@@ -36,11 +36,12 @@ green "upload ok"
 step "3/3 — verificação ao vivo"
 check() {
   local code
-  code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 25 "$1")
+  code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 25 "$1" || true)
+  [ -z "$code" ] && code="000"
   [ "$code" = "$2" ] && green "OK $code $1" || { red "FALHOU ($code, esperado $2) $1"; return 1; }
 }
 check "$DOMAIN/" 200
-curl -s --max-time 25 "$DOMAIN/" | grep -q "Tecnólogo" && green "OK conteúdo home" || { red "FALHOU conteúdo home"; exit 1; }
+curl -s --max-time 25 "$DOMAIN/" | grep -q "Tecnólogo" && green "OK conteúdo home" || { red "FALHOU conteúdo home (verifique o DNS)"; exit 1; }
 check "$DOMAIN/trabalho/" 200
 check "$DOMAIN/trabalho/mana-fest/" 200
 check "$DOMAIN/portfolio-details-clauamaral.html" 200
