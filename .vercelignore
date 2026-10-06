@@ -1,0 +1,6 @@
+.vercel
+out
+midia-fonte
+.env*
+*.log
+.next
