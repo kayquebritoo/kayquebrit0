@@ -9,11 +9,6 @@ export default function EntrarForm() {
   const [name, setName] = useState("");
   const [state, setState] = useState<{ ok?: boolean; sent?: boolean; msg?: string; devLink?: string; loading?: boolean }>({});
 
-export default function EntrarForm() {
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [state, setState] = useState<{ ok?: boolean; msg?: string; devLink?: string; loading?: boolean }>({});
-
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setState({ loading: true });
