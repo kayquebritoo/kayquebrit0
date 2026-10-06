@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import gsap from "gsap";
-import { WHATSAPP } from "@/lib/data";
 import { goToSlide } from "@/components/Header";
 import { SplitChars, useMagnetic } from "@/components/fx";
 
@@ -108,7 +108,6 @@ export function PanelWaves() {
 
 export default function HeroSlide() {
   const root = useRef<HTMLElement>(null);
-  const magCta = useMagnetic<HTMLAnchorElement>(0.3);
   const magBadge = useMagnetic<HTMLButtonElement>(0.45);
 
   // reveal por caractere — dispara direto na montagem (sem preloader)
@@ -207,15 +206,14 @@ export default function HeroSlide() {
           />
         </div>
 
-        {/* ORÇAMENTO abaixo da foto */}
-        <a
-          href={WHATSAPP}
-          target="_blank"
+        {/* ORÇAMENTO abre o briefing (fluxo de orçamento) */}
+        <Link
+          href="/briefing"
           className="m-hero-in mt-3 flex h-[52px] w-full shrink-0 items-center justify-center rounded-full border-[1.5px] border-white/90 text-[15px] uppercase text-white transition active:bg-white active:text-[#0B0B1E]"
           style={{ letterSpacing: "0.12em" }}
         >
           Orçamento
-        </a>
+        </Link>
         <p className="m-hero-in mt-2 shrink-0 text-[12px] font-light text-white/70">
           Escalando marcas através de design e tecnologia
         </p>
@@ -349,12 +347,10 @@ export default function HeroSlide() {
         </h1>
       </div>
 
-      {/* barra inferior — pill ORÇAMENTO (magnética) + placa escura com frase */}
+      {/* barra inferior — pill ORÇAMENTO (magnética) abre o briefing + placa escura */}
       <div className="fp-anim absolute bottom-[5vh] left-[24%] z-10 hidden md:block">
-        <a
-          ref={magCta}
-          href={WHATSAPP}
-          target="_blank"
+        <Link
+          href="/briefing"
           className="flex items-center justify-center rounded-full border-[1.5px] border-white/90 text-white transition hover:bg-white hover:text-[#0B0B1E]"
           style={{
             width: "min(24vw, 470px)",
@@ -365,7 +361,7 @@ export default function HeroSlide() {
           }}
         >
           ORÇAMENTO
-        </a>
+        </Link>
       </div>
       <div
         className="absolute bottom-0 right-[9%] z-10 hidden items-center rounded-tl-[24px] bg-[#0B0B1E] pl-14 pr-10 md:flex"
