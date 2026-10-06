@@ -48,7 +48,3 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
 }
 
-// Export estático (Hostinger): sem paths pré-gerados; na Vercel resolve em runtime.
-export async function generateStaticParams() {
-  return [];
-}

@@ -26,7 +26,3 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 }
 
-// Export estático (Hostinger): sem paths pré-gerados; na Vercel resolve em runtime.
-export async function generateStaticParams() {
-  return [];
-}
