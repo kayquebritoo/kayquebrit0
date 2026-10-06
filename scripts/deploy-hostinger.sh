@@ -23,7 +23,14 @@ command -v rsync >/dev/null || { red "rsync não instalado (brew install rsync).
 
 step "1/3 — build estático"
 unset VERCEL
-npm run build >/tmp/kb-deploy-build.log 2>&1 || { red "Build falhou. Log: /tmp/kb-deploy-build.log"; tail -20 /tmp/kb-deploy-build.log; exit 1; }
+# Rotas /api/* são dinâmicas (sessão/banco) e não existem em hospedagem
+# estática: esconde temporariamente p/ o export (a UI já trata a ausência).
+# Na Vercel (build padrão) tudo funciona normalmente.
+mv app/api /tmp/kb-api-bak 2>/dev/null || true
+STATIC_EXPORT=1 npm run build >/tmp/kb-deploy-build.log 2>&1
+BUILD_STATUS=$?
+mv /tmp/kb-api-bak app/api 2>/dev/null || true
+[ $BUILD_STATUS -ne 0 ] && { red "Build falhou. Log: /tmp/kb-deploy-build.log"; tail -20 /tmp/kb-deploy-build.log; exit 1; }
 [ -f out/index.html ] || { red "out/index.html não gerado."; exit 1; }
 green "build ok ($(du -sh out | cut -f1))"
 

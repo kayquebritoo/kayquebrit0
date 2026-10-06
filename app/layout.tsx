@@ -1,11 +1,21 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import Header from "@/components/Header";
 import { MobileCta, SlideProgress } from "@/components/MobileChrome";
 import { Grain } from "@/components/fx";
 
-const manrope = Manrope({ subsets: ["latin"], weight: ["300", "400", "500", "700"] });
+// Manrope auto-hospedada (latin) — build determinístico, sem depender
+// de fonts.googleapis.com no momento do build.
+const manrope = localFont({
+  src: [
+    { path: "../public/fonts/manrope-300.woff2", weight: "300" },
+    { path: "../public/fonts/manrope-400.woff2", weight: "400" },
+    { path: "../public/fonts/manrope-500.woff2", weight: "500" },
+    { path: "../public/fonts/manrope-700.woff2", weight: "700" },
+  ],
+  display: "swap",
+});
 
 const SITE_URL = "https://kayquebrito.com.br";
 const SITE_DESC =
