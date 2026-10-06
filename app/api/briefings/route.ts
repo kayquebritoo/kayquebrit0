@@ -30,7 +30,8 @@ export async function POST(req: Request) {
         clienteEmail: email,
         clienteTel: String(respostas.telefone || ""),
         respostas,
-        valorEstimado: String(respostas.orcamento || "") || null,
+        // valor_estimado fica nulo na criação (faixa "2.000 – 5.000" é texto,
+        // não número); o valor fechado entra na proposta/projeto.
       })
       .returning({ id: briefings.id });
     return NextResponse.json({ ok: true, id: rows[0].id }, { status: 201 });
