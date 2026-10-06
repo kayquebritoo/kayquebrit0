@@ -1,26 +1,494 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Azul-noite extraído dos prints /public/ref (fundo dominante) */
+  --color-bg: #0b0b1e;
+  --color-surface: #12122a;
+  --color-line: rgba(255, 255, 255, 0.14);
+  --color-ink: #f4f1ec;
+  --color-muted: rgba(244, 241, 236, 0.62);
+  --color-faint: rgba(244, 241, 236, 0.38);
+  --color-accent: #9db8e8;
+  --font-display: "Cottorway Pro", "Manrope", sans-serif;
+  --font-body: "Manrope", system-ui, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@font-face {
+  font-family: "Cottorway Pro";
+  src: url("/fonts/CottorwayPro-Bold.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Cottorway Pro";
+  src: url("/fonts/CottorwayPro-Light.woff") format("woff");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Cottorway Pro";
+  src: url("/fonts/CottorwayItalics-Bold.woff") format("woff");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Cottorway Pro";
+  src: url("/fonts/CottorwayItalics-Light.woff") format("woff");
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+  background: #0b0b1e;
+  color: #f4f1ec;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+html.fullpage-locked,
+html.fullpage-locked body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Faixa de conteúdo — MOBILE FIRST: base enxuta, expande no desktop */
+.ref-inner {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1720px;
+  padding-inline: 20px;
+}
+@media (min-width: 480px) {
+  .ref-inner {
+    padding-inline: 24px;
+  }
+}
+@media (min-width: 768px) {
+  .ref-inner {
+    padding-inline: 48px;
+  }
+}
+@media (min-width: 1024px) {
+  .ref-inner {
+    padding-inline: 88px;
+  }
+}
+@media (min-width: 1440px) {
+  .ref-inner {
+    padding-inline: clamp(120px, 11.5%, 220px);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* eyebrow superior centralizado (SOBRE / SERVIÇOS / DEPOIMENTOS) */
+.ref-eyebrow {
+  font-size: 17px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgba(244, 241, 236, 0.75);
+  font-weight: 300;
+}
+
+/* títulos gigantes finos do ref */
+.ref-giant {
+  font-family: var(--font-display);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: 0.98;
+}
+
+.glass {
+  background: linear-gradient(135deg, rgba(11, 11, 30, 0.42), rgba(11, 11, 30, 0.62));
+  backdrop-filter: blur(28px) saturate(1.4) brightness(1.08);
+  -webkit-backdrop-filter: blur(28px) saturate(1.4) brightness(1.08);
+}
+
+/* menu fullscreen — vidro ESCURO e legível: o conteúdo de trás some,
+   o blur dá o acabamento frosted sem comprometer a leitura */
+.glass-menu {
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(157, 184, 232, 0.12), transparent 60%),
+    linear-gradient(180deg, rgba(11, 11, 30, 0.94), rgba(11, 11, 30, 0.97));
+  backdrop-filter: blur(28px) saturate(1.4);
+  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+}
+.glass-menu::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 40% at 15% 20%, rgba(255, 255, 255, 0.07), transparent 70%),
+    radial-gradient(50% 35% at 85% 80%, rgba(157, 184, 232, 0.1), transparent 70%);
+}
+
+/* big titles do menu */
+.menu-big {
+  font-family: var(--font-display);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: 1.04;
+  font-size: clamp(2.4rem, 10.5vw, 4rem);
+}
+@media (min-width: 768px) {
+  .menu-big {
+    font-size: clamp(3.5rem, 7vw, 7rem);
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+  }
+}
+.menu-big .menu-num {
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  vertical-align: super;
+  margin-right: 0.6rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 400;
+}
+
+.hairline {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* dots hollow do ref */
+.fp-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(244, 241, 236, 0.28);
+  transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+}
+.fp-dot:hover {
+  border-color: rgba(244, 241, 236, 0.7);
+}
+.fp-dot.active {
+  background: #f4f1ec;
+  border-color: #f4f1ec;
+}
+
+/* rails verticais */
+.v-text {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+/* fotos: sem radius no ref, proteção anti-cópia */
+.no-save {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.no-save img {
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.fx-photo {
+  filter: grayscale(1) contrast(1.05) brightness(0.94);
+  transition: filter 0.45s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.fx-photo-wrap {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: #12122a;
+}
+.fx-photo-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 4px),
+    linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.14) 50%, transparent 60%);
+  transform: translateX(-30%) skewX(-8deg);
+  transition: opacity 0.35s ease, transform 0.6s ease;
+  pointer-events: none;
+}
+.fx-photo-wrap:hover .fx-photo {
+  filter: grayscale(0.15) contrast(1.08) brightness(1);
+  transform: scale(1.05) skewX(-1.5deg);
+}
+.fx-photo-wrap:hover::after {
+  opacity: 1;
+  transform: translateX(30%) skewX(-8deg);
+}
+
+/* ===== SOBRE — 4 hovers modernos distintos ===== */
+.about-photo {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: #12122a;
+}
+.about-photo img {
+  transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1), filter 0.5s ease;
+  filter: grayscale(0.9) contrast(1.04) brightness(0.92);
+  will-change: transform, filter;
+}
+.about-photo::before {
+  /* brilho varrendo */
+  content: "";
+  position: absolute;
+  inset: -20%;
+  z-index: 2;
+  background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,0.22) 50%, transparent 58%);
+  transform: translateX(-60%) rotate(0.001deg);
+  transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.about-photo::after {
+  /* vinheta + borda luminosa */
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.22), inset 0 -80px 60px -40px rgba(0,0,0,0.55);
+  pointer-events: none;
+}
+.about-photo .about-tag {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 3;
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(11,11,30,0.55);
+  border: 1px solid rgba(255,255,255,0.2);
+  backdrop-filter: blur(8px);
+  padding: 7px 12px;
+  border-radius: 999px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.22,1,0.36,1);
+}
+@media (hover: hover) {
+  .about-photo:hover img { filter: grayscale(0) contrast(1.06) brightness(1); }
+  .about-photo:hover::before { transform: translateX(60%); }
+  .about-photo:hover::after { opacity: 1; }
+  .about-photo:hover .about-tag { opacity: 1; transform: translateY(0); }
+  /* variação 1 — zoom suave */
+  .about-photo[data-fx="zoom"]:hover img { transform: scale(1.07); }
+  /* variação 2 — zoom + tilt leve */
+  .about-photo[data-fx="tilt"]:hover img { transform: scale(1.09) rotate(-1.2deg); }
+  /* variação 3 — slide lateral com reveal */
+  .about-photo[data-fx="slide"]:hover img { transform: scale(1.12) translateX(2.5%); }
+  /* variação 4 — zoom out dramático */
+  .about-photo[data-fx="pop"]:hover img { transform: scale(1.05) rotate(1deg); }
+}
+@media (hover: none) {
+  .about-photo img { filter: grayscale(0.15); }
+  .about-photo .about-tag { opacity: 1; transform: none; }
+}
+
+/* simulação de take em loop nas faixas de serviço */
+.loop-media {
+  position: relative;
+  overflow: hidden;
+  background: #12122a;
+}
+.loop-media img {
+  animation: looppan 10s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes looppan {
+  0% { transform: scale(1.1) translate(0, 0); }
+  50% { transform: scale(1.16) translate(-1.5%, 1.5%); }
+  100% { transform: scale(1.12) translate(1.5%, -1%); }
+}
+
+/* cursor VER PROJETO — círculo claro que substitui o cursor nativo */
+.cursor-view {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 90;
+  width: 132px;
+  height: 132px;
+  border-radius: 999px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: #0b0b1e;
+  background: #ece7e0;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  pointer-events: none;
+  opacity: 0;
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+.cursor-view small {
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+.cursor-view.on {
+  opacity: 1;
+}
+/* esconde o cursor nativo só nos cards (desktop com hover fino) */
+@media (hover: hover) and (pointer: fine) {
+  .proj-card, .proj-card * { cursor: none !important; }
+}
+@media (hover: none) {
+  .cursor-view { display: none; }
+}
+
+/* camada de parallax do motor v2 (mídia entre track e texto) */
+.fp-layer {
+  will-change: transform, opacity;
+}
+
+/* reveal de hover do portfólio — repouso colorido, hover P&B + info (ref 4/5/6) */
+.reveal-info {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity 0.45s ease,
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.group:hover .reveal-info {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (hover: none) {
+  .reveal-info {
+    opacity: 1;
+    transform: none;
+  }
+}
+.reveal-veil {
+  background: rgba(0, 0, 0, 0);
+  transition: background 0.5s ease;
+}
+.group:hover .reveal-veil {
+  background: rgba(0, 0, 0, 0.55);
+}
+@media (hover: none) {
+  /* no touch não há hover: foto sempre colorida + véu fixo p/ leitura */
+  .reveal-veil {
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.55));
+  }
+}
+.reveal-img {
+  transition:
+    transform 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.5s ease;
+}
+/* sombra de leitura nos títulos dos cards (ex.: PlugBra sobre mockup claro) */
+.reveal-info h3 {
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.55);
+}
+.group:hover .reveal-img {
+  transform: scale(1.04);
+  filter: grayscale(1) brightness(0.9);
+}
+@media (hover: none) {
+  .reveal-img {
+    filter: none;
+  }
+}
+
+.fp-anim {
+  will-change: transform, opacity, filter;
+}
+
+/* entrada do hero mobile — termina 100% visível (sem JS) */
+@keyframes mHeroIn {
+  from { opacity: 0; transform: translateY(26px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.m-hero-in {
+  opacity: 0;
+  animation: mHeroIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+h1 .m-hero-in:nth-child(2) { animation-delay: 0.08s; }
+a.m-hero-in { animation-delay: 0.18s; }
+@media (prefers-reduced-motion: reduce) {
+  .m-hero-in { animation: none; opacity: 1; }
+}
+
+/* works / single — acabamento premium */
+.work-card {
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.4s ease, box-shadow 0.5s ease;
+}
+@media (hover: hover) {
+  .work-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.6);
+  }
+}
+.work-card img { transition: transform 0.9s cubic-bezier(0.22,1,0.36,1), filter 0.6s ease; }
+.work-card:hover img { transform: scale(1.06); }
+
+.single-hero-glow {
+  background:
+    radial-gradient(80% 60% at 50% 0%, rgba(157, 184, 232, 0.16), transparent 70%),
+    linear-gradient(180deg, rgba(255,255,255,0.04), transparent);
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---------- assinatura: seleção, marquee, órbita, foco ---------- */
+::selection {
+  background: #ece7e0;
+  color: #0b0b1e;
+}
+
+:focus-visible {
+  outline: 2px solid #9db8e8;
+  outline-offset: 3px;
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.animate-marquee {
+  animation: marquee 24s linear infinite;
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin-slow {
+  animation: spin-slow 14s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee,
+  .animate-spin-slow,
+  .loop-media img {
+    animation: none;
+  }
 }

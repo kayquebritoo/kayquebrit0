@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# mídia-fonte (234MB, fora do deploy e do git)
+/midia-fonte/
