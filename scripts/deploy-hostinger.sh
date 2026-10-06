@@ -28,7 +28,7 @@ npm run build >/tmp/kb-deploy-build.log 2>&1 || { red "Build falhou. Log: /tmp/k
 green "build ok ($(du -sh out | cut -f1))"
 
 step "2/3 — upload (sem --delete: pastas existentes preservadas)"
-rsync -az --chmod=D755,F644 \
+rsync -az \
   -e "ssh -i $SSH_KEY -p $SSH_PORT -o StrictHostKeyChecking=no" \
   out/ "$SSH_USER@$SSH_HOST:$REMOTE_DIR/"
 green "upload ok"
