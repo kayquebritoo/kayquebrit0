@@ -1,4 +1,4 @@
-// Catálogos de briefing por categoria. O form renderer (`/briefing/[categoria]`)
+// Catálogos de briefing por categoria. O form renderer (`/briefing/[categoria]/orcamento`)
 // monta os campos daqui — adicionar categoria = adicionar entrada.
 export type FieldType = "text" | "textarea" | "select" | "date" | "tel" | "email" | "number";
 
@@ -16,6 +16,14 @@ export type BriefingCategory = {
   label: string;
   desc: string;
   baseValue: string;
+  /** copy rica da página de categoria */
+  tagline: string;
+  pitch: string[];
+  bullets: string[];
+  process: { title: string; desc: string }[];
+  cover: string;
+  /** para puxar portfolio relacionado em lib/data.ts */
+  portfolioService: ("audiovisual" | "dev" | "branding")[];
   fields: BriefingField[];
 };
 
@@ -38,6 +46,19 @@ export const BRIEFING_CATEGORIES: BriefingCategory[] = [
     label: "Fotografia",
     desc: "Ensaios, eventos, produto e corporativo.",
     baseValue: "a partir de R$ 800",
+    tagline: "Luz, direção e verdade em cada clique.",
+    pitch: [
+      "Fotografo marcas e pessoas com direção leve e olhar cinematográfico — do ensaio individual ao evento corporativo cheio.",
+      "Você recebe curadoria + tratamento fino cor a cor, galeria online pronta para postar e arquivos em alta para impressão.",
+    ],
+    bullets: ["Direção de poses leve", "Tratamento premium", "Galeria online + alta resolução", "Prévia em 48h"],
+    process: [
+      { title: "Conversa", desc: "Entendo objetivo, local, luz e referências." },
+      { title: "Direção", desc: "Roteiro de poses e cronograma no dia." },
+      { title: "Entrega", desc: "Curadoria, tratamento e galeria pronta." },
+    ],
+    cover: "/assets/manafest/01.webp",
+    portfolioService: ["audiovisual"],
     fields: [
       ...CONTATO,
       { name: "tipo_ensaio", label: "Tipo de ensaio", type: "select", required: true,
@@ -55,6 +76,19 @@ export const BRIEFING_CATEGORIES: BriefingCategory[] = [
     label: "Vídeo",
     desc: "Institucional, cobertura de eventos e reels.",
     baseValue: "a partir de R$ 1.500",
+    tagline: "Cinema que vende — do roteiro ao corte final.",
+    pitch: [
+      "Do institucional ao aftermovie: roteiro, direção, captação com drone e gimbal, áudio direto e color cinematográfico.",
+      "Entrego versões horizontal + vertical, legendadas e otimizadas para anúncios — prontas para escalar sua marca.",
+    ],
+    bullets: ["Roteiro + direção", "Drone e gimbal 4K", "Color cinematográfico", "Versões YT + reels"],
+    process: [
+      { title: "Roteiro", desc: "Conceito, plano de captação e cronograma." },
+      { title: "Set", desc: "Captação com direção leve e eficiente." },
+      { title: "Final", desc: "Montagem, color, trilha e masters." },
+    ],
+    cover: "/assets/portfolio/manafest-capa.webp",
+    portfolioService: ["audiovisual"],
     fields: [
       ...CONTATO,
       { name: "tipo_video", label: "Tipo de vídeo", type: "select", required: true,
@@ -74,6 +108,19 @@ export const BRIEFING_CATEGORIES: BriefingCategory[] = [
     label: "Sites",
     desc: "Institucionais, landing pages e portfólios.",
     baseValue: "a partir de R$ 2.500",
+    tagline: "Sites rápidos que viram orçamento no WhatsApp.",
+    pitch: [
+      "Sites institucionais e landing pages em Next.js com performance 90+ e design que guia o visitante até o CTA.",
+      "Copy estratégica, SEO técnico, animações GSAP leves e integração com WhatsApp, checkout e CRM.",
+    ],
+    bullets: ["Next.js ultrarrápido", "Copy + SEO inclusos", "Animações premium", "Integração WhatsApp"],
+    process: [
+      { title: "Mapa", desc: "Sitemap, copy e referências visuais." },
+      { title: "Build", desc: "Design + código com previews semanais." },
+      { title: "Go-live", desc: "Deploy, domínio, analytics e treino." },
+    ],
+    cover: "/assets/portfolio/PLUGBRA-CAPA-1.webp",
+    portfolioService: ["dev"],
     fields: [
       ...CONTATO,
       { name: "tipo_site", label: "Tipo de site", type: "select", required: true,
@@ -93,6 +140,19 @@ export const BRIEFING_CATEGORIES: BriefingCategory[] = [
     label: "Apps & Sistemas",
     desc: "Aplicativos e sistemas web sob medida.",
     baseValue: "a partir de R$ 8.000",
+    tagline: "Sistema sob medida, sem gambiarra.",
+    pitch: [
+      "Aplicativos e painéis web que resolvem operação real: login, pagamentos, agenda, mapas e integrações.",
+      "Arquitetura escalável, painel admin simples para sua equipe e suporte pós-entrega.",
+    ],
+    bullets: ["Escopo fechado", "Painel admin simples", "API + integrações", "Suporte pós-go"],
+    process: [
+      { title: "Descoberta", desc: "Fluxos, regras e protótipo navegável." },
+      { title: "Sprints", desc: "Entregas semanais testáveis." },
+      { title: "Escala", desc: "Deploy, monitoramento e evolução." },
+    ],
+    cover: "/assets/portfolio/passo-capa.webp",
+    portfolioService: ["dev"],
     fields: [
       ...CONTATO,
       { name: "tipo_app", label: "O que precisa?", type: "select", required: true,
@@ -111,6 +171,19 @@ export const BRIEFING_CATEGORIES: BriefingCategory[] = [
     label: "Lojas Virtuais",
     desc: "E-commerce completo para vender online.",
     baseValue: "a partir de R$ 4.000",
+    tagline: "Sua vitrine vendendo no automático.",
+    pitch: [
+      "E-commerce completo: catálogo, checkout Pix + cartão, frete, cupons e painel para você gerenciar tudo sozinho.",
+      "Foco em conversão mobile — onde 80% das suas vendas acontecem.",
+    ],
+    bullets: ["Checkout Pix + cartão", "Frete e cupons", "Painel simples", "Pixel + analytics"],
+    process: [
+      { title: "Catálogo", desc: "Produtos, fotos e precificação." },
+      { title: "Loja", desc: "Layout, checkout e testes reais." },
+      { title: "Vendas", desc: "Treino, tráfego e evolução." },
+    ],
+    cover: "/assets/portfolio/parasuperfoods-capa.webp",
+    portfolioService: ["dev"],
     fields: [
       ...CONTATO,
       { name: "produtos", label: "Quantos produtos?", type: "select", required: true,
@@ -129,6 +202,19 @@ export const BRIEFING_CATEGORIES: BriefingCategory[] = [
     label: "Design & Branding",
     desc: "Identidade visual, logo e peças.",
     baseValue: "a partir de R$ 1.200",
+    tagline: "Marca com conceito — não só um logo bonito.",
+    pitch: [
+      "Identidades com pesquisa, conceito e sistema completo: logo, paleta, tipografia, embalagem e aplicações reais.",
+      "Você sai com manual, arquivos abertos e peças prontas para fachada, social e impressão.",
+    ],
+    bullets: ["Conceito + moodboard", "Logo + sistema visual", "Manual da marca", "Peças de lançamento"],
+    process: [
+      { title: "Imersão", desc: "Pesquisa, concorrentes e posicionamento." },
+      { title: "Criação", desc: "Rotas criativas até a marca final." },
+      { title: "Sistema", desc: "Desdobramentos + manual + entrega." },
+    ],
+    cover: "/assets/portfolio/acai-norte-mix-capa.webp",
+    portfolioService: ["branding"],
     fields: [
       ...CONTATO,
       { name: "tipo_design", label: "O que precisa?", type: "select", required: true,

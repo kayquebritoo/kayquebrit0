@@ -68,81 +68,83 @@ export default function Fullpage({
         },
       });
 
-      // 1 — saída do texto: deriva curta na direção do gesto + blur
+      // 1 — saída do texto: deriva + blur + leve recuo (efeito cinema moderno)
       if (outAnims?.length) {
         tl.to(
           outAnims,
           {
-            y: -44 * dir,
+            y: -60 * dir,
+            scale: 0.98,
             opacity: 0,
-            filter: "blur(6px)",
-            stagger: 0.025,
-            duration: 0.28,
+            filter: "blur(8px)",
+            stagger: 0.022,
+            duration: 0.32,
             ease: "power3.in",
           },
           0
         );
       }
-      // 2 — saída das mídias: parallax curto
+      // 2 — saída das mídias: parallax com zoom-out suave
       if (outLayers?.length) {
         tl.to(
           outLayers,
           {
-            y: -32 * dir,
-            scale: 1.04,
-            opacity: 0.4,
-            duration: 0.55,
+            y: -48 * dir,
+            scale: 1.06,
+            opacity: 0.25,
+            duration: 0.6,
             ease: "expo.in",
           },
           0
         );
       }
 
-      // 3 — track: tira contínua 0.72s expo.inOut + skew sutil de velocidade
+      // 3 — track: tira contínua expo.inOut + skew de velocidade + respiro de escala
       const RM = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      tl.to(track.current, { y, duration: 0.72, ease: "expo.inOut" }, 0);
+      tl.to(track.current, { y, duration: 0.85, ease: "expo.inOut" }, 0);
       if (!RM) {
         tl.fromTo(
           track.current,
-          { skewY: 0 },
-          { skewY: -0.9 * dir, duration: 0.3, ease: "power2.in" },
+          { skewY: 0, scale: 1 },
+          { skewY: -1.1 * dir, scale: 0.995, duration: 0.34, ease: "power2.in" },
           0
         );
-        tl.to(track.current, { skewY: 0, duration: 0.42, ease: "expo.out" }, 0.3);
+        tl.to(track.current, { skewY: 0, scale: 1, duration: 0.51, ease: "expo.out" }, 0.34);
       } else {
         tl.timeScale(3);
       }
 
-      // 4 — entrada das mídias
+      // 4 — entrada das mídias: sobem com zoom-in cinematográfico
       if (inLayers?.length) {
         tl.fromTo(
           inLayers,
-          { y: 80 * dir, scale: 1.06, opacity: 0.4 },
+          { y: 110 * dir, scale: 1.1, opacity: 0 },
           {
             y: 0,
             scale: 1,
             opacity: 1,
-            duration: 0.75,
+            duration: 0.9,
             ease: "expo.out",
           },
-          0.3
+          0.32
         );
       }
-      // 5 — entrada do texto: blur 8→0, stagger curto, a ~45% da track
+      // 5 — entrada do texto: blur 10→0 + rise elástico suave
       if (inAnims?.length) {
         tl.fromTo(
           inAnims,
-          { y: 44 * dir, opacity: 0, filter: "blur(8px)" },
+          { y: 64 * dir, scale: 0.99, opacity: 0, filter: "blur(10px)" },
           {
             y: 0,
+            scale: 1,
             opacity: 1,
             filter: "blur(0px)",
-            stagger: 0.04,
-            duration: 0.6,
+            stagger: 0.05,
+            duration: 0.7,
             ease: "power4.out",
-            clearProps: "filter",
+            clearProps: "filter,scale",
           },
-          0.34
+          0.38
         );
       }
     },

@@ -5,8 +5,24 @@ import Link from "next/link";
 import gsap from "gsap";
 import { ABOUT, TESTIMONIALS, PARTNERS, CONTACT, WHATSAPP, SOCIALS } from "@/lib/data";
 import { goToSlide } from "@/components/Header";
-import { LocalTime } from "@/components/fx";
+import { LocalTime, useMagnetic } from "@/components/fx";
 import { SocialIcon } from "@/components/SocialIcons";
+
+/* flutuação ambiente para grupos (fotos do sobre, selos) */
+function useFloatAll(selector: string) {
+  const root = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = root.current;
+    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const ctx = gsap.context(() => {
+      gsap.utils.toArray<HTMLElement>(selector).forEach((t, i) => {
+        gsap.to(t, { y: i % 2 ? 8 : -8, duration: 2.6 + i * 0.4, ease: "sine.inOut", yoyo: true, repeat: -1, delay: i * 0.25 });
+      });
+    }, el);
+    return () => ctx.revert();
+  }, [selector]);
+  return root;
+}
 
 /* cursor VER PROJETO — círculo claro que substitui o cursor nativo.
    Segue o mouse com lerp rápido + pop elástico na entrada. */
@@ -67,8 +83,9 @@ const ABOUT_PHOTOS = [
 
 /* ================= SOBRE — ref 2.png ================= */
 export function AboutSlide() {
+  const floatRoot = useFloatAll(".about-photo");
   return (
-    <section className="relative flex h-full flex-col justify-center overflow-hidden bg-[#0B0B1E]">
+    <section ref={floatRoot as unknown as React.RefObject<HTMLElement>} className="relative flex h-full flex-col justify-center overflow-hidden bg-[#0B0B1E]">
       <p className="fp-anim ref-eyebrow absolute left-1/2 top-[70px] -translate-x-1/2 whitespace-nowrap md:top-[72px]">
         Sobre
       </p>
@@ -540,9 +557,18 @@ export function TestimonialsSlide() {
 
 /* ================= CONTATO — ref 8.png ================= */
 export function ContactSlide() {
+  const magContact = useMagnetic<HTMLAnchorElement>(0.35);
+  const pulse = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!pulse.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const t = gsap.to(pulse.current, { scale: 1.06, duration: 1.8, ease: "sine.inOut", yoyo: true, repeat: -1 });
+    return () => { t.kill(); };
+  }, []);
   return (
     <section className="relative flex h-full flex-col justify-center overflow-hidden bg-[#0B0B1E]">
-      <div className="ref-inner">
+      {/* aurora de fundo do contato */}
+      <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-[60vmin] w-[80vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#9DB8E8]/10 blur-[120px]" />
+      <div className="ref-inner relative">
         <h2
           className="fp-anim font-display font-light text-white"
           style={{ fontSize: "clamp(30px, 8.5vw, 44px)", letterSpacing: "-0.02em", lineHeight: 1.08 }}
@@ -571,15 +597,19 @@ export function ContactSlide() {
         <div className="fp-anim my-6 h-px w-full bg-white/15 md:my-[3vh]" aria-hidden />
 
         <div className="fp-anim flex flex-col gap-5 md:flex-row md:flex-wrap md:items-center md:gap-12">
+          <div ref={pulse}>
           <a
+            ref={magContact}
             href={WHATSAPP}
             target="_blank"
-            className="flex h-[60px] w-full max-w-[320px] items-center justify-center rounded-full border border-white/80 text-[18px] font-light transition hover:bg-white hover:text-[#0B0B1E] md:h-[76px] md:max-w-none"
+            className="relative flex h-[60px] w-full max-w-[320px] items-center justify-center overflow-hidden rounded-full border border-white/80 text-[18px] font-light transition hover:bg-white hover:text-[#0B0B1E] md:h-[76px] md:max-w-none"
             style={{ color: "#9DB8E8", maxWidth: 320 }}
           >
-            <span className="md:hidden">Contato</span>
-            <span className="hidden md:block" style={{ width: 220, fontSize: 22 }}>Contato</span>
+            <span aria-hidden className="pointer-events-none absolute inset-y-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/40 to-transparent" style={{ animation: "ctaSweep 3.2s ease-in-out infinite" }} />
+            <span className="md:hidden relative">Contato</span>
+            <span className="hidden md:block relative" style={{ width: 220, fontSize: 22 }}>Contato</span>
           </a>
+          </div>
           <div className="flex flex-wrap items-center gap-7 md:gap-9" style={{ color: "#9DB8E8" }}>
             {SOCIALS.map((s) => (
               <a

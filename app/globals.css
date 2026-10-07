@@ -492,3 +492,26 @@ a.m-hero-in { animation-delay: 0.18s; }
     animation: none;
   }
 }
+
+/* varredura de brilho nos CTAs (GSAP faz o loop principal; CSS cobre o contato) */
+@keyframes ctaSweep {
+  0% { left: -40%; opacity: 0; }
+  15% { opacity: 1; }
+  55% { left: 110%; opacity: 1; }
+  100% { left: 110%; opacity: 0; }
+}
+
+/* hero mobile: painel fluido translúcido */
+.hero-fluid-panel {
+  transform: translateZ(0);
+}
+.hero-person-float {
+  will-change: transform;
+  filter: drop-shadow(0 24px 48px rgba(0, 0, 0, 0.35));
+}
+.hero-cta-shine {
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-cta-shine { display: none; }
+}
