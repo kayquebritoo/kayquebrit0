@@ -501,10 +501,7 @@ a.m-hero-in { animation-delay: 0.18s; }
   100% { left: 110%; opacity: 0; }
 }
 
-/* hero mobile: painel fluido translúcido */
-.hero-fluid-panel {
-  transform: translateZ(0);
-}
+/* hero mobile: foto livre + plaquinha da frase */
 .hero-person-float {
   will-change: transform;
   filter: drop-shadow(0 24px 48px rgba(0, 0, 0, 0.35));

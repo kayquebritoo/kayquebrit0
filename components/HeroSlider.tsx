@@ -182,14 +182,6 @@ export default function HeroSlide() {
         { scale: 0, rotate: -30 },
         { scale: 1, rotate: 0, duration: 1.1, ease: "back.out(1.7)", delay: 0.7 }
       );
-      // ondas fluidas do mobile: sobem e descem sem parar
-      gsap.to(el.querySelectorAll(".hero-fluid-panel"), {
-        y: -6,
-        duration: 3.2,
-        ease: "sine.inOut",
-        yoyo: true,
-        repeat: -1,
-      });
     }, el);
     return () => ctx.revert();
   }, []);
@@ -218,14 +210,20 @@ export default function HeroSlide() {
 
   return (
     <section ref={root} className="relative h-[100svh] overflow-hidden bg-[#0B0B1E]">
-      {/* ============ MOBILE: coluna única ============ */}
+      {/* ============ MOBILE: foto livre, sem container — só a plaquinha da frase ============ */}
       <div className="flex h-full flex-col px-5 pb-3 pt-[74px] md:hidden">
-        <p className="m-hero-in text-[13px] font-light leading-snug text-[#F4F1EC]">
+        {/* fundo animado livre (sem caixa): ondas sutis em tela cheia */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 opacity-45">
+          <PanelWaves subtle />
+        </div>
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0B0B1E]/60 via-transparent to-[#0B0B1E]/70" />
+
+        <p className="m-hero-in relative z-10 text-[13px] font-light leading-snug text-[#F4F1EC]">
           Produtor Audiovisual &
           <br />
           Desenvolvedor Full Stack
         </p>
-        <h1 className="mt-2">
+        <h1 className="relative z-10 mt-2">
           <span
             className="m-hero-in font-display block font-light text-white"
             style={{ fontSize: "clamp(30px, 8.5vw, 40px)", lineHeight: 1.02, letterSpacing: "-0.02em" }}
@@ -240,51 +238,25 @@ export default function HeroSlide() {
           </span>
         </h1>
 
-        {/* painel translúcido de ondas com borda fluida — foto maior colada à esquerda */}
-        <div className="fp-anim relative mt-2 min-h-0 flex-1">
-          <div
-            className="hero-fluid-panel absolute inset-0 overflow-hidden rounded-[26px] border border-white/15"
-            style={{ boxShadow: "0 24px 70px -24px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.25)" }}
-          >
-            {/* fundo translúcido: mostra o site por trás, ondas com menos evidência */}
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  "linear-gradient(180deg, rgba(179,196,220,0.42) 0%, rgba(147,168,198,0.36) 32%, rgba(117,140,173,0.30) 62%, rgba(95,120,156,0.28) 100%)",
-                backdropFilter: "blur(6px)",
-                WebkitBackdropFilter: "blur(6px)",
-              }}
+        {/* Kayque livre — maior, colado na esquerda, sem moldura */}
+        <div className="fp-anim relative z-[5] min-h-0 flex-1">
+          <div className="hero-person-float absolute bottom-0 left-[-16%] top-[-6%] w-[116%]">
+            <Image
+              src="/assets/hero/kayque.png"
+              alt="Kayque Brito"
+              fill
+              priority
+              className="fp-layer object-cover"
+              style={{ objectPosition: "22% 100%" }}
+              sizes="100vw"
             />
-            <div className="absolute inset-0 opacity-60">
-              <PanelWaves subtle />
-            </div>
-            {/* véu escuro para o texto continuar legível sobre o fundo */}
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0B0B1E]/55 via-[#0B0B1E]/10 to-[#0B0B1E]/15" />
-            <FluidTop />
-            {/* brilho superior suave */}
-            <div aria-hidden className="pointer-events-none absolute inset-x-8 top-6 h-10 rounded-full bg-white/25 blur-2xl" />
-
-            {/* Kayque maior, colado na esquerda para esconder o recorte do braço */}
-            <div className="hero-person-float absolute bottom-0 left-[-14%] top-[-4%] w-[112%]">
-              <Image
-                src="/assets/hero/kayque.png"
-                alt="Kayque Brito"
-                fill
-                priority
-                className="fp-layer object-cover"
-                style={{ objectPosition: "22% 100%" }}
-                sizes="100vw"
-              />
-            </div>
-
-            {/* véu inferior + placa de vidro com o tagline SOBRE a imagem (esconde o recorte de baixo) */}
-            <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-[#0B0B1E]/80 via-[#0B0B1E]/25 to-transparent" />
-            <div className="absolute inset-x-3 bottom-3 rounded-2xl border border-white/20 bg-[#0B0B1E]/45 px-4 py-3 backdrop-blur-xl" style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.35)" }}>
-              <p className="text-[12.5px] font-light leading-snug text-white">
-                Escalando marcas através de <em className="italic text-[#9DB8E8]">design e tecnologia</em>
-              </p>
-            </div>
+          </div>
+          {/* véu inferior para leitura + plaquinha de vidro SOBRE a imagem (esconde o recorte de baixo) */}
+          <div aria-hidden className="pointer-events-none absolute inset-x-[-20px] bottom-0 h-[46%] bg-gradient-to-t from-[#0B0B1E]/85 via-[#0B0B1E]/25 to-transparent" />
+          <div className="absolute inset-x-0 bottom-1 rounded-2xl border border-white/20 bg-[#0B0B1E]/45 px-4 py-3 backdrop-blur-xl" style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.35)" }}>
+            <p className="text-[12.5px] font-light leading-snug text-white">
+              Escalando marcas através de <em className="italic text-[#9DB8E8]">design e tecnologia</em>
+            </p>
           </div>
         </div>
 
@@ -292,7 +264,7 @@ export default function HeroSlide() {
         <Link
           ref={magCtaM as unknown as React.RefObject<HTMLAnchorElement>}
           href="/briefing"
-          className="m-hero-in relative mt-3 flex h-[52px] w-full shrink-0 items-center justify-center overflow-hidden rounded-full border-[1.5px] border-white/90 text-[15px] uppercase text-white transition active:bg-white active:text-[#0B0B1E]"
+          className="m-hero-in relative z-10 mt-3 flex h-[52px] w-full shrink-0 items-center justify-center overflow-hidden rounded-full border-[1.5px] border-white/90 text-[15px] uppercase text-white transition active:bg-white active:text-[#0B0B1E]"
           style={{ letterSpacing: "0.12em" }}
         >
           <span aria-hidden className="hero-cta-shine pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
