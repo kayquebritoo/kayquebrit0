@@ -8,22 +8,6 @@ import { goToSlide } from "@/components/Header";
 import { LocalTime, useMagnetic } from "@/components/fx";
 import { SocialIcon } from "@/components/SocialIcons";
 
-/* flutuação ambiente para grupos (fotos do sobre, selos) */
-function useFloatAll(selector: string) {
-  const root = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const el = root.current;
-    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const ctx = gsap.context(() => {
-      gsap.utils.toArray<HTMLElement>(selector).forEach((t, i) => {
-        gsap.to(t, { y: i % 2 ? 8 : -8, duration: 2.6 + i * 0.4, ease: "sine.inOut", yoyo: true, repeat: -1, delay: i * 0.25 });
-      });
-    }, el);
-    return () => ctx.revert();
-  }, [selector]);
-  return root;
-}
-
 /* cursor VER PROJETO — círculo claro que substitui o cursor nativo.
    Segue o mouse com lerp rápido + pop elástico na entrada. */
 function useViewCursor() {
@@ -83,9 +67,8 @@ const ABOUT_PHOTOS = [
 
 /* ================= SOBRE — ref 2.png ================= */
 export function AboutSlide() {
-  const floatRoot = useFloatAll(".about-photo");
   return (
-    <section ref={floatRoot as unknown as React.RefObject<HTMLElement>} className="relative flex h-full flex-col justify-center overflow-hidden bg-[#0B0B1E]">
+    <section className="relative flex h-full flex-col justify-center overflow-hidden bg-[#0B0B1E]">
       <p className="fp-anim ref-eyebrow absolute left-1/2 top-[70px] -translate-x-1/2 whitespace-nowrap md:top-[72px]">
         Sobre
       </p>

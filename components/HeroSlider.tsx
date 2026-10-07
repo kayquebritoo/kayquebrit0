@@ -101,41 +101,6 @@ export function PanelWaves({ subtle = false }: { subtle?: boolean }) {
   return <canvas ref={ref} aria-hidden className="absolute inset-0 h-full w-full" />;
 }
 
-/* Borda fluida do topo — duas ondas sobrepostas em movimento perpétuo (sobem e descem).
-   Substitui o polígono reto: nunca há linha dura. */
-function FluidTop({ tint = "#0B0B1E" }: { tint?: string }) {
-  const a = useRef<SVGPathElement>(null);
-  const b = useRef<SVGPathElement>(null);
-  useEffect(() => {
-    const RM = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (RM) return;
-    const ctx = gsap.context(() => {
-      gsap.to(a.current, { y: 9, duration: 2.8, ease: "sine.inOut", yoyo: true, repeat: -1 });
-      gsap.to(b.current, { y: -7, duration: 3.4, ease: "sine.inOut", yoyo: true, repeat: -1, delay: 0.4 });
-      // respiro horizontal sutil — a borda "respira"
-      gsap.to([a.current, b.current], { scaleX: 1.02, transformOrigin: "50% 50%", duration: 4.2, ease: "sine.inOut", yoyo: true, repeat: -1 });
-    });
-    return () => ctx.revert();
-  }, []);
-  return (
-    <div aria-hidden className="pointer-events-none absolute -top-1 left-0 w-full overflow-visible" style={{ height: 46 }}>
-      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 1200 46" preserveAspectRatio="none">
-        <path
-          ref={b}
-          d="M0,26 C120,10 220,38 340,22 C460,6 560,36 690,20 C820,4 920,34 1040,20 C1100,13 1150,22 1200,16 L1200,0 L0,0 Z"
-          fill={tint}
-          opacity={0.55}
-        />
-        <path
-          ref={a}
-          d="M0,30 C140,16 260,40 380,26 C500,12 600,40 730,24 C860,8 960,38 1080,24 C1130,18 1170,26 1200,22 L1200,0 L0,0 Z"
-          fill={tint}
-        />
-      </svg>
-    </div>
-  );
-}
-
 export default function HeroSlide() {
   const root = useRef<HTMLElement>(null);
   const magBadge = useMagnetic<HTMLButtonElement>(0.45);
@@ -192,10 +157,10 @@ export default function HeroSlide() {
     if (!el) return;
     const person = el.querySelector(".hero-person");
     const title = el.querySelector(".hero-title");
-    const panel = el.querySelector(".hero-panel-desk");
+    const waves = el.querySelector(".hero-waves-desk");
     const qx = gsap.quickTo(person, "x", { duration: 0.7, ease: "power3.out" });
     const tx = gsap.quickTo(title, "x", { duration: 0.7, ease: "power3.out" });
-    const px = panel ? gsap.quickTo(panel, "x", { duration: 1, ease: "power3.out" }) : null;
+    const px = waves ? gsap.quickTo(waves, "x", { duration: 1, ease: "power3.out" }) : null;
     const onMove = (e: PointerEvent) => {
       const nx = e.clientX / window.innerWidth - 0.5;
       const ny = e.clientY / window.innerHeight - 0.5;
@@ -238,16 +203,16 @@ export default function HeroSlide() {
           </span>
         </h1>
 
-        {/* Kayque livre — maior, colado na esquerda, sem moldura */}
+        {/* Kayque livre — menor, fixado na direita, sem moldura e sem cortar a cabeça */}
         <div className="fp-anim relative z-[5] min-h-0 flex-1">
-          <div className="hero-person-float absolute bottom-0 left-[-16%] top-[-6%] w-[116%]">
+          <div className="hero-person-float absolute bottom-0 right-[-12%] top-[-2%] w-[110%]">
             <Image
               src="/assets/hero/kayque.png"
               alt="Kayque Brito"
               fill
               priority
-              className="fp-layer object-cover"
-              style={{ objectPosition: "22% 100%" }}
+              className="fp-layer object-contain"
+              style={{ objectPosition: "90% 100%" }}
               sizes="100vw"
             />
           </div>
@@ -273,58 +238,14 @@ export default function HeroSlide() {
       </div>
 
       {/* ============ DESKTOP: composição absoluta ============ */}
-      {/* auroras flutuantes atrás do painel */}
+      {/* fundo animado livre na composição toda — sem caixa, sem borda */}
+      <div aria-hidden className="hero-waves-desk absolute inset-0 hidden opacity-50 md:block">
+        <PanelWaves />
+      </div>
+      <div aria-hidden className="pointer-events-none absolute inset-0 hidden bg-gradient-to-t from-[#0B0B1E]/60 via-transparent to-[#0B0B1E]/45 md:block" />
+      {/* auroras flutuantes */}
       <div aria-hidden className="hero-aurora-a absolute left-[2%] top-[22%] hidden h-[420px] w-[420px] rounded-full bg-[#9DB8E8]/15 blur-[110px] md:block" />
       <div aria-hidden className="hero-aurora-b absolute bottom-[6%] right-[2%] hidden h-[380px] w-[380px] rounded-full bg-white/[0.07] blur-[110px] md:block" />
-
-      {/* painel de ondas — desktop também translúcido com borda fluida */}
-      <div className="hero-panel-desk fp-layer absolute bottom-0 left-[8%] right-[8%] top-[36%] hidden overflow-hidden rounded-t-[36px] border border-white/15 border-b-0 md:block"
-        style={{ boxShadow: "0 30px 90px -30px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.3)" }}>
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(179,196,220,0.55) 0%, rgba(147,168,198,0.45) 32%, rgba(117,140,173,0.38) 62%, rgba(95,120,156,0.34) 100%)",
-            backdropFilter: "blur(4px)",
-          }}
-        />
-        {/* corpo facetado da mesh com menos peso */}
-        <svg
-          className="absolute inset-0 h-full w-full opacity-60"
-          viewBox="0 0 1200 620"
-          preserveAspectRatio="none"
-          aria-hidden
-        >
-          <polygon points="0,180 140,120 260,160 0,260" fill="#8fa3c2" opacity="0.35" />
-          <polygon points="140,120 320,90 420,150 260,160" fill="#a7b8d2" opacity="0.38" />
-          <polygon points="320,90 520,130 420,150" fill="#c2cede" opacity="0.32" />
-          <polygon points="420,150 520,130 640,170 560,220 380,210" fill="#93a7c4" opacity="0.35" />
-          <polygon points="520,130 740,80 820,150 640,170" fill="#b9c7dc" opacity="0.35" />
-          <polygon points="740,80 980,120 820,150" fill="#cdd7e8" opacity="0.3" />
-          <polygon points="820,150 980,120 1080,170 940,210 700,200 640,170" fill="#8fa3c2" opacity="0.32" />
-          <polygon points="980,120 1200,100 1200,200 1080,170" fill="#aebdd4" opacity="0.35" />
-          <polygon points="0,260 260,160 380,210 200,300 0,340" fill="#7e93b5" opacity="0.3" />
-          <polygon points="380,210 560,220 700,200 620,300 360,320 200,300" fill="#8699b9" opacity="0.3" />
-          <polygon points="700,200 940,210 1080,170 1200,200 1200,330 900,330 620,300" fill="#7c90b3" opacity="0.3" />
-        </svg>
-        <FluidTop />
-        <svg
-          className="absolute left-0 w-full opacity-70"
-          viewBox="0 0 1200 60"
-          preserveAspectRatio="none"
-          style={{ height: 54, top: 44 }}
-          aria-hidden
-        >
-          <polyline
-            points="0,58 60,40 140,46 230,28 320,42 420,20 520,38 640,16 760,36 880,24 980,38 1080,22 1200,36"
-            fill="none"
-            stroke="rgba(255,255,255,0.5)"
-            strokeWidth="1.6"
-          />
-        </svg>
-        <PanelWaves />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0B0B1E]/30 via-transparent to-transparent" />
-      </div>
 
       {/* pessoa em recorte — desktop 44vw com flutuação */}
       <div className="hero-person absolute bottom-0 right-[5%] top-[12%] z-[5] hidden w-[min(44vw,640px)] md:block">
