@@ -184,8 +184,8 @@ export default function HeroSlide() {
         {/* véu de leitura: protege topo (título) e base (vidro + CTA) */}
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0B0B1E]/75 via-transparent to-[#0B0B1E]/85" />
 
-        {/* Kayque livre na camada do meio — fixado na direita, sem cortar a cabeça */}
-        <div className="hero-person-float absolute bottom-[150px] right-[-10%] top-[14%] z-[5] w-[108%]">
+        {/* Kayque fixado no canto inferior direito — por trás do vidro e do botão */}
+        <div className="hero-person-float absolute bottom-0 right-[-12%] top-[10%] z-[5] w-[112%]">
           <Image
             src="/assets/hero/kayque.png"
             alt="Kayque Brito"
