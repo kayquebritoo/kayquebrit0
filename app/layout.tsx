@@ -29,6 +29,11 @@ export const metadata: Metadata = {
   },
   description: SITE_DESC,
   alternates: { canonical: "/" },
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon.png",
+  },
   openGraph: {
     title: "Kayque Brito — Desenvolvedor Digital",
     description: SITE_DESC,
