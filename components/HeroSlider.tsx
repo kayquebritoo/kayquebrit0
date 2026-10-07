@@ -175,66 +175,71 @@ export default function HeroSlide() {
 
   return (
     <section ref={root} className="relative h-[100svh] overflow-hidden bg-[#0B0B1E]">
-      {/* ============ MOBILE: foto livre, sem container — só a plaquinha da frase ============ */}
-      <div className="flex h-full flex-col px-5 pb-3 pt-[74px] md:hidden">
-        {/* fundo animado livre (sem caixa): ondas sutis em tela cheia */}
+      {/* ============ MOBILE: camadas distribuídas na página toda ============ */}
+      <div className="relative flex h-full flex-col px-5 pb-3 pt-[86px] md:hidden">
+        {/* fundo animado livre em tela cheia */}
         <div aria-hidden className="pointer-events-none absolute inset-0 opacity-45">
           <PanelWaves subtle />
         </div>
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0B0B1E]/60 via-transparent to-[#0B0B1E]/70" />
+        {/* véu de leitura: protege topo (título) e base (vidro + CTA) */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0B0B1E]/75 via-transparent to-[#0B0B1E]/85" />
 
-        <p className="m-hero-in relative z-10 text-[13px] font-light leading-snug text-[#F4F1EC]">
-          Produtor Audiovisual &
-          <br />
-          Desenvolvedor Full Stack
-        </p>
-        <h1 className="relative z-10 mt-2">
-          <span
-            className="m-hero-in font-display block font-light text-white"
-            style={{ fontSize: "clamp(30px, 8.5vw, 40px)", lineHeight: 1.02, letterSpacing: "-0.02em" }}
-          >
-            Tecnólogo
-          </span>
-          <span
-            className="m-hero-in font-display block font-light text-white"
-            style={{ fontSize: "clamp(58px, 17.5vw, 88px)", lineHeight: 0.95, letterSpacing: "-0.03em" }}
-          >
-            Criativo
-          </span>
-        </h1>
+        {/* Kayque livre na camada do meio — fixado na direita, sem cortar a cabeça */}
+        <div className="hero-person-float absolute bottom-[150px] right-[-10%] top-[14%] z-[5] w-[108%]">
+          <Image
+            src="/assets/hero/kayque.png"
+            alt="Kayque Brito"
+            fill
+            priority
+            className="fp-layer object-contain"
+            style={{ objectPosition: "90% 100%" }}
+            sizes="100vw"
+          />
+        </div>
 
-        {/* Kayque livre — menor, fixado na direita, sem moldura e sem cortar a cabeça */}
-        <div className="fp-anim relative z-[5] min-h-0 flex-1">
-          <div className="hero-person-float absolute bottom-0 right-[-12%] top-[-2%] w-[110%]">
-            <Image
-              src="/assets/hero/kayque.png"
-              alt="Kayque Brito"
-              fill
-              priority
-              className="fp-layer object-contain"
-              style={{ objectPosition: "90% 100%" }}
-              sizes="100vw"
-            />
-          </div>
-          {/* véu inferior para leitura + plaquinha de vidro SOBRE a imagem (esconde o recorte de baixo) */}
-          <div aria-hidden className="pointer-events-none absolute inset-x-[-20px] bottom-0 h-[46%] bg-gradient-to-t from-[#0B0B1E]/85 via-[#0B0B1E]/25 to-transparent" />
-          <div className="absolute inset-x-0 bottom-1 rounded-2xl border border-white/20 bg-[#0B0B1E]/45 px-4 py-3 backdrop-blur-xl" style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.35)" }}>
-            <p className="text-[12.5px] font-light leading-snug text-white">
+        {/* topo: respiro do menu + tipografia com sombra sobre a foto */}
+        <div className="relative z-10">
+          <p className="m-hero-in text-[13px] font-light leading-snug text-[#F4F1EC]" style={{ textShadow: "0 2px 18px rgba(0,0,0,0.6)" }}>
+            Produtor Audiovisual &
+            <br />
+            Desenvolvedor Full Stack
+          </p>
+          <h1 className="mt-3">
+            <span
+              className="m-hero-in font-display block font-light text-white"
+              style={{ fontSize: "clamp(30px, 8.5vw, 40px)", lineHeight: 1.02, letterSpacing: "-0.02em", textShadow: "0 4px 28px rgba(0,0,0,0.65)" }}
+            >
+              Tecnólogo
+            </span>
+            <span
+              className="m-hero-in font-display block font-light text-white"
+              style={{ fontSize: "clamp(60px, 17vw, 88px)", lineHeight: 0.95, letterSpacing: "-0.03em", textShadow: "0 6px 36px rgba(0,0,0,0.7)" }}
+            >
+              Criativo
+            </span>
+          </h1>
+        </div>
+
+        {/* meio flexível: a foto respira entre os textos */}
+        <div className="min-h-0 flex-1" />
+
+        {/* base: vidro com frase centralizada + CTA */}
+        <div className="relative z-10">
+          <div className="fp-anim rounded-2xl border border-white/20 bg-[#0B0B1E]/45 px-4 py-3 backdrop-blur-xl" style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.35)" }}>
+            <p className="text-center text-[12.5px] font-light leading-snug text-white">
               Escalando marcas através de <em className="italic text-[#9DB8E8]">design e tecnologia</em>
             </p>
           </div>
+          <Link
+            ref={magCtaM as unknown as React.RefObject<HTMLAnchorElement>}
+            href="/briefing"
+            className="m-hero-in relative mt-3 flex h-[52px] w-full shrink-0 items-center justify-center overflow-hidden rounded-full border-[1.5px] border-white/90 text-[15px] uppercase text-white transition active:bg-white active:text-[#0B0B1E]"
+            style={{ letterSpacing: "0.12em" }}
+          >
+            <span aria-hidden className="hero-cta-shine pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+            <span className="relative">Orçamento</span>
+          </Link>
         </div>
-
-        {/* ORÇAMENTO com brilho varrendo */}
-        <Link
-          ref={magCtaM as unknown as React.RefObject<HTMLAnchorElement>}
-          href="/briefing"
-          className="m-hero-in relative z-10 mt-3 flex h-[52px] w-full shrink-0 items-center justify-center overflow-hidden rounded-full border-[1.5px] border-white/90 text-[15px] uppercase text-white transition active:bg-white active:text-[#0B0B1E]"
-          style={{ letterSpacing: "0.12em" }}
-        >
-          <span aria-hidden className="hero-cta-shine pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-          <span className="relative">Orçamento</span>
-        </Link>
       </div>
 
       {/* ============ DESKTOP: composição absoluta ============ */}
@@ -282,7 +287,7 @@ export default function HeroSlide() {
       </div>
 
       {/* bloco tipográfico */}
-      <div className="hero-title absolute left-[24%] top-[27%] z-10 hidden max-w-[60%] md:block">
+      <div className="hero-title absolute left-[15%] top-[27%] z-10 hidden max-w-[60%] md:block">
         <p
           className="fp-anim font-light text-[#F4F1EC]"
           style={{ fontSize: "clamp(20px, 1.6vw, 30px)", lineHeight: 1.35 }}
@@ -317,7 +322,7 @@ export default function HeroSlide() {
       </div>
 
       {/* barra inferior — pill ORÇAMENTO magnética com shine + placa escura */}
-      <div className="fp-anim absolute bottom-[5vh] left-[24%] z-10 hidden md:block">
+      <div className="fp-anim absolute bottom-[5vh] left-[15%] z-10 hidden md:block">
         <Link
           ref={magCta as unknown as React.RefObject<HTMLAnchorElement>}
           href="/briefing"

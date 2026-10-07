@@ -92,53 +92,53 @@ export function AboutSlide() {
           escaláveis no ambiente digital.
         </p>
 
-        {/* collage sobreposta — desktop (cada foto com hover próprio) */}
+        {/* collage escalonada — desktop (grade em fluxo: as 4 sempre cabem no slide) */}
         <div
-          className="fp-anim no-save relative mt-[3.5vh] hidden md:block"
-          style={{ height: "42vh" }}
+          className="fp-anim no-save mt-[3vh] hidden grid-cols-12 items-start gap-[1.5vw] md:grid"
+          style={{ height: "38vh" }}
           onContextMenu={(e) => e.preventDefault()}
         >
-          <div className="about-photo absolute left-0 top-0 w-[32%]" data-fx="zoom">
+          <div className="about-photo col-span-3" data-fx="zoom">
             <Image
               src="/assets/deco/ok1.webp"
               alt="Bastidor — programando"
               width={620}
               height={460}
               draggable={false}
-              className="fp-layer aspect-[4/3] w-full object-cover"
+              className="fp-layer h-[24vh] w-full object-cover"
             />
             <span className="about-tag">Código</span>
           </div>
-          <div className="about-photo absolute left-[24%] top-[9vh] z-[2] w-[29%]" data-fx="tilt">
+          <div className="about-photo col-span-3 mt-[6vh]" data-fx="tilt">
             <Image
               src="/assets/deco/ok2.webp"
               alt="Bastidor — direção"
               width={560}
               height={700}
               draggable={false}
-              className="fp-layer aspect-[3/4] w-full object-cover"
+              className="fp-layer h-[29vh] w-full object-cover"
             />
             <span className="about-tag">Direção</span>
           </div>
-          <div className="about-photo absolute left-[46%] top-[3vh] z-[1] w-[31%]" data-fx="slide">
+          <div className="about-photo col-span-3 mt-[2vh]" data-fx="slide">
             <Image
               src="/assets/deco/ok3.webp"
               alt="Bastidor — teclado"
               width={620}
               height={460}
               draggable={false}
-              className="fp-layer aspect-[4/3] w-full object-cover"
+              className="fp-layer h-[24vh] w-full object-cover"
             />
             <span className="about-tag">Setup</span>
           </div>
-          <div className="about-photo absolute right-0 top-[10vh] z-[3] w-[30%]" data-fx="pop">
+          <div className="about-photo col-span-3 mt-[7vh]" data-fx="pop">
             <Image
               src="/assets/deco/ok4.webp"
               alt="Bastidor — set"
               width={560}
               height={700}
               draggable={false}
-              className="aspect-[3/4] w-full object-cover"
+              className="fp-layer h-[29vh] w-full object-cover"
             />
             <span className="about-tag">Set</span>
           </div>
