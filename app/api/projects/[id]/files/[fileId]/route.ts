@@ -4,6 +4,7 @@ import { db } from "@/lib/kbos/db";
 import { projectFiles, projects } from "@/lib/kbos/schema";
 import { sessionUser } from "@/lib/kbos/rbac";
 import { notifyProject } from "@/lib/kbos/whatsapp";
+import { checkId, fileReviewSchema, readBody } from "@/lib/kbos/validators";
 
 // PATCH: cliente aprova/reprova (só arquivos dos próprios projetos); equipe também pode.
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string; fileId: string }> }) {
@@ -11,10 +12,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   try {
     const { id, fileId } = await params;
-    const { status, feedback } = await req.json();
-    if (!["aprovado", "reprovado"].includes(status)) {
-      return NextResponse.json({ error: "Status inválido." }, { status: 400 });
-    }
+    const bad = checkId(id) || checkId(fileId);
+    if (bad) return bad;
+    const parsed = await readBody(req, fileReviewSchema);
+    if ("error" in parsed) return parsed.error;
+    const { status, feedback } = parsed.data;
     const proj = (await db().select().from(projects).where(eq(projects.id, id)).limit(1))[0];
     if (!proj) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
     if (user.role === "cliente" && proj.clienteId !== user.id) {

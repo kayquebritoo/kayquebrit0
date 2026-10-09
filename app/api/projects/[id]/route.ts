@@ -4,9 +4,9 @@ import { db } from "@/lib/kbos/db";
 import { projects } from "@/lib/kbos/schema";
 import { deny, sessionUser, PIPELINE } from "@/lib/kbos/rbac";
 import { notifyProject } from "@/lib/kbos/whatsapp";
+import { checkId, projectPatchSchema, readBody } from "@/lib/kbos/validators";
 
 const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as const;
-const STATUS = PIPELINE.map((p) => p.id);
 
 async function visible(id: string, userId: string, role: string) {
   const row = (await db().select().from(projects).where(eq(projects.id, id)).limit(1))[0];
@@ -32,17 +32,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (denied) return denied;
   try {
     const { id } = await params;
-    const body = await req.json();
+    const bad = checkId(id);
+    if (bad) return bad;
+    const parsed = await readBody(req, projectPatchSchema);
+    if ("error" in parsed) return parsed.error;
+    const body = parsed.data;
     const patch: Record<string, unknown> = { updatedAt: new Date() };
     let statusChanged: string | null = null;
     if (body.status !== undefined) {
-      if (!STATUS.includes(body.status)) return NextResponse.json({ error: "Status inválido." }, { status: 400 });
       const before = (await db().select().from(projects).where(eq(projects.id, id)).limit(1))[0];
       patch.status = body.status;
       if (before && before.status !== body.status) statusChanged = body.status;
     }
-    if (body.titulo !== undefined) patch.titulo = String(body.titulo);
-    if (body.valor !== undefined) patch.valor = body.valor ? String(body.valor) : null;
+    if (body.titulo !== undefined) patch.titulo = body.titulo;
+    if (body.valor !== undefined) patch.valor = body.valor;
     if (body.prazo !== undefined) patch.prazo = body.prazo ? new Date(body.prazo) : null;
     await db().update(projects).set(patch).where(eq(projects.id, id));
     if (statusChanged) {

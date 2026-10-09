@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { requestMagicLink } from "@/lib/kbos/auth";
+import { authRequestSchema, readBody } from "@/lib/kbos/validators";
+import { withRateLimit } from "@/lib/kbos/rate-limit";
 
 export async function POST(req: Request) {
+  const limited = await withRateLimit(req, "auth:request");
+  if (limited) return limited;
   try {
-    const { email, name } = await req.json();
-    const r = await requestMagicLink(String(email || ""), name ? String(name) : undefined);
+    const parsed = await readBody(req, authRequestSchema);
+    if ("error" in parsed) return parsed.error;
+    const r = await requestMagicLink(parsed.data.email, parsed.data.name || undefined);
     return NextResponse.json({
       ok: true,
       emailEnviado: r.sent,

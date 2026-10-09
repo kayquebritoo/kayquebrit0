@@ -4,6 +4,7 @@ import { db } from "@/lib/kbos/db";
 import { projectFiles, projects } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { notifyProject } from "@/lib/kbos/whatsapp";
+import { checkId, fileCreateSchema, readBody } from "@/lib/kbos/validators";
 
 // GET arquivos do projeto (dono ou equipe).
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -30,13 +31,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (denied) return denied;
   try {
     const { id } = await params;
-    const body = await req.json();
-    if (!body.nome || !body.url) {
-      return NextResponse.json({ error: "Nome e URL são obrigatórios." }, { status: 400 });
-    }
+    const bad = checkId(id);
+    if (bad) return bad;
+    const parsed = await readBody(req, fileCreateSchema);
+    if ("error" in parsed) return parsed.error;
+    const body = parsed.data;
     const rows = await db()
       .insert(projectFiles)
-      .values({ projectId: id, nome: String(body.nome), url: String(body.url), kind: body.kind === "entrega" ? "entrega" : "aprovacao" })
+      .values({ projectId: id, nome: body.nome, url: body.url, kind: body.kind ?? "aprovacao" })
       .returning();
     await notifyProject(id, "arquivo", `Novo arquivo para aprovação: *${body.nome}*\nAbra o portal para revisar.`);
     return NextResponse.json({ ok: true, item: rows[0] }, { status: 201 });

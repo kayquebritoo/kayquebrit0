@@ -3,6 +3,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/kbos/db";
 import { projects, users } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
+import { projectCreateSchema, readBody } from "@/lib/kbos/validators";
 
 // GET: equipe vê tudo; cliente vê só os próprios.
 export async function GET() {
@@ -26,25 +27,24 @@ export async function POST(req: Request) {
   const d = deny(user, "admin");
   if (d) return d;
   try {
-    const body = await req.json();
-    if (!body.titulo || !body.categoria) {
-      return NextResponse.json({ error: "Título e categoria são obrigatórios." }, { status: 400 });
-    }
-    let clienteId: string | null = body.clienteId || null;
+    const parsed = await readBody(req, projectCreateSchema);
+    if ("error" in parsed) return parsed.error;
+    const body = parsed.data;
+    let clienteId: string | null = body.clienteId ?? null;
     if (!clienteId && body.clienteEmail) {
       const cli = (
-        await db().select().from(users).where(eq(users.email, String(body.clienteEmail).toLowerCase())).limit(1)
+        await db().select().from(users).where(eq(users.email, body.clienteEmail.toLowerCase())).limit(1)
       )[0];
       clienteId = cli?.id ?? null;
     }
     const rows = await db()
       .insert(projects)
       .values({
-        titulo: String(body.titulo),
-        categoria: String(body.categoria),
+        titulo: body.titulo,
+        categoria: body.categoria,
         clienteId,
-        briefingId: body.briefingId || null,
-        valor: body.valor ? String(body.valor) : null,
+        briefingId: body.briefingId ?? null,
+        valor: body.valor ?? null,
         prazo: body.prazo ? new Date(body.prazo) : null,
       })
       .returning();

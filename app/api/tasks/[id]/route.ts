@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/kbos/db";
 import { tasks } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
+import { checkId, readBody, taskPatchSchema } from "@/lib/kbos/validators";
 
 // PATCH: atualiza status/título da tarefa (equipe).
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -11,15 +12,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (denied) return denied;
   try {
     const { id } = await params;
-    const body = await req.json();
+    const bad = checkId(id);
+    if (bad) return bad;
+    const parsed = await readBody(req, taskPatchSchema);
+    if ("error" in parsed) return parsed.error;
+    const body = parsed.data;
     const patch: Record<string, unknown> = {};
-    if (body.status !== undefined) {
-      if (!["todo", "doing", "done"].includes(body.status)) {
-        return NextResponse.json({ error: "Status inválido." }, { status: 400 });
-      }
-      patch.status = body.status;
-    }
-    if (body.titulo !== undefined) patch.titulo = String(body.titulo);
+    if (body.status !== undefined) patch.status = body.status;
+    if (body.titulo !== undefined) patch.titulo = body.titulo;
     await db().update(tasks).set(patch).where(eq(tasks.id, id));
     return NextResponse.json({ ok: true });
   } catch (e) {

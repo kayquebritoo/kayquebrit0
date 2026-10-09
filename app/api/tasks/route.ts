@@ -3,6 +3,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/kbos/db";
 import { tasks } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
+import { checkId, readBody, taskCreateSchema } from "@/lib/kbos/validators";
 
 const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as const;
 
@@ -12,6 +13,8 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   const projectId = new URL(req.url).searchParams.get("projectId");
   if (!projectId) return NextResponse.json({ error: "projectId obrigatório." }, { status: 400 });
+  const bad = checkId(projectId);
+  if (bad) return bad;
   const rows = await db()
     .select()
     .from(tasks)
@@ -26,17 +29,16 @@ export async function POST(req: Request) {
   const denied = deny(user, ...STAFF);
   if (denied) return denied;
   try {
-    const body = await req.json();
-    if (!body.projectId || !body.titulo) {
-      return NextResponse.json({ error: "projectId e titulo são obrigatórios." }, { status: 400 });
-    }
+    const parsed = await readBody(req, taskCreateSchema);
+    if ("error" in parsed) return parsed.error;
+    const body = parsed.data;
     const rows = await db()
       .insert(tasks)
       .values({
         projectId: body.projectId,
-        titulo: String(body.titulo),
-        responsavelRole: body.responsavelRole || null,
-        estimativaMin: body.estimativaMin ? Number(body.estimativaMin) : null,
+        titulo: body.titulo,
+        responsavelRole: body.responsavelRole ?? null,
+        estimativaMin: body.estimativaMin ?? null,
       })
       .returning();
     return NextResponse.json({ ok: true, item: rows[0] }, { status: 201 });

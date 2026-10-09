@@ -3,6 +3,7 @@ import { desc } from "drizzle-orm";
 import { db } from "@/lib/kbos/db";
 import { transactions } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
+import { readBody, transactionCreateSchema } from "@/lib/kbos/validators";
 
 // ERP básico — só admin. Filtros: ?tipo=entrada|saida&status=pendente|pago|vencido
 export async function GET(req: Request) {
@@ -33,20 +34,19 @@ export async function POST(req: Request) {
   const denied = deny(user, "admin");
   if (denied) return denied;
   try {
-    const b = await req.json();
-    if (!["entrada", "saida"].includes(b.tipo) || !b.descricao || b.valor === undefined) {
-      return NextResponse.json({ error: "tipo, descricao e valor são obrigatórios." }, { status: 400 });
-    }
+    const parsed = await readBody(req, transactionCreateSchema);
+    if ("error" in parsed) return parsed.error;
+    const b = parsed.data;
     const rows = await db()
       .insert(transactions)
       .values({
         tipo: b.tipo,
-        descricao: String(b.descricao),
-        categoria: b.categoria || null,
-        valor: String(b.valor),
+        descricao: b.descricao,
+        categoria: b.categoria ?? null,
+        valor: b.valor,
         vencimento: b.vencimento ? new Date(b.vencimento) : null,
-        status: ["pendente", "pago", "vencido"].includes(b.status) ? b.status : "pendente",
-        projectId: b.projectId || null,
+        status: b.status ?? "pendente",
+        projectId: b.projectId ?? null,
       })
       .returning();
     return NextResponse.json({ ok: true, item: rows[0] }, { status: 201 });

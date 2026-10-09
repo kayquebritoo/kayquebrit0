@@ -4,14 +4,19 @@ import { db } from "@/lib/kbos/db";
 import { briefings } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { getCategory } from "@/lib/kbos/briefing-forms";
+import { briefingCreateSchema, readBody } from "@/lib/kbos/validators";
+import { withRateLimit } from "@/lib/kbos/rate-limit";
 
 // POST público: cria briefing a partir do form dinâmico.
 export async function POST(req: Request) {
+  const limited = await withRateLimit(req, "briefings:create");
+  if (limited) return limited;
   try {
-    const body = await req.json();
-    const cat = getCategory(String(body.categoria || ""));
+    const parsed = await readBody(req, briefingCreateSchema);
+    if ("error" in parsed) return parsed.error;
+    const { categoria, respostas } = parsed.data;
+    const cat = getCategory(categoria);
     if (!cat) return NextResponse.json({ error: "Categoria inválida." }, { status: 400 });
-    const respostas: Record<string, string> = body.respostas || {};
     for (const f of cat.fields) {
       if (f.required && !String(respostas[f.name] || "").trim()) {
         return NextResponse.json({ error: `Campo obrigatório: ${f.label}` }, { status: 400 });

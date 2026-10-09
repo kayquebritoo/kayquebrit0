@@ -3,6 +3,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/kbos/db";
 import { timeEntries } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
+import { checkId, readBody, timeSchema } from "@/lib/kbos/validators";
 
 const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as const;
 
@@ -12,6 +13,8 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   const projectId = new URL(req.url).searchParams.get("projectId");
   if (!projectId) return NextResponse.json({ error: "projectId obrigatório." }, { status: 400 });
+  const bad = checkId(projectId);
+  if (bad) return bad;
   const rows = await db()
     .select()
     .from(timeEntries)
@@ -29,8 +32,9 @@ export async function POST(req: Request) {
   const denied = deny(user, ...STAFF);
   if (denied) return denied;
   try {
-    const { action, projectId, taskId } = await req.json();
-    if (!projectId) return NextResponse.json({ error: "projectId obrigatório." }, { status: 400 });
+    const parsed = await readBody(req, timeSchema);
+    if ("error" in parsed) return parsed.error;
+    const { action, projectId, taskId } = parsed.data;
     const d = db();
     if (action === "start") {
       const open = (

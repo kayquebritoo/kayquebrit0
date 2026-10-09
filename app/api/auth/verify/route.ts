@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { consumeMagicLink } from "@/lib/kbos/auth";
 import { SESSION_COOKIE, sessionCookieOptions, SESSION_DAYS } from "@/lib/kbos/rbac";
+import { withRateLimit } from "@/lib/kbos/rate-limit";
 
 export async function GET(req: Request) {
+  const limited = await withRateLimit(req, "auth:verify");
+  if (limited) return limited;
   const url = new URL(req.url);
   const token = url.searchParams.get("token") || "";
   const next = url.searchParams.get("next") || "/portal";
