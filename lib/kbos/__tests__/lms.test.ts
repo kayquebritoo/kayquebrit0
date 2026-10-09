@@ -1,6 +1,8 @@
 // Unitários do LMS — regras puras + schemas (sem I/O).
 import { describe, expect, it } from "vitest";
-import { isConflict, isLessonUnlocked, slugify, unlocksAt } from "../lms";
+import { isConflict, isLessonUnlocked, unlocksAt } from "../lms";
+import { slugify, youtubeId } from "../lms-client";
+import { buildPreferenceBody } from "../mercadopago";
 import {
   courseCreateSchema,
   enrollmentCreateSchema,
@@ -40,6 +42,29 @@ describe("isConflict", () => {
     expect(isConflict(inner)).toBe(true);
     expect(isConflict(new Error("outro"))).toBe(false);
     expect(isConflict(null)).toBe(false);
+  });
+});
+
+describe("youtubeId", () => {
+  it("extrai de watch, embed, shorts e youtu.be", () => {
+    expect(youtubeId("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
+    expect(youtubeId("https://www.youtube.com/embed/dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
+    expect(youtubeId("https://youtu.be/dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
+    expect(youtubeId("https://www.youtube.com/shorts/dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
+  });
+  it("null p/ vazio ou não-YouTube", () => {
+    expect(youtubeId(null)).toBeNull();
+    expect(youtubeId("https://cdn.site.com/aula1.mp4")).toBeNull();
+  });
+});
+
+describe("buildPreferenceBody", () => {
+  it("monta itens em BRL + external_reference + notification", () => {
+    const b = buildPreferenceBody({ titulo: "Curso X", preco: 497.9, externalReference: "lms:abc" });
+    expect(b.items).toEqual([{ title: "Curso X", quantity: 1, unit_price: 497.9, currency_id: "BRL" }]);
+    expect(b.external_reference).toBe("lms:abc");
+    expect(b.auto_return).toBe("approved");
+    expect(String(b.notification_url)).toContain("/api/webhooks/mercadopago");
   });
 });
 

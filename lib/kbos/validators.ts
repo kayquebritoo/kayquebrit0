@@ -199,6 +199,9 @@ export const progressCompleteSchema = z.object({
   enrollmentId: uuidField,
   lessonId: uuidField,
 });
+export const checkoutSchema = z.object({
+  courseId: uuidField,
+});
 
 /* ---------- leitura validada ---------- */
 

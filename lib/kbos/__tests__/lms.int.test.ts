@@ -5,7 +5,7 @@ import { randomUUID } from "crypto";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { afterEach, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, like } from "drizzle-orm";
 
 try {
   const raw = readFileSync(resolve(process.cwd(), ".env.local"), "utf8");
@@ -26,9 +26,9 @@ try {
 const RUN = !!process.env.KBOS_TEST_REDIS && !!process.env.DATABASE_URL;
 
 const { db } = await import("../db");
-const { certificates, courses, enrollments, lessonProgress, lessons, modules, users } =
+const { certificates, courses, enrollments, lessonProgress, lessons, modules, transactions, users } =
   await import("../schema");
-const { completeLesson, ensureCertificate, getProgressSummary } = await import("../lms");
+const { completeLesson, createCheckoutEnrollment, ensureCertificate, getProgressSummary, verifyCertificate } = await import("../lms");
 const { enqueueJob, getQueue } = await import("../jobs");
 const { processJob } = await import("../../../worker/runner");
 
@@ -65,6 +65,7 @@ afterEach(async () => {
   for (const id of created.users.splice(0)) {
     await d.delete(users).where(eq(users.id, id));
   }
+  await d.delete(transactions).where(like(transactions.descricao, "Matrícula — Curso T lms-t-%"));
 });
 
 async function makeUser(phone: string | null = null) {
@@ -151,8 +152,7 @@ describe.skipIf(!RUN)("LMS (db+redis)", () => {
     });
   }, 60_000);
 
-  it("welcome: sem telefone = skip; com telefone = enfileira notify", async () => {
-    const semFone = await makeUser(null);
+  it("welcome: sem telefone = skip; com telefone = enfileira notify", async () => {    const semFone = await makeUser(null);
     const r1 = await processJob({
       id: `test--${randomUUID()}`,
       name: "lms.welcome",
@@ -187,10 +187,56 @@ describe.skipIf(!RUN)("LMS (db+redis)", () => {
     const r3b = await enqueueJob("lms.welcome", { enrollmentId: enr2.id }, { key });
     expect(r3b.deduped).toBe(true);
   }, 60_000);
+
+  it("checkout: cria matrícula pendente + transação vinculada (preço do banco)", async () => {
+    const aluno = await makeUser();
+    const course = await makeCourseWithPrice("199.90");
+    const ready = await createCheckoutEnrollment(aluno.id, course.id);
+    created.enrollments.push(ready.enrollment.id);
+    expect(ready.enrollment.status).toBe("pendente");
+    expect(ready.reused).toBe(false);
+    expect(ready.transaction.tipo).toBe("entrada");
+    expect(ready.transaction.status).toBe("pendente");
+    expect(Number(ready.transaction.valor)).toBe(199.9);
+    expect(ready.enrollment.transactionId).toBe(ready.transaction.id);
+    // segunda chamada reaproveita (ainda pendente)
+    const again = await createCheckoutEnrollment(aluno.id, course.id);
+    expect(again.reused).toBe(true);
+    expect(again.enrollment.id).toBe(ready.enrollment.id);
+    // limpa transação criada
+    await db().delete(transactions).where(eq(transactions.id, ready.transaction.id));
+  }, 60_000);
+
+  it("checkout: curso rascunho / sem preço / matrícula ativa → erro", async () => {
+    const aluno = await makeUser();
+    const draft = await makeCourseWithPrice("99.90", "rascunho");
+    await expect(createCheckoutEnrollment(aluno.id, draft.id)).rejects.toMatchObject({ code: "conflict" });
+    const free = await makeCourseWithPrice(null, "publicado");
+    await expect(createCheckoutEnrollment(aluno.id, free.id)).rejects.toMatchObject({ code: "conflict" });
+    const paid = await makeCourseWithPrice("50.00");
+    const enr = (
+      await db().insert(enrollments).values({ courseId: paid.id, userId: aluno.id, status: "ativa" }).returning()
+    )[0];
+    created.enrollments.push(enr.id);
+    await expect(createCheckoutEnrollment(aluno.id, paid.id)).rejects.toMatchObject({ code: "conflict" });
+  }, 60_000);
+
+  it("verifyCertificate: roundtrip + case-insensitive + inválido", async () => {
+    const aluno = await makeUser();
+    const course = await makeCourseLessonsSetup();
+    const enr = (
+      await db().insert(enrollments).values({ courseId: course.id, userId: aluno.id, status: "ativa" }).returning()
+    )[0];
+    created.enrollments.push(enr.id);
+    const cert = await ensureCertificate(enr.id);
+    const ok = await verifyCertificate(cert.codigo.toLowerCase());
+    expect(ok).toMatchObject({ valido: true, codigo: cert.codigo, curso: expect.any(String), aluno: "Aluno T" });
+    expect(await verifyCertificate("KBOS-XXXX-XXXX")).toEqual({ valido: false });
+    expect(await verifyCertificate("")).toEqual({ valido: false });
+  }, 60_000);
 });
 
-async function makeCourseLessonsSetup(dripSecond = 0) {
-  const d = db();
+async function makeCourseLessonsSetup(dripSecond = 0) {  const d = db();
   const c = (
     await d
       .insert(courses)
@@ -201,5 +247,22 @@ async function makeCourseLessonsSetup(dripSecond = 0) {
   const m = (await d.insert(modules).values({ courseId: c.id, titulo: "M1", ordem: 0 }).returning())[0];
   await d.insert(lessons).values({ moduleId: m.id, titulo: "A1", ordem: 0, dripDays: 0 });
   await d.insert(lessons).values({ moduleId: m.id, titulo: "A2", ordem: 1, dripDays: dripSecond });
+  return c;
+}
+
+async function makeCourseWithPrice(preco: string | null, status: "rascunho" | "publicado" = "publicado") {
+  const d = db();
+  const c = (
+    await d
+      .insert(courses)
+      .values({
+        titulo: `Curso T ${TAG}`,
+        slug: `curso-t-${TAG}-${randomUUID().slice(0, 6)}`,
+        status,
+        ...(preco === null ? {} : { preco }),
+      })
+      .returning()
+  )[0];
+  created.courses.push(c.id);
   return c;
 }

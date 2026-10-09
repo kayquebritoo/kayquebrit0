@@ -22,6 +22,10 @@ export function middleware(req: NextRequest) {
   const isLmsCatalog =
     req.method === "GET" && /^\/api\/lms\/courses(\/[^/]+)?$/.test(path);
   if (isLmsCatalog) return NextResponse.next();
+  // Verificação pública de certificado (terceiros validam autenticidade).
+  const isCertVerify =
+    req.method === "GET" && /^\/api\/lms\/certificates\/verify\/?$/.test(path);
+  if (isCertVerify) return NextResponse.next();
   const needsAuth =
     pathname.startsWith("/portal") ||
     pathname.startsWith("/admin") ||

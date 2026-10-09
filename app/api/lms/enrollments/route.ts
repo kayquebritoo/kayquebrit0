@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/kbos/db";
-import { courses, enrollments, transactions } from "@/lib/kbos/schema";
+import { courses, enrollments, transactions, users } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { checkId, enrollmentCreateSchema, readBody } from "@/lib/kbos/validators";
 import { buildIdempotencyKey, enqueueJob } from "@/lib/kbos/jobs";
@@ -29,7 +29,17 @@ export async function GET(req: Request) {
           .where(eq(enrollments.userId, user.id))
           .orderBy(desc(enrollments.createdAt));
     const items = courseId ? rows.filter((r) => r.courseId === courseId) : rows;
-    return NextResponse.json({ items });
+    // Equipe vê quem é o aluno (join p/ nome/e-mail); aluno vê só o próprio.
+    if (!isStaff(user.role)) return NextResponse.json({ items });
+    const withAlunos = await Promise.all(
+      items.map(async (e) => {
+        const aluno = (
+          await d.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, e.userId)).limit(1)
+        )[0];
+        return { ...e, aluno: aluno ?? null };
+      })
+    );
+    return NextResponse.json({ items: withAlunos });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
   }

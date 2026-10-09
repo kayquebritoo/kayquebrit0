@@ -4,6 +4,7 @@
 import { randomBytes } from "crypto";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "./db";
+import { slugify } from "./lms-client";
 import {
   certificates,
   courses,
@@ -11,6 +12,7 @@ import {
   lessonProgress,
   lessons,
   modules,
+  transactions,
   users,
 } from "./schema";
 import { buildIdempotencyKey, enqueueJob } from "./jobs";
@@ -26,17 +28,6 @@ export class LmsError extends Error {
 
 export function lmsStatus(code: LmsError["code"]) {
   return code === "not-found" ? 404 : code === "forbidden" ? 403 : code === "conflict" ? 409 : 423;
-}
-
-/** slug url-safe a partir do título. */
-export function slugify(titulo: string) {
-  return titulo
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
 }
 
 /** slug único (sufixo curto em colisão). */
@@ -278,4 +269,106 @@ export function welcomeMessage(nome: string, curso: string) {
     `Olá ${nome}! Sua matrícula está confirmada.\n` +
     `Acesse suas aulas aqui: ${appUrl()}/portal\nBons estudos!`
   );
+}
+
+/* ---------- checkout ---------- */
+
+export type CheckoutReady = {
+  enrollment: typeof enrollments.$inferSelect;
+  transaction: typeof transactions.$inferSelect;
+  reused: boolean;
+};
+
+/**
+ * Prepara o checkout: valida curso (publicado + preço), reaproveita matrícula
+ * pendente/pausada ou cria uma nova + transação `pendente` vinculada.
+ * 409 se já existe matrícula ativa/concluída. Preço SEMPRE do banco.
+ */
+export async function createCheckoutEnrollment(
+  userId: string,
+  courseId: string
+): Promise<CheckoutReady> {
+  const d = db();
+  const course = (
+    await d.select().from(courses).where(eq(courses.id, courseId)).limit(1)
+  )[0];
+  if (!course) throw new LmsError("not-found", "Curso não encontrado.");
+  if (course.status !== "publicado") throw new LmsError("conflict", "Curso indisponível para venda.");
+  const preco = Number(course.preco ?? 0);
+  if (!Number.isFinite(preco) || preco <= 0) {
+    throw new LmsError("conflict", "Curso sem preço definido.");
+  }
+
+  const mine = await d
+    .select()
+    .from(enrollments)
+    .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, courseId)))
+    .limit(1);
+  const existing = mine[0];
+  if (existing && (existing.status === "ativa" || existing.status === "concluida")) {
+    throw new LmsError("conflict", "Você já está matriculado neste curso.");
+  }
+  if (existing && existing.status !== "cancelada") {
+    const trx = existing.transactionId
+      ? (
+          await d.select().from(transactions).where(eq(transactions.id, existing.transactionId)).limit(1)
+        )[0]
+      : undefined;
+    if (!trx) throw new LmsError("not-found", "Transação da matrícula sumiu — fale com o suporte.");
+    return { enrollment: existing, transaction: trx, reused: true };
+  }
+
+  try {
+    const trxRows = await d
+      .insert(transactions)
+      .values({
+        tipo: "entrada",
+        descricao: `Matrícula — ${course.titulo}`,
+        categoria: "lms",
+        valor: String(preco),
+        status: "pendente",
+      })
+      .returning();
+    const enrRows = await d
+      .insert(enrollments)
+      .values({ courseId, userId, status: "pendente", transactionId: trxRows[0].id })
+      .returning();
+    return { enrollment: enrRows[0], transaction: trxRows[0], reused: false };
+  } catch (e) {
+    if (isConflict(e)) throw new LmsError("conflict", "Você já está matriculado neste curso.");
+    throw e;
+  }
+}
+
+/* ---------- verificação pública de certificado ---------- */
+
+export type CertificateCheck =
+  | { valido: true; codigo: string; curso: string; aluno: string; emitidaEm: string }
+  | { valido: false };
+
+export async function verifyCertificate(codigoRaw: string): Promise<CertificateCheck> {
+  const codigo = codigoRaw.trim().toUpperCase();
+  if (!codigo) return { valido: false };
+  const d = db();
+  const cert = (
+    await d.select().from(certificates).where(eq(certificates.codigo, codigo)).limit(1)
+  )[0];
+  if (!cert) return { valido: false };
+  const enr = (
+    await d.select().from(enrollments).where(eq(enrollments.id, cert.enrollmentId)).limit(1)
+  )[0];
+  const course = enr
+    ? (await d.select().from(courses).where(eq(courses.id, enr.courseId)).limit(1))[0]
+    : undefined;
+  const aluno = enr
+    ? (await d.select().from(users).where(eq(users.id, enr.userId)).limit(1))[0]
+    : undefined;
+  if (!enr || !course || !aluno) return { valido: false };
+  return {
+    valido: true,
+    codigo: cert.codigo,
+    curso: course.titulo,
+    aluno: aluno.name,
+    emitidaEm: cert.emitidaEm.toISOString(),
+  };
 }

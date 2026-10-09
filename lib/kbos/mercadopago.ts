@@ -56,3 +56,61 @@ export async function fetchMpPayment(paymentId: string, token: string): Promise<
     return null;
   }
 }
+
+/* ---------- checkout (preferências) ---------- */
+
+function appUrl() {
+  return (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+}
+
+export type PreferenceInput = {
+  titulo: string;
+  preco: number;
+  externalReference: string;
+};
+
+/** Corpo da preferência — puro e testável (preço sempre do servidor). */
+export function buildPreferenceBody(input: PreferenceInput) {
+  const base = appUrl();
+  return {
+    items: [
+      {
+        title: input.titulo.slice(0, 200),
+        quantity: 1,
+        unit_price: Math.round(input.preco * 100) / 100,
+        currency_id: "BRL",
+      },
+    ],
+    external_reference: input.externalReference,
+    back_urls: {
+      success: `${base}/portal/cursos?pagamento=aprovado`,
+      failure: `${base}/portal/cursos?pagamento=recusado`,
+      pending: `${base}/portal/cursos?pagamento=pendente`,
+    },
+    auto_return: "approved",
+    notification_url: `${base}/api/webhooks/mercadopago`,
+  };
+}
+
+export type MpPreference = { id: string; init_point: string };
+
+/** Cria a preferência de checkout (null = sem credencial ou falha). */
+export async function createMpPreference(
+  input: PreferenceInput,
+  token: string
+): Promise<MpPreference | null> {
+  try {
+    const res = await fetch("https://api.mercadopago.com/checkout/preferences", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(buildPreferenceBody(input)),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return null;
+    const p = (await res.json()) as { id?: unknown; init_point?: unknown };
+    if (!p.id || !p.init_point) return null;
+    return { id: String(p.id), init_point: String(p.init_point) };
+  } catch {
+    return null;
+  }
+}

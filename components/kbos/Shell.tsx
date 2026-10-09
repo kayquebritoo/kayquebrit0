@@ -77,11 +77,13 @@ export function KbosShell({
           <div className="flex items-center gap-3">
             <nav className="flex flex-wrap items-center gap-2 text-[12px] uppercase tracking-[0.15em]">
               <Link href="/portal" className="rounded-full border border-white/15 px-4 py-2 text-white/70 hover:text-white">Portal</Link>
+              <Link href="/portal/cursos" className="rounded-full border border-white/15 px-4 py-2 text-white/70 hover:text-white">Meus cursos</Link>
               {user.role !== "cliente" && (
                 <Link href="/admin/projetos" className="rounded-full border border-white/15 px-4 py-2 text-white/70 hover:text-white">Projetos</Link>
               )}
               {user.role === "admin" && (
                 <>
+                  <Link href="/admin/cursos" className="rounded-full border border-white/15 px-4 py-2 text-white/70 hover:text-white">Cursos</Link>
                   <Link href="/admin/financeiro" className="rounded-full border border-white/15 px-4 py-2 text-white/70 hover:text-white">Financeiro</Link>
                   <Link href="/admin/briefings" className="rounded-full border border-white/15 px-4 py-2 text-white/70 hover:text-white">Briefings</Link>
                 </>

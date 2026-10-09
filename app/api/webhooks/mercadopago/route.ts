@@ -72,6 +72,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, verified: true, applied: false, reason: "matrícula cancelada" });
     }
     await d.update(enrollments).set({ status: "ativa", updatedAt: new Date() }).where(eq(enrollments.id, enr.id));
+    if (enr.transactionId) {
+      await d
+        .update(transactions)
+        .set({ status: "pago", gatewayRef: payment.id })
+        .where(eq(transactions.id, enr.transactionId));
+    }
     const w = await enqueueJob(
       "lms.welcome",
       { enrollmentId: enr.id },
