@@ -98,7 +98,7 @@ services:
     restart: unless-stopped
 
   evolution:
-    image: atendai/evolution-api:v2
+    image: evoapicloud/evolution-api:v2.3.7
     profiles: ["evolution"]
     ports:
       - "${EVO_PORT:-8080}:8080"
