@@ -501,63 +501,324 @@ a.m-hero-in { animation-delay: 0.18s; }
   100% { left: 110%; opacity: 0; }
 }
 
-/* ---------- MODO CLARO (opcional; padrão é dark) ----------
-   Inverte superfícies e textos via classe `light` no <html>.
-   Mídias e fotos mantidas — só o chrome tipográfico adapta. */
+/* ============================================================
+   MODO CLARO PREMIUM — "Papel Quente"
+   Paleta harmônica ao dark validado (não dói a vista):
+   - dark: fundo #0B0B1E (azul-noite) · tinta #F4F1EC (off-white quente) · acento #9DB8E8 (gelo)
+   - light: fundo #F1EEE7 (mesmo off-white quente, como papel) · tinta #17172E (azul-noite
+     suavizado p/ leitura) · acento #2D4B9B (mesmo matiz do gelo, escurecido p/ contraste)
+   NUNCA branco puro #FFF como fundo — causa fadiga. Superfícies são #FFFFFF sobre o
+   papel, com borda tinta 12% + sombra quente suave (elevação premium).
+   Ativação: classe `light` no <html> (Providers.tsx) + color-scheme.
+   Estratégia: overrides por substring de classe (cobre `hover:`/`active:`/`md:` pois
+   o utilitário aparece dentro da string de classe). Contextos sobre FOTO
+   (.proj-card/.work-card + badges/overlays) são re-afirmados claros no final.
+   ============================================================ */
+html.light {
+  --lb-bg: #f1eee7;
+  --lb-bg-soft: #e9e4d6;
+  --lb-surface: #ffffff;
+  --lb-ink: #17172e;
+  --lb-accent: #2d4b9b;
+  color-scheme: light;
+}
 html.light body {
-  background: #f4f1ec;
-  color: #14142b;
+  background: var(--lb-bg);
+  color: var(--lb-ink);
 }
+/* transição suave de tema (não interfere no GSAP: só cor/fundo/borda) */
+html.light body, html.light main, html.light section, html.light header {
+  transition: background-color 0.45s ease, color 0.45s ease, border-color 0.45s ease;
+}
+
+/* ---------- 1 · fundos base (seções, páginas, fullpage) ---------- */
+html.light main,
+html.light section[class*="bg-[#0B0B1E]"],
+html.light div[class*="bg-[#0B0B1E]"]:not([class*="bg-[#0B0B1E]/"]),
 html.light .bg-\[\#0B0B1E\] {
-  background-color: #f4f1ec !important;
+  background-color: var(--lb-bg) !important;
 }
-html.light .bg-\[\#12122a\],
-html.light .bg-\[\#131316\] {
-  background-color: #e9e4d9 !important;
+/* vidros translúcidos sobre o hero/foto: viram vidro CLARO legível */
+html.light [class*="bg-[#0B0B1E]/"] {
+  background-color: rgba(255, 255, 255, 0.72) !important;
 }
+/* cards escuros sólidos → superfície branca premium com elevação */
+html.light [class*="bg-[#131316]"],
+html.light [class*="bg-[#12122a]"],
+html.light [class*="bg-[#0e0e22]"] {
+  background-color: var(--lb-surface) !important;
+  border-color: rgba(23, 23, 46, 0.1) !important;
+  box-shadow: 0 24px 60px -28px rgba(23, 23, 46, 0.22) !important;
+}
+/* placeholders de mídia (atrás das fotos) → bege quente */
+html.light [class*="bg-[#1a1a2e]"],
+html.light [class*="bg-[#14141f]"],
+html.light [class*="bg-[#2a2a30]"],
+html.light [class*="bg-[#101014]"] {
+  background-color: var(--lb-bg-soft) !important;
+}
+html.light [class*="bg-[#e8e4dc]"] {
+  background-color: #e8e4dc !important;
+}
+
+/* véus de leitura do hero (gradientes escuros) → véus de papel */
+html.light [class*="from-[#0B0B1E]"] {
+  background-image: linear-gradient(to bottom, rgba(241, 238, 231, 0.88), transparent 45%, rgba(241, 238, 231, 0.94)) !important;
+}
+html.light .hero-person-float {
+  filter: drop-shadow(0 24px 40px rgba(23, 23, 46, 0.22));
+}
+
+/* ---------- 2 · textos ---------- */
 html.light .text-white,
-html.light .text-\[\#F4F1EC\] {
-  color: #14142b !important;
+html.light [class*="text-[#F4F1EC]"] {
+  color: var(--lb-ink) !important;
 }
-html.light [class*="text-white/"] {
-  color: rgba(20, 20, 43, 0.72) !important;
+html.light [class*="text-[#9DB8E8]"] {
+  color: var(--lb-accent) !important;
 }
-html.light .text-\[\#9DB8E8\] {
-  color: #2b4b8f !important;
+html.light .text-black {
+  color: var(--lb-bg) !important;
 }
-html.light [class*="border-white"] {
-  border-color: rgba(20, 20, 43, 0.22) !important;
+/* opacidades de branco → tinta com a mesma hierarquia */
+html.light [class*="text-white/90"] { color: rgba(23, 23, 46, 0.9) !important; }
+html.light [class*="text-white/85"] { color: rgba(23, 23, 46, 0.85) !important; }
+html.light [class*="text-white/80"] { color: rgba(23, 23, 46, 0.8) !important; }
+html.light [class*="text-white/75"] { color: rgba(23, 23, 46, 0.75) !important; }
+html.light [class*="text-white/70"] { color: rgba(23, 23, 46, 0.7) !important; }
+html.light [class*="text-white/65"] { color: rgba(23, 23, 46, 0.65) !important; }
+html.light [class*="text-white/60"] { color: rgba(23, 23, 46, 0.62) !important; }
+html.light [class*="text-white/55"] { color: rgba(23, 23, 46, 0.58) !important; }
+html.light [class*="text-white/50"] { color: rgba(23, 23, 46, 0.55) !important; }
+html.light [class*="text-white/45"] { color: rgba(23, 23, 46, 0.5) !important; }
+html.light [class*="text-white/40"] { color: rgba(23, 23, 46, 0.45) !important; }
+html.light [class*="text-white/35"] { color: rgba(23, 23, 46, 0.4) !important; }
+html.light [class*="text-white/30"] { color: rgba(23, 23, 46, 0.36) !important; }
+html.light [class*="text-white/25"] { color: rgba(23, 23, 46, 0.32) !important; }
+html.light [class*="text-black/50"] { color: rgba(241, 238, 231, 0.65) !important; }
+html.light [class*="placeholder:text-white"]::placeholder { color: rgba(23, 23, 46, 0.38) !important; }
+
+/* ---------- 3 · bordas / divisórias ---------- */
+html.light [class*="border-white/90"] { border-color: rgba(23, 23, 46, 0.8) !important; }
+html.light [class*="border-white/80"] { border-color: rgba(23, 23, 46, 0.4) !important; }
+html.light [class*="border-white/60"] { border-color: rgba(23, 23, 46, 0.45) !important; }
+html.light [class*="border-white/40"] { border-color: rgba(23, 23, 46, 0.3) !important; }
+html.light [class*="border-white/25"] { border-color: rgba(23, 23, 46, 0.24) !important; }
+html.light [class*="border-white/20"] { border-color: rgba(23, 23, 46, 0.18) !important; }
+html.light [class*="border-white/15"] { border-color: rgba(23, 23, 46, 0.15) !important; }
+html.light [class*="border-white/10"] { border-color: rgba(23, 23, 46, 0.12) !important; }
+html.light [class*="border-white"]:not([class*="border-white/"]) { border-color: rgba(23, 23, 46, 0.55) !important; }
+html.light [class*="divide-white"] > * + * { border-color: rgba(23, 23, 46, 0.12) !important; }
+html.light [class*="bg-white/25"] { background-color: rgba(23, 23, 46, 0.14) !important; }
+
+/* ---------- 4 · botões sólidos (dark: branco/preto → light: tinta/papel) ---------- */
+html.light .bg-white:not([class*="bg-white/"]):not([class*="bg-white["]) {
+  background-color: var(--lb-ink) !important;
+  color: var(--lb-bg) !important;
+  box-shadow: 0 18px 44px -18px rgba(23, 23, 46, 0.5) !important;
 }
-html.light .glass-menu {
-  background:
-    radial-gradient(120% 90% at 50% 0%, rgba(43, 75, 143, 0.1), transparent 60%),
-    linear-gradient(180deg, rgba(244, 241, 236, 0.94), rgba(244, 241, 236, 0.97));
+html.light [class*="hover:bg-white"]:hover {
+  background-color: var(--lb-ink) !important;
+  color: var(--lb-bg) !important;
 }
-html.light .ref-eyebrow {
-  color: rgba(20, 20, 43, 0.66);
+html.light [class*="hover:text-[#0B0B1E]"]:hover { color: var(--lb-bg) !important; }
+html.light [class*="active:bg-white"]:active {
+  background-color: var(--lb-ink) !important;
+  color: var(--lb-bg) !important;
 }
-html.light .fp-dot {
-  border-color: rgba(20, 20, 43, 0.3);
+html.light [class*="active:text-[#0B0B1E]"]:active { color: var(--lb-bg) !important; }
+html.light [class*="hover:text-white"]:hover { color: var(--lb-ink) !important; }
+html.light [class*="hover:border-white"]:hover { border-color: rgba(23, 23, 46, 0.5) !important; }
+html.light [class*="group-hover:bg-white"] { --tw-bg-opacity: 1; }
+/* brilho varrendo os CTAs: branco invisível no papel → véu de acento */
+html.light .hero-cta-shine {
+  background-image: linear-gradient(to right, transparent, rgba(45, 75, 155, 0.22), transparent) !important;
 }
-html.light .fp-dot.active {
-  background: #14142b;
-  border-color: #14142b;
+/* cards sutis bg-white/[0.0x] → brancos reais com borda */
+html.light [class*="bg-white/[0.02]"],
+html.light [class*="bg-white/[0.03]"],
+html.light [class*="bg-white/[0.04]"] {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  border-color: rgba(23, 23, 46, 0.1) !important;
+  box-shadow: 0 20px 55px -30px rgba(23, 23, 46, 0.25) !important;
+  backdrop-filter: blur(12px);
 }
-/* logos: sem o invert viram pretas (o arquivo é claro) */
-html.light .brightness-0 {
+html.light [class*="bg-white/10"]:not(.proj-card *):not(.work-card *) {
+  background-color: rgba(23, 23, 46, 0.07) !important;
+}
+html.light [class*="bg-white/5"] { background-color: rgba(23, 23, 46, 0.05) !important; }
+html.light [class*="bg-white/80"] { background-color: rgba(23, 23, 46, 0.85) !important; }
+html.light [class*="bg-white/85"] { background-color: rgba(23, 23, 46, 0.85) !important; }
+
+/* ---------- 5 · campos / dark glass → papel ---------- */
+html.light [class*="bg-black/30"],
+html.light [class*="bg-black/20"] {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(23, 23, 46, 0.18) !important;
+  color: var(--lb-ink) !important;
+}
+html.light [class*="bg-black/60"],
+html.light [class*="bg-black/70"],
+html.light [class*="bg-black/80"] {
+  background-color: rgba(255, 255, 255, 0.82) !important;
+  color: var(--lb-ink) !important;
+}
+html.light input, html.light textarea, html.light select {
+  color: var(--lb-ink) !important;
+  caret-color: var(--lb-accent);
+}
+
+/* ---------- 6 · chrome: header, menu, rails, dots, progresso ---------- */
+html.light header img[class*="brightness-0"] {
   filter: brightness(0) !important;
 }
-/* cards sobre foto mantêm texto claro (a foto não inverte) */
+html.light header [class*="bg-[#F4F1EC]"] { background-color: var(--lb-ink) !important; }
+html.light .glass-menu {
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(45, 75, 155, 0.1), transparent 60%),
+    linear-gradient(180deg, rgba(241, 238, 231, 0.92), rgba(241, 238, 231, 0.97));
+  border-bottom: 1px solid rgba(23, 23, 46, 0.1);
+  box-shadow: 0 30px 80px -30px rgba(23, 23, 46, 0.25);
+}
+html.light .menu-big { color: rgba(23, 23, 46, 0.92) !important; }
+html.light .menu-big:hover { color: var(--lb-ink) !important; }
+html.light .menu-big .menu-num { color: rgba(23, 23, 46, 0.45) !important; }
+html.light .ref-eyebrow { color: rgba(23, 23, 46, 0.62); }
+html.light .fp-dot { border-color: rgba(23, 23, 46, 0.3); background: transparent; }
+html.light .fp-dot:hover { border-color: rgba(23, 23, 46, 0.65); }
+html.light .fp-dot.active { background: var(--lb-ink); border-color: var(--lb-ink); }
+html.light .v-text { color: rgba(23, 23, 46, 0.42) !important; }
+html.light [class*="bg-white/15"]:is(.absolute) { background-color: rgba(23, 23, 46, 0.12) !important; }
+html.light [class*="bg-white/70"].absolute,
+html.light [class*="bg-white/85"].absolute { background-color: rgba(23, 23, 46, 0.7) !important; }
+/* indicador mobile 01/08 */
+html.light [class*="bg-black/30"].fixed {
+  background-color: rgba(255, 255, 255, 0.72) !important;
+  border: 1px solid rgba(23, 23, 46, 0.12);
+  box-shadow: 0 10px 28px -12px rgba(23, 23, 46, 0.3);
+}
+/* auroras: mantém o acento, só suaviza p/ papel */
+html.light [class*="bg-[#9DB8E8]/"] {
+  background-color: rgba(45, 75, 155, 0.1) !important;
+}
+html.light .single-hero-glow {
+  background:
+    radial-gradient(80% 60% at 50% 0%, rgba(45, 75, 155, 0.14), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.6), transparent);
+}
+/* grain fílmico: overlay suja o papel → multiply sutil */
+html.light [class*="mix-blend-overlay"] {
+  mix-blend-mode: multiply !important;
+  opacity: 0.05 !important;
+}
+
+/* ---------- 7 · depoimentos / logos (arquivos claros → tinta) ---------- */
+html.light img[class*="brightness-0"][class*="invert"] {
+  filter: brightness(0) !important;
+  opacity: 0.82;
+}
+html.light .animate-marquee img[class*="invert"] {
+  filter: brightness(0) !important;
+  opacity: 0.6;
+}
+html.light [class*="border-white/20"].rounded-full { border-color: rgba(23, 23, 46, 0.16) !important; }
+
+/* ---------- 8 · contato / links de acento ---------- */
+html.light a[class*="text-[#9DB8E8]"],
+html.light span[class*="text-[#9DB8E8]"],
+html.light div[class*="text-[#9DB8E8]"],
+html.light em[class*="text-[#9DB8E8]"] {
+  color: var(--lb-accent) !important;
+}
+html.light ::selection { background: var(--lb-ink); color: var(--lb-bg); }
+html.light :focus-visible { outline-color: var(--lb-accent); }
+
+/* ---------- 9 · admin/portal/briefing/entrar ---------- */
+html.light code { color: var(--lb-accent); }
+html.light [class*="text-amber-200"] { color: #92600a !important; }
+html.light [class*="text-amber-100"] { color: #7c5308 !important; }
+html.light [class*="bg-amber-300/10"] { background-color: rgba(146, 96, 10, 0.1) !important; }
+html.light [class*="border-amber-300/30"],
+html.light [class*="border-amber-300/40"] { border-color: rgba(146, 96, 10, 0.35) !important; }
+/* status ok/erro: tons pastel escuros p/ contraste no papel */
+html.light [class*="text-emerald-300"],
+html.light [class*="text-emerald-200"] { color: #0c6b3f !important; }
+html.light [class*="text-emerald-100"] { color: #0c6b3f !important; }
+html.light [class*="text-rose-300"] { color: #a91e3c !important; }
+html.light [class*="bg-emerald-400/15"] { background-color: rgba(12, 107, 63, 0.12) !important; }
+html.light [class*="bg-rose-400/15"] { background-color: rgba(169, 30, 60, 0.1) !important; }
+html.light [class*="bg-emerald-300/10"],
+html.light [class*="bg-emerald-300/[0.07]"] { background-color: rgba(12, 107, 63, 0.08) !important; }
+html.light [class*="border-emerald-300/"] { border-color: rgba(12, 107, 63, 0.3) !important; }
+/* botão sólido verde + dot de status: mantém o verde, texto escuro */
+html.light [class*="bg-emerald-400"]:not([class*="bg-emerald-400/"]) {
+  background-color: #10b981 !important;
+  color: #062e1f !important;
+}
+html.light [class*="bg-emerald-400"].rounded-full { box-shadow: none !important; }
+/* chips escuros (badges bg-black/45–85): continuam escuros c/ texto claro */
+html.light [class*="bg-black/45"],
+html.light [class*="bg-black/50"],
+html.light [class*="bg-black/55"],
+html.light [class*="bg-black/85"] {
+  background-color: rgba(23, 23, 46, 0.72) !important;
+  color: #fff !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+html.light [class*="bg-black/45"] [class*="text-white"],
+html.light [class*="bg-black/55"] [class*="text-white"],
+html.light [class*="bg-black/85"] [class*="text-white"],
+html.light [class*="bg-black/45"][class*="text-white"],
+html.light [class*="bg-black/55"][class*="text-white"] {
+  color: #fff !important;
+}
+/* foco dos campos no papel: acento em vez de branco */
+html.light [class*="focus:border-white"]:focus { border-color: var(--lb-accent) !important; }
+html.light [class*="bg-white/80"].transition-all { background-color: rgba(23, 23, 46, 0.85) !important; }
+
+/* ---------- 10 · SOBRE FOTO: texto sempre claro (foto não inverte) ----------
+   Deve vir POR ÚLTIMO p/ vencer os mapeamentos globais acima. */
+html.light .proj-card,
+html.light .work-card .relative {
+  color-scheme: dark;
+}
 html.light .proj-card .text-white,
 html.light .proj-card [class*="text-white/"],
+html.light .proj-card [class*="text-[#F4F1EC]"],
 html.light .work-card .text-white,
 html.light .work-card [class*="text-white/"] {
   color: #fff !important;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.55);
 }
-html.light ::selection {
-  background: #14142b;
-  color: #f4f1ec;
+html.light .proj-card [class*="border-white"],
+html.light .work-card [class*="border-white"] {
+  border-color: rgba(255, 255, 255, 0.28) !important;
 }
+html.light .proj-card [class*="bg-black/"],
+html.light .work-card [class*="bg-black/"] {
+  background-color: rgba(0, 0, 0, 0.45) !important;
+  color: #fff !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+html.light .proj-card .bg-white,
+html.light .work-card .bg-white {
+  background-color: #fff !important;
+  color: #000 !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35) !important;
+}
+html.light .proj-card [class*="from-black"],
+html.light .work-card [class*="from-black"],
+html.light .proj-card [class*="bg-black/55"],
+html.light .work-card [class*="bg-black/55"],
+html.light .proj-card [class*="bg-black/45"],
+html.light .work-card [class*="bg-black/45"] {
+  background-color: inherit;
+}
+html.light .proj-card [class*="bg-gradient"],
+html.light .work-card [class*="bg-gradient"] {
+  background-color: transparent !important;
+}
+html.light .reveal-info h3 { text-shadow: 0 2px 20px rgba(0, 0, 0, 0.55); }
 
 /* hero mobile: foto livre + plaquinha da frase */
 .hero-person-float {

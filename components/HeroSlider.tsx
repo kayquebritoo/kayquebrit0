@@ -52,6 +52,9 @@ export function PanelWaves({ subtle = false }: { subtle?: boolean }) {
       mouse.x += (mouse.tx - mouse.x) * 0.045;
       mouse.y += (mouse.ty - mouse.y) * 0.045;
       ctx.clearRect(0, 0, w, h);
+      const isLight =
+        typeof document !== "undefined" &&
+        document.documentElement.classList.contains("light");
 
       for (let i = 0; i < lines; i++) {
         const p = i / (lines - 1);
@@ -71,7 +74,9 @@ export function PanelWaves({ subtle = false }: { subtle?: boolean }) {
           else ctx.lineTo(x, y);
         }
         const alpha = (subtle ? 0.04 : 0.08) + p * (subtle ? 0.09 : 0.18);
-        ctx.strokeStyle = `rgba(255,255,255,${alpha.toFixed(3)})`;
+        ctx.strokeStyle = isLight
+          ? `rgba(23,23,46,${(alpha * 0.85).toFixed(3)})`
+          : `rgba(255,255,255,${alpha.toFixed(3)})`;
         ctx.lineWidth = p > 0.82 ? 1.4 : 1;
         ctx.stroke();
       }
@@ -85,7 +90,11 @@ export function PanelWaves({ subtle = false }: { subtle?: boolean }) {
         if (x === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
-      ctx.strokeStyle = subtle ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.35)";
+      ctx.strokeStyle = isLight
+        ? "rgba(23,23,46,0.22)"
+        : subtle
+          ? "rgba(255,255,255,0.18)"
+          : "rgba(255,255,255,0.35)";
       ctx.lineWidth = 1.2;
       ctx.stroke();
 
