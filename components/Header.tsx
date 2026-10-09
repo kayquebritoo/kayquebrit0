@@ -4,14 +4,10 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { LocalTime, useMagnetic } from "@/components/fx";
-
-const MENU = [
-  { label: "Sobre", index: 1 },
-  { label: "Serviços", index: 2 },
-  { label: "Portfólio", index: 3 },
-  { label: "Depoimentos", index: 6 },
-  { label: "Contato", index: 7 },
-];
+import { SocialIcon } from "@/components/SocialIcons";
+import { SOCIALS } from "@/lib/data";
+import { LANGS } from "@/lib/i18n";
+import { useLang, useTheme } from "@/components/Providers";
 
 export function goToSlide(index: number) {
   if (window.location.pathname !== "/") {
@@ -30,8 +26,18 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const magBurger = useMagnetic<HTMLButtonElement>(0.4);
+  const { lang, setLang, t } = useLang();
+  const { theme, toggle } = useTheme();
 
-  const toggle = useCallback(() => setOpen((v) => !v), []);
+  const toggleMenu = useCallback(() => setOpen((v) => !v), []);
+
+  const MENU = [
+    { label: t("menu.about"), index: 1 },
+    { label: t("menu.services"), index: 2 },
+    { label: t("menu.portfolio"), index: 3 },
+    { label: t("menu.testimonials"), index: 6 },
+    { label: t("menu.contact"), index: 7 },
+  ];
 
   useEffect(() => {
     const goHome = () => router.push("/");
@@ -79,8 +85,8 @@ export default function Header() {
           <button
             ref={magBurger}
             type="button"
-            onClick={toggle}
-            aria-label={open ? "Fechar menu" : "Abrir menu"}
+            onClick={toggleMenu}
+            aria-label={open ? t("menu.close") : t("menu.open")}
             aria-expanded={open}
             className="group relative mt-1 flex h-10 w-11 touch-manipulation items-center justify-center md:mt-2 md:h-8 md:w-[38px]"
           >
@@ -122,10 +128,10 @@ export default function Header() {
           >
             Belém — <LocalTime />
           </p>
-          <nav className="relative mt-8 flex flex-col items-center gap-1 sm:mt-6 md:gap-2">
+          <nav className="relative mt-6 flex flex-col items-center gap-0.5 sm:mt-5 md:gap-1">
             <MenuItem
               num="01"
-              label="Início"
+              label={t("menu.home")}
               open={open}
               delay={100}
               onClick={() => {
@@ -150,30 +156,96 @@ export default function Header() {
               href="/trabalho"
               onClick={() => setOpen(false)}
               tabIndex={open ? 0 : -1}
-              className={`menu-big group relative mt-2 px-4 py-2 text-[#9DB8E8] transition-all duration-500 hover:text-white ${
+              className={`menu-big group relative mt-1 px-4 py-1.5 text-[#9DB8E8] transition-all duration-500 hover:text-white ${
                 open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
               }`}
               style={{ transitionDelay: open ? "420ms" : "0ms" }}
             >
               <span className="menu-num">07</span>
               <span className="relative">
-                Todos trabalhos
+                {t("menu.allWorks")}
                 <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-current transition-all duration-500 group-hover:w-full" />
               </span>
             </Link>
           </nav>
+
+          {/* sociais como ícones (inclui WhatsApp) */}
           <div
-            className={`mt-10 flex flex-wrap items-center justify-center gap-3 text-[11px] uppercase tracking-[0.25em] text-white/55 transition-all duration-500 ${
+            className={`mt-8 flex flex-wrap items-center justify-center gap-2.5 transition-all duration-500 ${
               open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
             }`}
-            style={{ transitionDelay: open ? "480ms" : "0ms" }}
+            style={{ transitionDelay: open ? "470ms" : "0ms" }}
           >
-            <a href="https://wa.me/5591993743109" target="_blank" tabIndex={open ? 0 : -1} className="rounded-full border border-white/20 px-5 py-2.5 backdrop-blur transition hover:border-white/60 hover:text-white">
-              WhatsApp
-            </a>
-            <a href="https://www.instagram.com/kayquebrit0/" target="_blank" rel="noopener" tabIndex={open ? 0 : -1} className="rounded-full border border-white/20 px-5 py-2.5 backdrop-blur transition hover:border-white/60 hover:text-white">
-              Instagram
-            </a>
+            {SOCIALS.map((s) => (
+              <a
+                key={s.name}
+                href={s.href}
+                target="_blank"
+                rel="noopener"
+                tabIndex={open ? 0 : -1}
+                aria-label={s.name}
+                title={s.name}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-white/70 backdrop-blur transition hover:border-white/60 hover:text-white"
+              >
+                <SocialIcon icon={s.icon} size={18} />
+              </a>
+            ))}
+          </div>
+
+          {/* tema + idioma */}
+          <div
+            className={`mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-3 transition-all duration-500 ${
+              open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
+            }`}
+            style={{ transitionDelay: open ? "520ms" : "0ms" }}
+          >
+            <button
+              type="button"
+              onClick={toggle}
+              tabIndex={open ? 0 : -1}
+              aria-label={theme === "dark" ? t("menu.themeLight") : t("menu.themeDark")}
+              title={theme === "dark" ? t("menu.themeLight") : t("menu.themeDark")}
+              className="flex h-11 items-center gap-2.5 rounded-full border border-white/20 px-5 text-[11px] uppercase tracking-[0.22em] text-white/70 backdrop-blur transition hover:border-white/60 hover:text-white"
+            >
+              <span aria-hidden className="inline-flex">
+                {theme === "dark" ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="4" />
+                    <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
+                  </svg>
+                )}
+              </span>
+              {theme === "dark" ? "Light" : "Dark"}
+            </button>
+            <div
+              role="group"
+              aria-label={t("menu.language")}
+              className="flex items-center gap-1 rounded-full border border-white/20 p-1 backdrop-blur"
+            >
+              {LANGS.map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={() => setLang(l.id)}
+                  tabIndex={open ? 0 : -1}
+                  aria-label={l.name}
+                  aria-pressed={lang === l.id}
+                  title={l.name}
+                  className={`flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[11px] font-semibold tracking-[0.14em] transition ${
+                    lang === l.id
+                      ? "bg-white text-black"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  <span aria-hidden>{l.flag}</span>
+                  {l.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -186,7 +258,7 @@ export default function Header() {
           <div className="animate-marquee flex w-max whitespace-nowrap text-[11px] uppercase text-white/45 sm:text-[12px]" style={{ letterSpacing: "0.3em" }}>
             {[0, 1].map((n) => (
               <span key={n} className="shrink-0 pr-8" aria-hidden={n === 1}>
-                Vamos criar algo incrível juntos — Disponível para projetos — Escalando marcas através de design e tecnologia —&nbsp;
+                {t("menu.marquee")}&nbsp;
               </span>
             ))}
           </div>
@@ -202,7 +274,7 @@ function MenuItem({ label, num, open, delay, onClick }: { label: string; num: st
       onClick={onClick}
       type="button"
       tabIndex={open ? 0 : -1}
-      className={`menu-big group relative touch-manipulation px-4 py-1.5 text-[#F4F1EC]/90 transition-all duration-500 hover:text-white sm:py-2 ${
+      className={`menu-big group relative touch-manipulation px-4 py-1 text-[#F4F1EC]/90 transition-all duration-500 hover:text-white sm:py-1.5 ${
         open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
       }`}
       style={{ transitionDelay: open ? `${delay}ms` : "0ms" }}

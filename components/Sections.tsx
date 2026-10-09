@@ -3,10 +3,59 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import gsap from "gsap";
-import { ABOUT, TESTIMONIALS, PARTNERS, CONTACT, WHATSAPP, SOCIALS } from "@/lib/data";
+import { ABOUT, TESTIMONIALS, PARTNERS, CONTACT, SOCIALS } from "@/lib/data";
 import { goToSlide } from "@/components/Header";
 import { LocalTime, useMagnetic } from "@/components/fx";
 import { SocialIcon } from "@/components/SocialIcons";
+import { useLang } from "@/components/Providers";
+
+/* Setas em SVG (nunca unicode): render idêntico no mobile e no desktop,
+   sem risco de virar emoji na fonte do sistema. */
+function ArrowDiag({ size = 30, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className={className}
+    >
+      <path d="M7 17 17 7M8 7h9v9" />
+    </svg>
+  );
+}
+function ArrowRight({ size = 20, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className={className}
+    >
+      <path d="M5 12h14m-6-6 6 6-6 6" />
+    </svg>
+  );
+}
+function initials(name: string) {
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
 
 /* cursor VER PROJETO — círculo claro que substitui o cursor nativo.
    Segue o mouse com lerp rápido + pop elástico na entrada. */
@@ -67,10 +116,11 @@ const ABOUT_PHOTOS = [
 
 /* ================= SOBRE — ref 2.png ================= */
 export function AboutSlide() {
+  const { t } = useLang();
   return (
     <section className="relative flex h-full flex-col justify-center overflow-hidden bg-[#0B0B1E]">
       <p className="fp-anim ref-eyebrow absolute left-1/2 top-[70px] -translate-x-1/2 whitespace-nowrap md:top-[72px]">
-        Sobre
+        {t("about.eyebrow")}
       </p>
       <div className="ref-inner">
         {/* mobile: texto compacto para caber em 100svh */}
@@ -179,6 +229,7 @@ export function ServicesSlide() {
   const [preview, setPreview] = useState<string | null>(null);
   const prevBox = useRef<HTMLDivElement>(null);
   const prevImg = useRef<HTMLImageElement>(null);
+  const { t } = useLang();
   useEffect(() => {
     const el = prevBox.current;
     if (!el) return;
@@ -219,7 +270,7 @@ export function ServicesSlide() {
         />
       </div>
       <p className="fp-anim ref-eyebrow absolute left-1/2 top-[70px] -translate-x-1/2 whitespace-nowrap md:top-[72px]">
-        Serviços
+        {t("services.eyebrow")}
       </p>
 
       <div className="ref-inner flex flex-col gap-5 md:gap-[clamp(20px,3.4vh,38px)]">
@@ -249,8 +300,8 @@ export function ServicesSlide() {
               <span className="md:hidden">Brand<br />ing</span>
               <span className="hidden md:block" style={{ fontSize: "clamp(58px, 6vw, 116px)", fontWeight: 300 }}>Branding</span>
             </h3>
-            <span className="text-white transition duration-300 group-hover:translate-x-1 group-hover:translate-y-1" style={{ fontSize: 30, lineHeight: 1 }}>
-              ↘
+            <span className="text-white transition duration-300 group-hover:translate-x-1 group-hover:translate-y-1">
+              <ArrowDiag size={30} />
             </span>
           </button>
           <button onClick={() => goToSlide(5)} onMouseEnter={() => setPreview("/assets/deco/ok4.webp")} onMouseLeave={() => setPreview(null)} className="group w-[32%] text-left">
@@ -267,8 +318,8 @@ export function ServicesSlide() {
           className="fp-anim font-display mt-6 block w-full text-right font-light text-white transition hover:opacity-80 md:mt-[3vh]"
           style={{ fontSize: "clamp(20px, 5vw, 30px)", letterSpacing: "-0.01em" }}
         >
-          <span className="hidden md:block" style={{ fontSize: "clamp(34px, 2.8vw, 54px)" }}>Todas as Categorias</span>
-          <span className="md:hidden">Todas as Categorias →</span>
+          <span className="hidden items-center justify-end gap-3 md:flex" style={{ fontSize: "clamp(34px, 2.8vw, 54px)" }}>{t("services.all")} <ArrowRight size={34} /></span>
+          <span className="flex items-center justify-end gap-2 md:hidden">{t("services.all")} <ArrowRight size={20} /></span>
         </button>
       </div>
     </section>
@@ -484,8 +535,8 @@ export function BrandingSlide() {
           className="fp-anim flex h-[60px] flex-none items-center justify-center rounded-lg bg-[#12122a] transition hover:bg-[#1a1a3a] md:h-auto md:flex-1 md:rounded-none"
         >
           <span className="font-light uppercase text-white" style={{ fontSize: "clamp(16px, 4.5vw, 22px)", letterSpacing: "0.02em" }}>
-            <span className="md:hidden">Todos trabalhos →</span>
-            <span className="hidden md:block" style={{ fontSize: "clamp(24px, 1.9vw, 36px)" }}>Todos trabalhos <span aria-hidden>→</span></span>
+            <span className="flex items-center justify-center gap-2 md:hidden">Todos trabalhos <ArrowRight size={20} /></span>
+            <span className="hidden items-center justify-center gap-3 md:flex" style={{ fontSize: "clamp(24px, 1.9vw, 36px)" }}>Todos trabalhos <ArrowRight size={30} /></span>
           </span>
         </Link>
       </div>
@@ -495,43 +546,116 @@ export function BrandingSlide() {
 
 /* ================= DEPOIMENTOS — ref 7.png ================= */
 export function TestimonialsSlide() {
+  const { t } = useLang();
   return (
     <section className="relative flex h-full flex-col justify-center overflow-hidden bg-[#0B0B1E]">
       <div className="ref-inner">
-        <p className="fp-anim ref-eyebrow" style={{ fontSize: 13 }}>Depoimentos</p>
+        <p className="fp-anim ref-eyebrow" style={{ fontSize: 13 }}>{t("testimonials.eyebrow")}</p>
         <div className="mt-5 grid grid-cols-1 gap-4 md:mt-[4vh] md:grid-cols-3 md:gap-10" style={{ columnGap: 80 }}>
-          {TESTIMONIALS.map((t) => (
-            <div key={t.name} className="fp-anim border-l border-white/10 pl-4 md:border-0 md:pl-0">
+          {TESTIMONIALS.map((testi) => (
+            <div key={testi.name} className="fp-anim border-l border-white/10 pl-4 md:border-0 md:pl-0">
               <p className="font-light leading-snug text-[#F4F1EC] md:leading-relaxed" style={{ fontSize: "clamp(13.5px, 3.7vw, 17px)", lineHeight: 1.55 }}>
-                <span className="md:hidden">{t.quote}</span>
-                <span className="hidden md:block" style={{ fontSize: "clamp(19px, 1.35vw, 25px)", lineHeight: 1.6 }}>{t.quote}</span>
+                <span className="md:hidden">{testi.quote}</span>
+                <span className="hidden md:block" style={{ fontSize: "clamp(19px, 1.35vw, 25px)", lineHeight: 1.6 }}>{testi.quote}</span>
               </p>
-              <p className="mt-2 text-white md:mt-10" style={{ fontSize: 16, fontWeight: 600 }}>
-                <span className="md:hidden">{t.name}</span>
-                <span className="hidden md:block" style={{ fontSize: 23 }}>{t.name}</span>
-              </p>
-              <p className="mt-0.5 text-white/45 md:mt-5" style={{ fontSize: 13, fontWeight: 300 }}>
-                <span className="md:hidden">{t.role}</span>
-                <span className="hidden md:block" style={{ fontSize: 21 }}>{t.role}</span>
-              </p>
+              {/* autor: foto + nome/cargo + canais da empresa */}
+              <div className="mt-3 flex items-center gap-3 md:mt-8">
+                <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-white/5 md:h-14 md:w-14">
+                  {testi.photo ? (
+                    <Image
+                      src={testi.photo}
+                      alt={testi.name}
+                      fill
+                      loading="lazy"
+                      className="object-cover"
+                      sizes="56px"
+                    />
+                  ) : (
+                    <span className="text-[13px] font-semibold tracking-[0.08em] text-white md:text-[15px]" aria-hidden>
+                      {initials(testi.name)}
+                    </span>
+                  )}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-white md:mt-0" style={{ fontSize: 16, fontWeight: 600 }}>
+                    <span className="md:hidden">{testi.name}</span>
+                    <span className="hidden md:block" style={{ fontSize: 23 }}>{testi.name}</span>
+                  </span>
+                  <span className="block truncate text-white/45" style={{ fontSize: 13, fontWeight: 300 }}>
+                    <span className="md:hidden">{testi.role}</span>
+                    <span className="hidden md:block" style={{ fontSize: 18 }}>{testi.role}</span>
+                  </span>
+                </span>
+              </div>
+              {(testi.companyLogo || testi.socials.length > 0) && (
+                <div className="mt-2.5 flex items-center gap-3 pl-[56px] md:mt-3 md:pl-[68px]">
+                  {testi.companyLogo && (
+                    <Image
+                      src={testi.companyLogo}
+                      alt={testi.companyName}
+                      width={120}
+                      height={32}
+                      loading="lazy"
+                      className="h-5 w-auto object-contain brightness-0 invert opacity-80"
+                    />
+                  )}
+                  {testi.socials.map((s) => (
+                    s.href.startsWith("/") ? (
+                      <Link
+                        key={s.name}
+                        href={s.href}
+                        aria-label={`${s.name} — ${testi.companyName}`}
+                        title={`${s.name} — ${testi.companyName}`}
+                        className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-[#9DB8E8] transition hover:text-white"
+                      >
+                        <SocialIcon icon={s.icon} size={15} />
+                        <span className="hidden md:inline">{t("testimonials.case")}</span>
+                      </Link>
+                    ) : (
+                      <a
+                        key={s.name}
+                        href={s.href}
+                        target="_blank"
+                        rel="noopener"
+                        aria-label={`${s.name} — ${testi.companyName}`}
+                        title={`${s.name} — ${testi.companyName}`}
+                        className="text-[#9DB8E8] transition hover:text-white"
+                      >
+                        <SocialIcon icon={s.icon} size={16} />
+                      </a>
+                    )
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
         <p className="fp-anim mt-6 text-white/75 md:mt-[7vh]" style={{ fontSize: 12, letterSpacing: "0.28em" }}>
-          PARCEIROS
+          {t("testimonials.partners").toUpperCase()}
         </p>
-        <div className="fp-anim mt-4 flex flex-wrap items-center gap-x-7 gap-y-3 md:mt-8 md:gap-[90px]">
-          {PARTNERS.map((p) => (
-            <Image
-              key={p.name}
-              src={p.img}
-              alt={p.name}
-              width={200}
-              height={64}
-              loading="lazy"
-              className="h-6 w-auto object-contain brightness-0 invert opacity-90 md:h-10"
-            />
-          ))}
+        {/* parceiros em loop infinito — carrossel lateral */}
+        <div
+          className="fp-anim mt-4 overflow-hidden md:mt-8"
+          style={{
+            maskImage: "linear-gradient(90deg, transparent, black 10%, black 90%, transparent)",
+            WebkitMaskImage: "linear-gradient(90deg, transparent, black 10%, black 90%, transparent)",
+          }}
+        >
+          <div className="animate-marquee flex w-max items-center gap-10 pr-10 hover:[animation-play-state:paused] md:gap-[90px] md:pr-[90px]">
+            {[...PARTNERS, ...PARTNERS].map((p, i) => (
+              <Image
+                key={`${p.name}-${i}`}
+                src={p.img}
+                alt={i < PARTNERS.length ? p.name : ""}
+                aria-hidden={i >= PARTNERS.length}
+                width={200}
+                height={64}
+                loading="lazy"
+                draggable={false}
+                className="h-6 w-auto shrink-0 select-none object-contain brightness-0 invert opacity-90 md:h-10"
+              />
+            ))}
+          </div>
         </div>
       </div>
     </section>
@@ -542,10 +666,11 @@ export function TestimonialsSlide() {
 export function ContactSlide() {
   const magContact = useMagnetic<HTMLAnchorElement>(0.35);
   const pulse = useRef<HTMLDivElement>(null);
+  const { t } = useLang();
   useEffect(() => {
     if (!pulse.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const t = gsap.to(pulse.current, { scale: 1.06, duration: 1.8, ease: "sine.inOut", yoyo: true, repeat: -1 });
-    return () => { t.kill(); };
+    const tm = gsap.to(pulse.current, { scale: 1.06, duration: 1.8, ease: "sine.inOut", yoyo: true, repeat: -1 });
+    return () => { tm.kill(); };
   }, []);
   return (
     <section className="relative flex h-full flex-col justify-center overflow-hidden bg-[#0B0B1E]">
@@ -556,23 +681,24 @@ export function ContactSlide() {
           className="fp-anim font-display font-light text-white"
           style={{ fontSize: "clamp(30px, 8.5vw, 44px)", letterSpacing: "-0.02em", lineHeight: 1.08 }}
         >
-          <span className="md:hidden">Vamos criar algo incrível juntos?</span>
-          <span className="hidden md:block" style={{ fontSize: "clamp(48px, 4.6vw, 88px)", lineHeight: 1.05 }}>Vamos criar algo incrível juntos?</span>
+          <span className="md:hidden">{t("contact.title")}</span>
+          <span className="hidden md:block" style={{ fontSize: "clamp(48px, 4.6vw, 88px)", lineHeight: 1.05 }}>{t("contact.title")}</span>
         </h2>
 
-        <div className="mt-5 flex flex-col gap-5 md:mt-[5vh] md:flex-row md:items-end md:justify-between md:gap-10">
+        <div className="mt-5 flex flex-col gap-5 md:mt-[5vh] md:flex-row md:items-center md:justify-between md:gap-10">
           <p className="fp-anim max-w-[600px] font-light text-white/70" style={{ fontSize: "clamp(14px, 3.8vw, 17px)", lineHeight: 1.65 }}>
-            <span className="md:hidden">Estou basicamente em todos os lugares. Portanto, fique à vontade para escolher o meio de comunicação que for melhor para você.</span>
-            <span className="hidden md:block" style={{ fontSize: 23 }}>Estou basicamente em todos os lugares. Portanto, fique à vontade para escolher o meio de comunicação que for melhor para você.</span>
+            <span className="md:hidden">{t("contact.text")}</span>
+            <span className="hidden md:block" style={{ fontSize: 23 }}>{t("contact.text")}</span>
           </p>
-          <div className="fp-anim relative hidden h-[280px] w-[280px] shrink-0 overflow-hidden rounded-full md:block">
+          {/* foto circular — visível no mobile e no desktop */}
+          <div className="fp-anim relative mx-auto h-28 w-28 shrink-0 overflow-hidden rounded-full border border-white/20 md:mx-0 md:h-[280px] md:w-[280px]">
             <Image
               src="/assets/deco/ok2.webp"
               alt="Kayque Brito"
               fill
               loading="lazy"
               className="fp-layer object-cover"
-              sizes="280px"
+              sizes="(max-width:768px) 112px, 280px"
             />
           </div>
         </div>
@@ -581,19 +707,16 @@ export function ContactSlide() {
 
         <div className="fp-anim flex flex-col gap-5 md:flex-row md:flex-wrap md:items-center md:gap-12">
           <div ref={pulse}>
-          <a
-            ref={magContact}
-            href={WHATSAPP}
-            target="_blank"
-            className="relative flex h-[60px] w-full max-w-[320px] items-center justify-center overflow-hidden rounded-full border border-white/80 text-[18px] font-light transition hover:bg-white hover:text-[#0B0B1E] md:h-[76px] md:max-w-none"
-            style={{ color: "#9DB8E8", maxWidth: 320 }}
+          <Link
+            ref={magContact as unknown as React.RefObject<HTMLAnchorElement>}
+            href="/briefing"
+            className="relative flex h-[60px] w-full items-center justify-center overflow-hidden rounded-full border border-white/80 px-10 text-center text-[18px] font-light text-[#9DB8E8] transition hover:bg-white hover:text-[#0B0B1E] md:h-[76px] md:min-w-[320px]"
           >
             <span aria-hidden className="pointer-events-none absolute inset-y-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/40 to-transparent" style={{ animation: "ctaSweep 3.2s ease-in-out infinite" }} />
-            <span className="md:hidden relative">Contato</span>
-            <span className="hidden md:block relative" style={{ width: 220, fontSize: 22 }}>Contato</span>
-          </a>
+            <span className="relative md:text-[22px]">{t("contact.cta")}</span>
+          </Link>
           </div>
-          <div className="flex flex-wrap items-center gap-7 md:gap-9" style={{ color: "#9DB8E8" }}>
+          <div className="flex flex-wrap items-center gap-3 text-[#9DB8E8] md:gap-4">
             {SOCIALS.map((s) => (
               <a
                 key={s.name}
@@ -601,15 +724,16 @@ export function ContactSlide() {
                 target="_blank"
                 rel="noopener"
                 aria-label={s.name}
-                className="transition hover:text-white"
+                title={s.name}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 transition hover:border-white/60 hover:text-white"
               >
-                <SocialIcon icon={s.icon} />
+                <SocialIcon icon={s.icon} size={18} />
               </a>
             ))}
           </div>
         </div>
 
-        <div className="fp-anim mt-6 flex flex-wrap items-center gap-x-5 gap-y-1 md:mt-[6vh] md:justify-between" style={{ color: "#9DB8E8", fontSize: 15, fontWeight: 300 }}>
+        <div className="fp-anim mt-6 flex flex-wrap items-center gap-x-5 gap-y-1 text-[15px] font-light text-[#9DB8E8] md:mt-[6vh] md:justify-between">
           <span className="text-white/80">© Kayque Brito</span>
           <span>Belém — <LocalTime /></span>
           <span>2026</span>

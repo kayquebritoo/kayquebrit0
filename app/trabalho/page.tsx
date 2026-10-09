@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import gsap from "gsap";
-import { PROJECTS, WHATSAPP } from "@/lib/data";
+import { PROJECTS } from "@/lib/data";
 
 const FILTERS = [
   { id: "all", label: "Todos" },
@@ -172,13 +172,12 @@ export default function WorksPage() {
           <h3 className="font-display mx-auto mt-4 max-w-2xl text-balance text-3xl font-light leading-tight md:text-5xl">
             Vamos criar algo <em className="italic text-[#9DB8E8]">incrível</em> juntos?
           </h3>
-          <a
-            href={WHATSAPP}
-            target="_blank"
+          <Link
+            href="/briefing"
             className="mt-8 inline-block rounded-full bg-white px-10 py-4 text-sm font-bold uppercase tracking-[0.18em] text-black transition hover:scale-[1.03] md:px-12"
           >
-            Iniciar conversa
-          </a>
+            Contratar serviço
+          </Link>
         </div>
       </div>
     </main>

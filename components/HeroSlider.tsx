@@ -5,6 +5,7 @@ import Link from "next/link";
 import gsap from "gsap";
 import { goToSlide } from "@/components/Header";
 import { SplitChars, useMagnetic } from "@/components/fx";
+import { useLang } from "@/components/Providers";
 
 /* Ondas tecnológicas orgânicas — fluxo contínuo e ininterrupto.
    Camadas senoidais sobrepostas + deriva que reage ao cursor sem nunca parar.
@@ -106,6 +107,7 @@ export default function HeroSlide() {
   const magBadge = useMagnetic<HTMLButtonElement>(0.45);
   const magCta = useMagnetic<HTMLAnchorElement>(0.3);
   const magCtaM = useMagnetic<HTMLAnchorElement>(0.25);
+  const { t } = useLang();
 
   // reveal por caractere + loops ambientes (desktop e mobile)
   useEffect(() => {
@@ -200,22 +202,22 @@ export default function HeroSlide() {
         {/* topo: respiro do menu + tipografia com sombra sobre a foto */}
         <div className="relative z-10">
           <p className="m-hero-in text-[13px] font-light leading-snug text-[#F4F1EC]" style={{ textShadow: "0 2px 18px rgba(0,0,0,0.6)" }}>
-            Produtor Audiovisual &
+            {t("hero.roleA")}
             <br />
-            Desenvolvedor Full Stack
+            {t("hero.roleB")}
           </p>
           <h1 className="mt-3">
             <span
               className="m-hero-in font-display block font-light text-white"
               style={{ fontSize: "clamp(30px, 8.5vw, 40px)", lineHeight: 1.02, letterSpacing: "-0.02em", textShadow: "0 4px 28px rgba(0,0,0,0.65)" }}
             >
-              Tecnólogo
+              {t("hero.titleA")}
             </span>
             <span
               className="m-hero-in font-display block font-light text-white"
               style={{ fontSize: "clamp(60px, 17vw, 88px)", lineHeight: 0.95, letterSpacing: "-0.03em", textShadow: "0 6px 36px rgba(0,0,0,0.7)" }}
             >
-              Criativo
+              {t("hero.titleB")}
             </span>
           </h1>
         </div>
@@ -227,7 +229,7 @@ export default function HeroSlide() {
         <div className="relative z-10">
           <div className="fp-anim rounded-2xl border border-white/20 bg-[#0B0B1E]/45 px-4 py-3 backdrop-blur-xl" style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.35)" }}>
             <p className="text-center text-[12.5px] font-light leading-snug text-white">
-              Escalando marcas através de <em className="italic text-[#9DB8E8]">design e tecnologia</em>
+              {t("hero.taglineA")} <em className="italic text-[#9DB8E8]">{t("hero.taglineB")}</em>
             </p>
           </div>
           <Link
@@ -237,7 +239,7 @@ export default function HeroSlide() {
             style={{ letterSpacing: "0.12em" }}
           >
             <span aria-hidden className="hero-cta-shine pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-            <span className="relative">Orçamento</span>
+            <span className="relative">{t("hero.cta")}</span>
           </Link>
         </div>
       </div>
@@ -292,9 +294,9 @@ export default function HeroSlide() {
           className="fp-anim font-light text-[#F4F1EC]"
           style={{ fontSize: "clamp(20px, 1.6vw, 30px)", lineHeight: 1.35 }}
         >
-          Produtor Audiovisual &
+          {t("hero.roleA")}
           <br />
-          Desenvolvedor Full Stack
+          {t("hero.roleB")}
         </p>
         <h1 className="mt-[4vh]">
           <span
@@ -305,7 +307,7 @@ export default function HeroSlide() {
               letterSpacing: "-0.02em",
             }}
           >
-            <SplitChars text="Tecnólogo" />
+            <SplitChars text={t("hero.titleA")} />
           </span>
           <span
             className="fp-anim font-display block overflow-hidden font-light text-white"
@@ -316,7 +318,7 @@ export default function HeroSlide() {
               textShadow: "0 20px 80px rgba(0,0,0,0.45)",
             }}
           >
-            <SplitChars text="Criativo" />
+            <SplitChars text={t("hero.titleB")} />
           </span>
         </h1>
       </div>
@@ -336,7 +338,7 @@ export default function HeroSlide() {
           }}
         >
           <span aria-hidden className="hero-cta-shine pointer-events-none absolute inset-y-0 w-1/4 bg-gradient-to-r from-transparent via-white/50 to-transparent" />
-          <span className="relative">ORÇAMENTO</span>
+          <span className="relative">{t("hero.cta").toUpperCase()}</span>
         </Link>
       </div>
       <div
@@ -347,7 +349,7 @@ export default function HeroSlide() {
           className="fp-anim font-light text-[#F4F1EC]"
           style={{ fontSize: "clamp(17px, 1.25vw, 23px)", lineHeight: 1.5 }}
         >
-          Escalando marcas através de <em className="italic text-[#9DB8E8]">design e tecnologia</em>
+          {t("hero.taglineA")} <em className="italic text-[#9DB8E8]">{t("hero.taglineB")}</em>
         </p>
       </div>
 

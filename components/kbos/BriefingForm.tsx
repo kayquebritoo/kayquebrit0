@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { BRIEFING_CATEGORIES, type BriefingField } from "@/lib/kbos/briefing-forms";
+import { goToSlide } from "@/components/Header";
 function Field({ f, value, onChange }: { f: BriefingField; value: string; onChange: (v: string) => void }) {
   const cls =
     "mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-4 py-3 text-[15px] outline-none placeholder:text-white/25 focus:border-white/50";
@@ -91,14 +92,13 @@ export default function BriefingForm() {
         </div>
         {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
         {failed && (
-          <a
-            href={`https://wa.me/5591993743109?text=${encodeURIComponent("Olá! Preenchi o briefing de " + (cat?.label ?? "projeto") + " e quero conversar.")}`}
-            target="_blank"
-            rel="noopener"
-            className="mt-4 block rounded-full border border-[#25D366]/50 bg-[#25D366]/10 py-3.5 text-center text-sm font-bold uppercase tracking-[0.18em] text-[#25D366]"
+          <button
+            type="button"
+            onClick={() => goToSlide(7)}
+            className="mt-4 block w-full rounded-full border border-white/25 bg-white/[0.04] py-3.5 text-center text-sm font-bold uppercase tracking-[0.18em] text-white/85 transition hover:border-white/60 hover:text-white"
           >
-            Prefiro chamar no WhatsApp →
-          </a>
+            Falar pelos canais de contato →
+          </button>
         )}
         <button
           type="submit"

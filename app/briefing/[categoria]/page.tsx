@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BRIEFING_CATEGORIES, getCategory } from "@/lib/kbos/briefing-forms";
-import { PROJECTS, WHATSAPP } from "@/lib/data";
+import { PROJECTS } from "@/lib/data";
 import CategoryAnim from "./CategoryAnim";
 
 export async function generateStaticParams() {
@@ -177,14 +177,6 @@ export default async function CategoriaDetail({ params }: { params: Promise<{ ca
                 <span aria-hidden className="cat-cta-shine pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-[#9DB8E8]/60 to-transparent" />
                 <span className="relative">Eu quero →</span>
               </Link>
-              <a
-                href={WHATSAPP}
-                target="_blank"
-                rel="noopener"
-                className="inline-flex w-full items-center justify-center rounded-full border border-white/20 px-10 py-4 text-sm uppercase tracking-[0.18em] text-white/80 transition hover:border-white/60 hover:text-white sm:w-auto"
-              >
-                Chamar no WhatsApp
-              </a>
             </div>
           </div>
 

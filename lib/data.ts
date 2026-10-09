@@ -245,18 +245,34 @@ export const TESTIMONIALS = [
       "Conseguiu ressignificar minha marca, trazendo conceito e agregando valor a cada detalhe. Tem sido um parceiro desde antes de tudo começar, uma peça chave para chegarmos onde estamos hoje.",
     name: "Caio Leonel",
     role: "Diretor — Açaí Norte Mix",
+    /** Foto real do autor (opcional — sem foto, exibe iniciais). */
+    photo: "",
+    companyLogo: "/assets/partners/acainortemix-logo.webp",
+    companyName: "Açaí Norte Mix",
+    socials: [
+      { icon: "instagram", name: "Instagram da empresa", href: "https://www.instagram.com/acainortemix/" },
+      { icon: "link", name: "Ver case", href: "/trabalho/acai-norte-mix" },
+    ],
   },
   {
     quote:
       "Um profissional excepcional, atua nos projetos dando contribuições criativas, inovadoras e efetivas. Tem como diferencial sua visão sistêmica, permitindo sempre ótimas soluções.",
     name: "Danilo Felipe",
     role: "Parceiro",
+    photo: "",
+    companyLogo: "/assets/partners/inexo-logo.webp",
+    companyName: "Inexo",
+    socials: [] as { icon: string; name: string; href: string }[],
   },
   {
     quote:
       "Profissional excelente, versátil, atua em várias áreas dentro da comunicação. Já fizemos jobs maravilhosos juntos. Programação, fotografia e audiovisual.",
     name: "Amanda Moraes",
     role: "CEO Direcionare — Publicitária",
+    photo: "",
+    companyLogo: "/assets/partners/direcionare-logo.webp",
+    companyName: "Direcionare",
+    socials: [] as { icon: string; name: string; href: string }[],
   },
 ];
 
@@ -270,8 +286,8 @@ export const PARTNERS = [
 export const CONTACT = {
   title: "Vamos criar algo incrível juntos?",
   text: "Estou basicamente em todos os lugares. Fique à vontade para escolher o meio de comunicação que for melhor para você.",
-  cta: "Contato",
-  ctaHref: WHATSAPP,
+  cta: "Contratar serviço",
+  ctaHref: "/briefing",
 };
 
 export const SOCIALS = [
@@ -280,4 +296,6 @@ export const SOCIALS = [
   { name: "YouTube", href: "https://www.youtube.com/@kayquebritoo", icon: "youtube" },
   { name: "Behance", href: "https://www.behance.net/kayquebrito1", icon: "behance" },
   { name: "GitHub", href: "https://github.com/kayquebritoo", icon: "github" },
+  // WhatsApp aparece SÓ como ícone: aqui (contato) e no menu.
+  { name: "WhatsApp", href: WHATSAPP, icon: "whatsapp" },
 ];

@@ -133,19 +133,19 @@ html.fullpage-locked body {
     radial-gradient(50% 35% at 85% 80%, rgba(157, 184, 232, 0.1), transparent 70%);
 }
 
-/* big titles do menu */
+/* big titles do menu — medida contida p/ caber na composição desktop */
 .menu-big {
   font-family: var(--font-display);
   font-weight: 300;
   letter-spacing: -0.02em;
-  line-height: 1.04;
-  font-size: clamp(2.4rem, 10.5vw, 4rem);
+  line-height: 1.08;
+  font-size: clamp(1.9rem, 8vw, 3rem);
 }
 @media (min-width: 768px) {
   .menu-big {
-    font-size: clamp(3.5rem, 7vw, 7rem);
-    line-height: 0.95;
-    letter-spacing: -0.03em;
+    font-size: clamp(2rem, 3.6vw, 3.9rem);
+    line-height: 1.02;
+    letter-spacing: -0.025em;
   }
 }
 .menu-big .menu-num {
@@ -499,6 +499,64 @@ a.m-hero-in { animation-delay: 0.18s; }
   15% { opacity: 1; }
   55% { left: 110%; opacity: 1; }
   100% { left: 110%; opacity: 0; }
+}
+
+/* ---------- MODO CLARO (opcional; padrão é dark) ----------
+   Inverte superfícies e textos via classe `light` no <html>.
+   Mídias e fotos mantidas — só o chrome tipográfico adapta. */
+html.light body {
+  background: #f4f1ec;
+  color: #14142b;
+}
+html.light .bg-\[\#0B0B1E\] {
+  background-color: #f4f1ec !important;
+}
+html.light .bg-\[\#12122a\],
+html.light .bg-\[\#131316\] {
+  background-color: #e9e4d9 !important;
+}
+html.light .text-white,
+html.light .text-\[\#F4F1EC\] {
+  color: #14142b !important;
+}
+html.light [class*="text-white/"] {
+  color: rgba(20, 20, 43, 0.72) !important;
+}
+html.light .text-\[\#9DB8E8\] {
+  color: #2b4b8f !important;
+}
+html.light [class*="border-white"] {
+  border-color: rgba(20, 20, 43, 0.22) !important;
+}
+html.light .glass-menu {
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(43, 75, 143, 0.1), transparent 60%),
+    linear-gradient(180deg, rgba(244, 241, 236, 0.94), rgba(244, 241, 236, 0.97));
+}
+html.light .ref-eyebrow {
+  color: rgba(20, 20, 43, 0.66);
+}
+html.light .fp-dot {
+  border-color: rgba(20, 20, 43, 0.3);
+}
+html.light .fp-dot.active {
+  background: #14142b;
+  border-color: #14142b;
+}
+/* logos: sem o invert viram pretas (o arquivo é claro) */
+html.light .brightness-0 {
+  filter: brightness(0) !important;
+}
+/* cards sobre foto mantêm texto claro (a foto não inverte) */
+html.light .proj-card .text-white,
+html.light .proj-card [class*="text-white/"],
+html.light .work-card .text-white,
+html.light .work-card [class*="text-white/"] {
+  color: #fff !important;
+}
+html.light ::selection {
+  background: #14142b;
+  color: #f4f1ec;
 }
 
 /* hero mobile: foto livre + plaquinha da frase */

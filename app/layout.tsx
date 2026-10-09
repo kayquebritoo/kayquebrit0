@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import Header from "@/components/Header";
-import { MobileCta, SlideProgress } from "@/components/MobileChrome";
+import { SlideProgress } from "@/components/MobileChrome";
+import { Providers } from "@/components/Providers";
 import { Grain } from "@/components/fx";
 
 // Manrope auto-hospedada (latin) — build determinístico, sem depender
@@ -92,10 +93,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
         />
-        <Header />
-        {children}
-        <SlideProgress />
-        <MobileCta />
+        <Providers>
+          <Header />
+          {children}
+          <SlideProgress />
+        </Providers>
         <Grain />
       </body>
     </html>
