@@ -40,6 +40,8 @@ services:
     ports:
       - "${WEB_PORT:-3000}:3000"
     environment:
+      HOSTNAME: "0.0.0.0"
+      PORT: "3000"
       DATABASE_URL: ${DATABASE_URL:-postgres://postgres:kbos@db:5432/kbos}
       REDIS_URL: redis://redis:6379
       APP_URL: ${APP_URL:-http://localhost:3000}
