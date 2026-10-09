@@ -165,5 +165,34 @@ export const notifications = pgTable("kbos_notifications", {
   createdAt: ts("created_at"),
 });
 
+// Fila de jobs (KBOS jobs) — espelho/auditoria em Postgres da fila BullMQ/Redis.
+// O request HTTP só escreve aqui (+ Redis); o worker executa e atualiza o status.
+// `idempotency_key` única = enfileirar 2x o mesmo trabalho retorna o existente.
+export const jobStatus = pgEnum("kbos_job_status", [
+  "pendente", // só no Postgres (Redis indisponível) — sweeper reenfileira
+  "ativo", // entregue ao BullMQ
+  "concluido",
+  "falha", // esgotou as tentativas (DLQ lógica)
+  "morto", // falha irrecuperável (ex.: provider não configurado)
+]);
+
+export const jobs = pgTable("kbos_jobs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tipo: text("tipo").notNull(),
+  payload: jsonb("payload").notNull().$type<Record<string, unknown>>(),
+  status: jobStatus("status").notNull().default("pendente"),
+  tentativas: integer("tentativas").notNull().default(0),
+  maxTentativas: integer("max_tentativas").notNull().default(5),
+  proximaTentativa: timestamp("proxima_tentativa", { withTimezone: true }),
+  idempotencyKey: text("idempotency_key").notNull().unique(),
+  bullmqId: text("bullmq_id"),
+  erro: text("erro"),
+  createdAt: ts("created_at"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
 export type Role = (typeof roleEnum.enumValues)[number];
 export type ProjectStatus = (typeof projectStatus.enumValues)[number];

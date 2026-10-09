@@ -1,9 +1,37 @@
-// Camada de notificações (Módulo 4).
-// Provider via Evolution API quando configurado; sem credenciais, a mensagem
-// fica registrada como `pendente` na fila (outbox) — nada se perde.
+// Camada de notificações (Módulo 4/6).
+//
+// O request HTTP SÓ enfileira (Redis + espelho Postgres) — o envio real à
+// Evolution API acontece no worker (`worker/index.ts` → `job-handlers.ts`).
+// Sem Redis, o job fica `pendente` no banco e o sweeper reenfileira depois.
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { notifications, projects, users } from "./schema";
+import { buildIdempotencyKey, enqueueJob } from "./jobs";
+
+export type WhatsappPayload = {
+  notificationId: string;
+  destino: string;
+  mensagem: string;
+  evento?: string;
+};
+
+/** Envio real à Evolution API — roda SÓ no worker (pode lançar erro p/ retry). */
+export async function sendEvolutionText(destino: string, mensagem: string) {
+  const base = process.env.EVOLUTION_API_URL?.replace(/\/$/, "");
+  const key = process.env.EVOLUTION_API_KEY;
+  const instance = process.env.EVOLUTION_INSTANCE;
+  if (!base || !key || !instance) {
+    const err = new Error("Evolution API não configurada (EVOLUTION_API_URL/KEY/INSTANCE).");
+    (err as NodeJS.ErrnoException).code = "EVOLUTION_MISCONFIGURED";
+    throw err;
+  }
+  const res = await fetch(`${base}/message/sendText/${instance}`, {
+    method: "POST",
+    headers: { apikey: key, "Content-Type": "application/json" },
+    body: JSON.stringify({ number: destino, text: mensagem }),
+  });
+  if (!res.ok) throw new Error(`Evolution ${res.status}: ${await res.text()}`);
+}
 
 export async function queueWhatsApp(destino: string, mensagem: string, evento?: string) {
   const d = db();
@@ -12,24 +40,15 @@ export async function queueWhatsApp(destino: string, mensagem: string, evento?: 
     .values({ canal: "whatsapp", destino, mensagem, evento })
     .returning({ id: notifications.id });
   const id = rows[0].id;
-  const base = process.env.EVOLUTION_API_URL?.replace(/\/$/, "");
-  const key = process.env.EVOLUTION_API_KEY;
-  const instance = process.env.EVOLUTION_INSTANCE;
-  if (!base || !key || !instance) return { queued: true, id, sent: false };
-  try {
-    const res = await fetch(`${base}/message/sendText/${instance}`, {
-      method: "POST",
-      headers: { apikey: key, "Content-Type": "application/json" },
-      body: JSON.stringify({ number: destino, text: mensagem }),
-    });
-    if (!res.ok) throw new Error(`Evolution ${res.status}: ${await res.text()}`);
-    await d.update(notifications).set({ status: "enviado" }).where(eq(notifications.id, id));
-    return { queued: true, id, sent: true };
-  } catch (e) {
-    const erro = e instanceof Error ? e.message : String(e);
-    await d.update(notifications).set({ status: "falha", erro }).where(eq(notifications.id, id));
-    return { queued: true, id, sent: false, erro };
-  }
+
+  const payload: WhatsappPayload = { notificationId: id, destino, mensagem, evento };
+  const key = buildIdempotencyKey("notify.whatsapp", {
+    destino,
+    mensagem,
+    evento: evento ?? null,
+  });
+  const r = await enqueueJob("notify.whatsapp", payload, { key });
+  return { queued: r.queued, id, jobId: r.jobId, sent: false, deduped: r.deduped, via: r.via };
 }
 
 /** Dispara (sem nunca quebrar a operação principal) para o cliente do projeto. */

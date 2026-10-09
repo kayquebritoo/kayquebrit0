@@ -1,0 +1,119 @@
+# KBOS — stack local e de VPS (web + worker + redis + postgres).
+# Uso: docker compose -f infra/docker-compose.yml up -d --build
+# Variáveis via ambiente ou arquivo .env na raiz (DATABASE_URL, APP_URL...).
+# Em produção (VPS), aponte DATABASE_URL para o Neon e suba só web+worker+redis.
+# Evolution API + banco próprio sob o profile `evolution`:
+#   docker compose -f infra/docker-compose.yml --profile evolution up -d
+
+services:
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # Postgres local p/ dev. Produção: DATABASE_URL do Neon (serviço ignorado).
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: kbos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kbos}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kbos"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:kbos@db:5432/kbos}
+      REDIS_URL: redis://redis:6379
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM: ${RESEND_FROM:-}
+      EVOLUTION_API_URL: ${EVOLUTION_API_URL:-}
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
+      EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-}
+      MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
+      MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET:-}
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: ["npx", "tsx", "worker/index.ts"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:kbos@db:5432/kbos}
+      REDIS_URL: redis://redis:6379
+      EVOLUTION_API_URL: ${EVOLUTION_API_URL:-}
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
+      EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-5}
+      WORKER_SWEEP_MS: ${WORKER_SWEEP_MS:-30000}
+      WORKER_CRON_MS: ${WORKER_CRON_MS:-3600000}
+      JOB_MAX_ATTEMPTS: ${JOB_MAX_ATTEMPTS:-5}
+      JOB_BASE_DELAY_MS: ${JOB_BASE_DELAY_MS:-5000}
+      BRIEFING_FOLLOWUP_HOURS: ${BRIEFING_FOLLOWUP_HOURS:-48}
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # --- Evolution API (motor WhatsApp) — profile `evolution` ---
+  evo-db:
+    image: postgres:15-alpine
+    profiles: ["evolution"]
+    environment:
+      POSTGRES_DB: evolution
+      POSTGRES_PASSWORD: ${EVO_DB_PASSWORD:-evolution}
+    volumes:
+      - evo-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  evolution:
+    image: atendai/evolution-api:v2
+    profiles: ["evolution"]
+    ports:
+      - "${EVO_PORT:-8080}:8080"
+    environment:
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-kbos-dev-key}
+      DATABASE_ENABLED: "true"
+      DATABASE_CONNECTION_URI: postgres://postgres:${EVO_DB_PASSWORD:-evolution}@evo-db:5432/evolution
+      REDIS_ENABLED: "true"
+      REDIS_URI: redis://redis:6379
+    depends_on:
+      - redis
+      - evo-db
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  pg-data:
+  evo-data:

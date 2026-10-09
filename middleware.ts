@@ -5,6 +5,9 @@ import { SESSION_COOKIE } from "@/lib/kbos/rbac";
 // de acesso (role) são verificados dentro de cada rota/layout.
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  // health é público (Docker HEALTHCHECK / monitores de uptime).
+  // (com trailingSlash, o Next redireciona /api/health -> /api/health/)
+  if (pathname === "/api/health" || pathname === "/api/health/") return NextResponse.next();
   const needsAuth =
     pathname.startsWith("/portal") ||
     pathname.startsWith("/admin") ||
