@@ -16,6 +16,7 @@ const POLICIES: Record<string, { limit: number; windowMs: number }> = {
   "auth:verify": { limit: num(process.env.RATE_VERIFY_MIN, 30), windowMs: WINDOW_MS },
   "briefings:create": { limit: num(process.env.RATE_BRIEFING_MIN, 10), windowMs: WINDOW_MS },
   "lms:checkout": { limit: num(process.env.RATE_CHECKOUT_MIN, 10), windowMs: WINDOW_MS },
+  "admin:whatsapp": { limit: num(process.env.RATE_ADMIN_MIN, 30), windowMs: WINDOW_MS },
   "webhooks:mp": { limit: num(process.env.RATE_WEBHOOK_MIN, 60), windowMs: WINDOW_MS },
   "webhooks:wa": { limit: num(process.env.RATE_WEBHOOK_MIN, 60), windowMs: WINDOW_MS },
 };

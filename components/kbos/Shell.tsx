@@ -84,6 +84,7 @@ export function KbosShell({
               {user.role === "admin" && (
                 <>
                   <Link href="/admin/cursos" className="rounded-full border border-white/15 px-4 py-2 text-white/70 hover:text-white">Cursos</Link>
+                  <Link href="/admin/whatsapp" className="rounded-full border border-white/15 px-4 py-2 text-white/70 hover:text-white">WhatsApp</Link>
                   <Link href="/admin/financeiro" className="rounded-full border border-white/15 px-4 py-2 text-white/70 hover:text-white">Financeiro</Link>
                   <Link href="/admin/briefings" className="rounded-full border border-white/15 px-4 py-2 text-white/70 hover:text-white">Briefings</Link>
                 </>

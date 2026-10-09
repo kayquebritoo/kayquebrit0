@@ -202,6 +202,9 @@ export const progressCompleteSchema = z.object({
 export const checkoutSchema = z.object({
   courseId: uuidField,
 });
+export const waAdminActionSchema = z.object({
+  action: z.enum(["restart", "logout"]),
+});
 
 /* ---------- leitura validada ---------- */
 
