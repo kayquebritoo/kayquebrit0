@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { eq, or } from "drizzle-orm";
 import { db } from "@/lib/kbos/db";
-import { transactions } from "@/lib/kbos/schema";
+import { enrollments, transactions } from "@/lib/kbos/schema";
 import { notifyProject } from "@/lib/kbos/whatsapp";
 import { badRequest, mpNotificationSchema, readBody } from "@/lib/kbos/validators";
 import { withRateLimit } from "@/lib/kbos/rate-limit";
 import { fetchMpPayment, parseSignatureHeader, verifyMpSignature } from "@/lib/kbos/mercadopago";
+import { buildIdempotencyKey, enqueueJob } from "@/lib/kbos/jobs";
 
 // Webhook Mercado Pago — baixa automática com HMAC real.
 // Ativação: preferência com `external_reference = <transactionId>`, esta URL
@@ -51,10 +52,36 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, verified: true, applied: false, reason: payment.status });
   }
 
-  // Localiza a transação: external_reference (preferência) ou gatewayRef.
-  // (external_reference só entra na query se for uuid — senão o Postgres erra.)
+  // Ramo LMS: preferência criada com external_reference = `lms:<enrollmentId>`.
+  // Confirma a matrícula e dispara as boas-vindas via worker (idempotente).
   const d = db();
   const ext = payment.external_reference;
+  if (ext?.startsWith("lms:")) {
+    const enrollmentId = ext.slice(4);
+    const uuidOk = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(enrollmentId);
+    const enr = uuidOk
+      ? (await d.select().from(enrollments).where(eq(enrollments.id, enrollmentId)).limit(1))[0]
+      : undefined;
+    if (!enr) {
+      return NextResponse.json({ ok: true, verified: true, applied: false, reason: "matrícula LMS não encontrada" });
+    }
+    if (enr.status === "ativa" || enr.status === "concluida") {
+      return NextResponse.json({ ok: true, verified: true, applied: true, duplicate: true });
+    }
+    if (enr.status === "cancelada") {
+      return NextResponse.json({ ok: true, verified: true, applied: false, reason: "matrícula cancelada" });
+    }
+    await d.update(enrollments).set({ status: "ativa", updatedAt: new Date() }).where(eq(enrollments.id, enr.id));
+    const w = await enqueueJob(
+      "lms.welcome",
+      { enrollmentId: enr.id },
+      { key: buildIdempotencyKey("lms-welcome", { enrollment: enr.id }) }
+    );
+    return NextResponse.json({ ok: true, verified: true, applied: true, via: "lms", welcome: w.queued });
+  }
+
+  // Localiza a transação: external_reference (preferência) ou gatewayRef.
+  // (external_reference só entra na query se for uuid — senão o Postgres erra.)
   const extIsUuid =
     !!ext && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ext);
   const row = (

@@ -17,6 +17,11 @@ export function middleware(req: NextRequest) {
   const isBriefingPublicRead =
     req.method === "GET" && /^\/api\/briefings\/[^/]+(\/contrato)?$/.test(path);
   if (isBriefingCreate || isBriefingPublicRead) return NextResponse.next();
+  // Catálogo público do LMS (vitrine de cursos); o conteúdo das aulas
+  // segue gated na rota (só matriculados/equipe veem vídeo e texto).
+  const isLmsCatalog =
+    req.method === "GET" && /^\/api\/lms\/courses(\/[^/]+)?$/.test(path);
+  if (isLmsCatalog) return NextResponse.next();
   const needsAuth =
     pathname.startsWith("/portal") ||
     pathname.startsWith("/admin") ||

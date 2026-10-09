@@ -124,6 +124,82 @@ export const mpNotificationSchema = z.object({
   data: z.object({ id: z.union([z.string(), z.number()]) }).passthrough(),
 }).passthrough();
 
+/* ---------- LMS ---------- */
+export const courseCreateSchema = z.object({
+  titulo: shortText(160),
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, { error: "Slug inválido." })
+    .max(100)
+    .optional(),
+  descricao: z.string().trim().max(5000).optional(),
+  preco: moneyField.optional(),
+  capa: z.url({ error: "URL inválida." }).max(2000).optional(),
+  status: z.enum(["rascunho", "publicado", "arquivado"]).optional(),
+});
+export const coursePatchSchema = nonEmpty(
+  z.object({
+    titulo: shortText(160).optional(),
+    slug: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, { error: "Slug inválido." })
+      .max(100)
+      .optional(),
+    descricao: z.string().trim().max(5000).nullable().optional(),
+    preco: moneyField.nullable().optional(),
+    capa: z.url({ error: "URL inválida." }).max(2000).nullable().optional(),
+    status: z.enum(["rascunho", "publicado", "arquivado"]).optional(),
+  })
+);
+export const moduleCreateSchema = z.object({
+  courseId: uuidField,
+  titulo: shortText(160),
+  ordem: z.coerce.number().int().min(0).max(10000).optional(),
+});
+export const modulePatchSchema = nonEmpty(
+  z.object({
+    titulo: shortText(160).optional(),
+    ordem: z.coerce.number().int().min(0).max(10000).optional(),
+  })
+);
+export const lessonCreateSchema = z.object({
+  moduleId: uuidField,
+  titulo: shortText(160),
+  descricao: z.string().trim().max(5000).optional(),
+  tipo: z.enum(["video", "texto", "quiz", "arquivo"]).optional(),
+  videoUrl: z.url({ error: "URL inválida." }).max(2000).optional(),
+  conteudo: z.string().max(100000).optional(),
+  duracaoMin: z.coerce.number().int().positive().max(100000).optional(),
+  ordem: z.coerce.number().int().min(0).max(10000).optional(),
+  dripDays: z.coerce.number().int().min(0).max(3650).optional(),
+});
+export const lessonPatchSchema = nonEmpty(
+  z.object({
+    titulo: shortText(160).optional(),
+    descricao: z.string().trim().max(5000).nullable().optional(),
+    tipo: z.enum(["video", "texto", "quiz", "arquivo"]).optional(),
+    videoUrl: z.url({ error: "URL inválida." }).max(2000).nullable().optional(),
+    conteudo: z.string().max(100000).nullable().optional(),
+    duracaoMin: z.coerce.number().int().positive().max(100000).nullable().optional(),
+    ordem: z.coerce.number().int().min(0).max(10000).optional(),
+    dripDays: z.coerce.number().int().min(0).max(3650).optional(),
+  })
+);
+export const enrollmentCreateSchema = z.object({
+  courseId: uuidField,
+  userId: uuidField.optional(),
+  transactionId: uuidField.optional(),
+  status: z.enum(["pendente", "ativa"]).optional(),
+});
+export const progressCompleteSchema = z.object({
+  enrollmentId: uuidField,
+  lessonId: uuidField,
+});
+
 /* ---------- leitura validada ---------- */
 
 export type Issue = { campo: string; mensagem: string };

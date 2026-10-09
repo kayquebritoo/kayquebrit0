@@ -4,9 +4,10 @@
 import { and, eq, lt } from "drizzle-orm";
 import { UnrecoverableError } from "bullmq";
 import { db } from "./db";
-import { briefings, jobs, notifications, projects, transactions, users } from "./schema";
+import { briefings, courses, enrollments, jobs, notifications, projects, transactions, users } from "./schema";
 import { buildIdempotencyKey, enqueueJob } from "./jobs";
-import { sendEvolutionText, type WhatsappPayload } from "./whatsapp";
+import { welcomeMessage } from "./lms";
+import { queueWhatsApp, sendEvolutionText, type WhatsappPayload } from "./whatsapp";
 
 export const FOLLOWUP_AFTER_H = Number(process.env.BRIEFING_FOLLOWUP_HOURS || 48);
 
@@ -118,9 +119,24 @@ export async function handleBriefingFollowup(now: Date = new Date()) {
   return { enviados };
 }
 
-/* ---------- auditoria da fila (atualizada pelos eventos do worker) ---------- */
+/* ---------- lms.welcome ---------- */
 
-export async function auditJobDone(idempotencyKey: string) {
+export async function handleLmsWelcome(p: { enrollmentId: string }) {
+  const d = db();
+  const enr = (
+    await d.select().from(enrollments).where(eq(enrollments.id, p.enrollmentId)).limit(1)
+  )[0];
+  if (!enr) throw new UnrecoverableError("Matrícula não encontrada.");
+  const aluno = (await d.select().from(users).where(eq(users.id, enr.userId)).limit(1))[0];
+  const course = (await d.select().from(courses).where(eq(courses.id, enr.courseId)).limit(1))[0];
+  if (!aluno || !course) throw new UnrecoverableError("Aluno ou curso inexistente.");
+  // Sem telefone não há para onde enviar — sucesso com skip (não é falha).
+  if (!aluno.phone) return { skipped: true, reason: "aluno sem telefone" };
+  const r = await queueWhatsApp(aluno.phone, welcomeMessage(aluno.name, course.titulo), "lms.boas-vindas");
+  return { skipped: false, queued: r.queued, via: r.via };
+}
+
+/* ---------- auditoria da fila (atualizada pelos eventos do worker) ---------- */export async function auditJobDone(idempotencyKey: string) {
   try {
     await db()
       .update(jobs)

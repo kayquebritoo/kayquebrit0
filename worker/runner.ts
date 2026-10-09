@@ -16,6 +16,7 @@ import {
   auditJobDead,
   handleBillingReconcile,
   handleBriefingFollowup,
+  handleLmsWelcome,
   handleNotifyWhatsapp,
 } from "../lib/kbos/job-handlers";
 import type { WhatsappPayload } from "../lib/kbos/whatsapp";
@@ -29,10 +30,12 @@ export async function processJob(job: Pick<Job, "id" | "name" | "data" | "update
     switch (tipo) {
       case "notify.whatsapp":
         return await handleNotifyWhatsapp(job.data as WhatsappPayload);
-      case "billing.reconcile":
-        return await handleBillingReconcile();
-      case "briefing.followup":
-        return await handleBriefingFollowup();
+    case "billing.reconcile":
+      return await handleBillingReconcile();
+    case "briefing.followup":
+      return await handleBriefingFollowup();
+    case "lms.welcome":
+      return await handleLmsWelcome(job.data as { enrollmentId: string });
       default:
         throw new UnrecoverableError(`Tipo de job desconhecido: ${String(tipo)}`);
     }

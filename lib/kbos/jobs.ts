@@ -17,6 +17,7 @@ export const JOB_TYPES = [
   "notify.whatsapp",
   "billing.reconcile",
   "briefing.followup",
+  "lms.welcome",
 ] as const;
 export type JobType = (typeof JOB_TYPES)[number];
 

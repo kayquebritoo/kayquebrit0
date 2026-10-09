@@ -9,6 +9,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -196,3 +197,111 @@ export const jobs = pgTable("kbos_jobs", {
 
 export type Role = (typeof roleEnum.enumValues)[number];
 export type ProjectStatus = (typeof projectStatus.enumValues)[number];
+
+// ---------- LMS (cursos, matrículas, progresso, certificados) ----------
+
+export const courseStatus = pgEnum("kbos_course_status", ["rascunho", "publicado", "arquivado"]);
+
+export const courses = pgTable("kbos_courses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  titulo: text("titulo").notNull(),
+  slug: text("slug").notNull().unique(),
+  descricao: text("descricao"),
+  preco: numeric("preco"),
+  capa: text("capa"),
+  status: courseStatus("status").notNull().default("rascunho"),
+  createdAt: ts("created_at"),
+  updatedAt: ts("updated_at"),
+});
+
+export const modules = pgTable("kbos_modules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  courseId: uuid("course_id")
+    .notNull()
+    .references(() => courses.id, { onDelete: "cascade" }),
+  titulo: text("titulo").notNull(),
+  ordem: integer("ordem").notNull().default(0),
+  createdAt: ts("created_at"),
+  updatedAt: ts("updated_at"),
+});
+
+export const lessonType = pgEnum("kbos_lesson_type", ["video", "texto", "quiz", "arquivo"]);
+
+export const lessons = pgTable("kbos_lessons", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  moduleId: uuid("module_id")
+    .notNull()
+    .references(() => modules.id, { onDelete: "cascade" }),
+  titulo: text("titulo").notNull(),
+  descricao: text("descricao"),
+  tipo: lessonType("tipo").notNull().default("video"),
+  videoUrl: text("video_url"),
+  conteudo: text("conteudo"),
+  duracaoMin: integer("duracao_min"),
+  ordem: integer("ordem").notNull().default(0),
+  /** drip: dias após a matrícula para liberar (0 = imediato) */
+  dripDays: integer("drip_days").notNull().default(0),
+  createdAt: ts("created_at"),
+  updatedAt: ts("updated_at"),
+});
+
+export const enrollmentStatus = pgEnum("kbos_enrollment_status", [
+  "pendente",
+  "ativa",
+  "pausada",
+  "concluida",
+  "cancelada",
+]);
+
+export const enrollments = pgTable(
+  "kbos_enrollments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: enrollmentStatus("status").notNull().default("pendente"),
+    transactionId: uuid("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
+    progressoPct: numeric("progresso_pct").notNull().default("0"),
+    concluidoEm: timestamp("concluido_em", { withTimezone: true }),
+    createdAt: ts("created_at"),
+    updatedAt: ts("updated_at"),
+  },
+  (t) => [
+    // um aluno = uma matrícula por curso (409 em duplicada)
+    uniqueIndex("kbos_enrollments_user_course_unique").on(t.userId, t.courseId),
+  ]
+);
+
+export const lessonProgress = pgTable(
+  "kbos_lesson_progress",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    enrollmentId: uuid("enrollment_id")
+      .notNull()
+      .references(() => enrollments.id, { onDelete: "cascade" }),
+    lessonId: uuid("lesson_id")
+      .notNull()
+      .references(() => lessons.id, { onDelete: "cascade" }),
+    concluida: boolean("concluida").notNull().default(false),
+    concluidaEm: timestamp("concluida_em", { withTimezone: true }),
+    createdAt: ts("created_at"),
+  },
+  (t) => [
+    // uma linha por (matrícula, aula)
+    uniqueIndex("kbos_lesson_progress_unique").on(t.enrollmentId, t.lessonId),
+  ]
+);
+
+export const certificates = pgTable("kbos_certificates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  enrollmentId: uuid("enrollment_id")
+    .notNull()
+    .references(() => enrollments.id, { onDelete: "cascade" })
+    .unique(),
+  codigo: text("codigo").notNull().unique(),
+  emitidaEm: timestamp("emitida_em", { withTimezone: true }).defaultNow().notNull(),
+});
