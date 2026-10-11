@@ -1,12 +1,15 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function EntrarForm() {
   const params = useSearchParams();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [adminBypass, setAdminBypass] = useState("");
+  const [showBypass, setShowBypass] = useState(false);
   const [state, setState] = useState<{ ok?: boolean; sent?: boolean; msg?: string; devLink?: string; loading?: boolean }>({});
 
   async function submit(e: React.FormEvent) {
@@ -16,10 +19,15 @@ export default function EntrarForm() {
       const res = await fetch("/api/auth/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, name }),
+        body: JSON.stringify({ email, name, ...(showBypass && adminBypass ? { adminBypass } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Falha ao enviar.");
+      // Sessão admin direta (bypass): cookie já setado — vai para /admin.
+      if (data.adminSession) {
+        router.replace(params.get("next") || "/admin");
+        return;
+      }
       setState({
         ok: true,
         sent: data.emailEnviado,
@@ -28,6 +36,8 @@ export default function EntrarForm() {
           : "E-mail de acesso ainda não configurado — peça seu link ao administrador.",
         devLink: data.devLink,
       });
+      // Provedor fora do ar para o admin: oferece o campo do token de emergência.
+      if (data.adminFallback) setShowBypass(true);
     } catch (err) {
       setState({ msg: err instanceof Error ? err.message : "Erro inesperado." });
     }
@@ -69,6 +79,24 @@ export default function EntrarForm() {
         >
           {state.loading ? "Enviando..." : "Enviar link"}
         </button>
+        {showBypass && (
+          <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+            <label className="block text-[12px] uppercase tracking-[0.2em] text-white/50">
+              Token de acesso admin
+            </label>
+            <input
+              value={adminBypass}
+              onChange={(e) => setAdminBypass(e.target.value)}
+              type="password"
+              autoComplete="off"
+              placeholder="KBOS_ADMIN_BYPASS_TOKEN"
+              className="mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-4 py-3 text-[15px] outline-none placeholder:text-white/25 focus:border-white/50"
+            />
+            <p className="mt-2 text-xs leading-relaxed text-white/40">
+              Emergência para o admin quando o e-mail falha. Reenvie o formulário com o token para entrar direto.
+            </p>
+          </div>
+        )}
         {state.msg && (
           <p className={`mt-4 text-sm ${state.ok ? "text-emerald-300" : "text-rose-300"}`}>{state.msg}</p>
         )}

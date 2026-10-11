@@ -57,6 +57,28 @@ docker compose -f infra/docker-compose.yml logs -f evolution  # whatsapp
 docker compose -f infra/docker-compose.yml --profile evolution up -d --build  # atualizar
 ```
 
+> SEMPRE rode de `/opt/kbos` (raiz do repo) com `-f infra/docker-compose.yml`.
+> Rodar de dentro de `infra/` faz o compose ignorar `/opt/kbos/.env` e subir
+> com banco/Resend vazios (fallback local).
+
+## 4.1. Bypass admin de emergência (e-mail fora do ar)
+
+```bash
+cd /opt/kbos
+# Remove linhas antigas (inclui aliases legados)
+sed -i '/KBOS_ADMIN_BYPASS_TOKEN/d; /KBOS_SESSION_TOKEN/d; /ADMIN_SESSION_TOKEN/d' .env
+NEW_TOKEN=$(openssl rand -hex 32)
+echo "KBOS_ADMIN_BYPASS_TOKEN=\"$NEW_TOKEN\"" >> .env
+# Rebuild a partir da raiz (NÃO entre em infra/)
+docker compose -f infra/docker-compose.yml up -d --build
+# Confere que o segredo chegou no container (mostra só o tamanho: esperado 65 = 64 + \n)
+docker compose -f infra/docker-compose.yml exec web sh -c 'printenv KBOS_ADMIN_BYPASS_TOKEN | wc -c'
+```
+
+Depois entre em `https://kbos.kayquebrito.com.br/entrar` com
+`contato@kayquebrito.com.br` + o token no campo "Token de acesso admin".
+Se o token vazar, gere outro e repita o processo.
+
 ## 5. Portas (liberar no firewall da VPS)
 
 | Porta | Serviço | Expor? |

@@ -30,6 +30,10 @@ function nonEmpty<T extends z.ZodRawShape>(s: z.ZodObject<T>) {
 export const authRequestSchema = z.object({
   email: emailField,
   name: z.string().trim().max(120).optional(),
+  // Fallback do admin (produção): segredo `KBOS_ADMIN_BYPASS_TOKEN`.
+  // Quando confere + e-mail é o do admin, a rota cria sessão imediata sem
+  // depender do provedor de e-mail. O campo é ignorado para outros e-mails.
+  adminBypass: z.string().trim().max(256).optional(),
 });
 
 /* ---------- briefings ---------- */

@@ -1,8 +1,19 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE } from "@/lib/kbos/rbac";
+// NOTA: importar SOMENTE de `admin-access` (módulo edge-safe, sem
+// `next/headers`/drizzle/db). Importar `rbac` aqui puxaria o cliente do banco
+// para o runtime do middleware e quebraria o deploy.
+import { SESSION_COOKIE_ALIASES, isAdminBypass } from "@/lib/kbos/admin-access";
 
 // Barreira leve: exige cookie de sessão. A validade do token e o nível
 // de acesso (role) são verificados dentro de cada rota/layout.
+//
+// Bypass do admin (produção/VPS): quando `KBOS_ADMIN_BYPASS_TOKEN` está
+// configurado e o cookie de sessão contém exatamente esse segredo, o
+// middleware libera o acesso — inclusive às rotas `/admin/*` — sem redirect
+// para `/entrar`. O `sessionUser()` (rbac) resolve o mesmo token para o
+// usuário `contato@kayquebrito.com.br` com role admin, então guards
+// client-side e `deny()` nas rotas seguem autorizando. Sem o segredo
+// configurado, o bypass fica inativo (fail-closed).
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   // health é público (Docker HEALTHCHECK / monitores de uptime).
@@ -35,7 +46,20 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/api/transactions") ||
     pathname.startsWith("/api/briefings");
   if (!needsAuth) return NextResponse.next();
-  if (!req.cookies.get(SESSION_COOKIE)) {
+  // Aceita o cookie principal (`kbos_session`) e o alternativo
+  // (`kbos.session-token`, convenção usada no deploy da VPS).
+  let sessionValue: string | undefined;
+  for (const name of SESSION_COOKIE_ALIASES) {
+    const v = req.cookies.get(name)?.value;
+    if (v) {
+      sessionValue = v;
+      break;
+    }
+  }
+  // Bypass do admin: token fixo via cookie libera tudo (compara em tempo
+  // constante; inativo sem `KBOS_ADMIN_BYPASS_TOKEN` — ver admin-access.ts).
+  if (sessionValue && isAdminBypass(sessionValue)) return NextResponse.next();
+  if (!sessionValue) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
     }

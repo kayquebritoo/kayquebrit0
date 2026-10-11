@@ -7,8 +7,14 @@ export async function GET(req: Request) {
   const limited = await withRateLimit(req, "auth:verify");
   if (limited) return limited;
   const url = new URL(req.url);
-  const token = url.searchParams.get("token") || "";
+  const token = (url.searchParams.get("token") || "").trim();
   const next = url.searchParams.get("next") || "/portal";
+  // O bypass do admin NUNCA trafega por URL (evita segredo em logs/histórico):
+  // `?token=` aceita somente o formato do Magic Link (hex de 64+ chars).
+  // Qualquer outro formato cai em `/entrar?erro=link` sem tocar no banco.
+  if (!/^[0-9a-f]{32,128}$/i.test(token)) {
+    return NextResponse.redirect(new URL("/entrar?erro=link", url.origin));
+  }
   try {
     const r = await consumeMagicLink(token);
     if (!r) {

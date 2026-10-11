@@ -1,5 +1,22 @@
 // Schema KBOS — todas as tabelas do ecossistema.
 // Convenção: ids uuid, timestamps com timezone, valores em `numeric`.
+//
+// CONTRATO COM O BANCO (produção/VPS): os campos camelCase do Drizzle mapeiam
+// para colunas snake_case existentes (`createdAt` -> `created_at`,
+// `userId` -> `user_id`, `tokenHash` -> `token_hash`, ...). Este arquivo é a
+// fonte de verdade e confere 1:1 com `drizzle/*.sql` (aplicado via
+// `npx drizzle-kit push`):
+//   - `users`      <-> kbos_users(id, email, name, role, phone, created_at)
+//   - `sessions`   <-> kbos_sessions(id uuid, user_id, expires_at, created_at)
+//   - `loginTokens`<-> kbos_login_tokens(id, email, token_hash, expires_at,
+//                     consumed, created_at)
+// Regras de segurança do mapeamento:
+//   1. Nunca renomear coluna aqui sem migration (quebra as rotas de auth).
+//   2. `sessions.id` é uuid: o bypass do admin (`KBOS_ADMIN_BYPASS_TOKEN`)
+//      NUNCA chega ao Postgres — é comparado em memória em `admin-access.ts`
+//      antes de qualquer query (evita `invalid input syntax for type uuid`).
+//   3. Queries de sessão validam o formato uuid antes (`isUuidLike`) e
+//      retornam 401 em vez de 500 para valores inesperados.
 import {
   boolean,
   integer,
