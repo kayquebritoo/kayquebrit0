@@ -29,8 +29,8 @@ openssl rand -hex 16
 
 ```bash
 cd /opt/kbos
-docker compose -f infra/docker-compose.yml --profile evolution up -d --build
-docker compose -f infra/docker-compose.yml ps
+docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml --profile evolution up -d --build
+docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml ps
 ```
 
 Checar saúde (todos `healthy`/`running`):
@@ -52,9 +52,9 @@ curl -s http://localhost:3000/api/health
 ## 4. Operação
 
 ```bash
-docker compose -f infra/docker-compose.yml logs -f worker     # fila
-docker compose -f infra/docker-compose.yml logs -f evolution  # whatsapp
-docker compose -f infra/docker-compose.yml --profile evolution up -d --build  # atualizar
+docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml logs -f worker     # fila
+docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml logs -f evolution  # whatsapp
+docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml --profile evolution up -d --build  # atualizar
 ```
 
 > SEMPRE rode de `/opt/kbos` (raiz do repo) com `-f infra/docker-compose.yml`.
@@ -70,9 +70,9 @@ sed -i '/KBOS_ADMIN_BYPASS_TOKEN/d; /KBOS_SESSION_TOKEN/d; /ADMIN_SESSION_TOKEN/
 NEW_TOKEN=$(openssl rand -hex 32)
 echo "KBOS_ADMIN_BYPASS_TOKEN=\"$NEW_TOKEN\"" >> .env
 # Rebuild a partir da raiz (NÃO entre em infra/)
-docker compose -f infra/docker-compose.yml up -d --build
+docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml up -d --build
 # Confere que o segredo chegou no container (mostra só o tamanho: esperado 65 = 64 + \n)
-docker compose -f infra/docker-compose.yml exec web sh -c 'printenv KBOS_ADMIN_BYPASS_TOKEN | wc -c'
+docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml exec web sh -c 'printenv KBOS_ADMIN_BYPASS_TOKEN | wc -c'
 ```
 
 Depois entre em `https://kbos.kayquebrito.com.br/entrar` com
