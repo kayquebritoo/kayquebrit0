@@ -7,6 +7,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "./db";
 import { contacts, conversations, messages } from "./schema";
+import { sendTelegramText } from "./telegram";
 
 export type InboundMessage = {
   /** Identificador remoto do chat (ex. `5511999998888@s.whatsapp.net`). */
@@ -337,14 +338,30 @@ export function chatIdToNumber(chatId: string): string | null {
 export type OutboundInput = { content?: string | null; mediaUrl?: string | null; messageType?: string };
 
 /**
- * Envia pela Evolution e persiste como `agent`. Só WhatsApp é suportado
- * no envio (`501` nos demais canais). Lança erro quando a Evolution não
- * está configurada ou a API falha — a rota traduz em 503/502.
+ * Envia pela Evolution (WhatsApp) ou Bot API (Telegram) e persiste como
+ * `agent`. Demais canais → `501`. Lança erro quando o provedor não está
+ * configurado ou a API falha — a rota traduz em 503/502.
  */
 export async function sendAgentMessage(
   conv: Conversation,
   input: OutboundInput
 ): Promise<{ id: string; externalId: string | null }> {
+  const text = input.content?.trim() || "";
+  const type = input.messageType ?? (input.mediaUrl ? "image" : "text");
+
+  if (conv.channel === "telegram") {
+    if (input.mediaUrl) {
+      throw new Error("Envio de mídia no Telegram ainda não suportado — envie texto.");
+    }
+    const { messageId } = await sendTelegramText(conv.channelChatId, text);
+    return persistAgentMessage(conv, {
+      content: text || null,
+      mediaUrl: null,
+      messageType: "text",
+      externalId: messageId !== null ? `tg:${messageId}` : null,
+    });
+  }
+
   if (conv.channel !== "whatsapp") {
     const err = new Error(`Envio ainda não suportado no canal ${conv.channel}.`);
     (err as NodeJS.ErrnoException).code = "CHANNEL_UNSUPPORTED";
@@ -362,8 +379,6 @@ export async function sendAgentMessage(
     throw err;
   }
   const instance = process.env.EVOLUTION_INSTANCE!;
-  const text = input.content?.trim() || "";
-  const type = input.messageType ?? (input.mediaUrl ? "image" : "text");
   let externalId: string | null = null;
   if (input.mediaUrl) {
     const mediatype = type === "audio" ? "audio" : type === "document" ? "document" : "image";
@@ -378,22 +393,34 @@ export async function sendAgentMessage(
     const r = await evoPost(`/message/sendText/${encodeURIComponent(instance)}`, { number, text });
     externalId = str((r.key as Record<string, unknown> | undefined)?.id) ?? null;
   }
+  return persistAgentMessage(conv, {
+    content: text || null,
+    mediaUrl: input.mediaUrl || null,
+    messageType: (type as "text" | "image" | "audio" | "document") ?? "text",
+    externalId,
+  });
+}
+
+async function persistAgentMessage(
+  conv: Conversation,
+  v: { content: string | null; mediaUrl: string | null; messageType: "text" | "image" | "audio" | "document"; externalId: string | null }
+): Promise<{ id: string; externalId: string | null }> {
   const now = new Date();
   const ins = await db()
     .insert(messages)
     .values({
       conversationId: conv.id,
       senderType: "agent",
-      content: text || null,
-      mediaUrl: input.mediaUrl || null,
-      messageType: (type as "text" | "image" | "audio" | "document") ?? "text",
+      content: v.content,
+      mediaUrl: v.mediaUrl,
+      messageType: v.messageType,
       status: "sent",
-      externalId,
+      externalId: v.externalId,
     })
     .returning({ id: messages.id });
   await db()
     .update(conversations)
     .set({ lastMessageAt: now, unreadCount: 0, updatedAt: now })
     .where(eq(conversations.id, conv.id));
-  return { id: ins[0].id, externalId };
+  return { id: ins[0].id, externalId: v.externalId };
 }

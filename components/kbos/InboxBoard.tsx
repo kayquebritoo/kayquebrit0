@@ -66,7 +66,7 @@ export default function InboxBoard() {
   const [unreadTotal, setUnreadTotal] = useState(0);
   const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [channelFilter, setChannelFilter] = useState("all");
+  const [channelFilter, setChannelFilter] = useState("whatsapp");
   const [q, setQ] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [msgs, setMsgs] = useState<Message[]>([]);

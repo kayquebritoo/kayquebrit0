@@ -67,6 +67,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           { status: 503 }
         );
       }
+      if (code === "TELEGRAM_MISCONFIGURED") {
+        return NextResponse.json(
+          { error: "Telegram não configurado (TELEGRAM_BOT_TOKEN)." },
+          { status: 503 }
+        );
+      }
       if (code === "CHANNEL_UNSUPPORTED") {
         return NextResponse.json({ error: e instanceof Error ? e.message : "Canal sem envio." }, { status: 501 });
       }

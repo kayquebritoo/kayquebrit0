@@ -60,6 +60,9 @@ services:
       EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-}
       # Inbox Fase 2: segredo do webhook inbound (vazio = aceita sem segredo).
       EVOLUTION_WEBHOOK_TOKEN: ${EVOLUTION_WEBHOOK_TOKEN:-}
+      # Canais Fase 2b: Telegram via Bot API.
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
       # Campanhas Fase 3 (pacing visto pela API na estimativa de duração).
       CAMPAIGN_SEND_DELAY_MS: ${CAMPAIGN_SEND_DELAY_MS:-8000}
       # Assistente IA Fase 3 (sem OPENAI_API_KEY = modo base/stub).
