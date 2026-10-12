@@ -47,6 +47,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.titulo !== undefined) patch.titulo = body.titulo;
     if (body.valor !== undefined) patch.valor = body.valor;
     if (body.prazo !== undefined) patch.prazo = body.prazo ? new Date(body.prazo) : null;
+    // Fase 1 — vitrine / associação com curso.
+    if (body.slug !== undefined) patch.slug = body.slug || null;
+    if (body.description !== undefined) patch.description = body.description || null;
+    if (body.coverUrl !== undefined) patch.coverUrl = body.coverUrl || null;
+    if (body.thumbUrl !== undefined) patch.thumbUrl = body.thumbUrl || null;
+    if (body.videoUrl !== undefined) patch.videoUrl = body.videoUrl || null;
+    if (body.courseId !== undefined) patch.courseId = body.courseId || null;
     await db().update(projects).set(patch).where(eq(projects.id, id));
     if (statusChanged) {
       const label = PIPELINE.find((p) => p.id === statusChanged)?.label ?? statusChanged;

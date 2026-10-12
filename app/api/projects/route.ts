@@ -46,10 +46,21 @@ export async function POST(req: Request) {
         briefingId: body.briefingId ?? null,
         valor: body.valor ?? null,
         prazo: body.prazo ? new Date(body.prazo) : null,
+        // Fase 1 — vitrine (slug único; 409 amigável em conflito).
+        slug: body.slug ?? null,
+        description: body.description ?? null,
+        coverUrl: body.coverUrl ?? null,
+        thumbUrl: body.thumbUrl ?? null,
+        videoUrl: body.videoUrl ?? null,
+        courseId: body.courseId ?? null,
       })
       .returning();
     return NextResponse.json({ ok: true, item: rows[0] }, { status: 201 });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    const msg = e instanceof Error ? e.message : "Erro";
+    if (/slug|unique|duplicate/i.test(msg)) {
+      return NextResponse.json({ error: "Slug já em uso." }, { status: 409 });
+    }
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

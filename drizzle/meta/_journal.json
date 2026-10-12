@@ -15,6 +15,34 @@
       "when": 1791552835079,
       "tag": "0001_lms",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791600000000,
+      "tag": "0002_fase1_crm_kanban",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791700000000,
+      "tag": "0003_fase2_inbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791800000000,
+      "tag": "0004_fase3_campaigns",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791900000000,
+      "tag": "0005_fase4_finance_agenda",
+      "breakpoints": true
     }
   ]
 }

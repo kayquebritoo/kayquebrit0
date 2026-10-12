@@ -50,7 +50,8 @@ export async function POST(req: Request) {
           slug,
           descricao: b.descricao ?? null,
           preco: b.preco ?? null,
-          capa: b.capa ?? null,
+          capa: b.capa ?? b.thumbnailUrl ?? null,
+          thumbnailUrl: b.thumbnailUrl ?? b.capa ?? null,
           status: b.status ?? "rascunho",
         })
         .returning();

@@ -18,6 +18,9 @@ export const JOB_TYPES = [
   "billing.reconcile",
   "briefing.followup",
   "lms.welcome",
+  "campaign.dispatch",
+  "campaign.send",
+  "agenda.reminders",
 ] as const;
 export type JobType = (typeof JOB_TYPES)[number];
 

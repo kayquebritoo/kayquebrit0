@@ -14,28 +14,43 @@ import {
 } from "../lib/kbos/jobs";
 import {
   auditJobDead,
+  handleAgendaReminders,
   handleBillingReconcile,
   handleBriefingFollowup,
+  handleCampaignDispatch,
+  handleCampaignSend,
   handleLmsWelcome,
   handleNotifyWhatsapp,
 } from "../lib/kbos/job-handlers";
 import type { WhatsappPayload } from "../lib/kbos/whatsapp";
+import { jobAttempts } from "../lib/kbos/jobs";
 
 export const newConn = (url: string) =>
   new IORedis(url, { maxRetriesPerRequest: null });
 
-export async function processJob(job: Pick<Job, "id" | "name" | "data" | "updateData">) {
+export async function processJob(
+  job: Pick<Job, "id" | "name" | "data" | "updateData" | "attemptsMade">
+) {
   try {
     const tipo = job.name as JobType;
     switch (tipo) {
       case "notify.whatsapp":
         return await handleNotifyWhatsapp(job.data as WhatsappPayload);
-    case "billing.reconcile":
-      return await handleBillingReconcile();
-    case "briefing.followup":
-      return await handleBriefingFollowup();
-    case "lms.welcome":
-      return await handleLmsWelcome(job.data as { enrollmentId: string });
+      case "billing.reconcile":
+        return await handleBillingReconcile();
+      case "briefing.followup":
+        return await handleBriefingFollowup();
+      case "lms.welcome":
+        return await handleLmsWelcome(job.data as { enrollmentId: string });
+      case "campaign.dispatch":
+        return await handleCampaignDispatch(job.data as { campaignId: string });
+      case "campaign.send":
+        return await handleCampaignSend(job.data as { campaignId: string; logId: string }, {
+          attempt: (job.attemptsMade ?? 0) + 1,
+          max: jobAttempts(),
+        });
+      case "agenda.reminders":
+        return await handleAgendaReminders();
       default:
         throw new UnrecoverableError(`Tipo de job desconhecido: ${String(tipo)}`);
     }
@@ -54,6 +69,11 @@ export async function processJob(job: Pick<Job, "id" | "name" | "data" | "update
   }
 }
 
+export function reminderPollMs(): number {
+  const n = Number(process.env.REMINDER_POLL_MS || 300_000);
+  return Number.isFinite(n) && n >= 60_000 ? Math.floor(n) : 300_000;
+}
+
 export async function ensureCrons(queue: Queue, everyMs: number) {
   const existing = await queue.getJobSchedulers();
   const has = (id: string) => existing.some((j) => j.id === id);
@@ -69,6 +89,15 @@ export async function ensureCrons(queue: Queue, everyMs: number) {
       "cron--briefing.followup",
       { every: everyMs },
       { name: "briefing.followup", data: {} }
+    );
+  }
+  // Alertas da agenda: cadência própria (padrão 5 min) — o cron horário
+  // padrão seria lento demais p/ avisos de 15 min.
+  if (!has("cron--agenda.reminders")) {
+    await queue.upsertJobScheduler(
+      "cron--agenda.reminders",
+      { every: reminderPollMs() },
+      { name: "agenda.reminders", data: {} }
     );
   }
 }

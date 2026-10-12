@@ -58,6 +58,17 @@ services:
       EVOLUTION_API_URL: ${EVOLUTION_API_URL:-}
       EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
       EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-}
+      # Inbox Fase 2: segredo do webhook inbound (vazio = aceita sem segredo).
+      EVOLUTION_WEBHOOK_TOKEN: ${EVOLUTION_WEBHOOK_TOKEN:-}
+      # Campanhas Fase 3 (pacing visto pela API na estimativa de duração).
+      CAMPAIGN_SEND_DELAY_MS: ${CAMPAIGN_SEND_DELAY_MS:-8000}
+      # Assistente IA Fase 3 (sem OPENAI_API_KEY = modo base/stub).
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
+      AI_TTS_MODEL: ${AI_TTS_MODEL:-tts-1}
+      AI_TTS_VOICE: ${AI_TTS_VOICE:-alloy}
+      ASSISTANT_SYSTEM_PROMPT: ${ASSISTANT_SYSTEM_PROMPT:-}
+      RATE_AI_MIN: ${RATE_AI_MIN:-20}
       MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
       MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET:-}
     depends_on:
@@ -90,6 +101,12 @@ services:
       JOB_MAX_ATTEMPTS: ${JOB_MAX_ATTEMPTS:-5}
       JOB_BASE_DELAY_MS: ${JOB_BASE_DELAY_MS:-5000}
       BRIEFING_FOLLOWUP_HOURS: ${BRIEFING_FOLLOWUP_HOURS:-48}
+      # Campanhas Fase 3: intervalo base entre envios (anti-banimento).
+      CAMPAIGN_SEND_DELAY_MS: ${CAMPAIGN_SEND_DELAY_MS:-8000}
+      # Agenda Fase 4: destino, cadência da varredura e tolerância.
+      REMINDER_WHATSAPP_TO: ${REMINDER_WHATSAPP_TO:-}
+      REMINDER_POLL_MS: ${REMINDER_POLL_MS:-300000}
+      REMINDER_CATCHUP_MIN: ${REMINDER_CATCHUP_MIN:-60}
     depends_on:
       redis:
         condition: service_healthy

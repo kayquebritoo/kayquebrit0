@@ -56,6 +56,19 @@ export const projectCreateSchema = z.object({
   briefingId: uuidField.optional(),
   valor: moneyField.optional(),
   prazo: dateField.optional(),
+  // Fase 1 — vitrine (opcionais; slug validado como slug URL).
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, { error: "Slug inválido." })
+    .max(100)
+    .optional(),
+  description: z.string().trim().max(5000).optional(),
+  coverUrl: z.url({ error: "URL inválida." }).max(2000).optional(),
+  thumbUrl: z.url({ error: "URL inválida." }).max(2000).optional(),
+  videoUrl: z.url({ error: "URL inválida." }).max(2000).optional(),
+  courseId: uuidField.optional(),
 });
 export const projectPatchSchema = nonEmpty(
   z.object({
@@ -63,6 +76,19 @@ export const projectPatchSchema = nonEmpty(
     titulo: shortText(160).optional(),
     valor: moneyField.nullable().optional(),
     prazo: dateField.nullable().optional(),
+    slug: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, { error: "Slug inválido." })
+      .max(100)
+      .nullable()
+      .optional(),
+    description: z.string().trim().max(5000).nullable().optional(),
+    coverUrl: z.url({ error: "URL inválida." }).max(2000).nullable().optional(),
+    thumbUrl: z.url({ error: "URL inválida." }).max(2000).nullable().optional(),
+    videoUrl: z.url({ error: "URL inválida." }).max(2000).nullable().optional(),
+    courseId: uuidField.nullable().optional(),
   })
 );
 
@@ -141,6 +167,7 @@ export const courseCreateSchema = z.object({
   descricao: z.string().trim().max(5000).optional(),
   preco: moneyField.optional(),
   capa: z.url({ error: "URL inválida." }).max(2000).optional(),
+  thumbnailUrl: z.url({ error: "URL inválida." }).max(2000).optional(),
   status: z.enum(["rascunho", "publicado", "arquivado"]).optional(),
 });
 export const coursePatchSchema = nonEmpty(
@@ -156,6 +183,7 @@ export const coursePatchSchema = nonEmpty(
     descricao: z.string().trim().max(5000).nullable().optional(),
     preco: moneyField.nullable().optional(),
     capa: z.url({ error: "URL inválida." }).max(2000).nullable().optional(),
+    thumbnailUrl: z.url({ error: "URL inválida." }).max(2000).nullable().optional(),
     status: z.enum(["rascunho", "publicado", "arquivado"]).optional(),
   })
 );
@@ -210,7 +238,164 @@ export const waAdminActionSchema = z.object({
   action: z.enum(["restart", "logout"]),
 });
 
-/* ---------- leitura validada ---------- */
+/* ---------- Fase 1: CRM + Kanban de vendas ---------- */
+const optionalEmail = z
+  .string()
+  .trim()
+  .max(160)
+  .optional()
+  .refine((s) => !s || /.+@.+\..+/.test(s), { error: "E-mail inválido." });
+const optionalUrl = z.url({ error: "URL inválida." }).max(2000);
+
+export const contactCreateSchema = z.object({
+  name: shortText(120),
+  email: optionalEmail,
+  phone: z.string().trim().max(40).optional(),
+  company: z.string().trim().max(160).optional(),
+  status: z.enum(["lead", "client", "partner", "archived"]).optional(),
+  notes: z.string().trim().max(5000).optional(),
+});
+export const contactPatchSchema = nonEmpty(
+  z.object({
+    name: shortText(120).optional(),
+    email: z.string().trim().max(160).nullable().optional(),
+    phone: z.string().trim().max(40).nullable().optional(),
+    company: z.string().trim().max(160).nullable().optional(),
+    status: z.enum(["lead", "client", "partner", "archived"]).optional(),
+    notes: z.string().trim().max(5000).nullable().optional(),
+  })
+);
+
+export const dealCreateSchema = z.object({
+  title: shortText(160),
+  contactId: uuidField.optional(),
+  stage: z.enum(["prospecting", "proposal", "negotiation", "won", "lost"]).optional(),
+  value: moneyField.optional(),
+  position: z.coerce.number().int().min(0).max(100000).optional(),
+});
+export const dealPatchSchema = nonEmpty(
+  z.object({
+    title: shortText(160).optional(),
+    contactId: uuidField.nullable().optional(),
+    stage: z.enum(["prospecting", "proposal", "negotiation", "won", "lost"]).optional(),
+    value: moneyField.nullable().optional(),
+    position: z.coerce.number().int().min(0).max(100000).optional(),
+  })
+);
+
+// Re-export p/ compat: rotas de vitrine usam `optionalUrl` no client.
+export { optionalUrl };
+
+/* ---------- Fase 2: Inbox omnichannel ---------- */
+export const conversationCreateSchema = z.object({
+  contactId: uuidField.optional(),
+  channel: z.enum(["whatsapp", "instagram", "telegram", "messenger", "webchat"]).optional(),
+  // Telefone ou identificador externo (ex. remoteJid). Vira `channel_chat_id`.
+  channelChatId: z.string().trim().min(3).max(160),
+  status: z.enum(["open", "pending", "closed"]).optional(),
+});
+export const conversationPatchSchema = nonEmpty(
+  z.object({
+    contactId: uuidField.nullable().optional(),
+    status: z.enum(["open", "pending", "closed"]).optional(),
+    // Agente abriu o chat: zera o contador sem mudar o status.
+    markRead: z.boolean().optional(),
+  })
+);
+
+export const inboxSendSchema = z
+  .object({
+    content: z.string().trim().max(4000).optional(),
+    mediaUrl: z.url({ error: "URL inválida." }).max(2000).optional(),
+    messageType: z.enum(["text", "image", "audio", "document"]).optional(),
+  })
+  .refine((b) => (b.content?.trim() ? true : !!b.mediaUrl), {
+    error: "Informe texto ou anexo.",
+  });
+
+/* ---------- Fase 3: campanhas + assistente de IA ---------- */
+export const campaignCreateSchema = z.object({
+  title: shortText(120),
+  messageTemplate: z.string().trim().min(1, { error: "Template obrigatório." }).max(4000),
+  targetStatus: z.enum(["all", "lead", "client", "partner", "archived"]).optional(),
+  scheduledAt: dateField.optional(),
+});
+export const campaignPatchSchema = nonEmpty(
+  z.object({
+    title: shortText(120).optional(),
+    messageTemplate: z.string().trim().min(1).max(4000).optional(),
+    targetStatus: z.enum(["all", "lead", "client", "partner", "archived"]).optional(),
+    scheduledAt: dateField.nullable().optional(),
+  })
+);
+export const campaignDispatchSchema = z.object({
+  // Reagenda na hora do disparo (opcional); sem ele, vale `scheduled_at` ou imediato.
+  scheduledAt: dateField.optional(),
+});
+
+export const assistantTurnSchema = z
+  .object({
+    conversationId: uuidField.optional(),
+    channel: z.enum(["whatsapp", "instagram", "telegram", "messenger", "webchat"]).optional(),
+    channelChatId: z.string().trim().min(3).max(160).optional(),
+    text: z.string().trim().max(4000).optional(),
+    audioUrl: z.url({ error: "URL inválida." }).max(2000).optional(),
+    audioBase64: z.string().max(15_000_000).optional(),
+    audioMime: z.string().trim().max(80).optional(),
+    voicePrompt: z.string().trim().max(4000).optional(),
+    send: z.boolean().optional(),
+    tts: z.boolean().optional(),
+    voice: z.string().trim().max(40).optional(),
+  })
+  .refine((b) => b.text?.trim() || b.audioUrl || b.audioBase64, {
+    error: "Informe `text` ou áudio (`audioUrl`/`audioBase64`).",
+  });
+
+/* ---------- Fase 4: financeiro + agenda ---------- */
+export const financeCreateSchema = z.object({
+  type: z.enum(["income", "expense"]),
+  description: shortText(200),
+  amount: moneyField,
+  category: z.string().trim().max(80).optional(),
+  dueDate: dateField.optional(),
+  status: z.enum(["pending", "paid"]).optional(),
+});
+export const financePatchSchema = nonEmpty(
+  z.object({
+    type: z.enum(["income", "expense"]).optional(),
+    description: shortText(200).optional(),
+    amount: moneyField.nullable().optional(),
+    category: z.string().trim().max(80).nullable().optional(),
+    dueDate: dateField.nullable().optional(),
+    status: z.enum(["pending", "paid"]).optional(),
+  })
+);
+
+export const eventCreateSchema = z
+  .object({
+    title: shortText(160),
+    description: z.string().trim().max(2000).optional(),
+    startTime: dateField,
+    endTime: dateField.optional(),
+    location: z.string().trim().max(200).optional(),
+    reminderMinutesBefore: z.coerce.number().int().min(0).max(10080).optional(),
+  })
+  .refine(
+    (b) => !b.endTime || new Date(b.endTime).getTime() >= new Date(b.startTime).getTime(),
+    { error: "Término anterior ao início." }
+  );
+export const eventPatchSchema = nonEmpty(
+  z.object({
+    title: shortText(160).optional(),
+    description: z.string().trim().max(2000).nullable().optional(),
+    startTime: dateField.optional(),
+    endTime: dateField.nullable().optional(),
+    location: z.string().trim().max(200).nullable().optional(),
+    reminderMinutesBefore: z.coerce.number().int().min(0).max(10080).optional(),
+    // Reavisar: zera o flag p/ o worker disparar de novo.
+    markUnsent: z.boolean().optional(),
+  })
+);
 
 export type Issue = { campo: string; mensagem: string };
 

@@ -17,7 +17,7 @@ export const SESSION_COOKIE = SESSION_COOKIE_NAME;
 export { SESSION_COOKIE_ALIASES };
 export const SESSION_DAYS = 30;
 
-export { ROLE_LABELS, PIPELINE } from "./constants";
+export { ROLE_LABELS, PIPELINE, CONTACT_STATUS, DEAL_STAGES, INBOX_CHANNELS, CONVERSATION_STATUS, CAMPAIGN_STATUS, CAMPAIGN_TARGETS, FINANCE_TYPES, FINANCE_STATUS } from "./constants";
 
 export type SessionUser = typeof users.$inferSelect;
 

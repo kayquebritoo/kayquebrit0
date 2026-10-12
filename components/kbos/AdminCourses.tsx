@@ -8,6 +8,8 @@ type Course = {
   slug: string;
   descricao: string | null;
   preco: string | null;
+  capa: string | null;
+  thumbnailUrl: string | null;
   status: string;
 };
 
@@ -23,7 +25,7 @@ async function fetchCourses() {
 export default function AdminCourses() {
   const [items, setItems] = useState<Course[]>([]);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ titulo: "", preco: "", descricao: "", status: "rascunho" });
+  const [form, setForm] = useState({ titulo: "", preco: "", descricao: "", thumbnailUrl: "", status: "rascunho" });
 
   async function load() {
     try {
@@ -61,12 +63,13 @@ export default function AdminCourses() {
           titulo: form.titulo,
           preco: form.preco || undefined,
           descricao: form.descricao || undefined,
+          thumbnailUrl: form.thumbnailUrl || undefined,
           status: form.status,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.details?.[0]?.mensagem || data.error || "Falha.");
-      setForm({ titulo: "", preco: "", descricao: "", status: "rascunho" });
+      setForm({ titulo: "", preco: "", descricao: "", thumbnailUrl: "", status: "rascunho" });
       load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro.");
@@ -86,7 +89,7 @@ export default function AdminCourses() {
           onChange={(e) => setForm({ ...form, titulo: e.target.value })}
           required
           placeholder="Título do curso"
-          className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 md:col-span-4"
+          className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 md:col-span-3"
         />
         <input
           value={form.preco}
@@ -99,7 +102,14 @@ export default function AdminCourses() {
           value={form.descricao}
           onChange={(e) => setForm({ ...form, descricao: e.target.value })}
           placeholder="Descrição curta"
-          className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 md:col-span-3"
+          className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 md:col-span-2"
+        />
+        <input
+          value={form.thumbnailUrl}
+          onChange={(e) => setForm({ ...form, thumbnailUrl: e.target.value })}
+          placeholder="Thumb URL (https://...)"
+          inputMode="url"
+          className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 md:col-span-2"
         />
         <select
           value={form.status}
@@ -116,18 +126,27 @@ export default function AdminCourses() {
       </form>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
-        {items.map((c) => (
-          <Link key={c.id} href={`/admin/cursos/${c.id}`} className="group rounded-2xl border border-white/10 bg-white/[0.02] p-6 transition hover:border-white/30">
-            <div className="flex items-start justify-between gap-3">
-              <h2 className="font-display text-xl group-hover:underline">{c.titulo}</h2>
-              <span className="shrink-0 rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.15em] text-white/75">
-                {c.status}
-              </span>
-            </div>
-            <p className="mt-2 text-sm tabular-nums text-white/60">{c.preco ? brl(Number(c.preco)) : "sem preço"}</p>
-            <p className="mt-1 truncate font-mono text-[11px] text-white/35">/{c.slug}</p>
-          </Link>
-        ))}
+        {items.map((c) => {
+          const thumb = c.thumbnailUrl || c.capa;
+          return (
+            <Link key={c.id} href={`/admin/cursos/${c.id}`} className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] transition hover:border-white/30">
+              {thumb ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={thumb} alt="" loading="lazy" className="h-36 w-full object-cover opacity-90 transition group-hover:opacity-100" />
+              ) : null}
+              <div className="p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="font-display text-xl group-hover:underline">{c.titulo}</h2>
+                  <span className="shrink-0 rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.15em] text-white/75">
+                    {c.status}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm tabular-nums text-white/60">{c.preco ? brl(Number(c.preco)) : "sem preço"}</p>
+                <p className="mt-1 truncate font-mono text-[11px] text-white/35">/{c.slug}</p>
+              </div>
+            </Link>
+          );
+        })}
         {items.length === 0 && <p className="text-sm font-light text-white/40">Nenhum curso ainda.</p>}
       </div>
     </div>

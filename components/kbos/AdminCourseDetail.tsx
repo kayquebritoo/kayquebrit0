@@ -23,7 +23,7 @@ const TIPOS = ["video", "texto", "quiz", "arquivo"];
 
 type DetailData = {
   title: string;
-  course: { titulo: string; descricao: string; preco: string; capa: string; status: string };
+  course: { titulo: string; descricao: string; preco: string; capa: string; thumbnailUrl: string; status: string };
   modules: (Module & { aulas: Lesson[] })[];
   enrollments: Enrollment[];
 };
@@ -43,7 +43,8 @@ async function fetchCourseDetail(courseId: string): Promise<DetailData> {
       titulo: det.item.titulo,
       descricao: det.item.descricao || "",
       preco: det.item.preco || "",
-      capa: det.item.capa || "",
+      capa: det.item.capa || det.item.thumbnailUrl || "",
+      thumbnailUrl: det.item.thumbnailUrl || det.item.capa || "",
       status: det.item.status,
     },
     modules: (det.modulos || []).map((m: Module & { aulas: Lesson[] }) => ({
@@ -58,7 +59,7 @@ async function fetchCourseDetail(courseId: string): Promise<DetailData> {
 
 export default function AdminCourseDetail({ courseId }: { courseId: string }) {
   const [title, setTitle] = useState("Carregando...");
-  const [course, setCourse] = useState({ titulo: "", descricao: "", preco: "", capa: "", status: "rascunho" });
+  const [course, setCourse] = useState({ titulo: "", descricao: "", preco: "", capa: "", thumbnailUrl: "", status: "rascunho" });
   const [modules, setModules] = useState<(Module & { aulas: Lesson[] })[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [error, setError] = useState("");
@@ -110,7 +111,8 @@ export default function AdminCourseDetail({ courseId }: { courseId: string }) {
           titulo: course.titulo,
           descricao: course.descricao || null,
           preco: course.preco || null,
-          capa: course.capa || null,
+          capa: course.capa || course.thumbnailUrl || null,
+          thumbnailUrl: course.thumbnailUrl || course.capa || null,
           status: course.status,
         }),
       });
@@ -180,8 +182,8 @@ export default function AdminCourseDetail({ courseId }: { courseId: string }) {
       <form onSubmit={save} className="mt-4 grid gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-4 md:grid-cols-12">
         <input value={course.titulo} onChange={(e) => setCourse({ ...course, titulo: e.target.value })} required placeholder="Título" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 md:col-span-3" />
         <input value={course.preco} onChange={(e) => setCourse({ ...course, preco: e.target.value })} placeholder="Preço R$" inputMode="decimal" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 md:col-span-2" />
-        <input value={course.descricao} onChange={(e) => setCourse({ ...course, descricao: e.target.value })} placeholder="Descrição" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 md:col-span-3" />
-        <input value={course.capa} onChange={(e) => setCourse({ ...course, capa: e.target.value })} placeholder="URL da capa" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 md:col-span-2" />
+        <input value={course.descricao} onChange={(e) => setCourse({ ...course, descricao: e.target.value })} placeholder="Descrição" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 md:col-span-2" />
+        <input value={course.thumbnailUrl} onChange={(e) => setCourse({ ...course, thumbnailUrl: e.target.value })} placeholder="Thumb URL (https://...)" inputMode="url" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 md:col-span-3" />
         <select value={course.status} onChange={(e) => setCourse({ ...course, status: e.target.value })} className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none">
           {["rascunho", "publicado", "arquivado"].map((s) => (
             <option key={s} value={s} className="bg-[#12122a]">{s}</option>

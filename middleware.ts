@@ -44,6 +44,14 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/api/tasks") ||
     pathname.startsWith("/api/time") ||
     pathname.startsWith("/api/transactions") ||
+    pathname.startsWith("/api/contacts") ||
+    pathname.startsWith("/api/deals") ||
+    pathname.startsWith("/api/courses") ||
+    pathname.startsWith("/api/conversations") ||
+    pathname.startsWith("/api/campaigns") ||
+    pathname.startsWith("/api/finance") ||
+    pathname.startsWith("/api/events") ||
+    pathname.startsWith("/api/ai") ||
     pathname.startsWith("/api/briefings");
   if (!needsAuth) return NextResponse.next();
   // Aceita o cookie principal (`kbos_session`) e o alternativo

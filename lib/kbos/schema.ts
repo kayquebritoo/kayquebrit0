@@ -108,6 +108,13 @@ export const projects = pgTable("kbos_projects", {
   status: projectStatus("status").notNull().default("novo"),
   valor: numeric("valor"),
   prazo: timestamp("prazo", { withTimezone: true }),
+  // Fase 1 — vitrine / associação com cursos (todos nullable p/ legado):
+  slug: text("slug").unique(),
+  description: text("description"),
+  coverUrl: text("cover_url"),
+  thumbUrl: text("thumb_url"),
+  videoUrl: text("video_url"),
+  courseId: uuid("course_id").references(() => courses.id, { onDelete: "set null" }),
   createdAt: ts("created_at"),
   updatedAt: ts("updated_at"),
 });
@@ -168,6 +175,11 @@ export const transactions = pgTable("kbos_transactions", {
   projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
   gatewayRef: text("gateway_ref"),
   createdAt: ts("created_at"),
+  // Fase 4 — `updated_at` (a API `/api/finance` o expõe como `updatedAt`).
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
 });
 
 export const notifStatus = pgEnum("kbos_notif_status", ["pendente", "enviado", "falha"]);
@@ -226,6 +238,8 @@ export const courses = pgTable("kbos_courses", {
   descricao: text("descricao"),
   preco: numeric("preco"),
   capa: text("capa"),
+  // Fase 1 — alias explícito p/ thumbnail da plataforma (espelha `capa`).
+  thumbnailUrl: text("thumbnail_url"),
   status: courseStatus("status").notNull().default("rascunho"),
   createdAt: ts("created_at"),
   updatedAt: ts("updated_at"),
@@ -321,4 +335,199 @@ export const certificates = pgTable("kbos_certificates", {
     .unique(),
   codigo: text("codigo").notNull().unique(),
   emitidaEm: timestamp("emitida_em", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ---------- Fase 1: CRM, Kanban de vendas, vitrine projetos/cursos ----------
+//
+// `contacts` + `deals` são tabelas novas (sem legado). `projects` e `courses`
+// já existiam no monólito com campos operacionais (titulo/categoria/cliente…);
+// a Fase 1 ESTENDE ambas com colunas de vitrine (slug, mídias, course_id…)
+// mantendo 100% de compatibilidade: tudo novo é nullable e o SQL está em
+// `drizzle/0002_fase1_crm_kanban.sql` (aplicar com `npx drizzle-kit push`).
+
+export const contactStatus = pgEnum("kbos_contact_status", [
+  "lead",
+  "client",
+  "partner",
+  "archived",
+]);
+
+export const contacts = pgTable("kbos_contacts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  company: text("company"),
+  status: contactStatus("status").notNull().default("lead"),
+  notes: text("notes"),
+  createdAt: ts("created_at"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const dealStage = pgEnum("kbos_deal_stage", [
+  "prospecting",
+  "proposal",
+  "negotiation",
+  "won",
+  "lost",
+]);
+
+export const deals = pgTable("kbos_deals", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
+  stage: dealStage("stage").notNull().default("prospecting"),
+  value: numeric("value"),
+  position: integer("position").notNull().default(0),
+  createdAt: ts("created_at"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+// ---------- Fase 2: Motor Omnichannel & Inbox Unificado ----------
+//
+// `conversations` agrega um chat externo (Evolution API ou outra rede) a um
+// contato do CRM. `messages` guarda o histórico em ordem de chegada.
+// `channel_chat_id` é o identificador remoto (ex. `5511999998888@s.whatsapp.net`
+// ou o `remoteJid`); a unicidade é composta (channel, channel_chat_id) para
+// permitir o mesmo contato em várias redes.
+// `external_id` (id da mensagem na rede, ex. `3EB0...`) garante idempotência
+// do webhook: reentregas do mesmo evento não duplicam linhas.
+// SQL em `drizzle/0003_fase2_inbox.sql` (aplicar com `npx drizzle-kit push`).
+
+export const convChannel = pgEnum("kbos_conv_channel", [
+  "whatsapp",
+  "instagram",
+  "telegram",
+  "messenger",
+  "webchat",
+]);
+
+export const convStatus = pgEnum("kbos_conv_status", ["open", "pending", "closed"]);
+
+export const conversations = pgTable(
+  "kbos_conversations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
+    channel: convChannel("channel").notNull().default("whatsapp"),
+    channelChatId: text("channel_chat_id").notNull(),
+    status: convStatus("status").notNull().default("open"),
+    unreadCount: integer("unread_count").notNull().default(0),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true }),
+    createdAt: ts("created_at"),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    // um chat externo = uma conversa (reentregas fazem upsert, não duplicam)
+    uniqueIndex("kbos_conversations_channel_chat_unique").on(t.channel, t.channelChatId),
+  ]
+);
+
+export const senderType = pgEnum("kbos_sender_type", ["customer", "agent", "ai"]);
+
+export const messageType = pgEnum("kbos_message_type", ["text", "image", "audio", "document"]);
+
+export const messageStatus = pgEnum("kbos_message_status", ["sent", "delivered", "read"]);
+
+export const messages = pgTable(
+  "kbos_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    senderType: senderType("sender_type").notNull().default("customer"),
+    content: text("content"),
+    mediaUrl: text("media_url"),
+    messageType: messageType("message_type").notNull().default("text"),
+    status: messageStatus("status").notNull().default("sent"),
+    externalId: text("external_id"),
+    createdAt: ts("created_at"),
+  },
+  (t) => [
+    // idempotência do webhook (Evolution pode reentregar o mesmo evento)
+    uniqueIndex("kbos_messages_external_unique").on(t.externalId),
+  ]
+);
+
+// ---------- Fase 3: Campanhas de disparo + Assistente de IA ----------
+//
+// `campaigns` guarda o template e o progresso agregado; `campaignLogs` tem
+// uma linha por destinatário (idempotência do fan-out: o worker pula logs
+// que já saíram de `pending`, então replays/retries nunca duplicam envios).
+// `target_status` filtra o CRM (`all` = lead+client+partner, sem arquivados).
+// `scheduled_at` permite agendar; null = disparo imediato ao despachar.
+// SQL em `drizzle/0004_fase3_campaigns.sql` (aplicar com `npx drizzle-kit push`).
+
+export const campaignStatus = pgEnum("kbos_campaign_status", [
+  "draft",
+  "scheduled",
+  "running",
+  "completed",
+  "failed",
+]);
+
+export const campaigns = pgTable("kbos_campaigns", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  messageTemplate: text("message_template").notNull(),
+  status: campaignStatus("status").notNull().default("draft"),
+  targetStatus: text("target_status").notNull().default("all"),
+  totalRecipients: integer("total_recipients").notNull().default(0),
+  sentCount: integer("sent_count").notNull().default(0),
+  failedCount: integer("failed_count").notNull().default(0),
+  scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
+  createdAt: ts("created_at"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const campaignLogStatus = pgEnum("kbos_campaign_log_status", ["pending", "sent", "failed"]);
+
+export const campaignLogs = pgTable("kbos_campaign_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  campaignId: uuid("campaign_id")
+    .notNull()
+    .references(() => campaigns.id, { onDelete: "cascade" }),
+  contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
+  status: campaignLogStatus("status").notNull().default("pending"),
+  errorMessage: text("error_message"),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+});
+
+// ---------- Fase 4: Central Financeira, Agenda e Alertas ----------
+//
+// `transactions` (Fase 0) já cobre o contrato financeiro pedido — o mapeamento
+// EN↔PT vive em `lib/kbos/finance.ts` e a API `/api/finance` o expõe como
+// `{ type: income|expense, amount, dueDate, status: pending|paid|overdue }`.
+// `events` (`kbos_events`) é a agenda pessoal: o worker (`agenda.reminders`)
+// reivindica atomicamente os eventos devidos e avisa via WhatsApp.
+// SQL em `drizzle/0005_fase4_finance_agenda.sql` (`npx drizzle-kit push`).
+
+export const events = pgTable("kbos_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  description: text("description"),
+  startTime: timestamp("start_time", { withTimezone: true }).notNull(),
+  endTime: timestamp("end_time", { withTimezone: true }),
+  location: text("location"),
+  reminderMinutesBefore: integer("reminder_minutes_before").notNull().default(15),
+  notificationSent: boolean("notification_sent").notNull().default(false),
+  reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
+  createdAt: ts("created_at"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
 });
