@@ -114,6 +114,18 @@ html.fullpage-locked body {
   -webkit-backdrop-filter: blur(28px) saturate(1.4) brightness(1.08);
 }
 
+/* header das páginas internas — pill em vidro (Header.tsx, fora da home/app) */
+@keyframes headerGlassIn {
+  from { opacity: 0; transform: translateY(-14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.header-glass {
+  animation: headerGlassIn 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .header-glass { animation: none; }
+}
+
 /* menu fullscreen — vidro ESCURO e legível: o conteúdo de trás some,
    o blur dá o acabamento frosted sem comprometer a leitura */
 .glass-menu {

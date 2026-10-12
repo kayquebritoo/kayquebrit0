@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { LocalTime, useMagnetic } from "@/components/fx";
@@ -25,11 +25,19 @@ export function goToSlide(index: number) {
 export default function Header() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
   const magBurger = useMagnetic<HTMLButtonElement>(0.4);
   const { lang, setLang, t } = useLang();
   const { theme, toggle } = useTheme();
 
   const toggleMenu = useCallback(() => setOpen((v) => !v), []);
+
+  // Telas de app (admin/portal/entrar) têm chrome próprio (KbosShell) —
+  // o header do site sumiria por cima do topbar delas, então nem renderiza.
+  // Mesmo padrão do SlideProgress (só home).
+  const isApp =
+    pathname.startsWith("/admin") || pathname.startsWith("/portal") || pathname.startsWith("/entrar");
+  const isHome = pathname === "/";
 
   const MENU = [
     { label: t("menu.about"), index: 1 },
@@ -59,58 +67,83 @@ export default function Header() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const closeAndHome = () => {
+    setOpen(false);
+    goToSlide(0);
+  };
+
+  const logoBtn = (compact?: boolean) => (
+    <button
+      onClick={closeAndHome}
+      aria-label="Kayque Brito — início"
+      className="block"
+    >
+      <Image
+        src="/logo-kayque.png"
+        alt="Kayque Brito"
+        width={168}
+        height={64}
+        priority
+        className={`w-auto object-contain brightness-0 invert ${
+          compact ? "h-8 md:h-9" : "h-9 sm:h-11 md:h-[54px]"
+        }`}
+      />
+    </button>
+  );
+
+  const burgerBtn = (compact?: boolean) => (
+    <button
+      ref={magBurger}
+      type="button"
+      onClick={toggleMenu}
+      aria-label={open ? t("menu.close") : t("menu.open")}
+      aria-expanded={open}
+      className={`group relative flex touch-manipulation items-center justify-center ${
+        compact ? "h-9 w-10" : "mt-1 h-10 w-11 md:mt-2 md:h-8 md:w-[38px]"
+      }`}
+    >
+      <span className="relative block h-[18px] w-[32px] md:w-[34px]">
+        <span
+          className="absolute left-0 h-[2px] w-full bg-[#F4F1EC] transition-all duration-500"
+          style={
+            open
+              ? { top: "50%", transform: "translateY(-50%) rotate(45deg)" }
+              : { top: "3px", transform: "none" }
+          }
+        />
+        <span
+          className="absolute left-0 h-[2px] w-full bg-[#F4F1EC] transition-all duration-500"
+          style={
+            open
+              ? { top: "50%", transform: "translateY(-50%) rotate(-45deg)" }
+              : { top: "13px", transform: "none" }
+          }
+        />
+      </span>
+    </button>
+  );
+
+  if (isApp) return null;
+
   return (
     <>
-      {/* MOBILE FIRST: respiro pequeno, logo compacta */}
-      <header className="fixed inset-x-0 top-0 z-[60]">
-        <div className="flex items-start justify-between px-5 pt-5 sm:px-8 sm:pt-7 md:px-[80px] md:pt-[42px]">
-          <button
-            onClick={() => {
-              setOpen(false);
-              goToSlide(0);
-            }}
-            aria-label="Kayque Brito — início"
-            className="block"
-          >
-            <Image
-              src="/logo-kayque.png"
-              alt="Kayque Brito"
-              width={168}
-              height={64}
-              priority
-              className="h-9 w-auto object-contain brightness-0 invert sm:h-11 md:h-[54px]"
-            />
-          </button>
-
-          <button
-            ref={magBurger}
-            type="button"
-            onClick={toggleMenu}
-            aria-label={open ? t("menu.close") : t("menu.open")}
-            aria-expanded={open}
-            className="group relative mt-1 flex h-10 w-11 touch-manipulation items-center justify-center md:mt-2 md:h-8 md:w-[38px]"
-          >
-            <span className="relative block h-[18px] w-[32px] md:w-[34px]">
-              <span
-                className="absolute left-0 h-[2px] w-full bg-[#F4F1EC] transition-all duration-500"
-                style={
-                  open
-                    ? { top: "50%", transform: "translateY(-50%) rotate(45deg)" }
-                    : { top: "3px", transform: "none" }
-                }
-              />
-              <span
-                className="absolute left-0 h-[2px] w-full bg-[#F4F1EC] transition-all duration-500"
-                style={
-                  open
-                    ? { top: "50%", transform: "translateY(-50%) rotate(-45deg)" }
-                    : { top: "13px", transform: "none" }
-                }
-              />
-            </span>
-          </button>
-        </div>
-      </header>
+      {isHome ? (
+        /* HOME: flutuante sobre o hero fullscreen (composição original) */
+        <header className="fixed inset-x-0 top-0 z-[60]">
+          <div className="flex items-start justify-between px-5 pt-5 sm:px-8 sm:pt-7 md:px-[80px] md:pt-[42px]">
+            {logoBtn()}
+            {burgerBtn()}
+          </div>
+        </header>
+      ) : (
+        /* DEMAIS PÁGINAS: pill compacta em vidro — nunca colide com o conteúdo */
+        <header className="fixed inset-x-0 top-0 z-[60] px-4 pt-3 sm:px-6 sm:pt-4">
+          <div className="header-glass mx-auto flex max-w-6xl items-center justify-between rounded-2xl border border-white/10 bg-[#0B0B1E]/70 py-2 pl-4 pr-2.5 shadow-2xl shadow-black/30 backdrop-blur-xl">
+            {logoBtn(true)}
+            {burgerBtn(true)}
+          </div>
+        </header>
+      )}
 
       {/* menu fullscreen — vidro translúcido + big titles (100% CSS, sem GSAP) */}
       <div
