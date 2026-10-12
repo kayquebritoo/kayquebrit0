@@ -88,3 +88,51 @@ Se o token vazar, gere outro e repita o processo.
 | 6379/5432 | redis/postgres | **não** |
 
 Recomendado depois: reverso com TLS (Caddy/Traefik) + `APP_URL=https://...`.
+
+## 6. Deploy automático (CI/CD) — push na `main` publica sozinho
+
+O workflow `.github/workflows/deploy-vps.yml` faz `git pull` + rebuild na VPS
+a cada push na `main` (docs `*.md` não disparam). Configurar **uma vez**:
+
+```bash
+# 1. Chave SSH dedicada (na sua máquina local — NUNCA commite a privada)
+ssh-keygen -t ed25519 -f ~/.ssh/kbos-deploy -C "kbos-github-actions" -N ""
+# 2. Autoriza na VPS (sessão SSH existente)
+cat ~/.ssh/kbos-deploy.pub  # anexe em ~/.ssh/authorized_keys do usuário do deploy
+# 3. GitHub: repo → Settings → Secrets and variables → Actions → New secret
+#      VPS_HOST = 109.106.251.173
+#      VPS_PORT = 65002
+#      VPS_USER = <usuário dono de /opt/kbos na VPS>
+#      VPS_SSH_KEY = <conteúdo de ~/.ssh/kbos-deploy, privada>
+```
+
+Depois disso, qualquer `git push origin main` publica sozinho; falhas aparecem
+na aba Actions. Re-execução manual: Actions → "Deploy VPS" → Run workflow.
+
+> O deploy usa `git reset --hard origin/main` (a VPS nunca tem alteração
+> local) e SEMPRE com `--env-file /opt/kbos/.env -f infra/docker-compose.yml
+> --profile evolution` a partir de `/opt/kbos` — sem o profile, a Evolution
+> não sobe; sem `--env-file`, sobe com banco/e-mail vazios.
+
+### 6.1. Variáveis novas (Fases 2–4) — anexar uma vez ao `/opt/kbos/.env`
+
+```bash
+cat >> /opt/kbos/.env <<'EOF'
+EVOLUTION_WEBHOOK_TOKEN=""
+CAMPAIGN_SEND_DELAY_MS="8000"
+OPENAI_API_KEY=""
+AI_MODEL="gpt-4o-mini"
+AI_TTS_MODEL="tts-1"
+AI_TTS_VOICE="alloy"
+ASSISTANT_SYSTEM_PROMPT=""
+REMINDER_WHATSAPP_TO=""
+REMINDER_POLL_MS="300000"
+REMINDER_CATCHUP_MIN="60"
+RATE_EVOLUTION_MIN="300"
+RATE_AI_MIN="20"
+EOF
+```
+
+Sem elas, os defaults valem (IA em modo stub, lembretes p/ o telefone do
+admin). Schema do banco (migrations `drizzle/0002`–`0005`) já aplicado no
+Neon em 2026-10-12 — **não** rode `drizzle-kit push` na VPS sem necessidade.

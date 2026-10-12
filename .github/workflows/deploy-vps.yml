@@ -1,0 +1,38 @@
+# Deploy automático p/ a VPS de produção (kbos.kayquebrito.com.br).
+#
+# Dispara em todo push na `main` (exceto docs) + botão manual (workflow_dispatch).
+# Pré-requisitos (uma vez — ver "6. Deploy automático" em infra/VPS.md):
+#   - chave SSH dedicada com a pub em ~/.ssh/authorized_keys na VPS
+#   - secrets no GitHub (repo → Settings → Secrets → Actions):
+#       VPS_HOST, VPS_PORT, VPS_USER, VPS_SSH_KEY
+name: Deploy VPS (kbos.kayquebrito.com.br)
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "out/**"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull + rebuild na VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_PORT }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            cd /opt/kbos
+            git fetch origin
+            git reset --hard origin/main
+            docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml --profile evolution up -d --build
+            docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml ps
+            curl -sf http://localhost:3000/api/health/ | head -c 400
+            echo
