@@ -6,14 +6,17 @@ import {
   ensureInstance,
   getConnectionState,
   getQrCode,
+  getWebhookStatus,
   logoutInstance,
   restartInstance,
+  setInstanceWebhook,
   waConfigured,
   waInstance,
   waUsingDefaultKey,
 } from "@/lib/kbos/evolution";
 
-// GET ?qr=1 — status da instância; com qr=1 inclui QR fresco (expira em ~60s).
+// GET ?qr=1 — status da instância; com qr=1 inclui QR fresco (expira em ~60s)
+// + auto-cria a instância quando ausente e repara/verifica o webhook.
 // Só admin. Sem Evolution configurada → 503 explicativo (não 500).
 export async function GET(req: Request) {
   const user = await sessionUser();
@@ -48,8 +51,25 @@ export async function GET(req: Request) {
     }
     let qrcode: string | null = null;
     let pairingCode: string | null = null;
-    // QR só faz sentido fora do `open` — e só quando pedido (expira rápido).
-    if (wantQr && state !== "open") {
+    // Escuta do webhook: com a Evolution alcançável, o `set` é idempotente
+    // e barato — repara sozinho (ex.: instância criada à mão sem webhook).
+    let webhook: { ok: boolean; url: string | null } | null = null;
+    if (wantQr && conn.status !== undefined) {
+      const [qr, wh] = await Promise.all([
+        state !== "open" ? getQrCode() : Promise.resolve(null),
+        (async () => {
+          await setInstanceWebhook();
+          return getWebhookStatus();
+        })(),
+      ]);
+      webhook = wh;
+      if (qr) {
+        qrcode = qr.qrcode;
+        pairingCode = qr.pairingCode;
+        if (!qrcode && qr.detail) detail = qr.detail;
+      }
+    } else if (wantQr && state !== "open") {
+      // QR só faz sentido fora do `open` — e só quando pedido (expira rápido).
       const qr = await getQrCode();
       qrcode = qr.qrcode;
       pairingCode = qr.pairingCode;
@@ -62,6 +82,7 @@ export async function GET(req: Request) {
       qrcode,
       pairingCode,
       created,
+      webhook,
       // Produção com a chave default de dev: funciona, mas a UI avisa p/ trocar.
       usingDefaultKey: waUsingDefaultKey(),
       ...(detail ? { detail } : {}),

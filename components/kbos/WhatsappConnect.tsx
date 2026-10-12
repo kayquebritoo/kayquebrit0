@@ -9,6 +9,7 @@ type Status = {
   pairingCode: string | null;
   created?: boolean;
   usingDefaultKey?: boolean;
+  webhook?: { ok: boolean; url: string | null } | null;
   detail?: string;
   error?: string;
   checkedAt?: string;
@@ -67,11 +68,12 @@ export default function WhatsappConnect() {
       timer = setInterval(async () => {
         const s = await fetchStatus(false).catch(() => null);
         if (!s || !alive) return;
-        // status-only não traz QR: preserva o atual
+        // status-only não traz QR/webhook: preserva os atuais
         setData((prev) => ({
           ...s,
           qrcode: prev?.qrcode ?? null,
           pairingCode: prev?.pairingCode ?? null,
+          webhook: s.webhook ?? prev?.webhook ?? null,
         }));
         if (s.state === "open") {
           stop();
@@ -194,6 +196,22 @@ export default function WhatsappConnect() {
               {st.label}
             </p>
             <p className="mt-2 font-mono text-[12px] text-white/45">instância: {data?.instance}</p>
+            {data?.created && (
+              <p className="mt-1 text-[12px] font-light text-emerald-200/80">
+                Instância criada agora com escuta ativa — escaneie o QR.
+              </p>
+            )}
+            {data?.webhook && (
+              <p className="mt-1 flex items-center gap-1.5 text-[12px] font-light">
+                <span
+                  aria-hidden
+                  className={`h-2 w-2 rounded-full ${data.webhook.ok ? "bg-emerald-400" : "bg-amber-300"}`}
+                />
+                <span className={data.webhook.ok ? "text-white/60" : "text-amber-200/90"}>
+                  {data.webhook.ok ? "Escuta de mensagens ativa" : "Escuta inativa — será reparada no próximo refresh"}
+                </span>
+              </p>
+            )}
             {data?.checkedAt && (
               <p className="mt-1 text-[12px] font-light text-white/35">
                 verificado às {new Date(data.checkedAt).toLocaleTimeString("pt-BR")}

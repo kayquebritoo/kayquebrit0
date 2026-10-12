@@ -1,7 +1,9 @@
 // Unitários do cliente Evolution (puros, sem rede).
 import { describe, expect, it, vi, afterEach } from "vitest";
 import {
+  buildWebhookUrl,
   ensureInstance,
+  getWebhookStatus,
   mapState,
   normalizeQr,
   setInstanceWebhook,
@@ -114,5 +116,48 @@ describe("setInstanceWebhook", () => {
     for (const [k, v] of Object.entries(BASE_ENV)) vi.stubEnv(k, v);
     vi.stubEnv("APP_URL", "");
     expect(await setInstanceWebhook()).toBe(false);
+  });
+
+  it("anexa ?token= quando o segredo está configurado", async () => {
+    for (const [k, v] of Object.entries(BASE_ENV)) vi.stubEnv(k, v);
+    vi.stubEnv("EVOLUTION_WEBHOOK_TOKEN", "segredo-123");
+    let posted: unknown = null;
+    mockEvo((url, init) => {
+      if (url.includes("/webhook/set/")) {
+        posted = JSON.parse((init?.body as string) ?? "{}");
+        return { status: 200, body: {} };
+      }
+      return { status: 404, body: {} };
+    });
+    expect(await setInstanceWebhook()).toBe(true);
+    expect((posted as Record<string, string>).url).toContain("?token=segredo-123");
+  });
+});
+
+describe("buildWebhookUrl", () => {
+  it("null sem APP_URL; sem token por padrão; com token quando ≥8 chars", () => {
+    vi.stubEnv("APP_URL", "");
+    expect(buildWebhookUrl()).toBeNull();
+    vi.stubEnv("APP_URL", "https://kbos.kayquebrito.com.br/");
+    vi.stubEnv("EVOLUTION_WEBHOOK_TOKEN", "");
+    expect(buildWebhookUrl()).toBe("https://kbos.kayquebrito.com.br/api/webhooks/evolution");
+    vi.stubEnv("EVOLUTION_WEBHOOK_TOKEN", "segredo-123");
+    expect(buildWebhookUrl()).toBe(
+      "https://kbos.kayquebrito.com.br/api/webhooks/evolution?token=segredo-123"
+    );
+  });
+});
+
+describe("getWebhookStatus", () => {
+  it("ok quando a URL confere; false em mismatch ou 404", async () => {
+    for (const [k, v] of Object.entries(BASE_ENV)) vi.stubEnv(k, v);
+    vi.stubEnv("EVOLUTION_WEBHOOK_TOKEN", "");
+    const ours = "https://kbos.kayquebrito.com.br/api/webhooks/evolution";
+    mockEvo(() => ({ status: 200, body: { enabled: true, url: ours } }));
+    expect(await getWebhookStatus()).toMatchObject({ ok: true, url: ours });
+    mockEvo(() => ({ status: 200, body: { enabled: true, url: "https://outra/x" } }));
+    expect((await getWebhookStatus()).ok).toBe(false);
+    mockEvo(() => ({ status: 404, body: {} }));
+    expect(await getWebhookStatus()).toMatchObject({ ok: false, url: null });
   });
 });

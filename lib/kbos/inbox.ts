@@ -61,8 +61,15 @@ export function extractInbound(data: unknown): InboundMessage | null {
   if (!data || typeof data !== "object") return null;
   const d = data as Record<string, unknown>;
   const key = (d.key ?? {}) as Record<string, unknown>;
-  const chatId = str(key.remoteJid);
+  let chatId = str(key.remoteJid);
   if (!chatId) return null;
+  // JIDs `@lid` (identidade vinculada): não são o telefone — resolve pelo
+  // `senderPn` (número real) para a conversa não duplicar/quebrar o vínculo.
+  if (chatId.endsWith("@lid")) {
+    const pn = str(d.senderPn);
+    if (!pn) return null;
+    chatId = pn.includes("@") ? pn : `${onlyDigits(pn)}@s.whatsapp.net`;
+  }
   // Status do WhatsApp (`status@broadcast`) e newsletter: ignora.
   if (chatId === "status@broadcast" || chatId.endsWith("@newsletter")) return null;
   const fromMe = key.fromMe === true;

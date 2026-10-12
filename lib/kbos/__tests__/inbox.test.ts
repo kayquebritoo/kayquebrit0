@@ -105,6 +105,24 @@ describe("extractInbound", () => {
     expect(r?.phoneDigits).toBeNull();
     expect(r?.chatId).toBe("55119-999@g.us");
   });
+  it("JID @lid: resolve o telefone via senderPn", () => {
+    const r = extractInbound({
+      key: { remoteJid: "123456789012345@lid", fromMe: false, id: "L" },
+      pushName: "Ciclana",
+      senderPn: "5511988887777@s.whatsapp.net",
+      message: { conversation: "oi via lid" },
+    });
+    expect(r?.chatId).toBe("5511988887777@s.whatsapp.net");
+    expect(r?.phoneDigits).toBe("5511988887777");
+  });
+  it("JID @lid sem senderPn: ignora (sem vínculo confiável)", () => {
+    const r = extractInbound({
+      key: { remoteJid: "123456789012345@lid", fromMe: false, id: "L2" },
+      pushName: "Sem fone",
+      message: { conversation: "oi" },
+    });
+    expect(r).toBeNull();
+  });
   it("ignora protocolo, reaction e status@broadcast", () => {
     expect(extractInbound(base({ protocolMessage: {} }))).toBeNull();
     expect(extractInbound(base({ reactionMessage: {} }))).toBeNull();

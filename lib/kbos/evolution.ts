@@ -25,6 +25,19 @@ export function waUsingDefaultKey() {
   return (process.env.EVOLUTION_API_KEY || "") === DEFAULT_API_KEY;
 }
 
+/**
+ * URL pública do webhook inbound (`/api/webhooks/evolution`).
+ * Inclui `?token=` quando `EVOLUTION_WEBHOOK_TOKEN` está configurado —
+ * sem ele, o receiver responderia 401 e nada chegaria ao inbox.
+ */
+export function buildWebhookUrl(): string | null {
+  const appUrl = (process.env.APP_URL || "").replace(/\/$/, "");
+  if (!appUrl) return null;
+  const secret = (process.env.EVOLUTION_WEBHOOK_TOKEN || "").trim();
+  const base = `${appUrl}/api/webhooks/evolution`;
+  return secret.length >= 8 ? `${base}?token=${encodeURIComponent(secret)}` : base;
+}
+
 function base() {
   return (process.env.EVOLUTION_API_URL || "").replace(/\/$/, "");
 }
@@ -116,20 +129,39 @@ export async function ensureInstance(): Promise<{ created: boolean; state: WaSta
 /** Aponta o webhook da instância p/ o inbound do KBOS. Best-effort (nunca lança). */
 export async function setInstanceWebhook(): Promise<boolean> {
   try {
-    const appUrl = (process.env.APP_URL || "").replace(/\/$/, "");
-    if (!appUrl) return false;
+    const url = buildWebhookUrl();
+    if (!url) return false;
     const r = await evoFetch(`/webhook/set/${encodeURIComponent(waInstance())}`, {
       method: "POST",
       body: JSON.stringify({
-        url: `${appUrl}/api/webhooks/evolution`,
+        url,
         webhook_by_events: false,
         webhook_base64: false,
-        events: ["MESSAGES_UPSERT"],
+        // Upsert = mensagens; UPDATE/SEND_MESSAGE_UPDATE = recibos de leitura.
+        events: ["MESSAGES_UPSERT", "MESSAGES_UPDATE", "SEND_MESSAGE_UPDATE"],
       }),
     });
     return r.ok;
   } catch {
     return false;
+  }
+}
+
+/** Lê a config atual do webhook (`GET /webhook/find`) e confere se é a nossa. */
+export async function getWebhookStatus(): Promise<{ ok: boolean; url: string | null }> {
+  try {
+    if (!waConfigured()) return { ok: false, url: null };
+    const r = await evoFetch(`/webhook/find/${encodeURIComponent(waInstance())}`);
+    if (!r.ok) return { ok: false, url: null };
+    const j = r.json as Record<string, unknown>;
+    const enabled = j.enabled !== false;
+    const url = typeof j.url === "string" && j.url ? j.url : null;
+    const ours = buildWebhookUrl();
+    const same =
+      !!url && !!ours && url.replace(/\/$/, "") === ours.replace(/\/$/, "");
+    return { ok: enabled && same, url };
+  } catch {
+    return { ok: false, url: null };
   }
 }
 

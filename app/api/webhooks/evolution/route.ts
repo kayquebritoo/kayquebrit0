@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/kbos/db";
 import { messages } from "@/lib/kbos/schema";
@@ -13,8 +14,10 @@ import {
 // Webhook inbound da Evolution API — PÚBLICO (a Evolution não tem cookie de
 // sessão; o middleware não exige auth em `/api/webhooks/*`).
 //
-// Configure na Evolution: URL `https://<vps>/api/webhooks/evolution`, eventos
-// `MESSAGES-UPSERT` (+ `SEND-MESSAGE-UPDATE` p/ recibos de leitura).
+// Configurado SOZINHO pelo app (`ensureInstance`/`setInstanceWebhook` ao abrir
+// /admin/whatsapp): URL `https://<APP_URL>/api/webhooks/evolution` (+ `?token=`
+/// quando `EVOLUTION_WEBHOOK_TOKEN` ≥8 chars), eventos `MESSAGES_UPSERT`,
+// `MESSAGES_UPDATE` e `SEND_MESSAGE_UPDATE`.
 // Segurança opcional: defina `EVOLUTION_WEBHOOK_TOKEN` (≥8 chars) e repita o
 // valor em `?token=` ou no header `x-webhook-token` na config do webhook.
 // Sem o token configurado, aceita qualquer origem (fail-open documentado,
@@ -31,7 +34,10 @@ function checkSecret(req: Request): boolean {
     req.headers.get("apikey") ||
     url.searchParams.get("token") ||
     "";
-  return got.length === token.length && got === token;
+  // Comparação em tempo constante (não vaza o segredo via timing).
+  const a = Buffer.from(got);
+  const b = Buffer.from(token);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 function str(v: unknown): string | null {
