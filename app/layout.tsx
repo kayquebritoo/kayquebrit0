@@ -63,6 +63,11 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: "#0B0B1E",
   viewportFit: "cover",
+  // App-like: bloqueia o zoom por gesto/toque duplo (PWA mobile-first).
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 const JSON_LD = {
