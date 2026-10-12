@@ -19,8 +19,9 @@ export type WhatsappPayload = {
 export async function sendEvolutionText(destino: string, mensagem: string) {
   const base = process.env.EVOLUTION_API_URL?.replace(/\/$/, "");
   const key = process.env.EVOLUTION_API_KEY;
-  const instance = process.env.EVOLUTION_INSTANCE;
-  if (!base || !key || !instance) {
+  // Instância cai p/ a padrão do compose/código (`kbos-primary`).
+  const instance = process.env.EVOLUTION_INSTANCE || "kbos-primary";
+  if (!base || !key) {
     const err = new Error("Evolution API não configurada (EVOLUTION_API_URL/KEY/INSTANCE).");
     (err as NodeJS.ErrnoException).code = "EVOLUTION_MISCONFIGURED";
     throw err;

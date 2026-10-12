@@ -3,12 +3,14 @@ import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { readBody, waAdminActionSchema } from "@/lib/kbos/validators";
 import { withRateLimit } from "@/lib/kbos/rate-limit";
 import {
+  ensureInstance,
   getConnectionState,
   getQrCode,
   logoutInstance,
   restartInstance,
   waConfigured,
   waInstance,
+  waUsingDefaultKey,
 } from "@/lib/kbos/evolution";
 
 // GET ?qr=1 — status da instância; com qr=1 inclui QR fresco (expira em ~60s).
@@ -33,7 +35,17 @@ export async function GET(req: Request) {
       );
     }
     const wantQr = new URL(req.url).searchParams.get("qr") === "1";
-    const { state, detail } = await getConnectionState();
+    const conn = await getConnectionState();
+    let { state, detail } = conn;
+    // Auto-provisionamento: instância inexistente (404) é criada na hora
+    // (com webhook de inbound) para o QR renderizar sem erro.
+    let created = false;
+    if (wantQr && conn.status === 404) {
+      const ensured = await ensureInstance();
+      created = ensured.created;
+      state = ensured.state;
+      detail = ensured.detail;
+    }
     let qrcode: string | null = null;
     let pairingCode: string | null = null;
     // QR só faz sentido fora do `open` — e só quando pedido (expira rápido).
@@ -41,6 +53,7 @@ export async function GET(req: Request) {
       const qr = await getQrCode();
       qrcode = qr.qrcode;
       pairingCode = qr.pairingCode;
+      if (!qrcode && qr.detail) detail = qr.detail;
     }
     return NextResponse.json({
       configured: true,
@@ -48,6 +61,9 @@ export async function GET(req: Request) {
       state,
       qrcode,
       pairingCode,
+      created,
+      // Produção com a chave default de dev: funciona, mas a UI avisa p/ trocar.
+      usingDefaultKey: waUsingDefaultKey(),
       ...(detail ? { detail } : {}),
       checkedAt: new Date().toISOString(),
     });

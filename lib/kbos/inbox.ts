@@ -309,7 +309,7 @@ function evoBase() {
 }
 
 export function evoOutboundConfigured() {
-  return !!(process.env.EVOLUTION_API_URL && process.env.EVOLUTION_API_KEY && process.env.EVOLUTION_INSTANCE);
+  return !!(process.env.EVOLUTION_API_URL && process.env.EVOLUTION_API_KEY);
 }
 
 async function evoPost(path: string, body: Record<string, unknown>) {
@@ -378,7 +378,7 @@ export async function sendAgentMessage(
     (err as NodeJS.ErrnoException).code = "CHAT_NOT_DIALABLE";
     throw err;
   }
-  const instance = process.env.EVOLUTION_INSTANCE!;
+  const instance = process.env.EVOLUTION_INSTANCE || "kbos-primary";
   let externalId: string | null = null;
   if (input.mediaUrl) {
     const mediatype = type === "audio" ? "audio" : type === "document" ? "document" : "image";

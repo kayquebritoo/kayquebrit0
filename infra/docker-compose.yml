@@ -58,9 +58,15 @@ services:
       SMTP_SECURE: ${SMTP_SECURE:-}
       # Bypass admin de emergência (/admin/* sem e-mail). Sem ele, inativo.
       KBOS_ADMIN_BYPASS_TOKEN: ${KBOS_ADMIN_BYPASS_TOKEN:-}
-      EVOLUTION_API_URL: ${EVOLUTION_API_URL:-}
-      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
-      EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-}
+      # Evolution (motor WhatsApp, profile `evolution` abaixo). Defaults com
+      # zero-config: URL é o nome do serviço na rede do compose e a instância
+      # é a padrão do código (`kbos-primary`). A CHAVE precisa coincidir com
+      # `AUTHENTICATION_API_KEY` do serviço `evolution` (mesmo default dev
+      # `kbos-dev-key` nos dois lados). Produção: defina chave forte no
+      # `/opt/kbos/.env` e recrie (`up -d --build`) — ver aviso na UI.
+      EVOLUTION_API_URL: ${EVOLUTION_API_URL:-http://evolution:8080}
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-kbos-dev-key}
+      EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-kbos-primary}
       # Inbox Fase 2: segredo do webhook inbound (vazio = aceita sem segredo).
       EVOLUTION_WEBHOOK_TOKEN: ${EVOLUTION_WEBHOOK_TOKEN:-}
       # Canais Fase 2b: Telegram via Bot API.
@@ -103,9 +109,10 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgres://postgres:kbos@db:5432/kbos}
       REDIS_URL: redis://redis:6379
-      EVOLUTION_API_URL: ${EVOLUTION_API_URL:-}
-      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
-      EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-}
+      # Mesmos defaults do `web` (ver comentário lá): zero-config no compose.
+      EVOLUTION_API_URL: ${EVOLUTION_API_URL:-http://evolution:8080}
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-kbos-dev-key}
+      EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-kbos-primary}
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-5}
       WORKER_SWEEP_MS: ${WORKER_SWEEP_MS:-30000}
       WORKER_CRON_MS: ${WORKER_CRON_MS:-3600000}

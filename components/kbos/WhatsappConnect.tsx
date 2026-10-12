@@ -7,6 +7,8 @@ type Status = {
   state: "open" | "connecting" | "close" | "unknown";
   qrcode: string | null;
   pairingCode: string | null;
+  created?: boolean;
+  usingDefaultKey?: boolean;
   detail?: string;
   error?: string;
   checkedAt?: string;
@@ -134,7 +136,12 @@ export default function WhatsappConnect() {
         <p className="font-semibold">Evolution API não configurada</p>
         <p className="mt-2 font-light leading-relaxed text-amber-100/80">
           Defina <code>EVOLUTION_API_URL</code>, <code>EVOLUTION_API_KEY</code> e{" "}
-          <code>EVOLUTION_INSTANCE</code> no ambiente da VPS. {data.error}
+          <code>EVOLUTION_INSTANCE</code> no ambiente da VPS e recrie os containers{" "}
+          (<code>up -d --build</code>). {data.error}
+        </p>
+        <p className="mt-2 font-light leading-relaxed text-amber-100/60">
+          Atalho: com o compose atualizado, basta <code>EVOLUTION_API_KEY</code> (a URL{" "}
+          <code>http://evolution:8080</code> e a instância <code>kbos-primary</code> já vêm por padrão).
         </p>
       </div>
     );
@@ -144,6 +151,13 @@ export default function WhatsappConnect() {
 
   return (
     <div>
+      {data?.usingDefaultKey && (
+        <div className="mb-4 rounded-2xl border border-amber-300/30 bg-amber-300/10 px-5 py-3 text-sm text-amber-100">
+          Chave padrão de desenvolvimento em uso (<code>kbos-dev-key</code>). Funciona, mas defina uma{" "}
+          <code>EVOLUTION_API_KEY</code> forte no <code>/opt/kbos/.env</code> e rode{" "}
+          <code>up -d --build</code> para endurecer a produção.
+        </div>
+      )}
       {error && (
         <div className="mb-4 rounded-2xl border border-rose-300/30 bg-rose-300/10 px-5 py-3 text-sm text-rose-100">{error}</div>
       )}
