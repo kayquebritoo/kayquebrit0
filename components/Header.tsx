@@ -91,6 +91,24 @@ export default function Header() {
     </button>
   );
 
+  const loginBtn = (compact?: boolean) => (
+    <Link
+      href="/entrar"
+      onClick={() => setOpen(false)}
+      aria-label="Entrar — área do cliente"
+      className={`flex items-center gap-2 rounded-full border border-white/25 bg-black/30 font-semibold uppercase text-white/85 backdrop-blur-md transition hover:border-white/60 hover:bg-white hover:text-black ${
+        compact ? "px-4 py-2 text-[10px] tracking-[0.2em]" : "px-5 py-2.5 text-[11px] tracking-[0.22em]"
+      }`}
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+        <path d="m10 17 5-5-5-5" />
+        <path d="M15 12H3" />
+      </svg>
+      Entrar
+    </Link>
+  );
+
   const burgerBtn = (compact?: boolean) => (
     <button
       ref={magBurger}
@@ -132,7 +150,10 @@ export default function Header() {
         <header className="fixed inset-x-0 top-0 z-[60]">
           <div className="flex items-start justify-between px-5 pt-5 sm:px-8 sm:pt-7 md:px-[80px] md:pt-[42px]">
             {logoBtn()}
-            {burgerBtn()}
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              {loginBtn()}
+              {burgerBtn()}
+            </div>
           </div>
         </header>
       ) : (
@@ -140,7 +161,10 @@ export default function Header() {
         <header className="fixed inset-x-0 top-0 z-[60] px-4 pt-3 sm:px-6 sm:pt-4">
           <div className="header-glass mx-auto flex max-w-6xl items-center justify-between rounded-2xl border border-white/10 bg-[#0B0B1E]/70 py-2 pl-4 pr-2.5 shadow-2xl shadow-black/30 backdrop-blur-xl">
             {logoBtn(true)}
-            {burgerBtn(true)}
+            <div className="flex items-center gap-2">
+              {loginBtn(true)}
+              {burgerBtn(true)}
+            </div>
           </div>
         </header>
       )}
@@ -199,6 +223,17 @@ export default function Header() {
                 {t("menu.allWorks")}
                 <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-current transition-all duration-500 group-hover:w-full" />
               </span>
+            </Link>
+            <Link
+              href="/entrar"
+              onClick={() => setOpen(false)}
+              tabIndex={open ? 0 : -1}
+              className={`mt-4 inline-flex items-center gap-2.5 rounded-full border border-white/25 px-7 py-3 text-[12px] font-semibold uppercase tracking-[0.25em] text-white/85 transition-all duration-500 hover:border-white hover:bg-white hover:text-black ${
+                open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
+              }`}
+              style={{ transitionDelay: open ? "460ms" : "0ms" }}
+            >
+              Entrar — Área do cliente
             </Link>
           </nav>
 

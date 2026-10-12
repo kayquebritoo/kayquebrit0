@@ -79,3 +79,11 @@ export const FINANCE_STATUS = [
   { id: "paid", label: "Pago" },
   { id: "overdue", label: "Vencido" },
 ] as const;
+
+// Orçamentos (client-safe: sem imports server).
+export const BUDGET_STATUS = [
+  { id: "draft", label: "Rascunho" },
+  { id: "sent", label: "Enviado" },
+  { id: "approved", label: "Aprovado" },
+  { id: "rejected", label: "Recusado" },
+] as const;

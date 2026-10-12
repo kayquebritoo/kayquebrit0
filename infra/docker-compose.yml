@@ -37,11 +37,14 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
+      args:
+        GIT_SHA: ${GIT_SHA:-local}
     ports:
       - "${WEB_PORT:-3000}:3000"
     environment:
       HOSTNAME: "0.0.0.0"
       PORT: "3000"
+      GIT_SHA: ${GIT_SHA:-local}
       DATABASE_URL: ${DATABASE_URL:-postgres://postgres:kbos@db:5432/kbos}
       REDIS_URL: redis://redis:6379
       APP_URL: ${APP_URL:-http://localhost:3000}
@@ -80,11 +83,16 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health/"]
-      interval: 20s
+      # Liveness pura (sempre 200 com o servidor de pé). NÃO usar /api/health
+      # aqui: ele retorna 503 quando db/redis caem e prenderia o container em
+      # `unhealthy` por causa de downstream (foi a causa do 502 no Caddy).
+      # 127.0.0.1 (não `localhost`): o wget resolve localhost p/ ::1 (IPv6)
+      # e o Next standalone escuta só em IPv4 — connection refused.
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--timeout=3", "--spider", "http://127.0.0.1:3000/api/health/live/"]
+      interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 30s
+      start_period: 20s
     restart: unless-stopped
 
   worker:

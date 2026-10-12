@@ -41,7 +41,13 @@ export async function GET() {
 
   const ok = checks.db.ok && checks.redis.ok;
   return NextResponse.json(
-    { ok, degraded: !checks.worker.ok, checks, now: new Date().toISOString() },
+    {
+      ok,
+      degraded: !checks.worker.ok,
+      checks,
+      commit: process.env.GIT_SHA || "local",
+      now: new Date().toISOString(),
+    },
     { status: ok ? 200 : 503 }
   );
 }

@@ -22,6 +22,7 @@ const POLICIES: Record<string, { limit: number; windowMs: number }> = {
   "webhooks:wa": { limit: num(process.env.RATE_WEBHOOK_MIN, 60), windowMs: WINDOW_MS },
   "webhooks:evolution": { limit: num(process.env.RATE_EVOLUTION_MIN, 300), windowMs: WINDOW_MS },
   "ai:assistant": { limit: num(process.env.RATE_AI_MIN, 20), windowMs: WINDOW_MS },
+  "admin:deploy": { limit: num(process.env.RATE_DEPLOY_MIN, 30), windowMs: WINDOW_MS },
 };
 
 const LUA = `local c = redis.call('INCR', KEYS[1])

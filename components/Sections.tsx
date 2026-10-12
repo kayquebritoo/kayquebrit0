@@ -548,13 +548,27 @@ export function BrandingSlide() {
 export function TestimonialsSlide() {
   const { t } = useLang();
   return (
-    <section className="relative flex h-full flex-col justify-center overflow-hidden bg-[#0B0B1E]">
-      <div className="ref-inner">
-        <p className="fp-anim ref-eyebrow" style={{ fontSize: 13 }}>{t("testimonials.eyebrow")}</p>
-        <div className="mt-5 grid grid-cols-1 gap-4 md:mt-[4vh] md:grid-cols-3 md:gap-10" style={{ columnGap: 80 }}>
+    <section className="relative isolate z-0 flex h-full flex-col justify-center overflow-hidden bg-[#0B0B1E]">
+      {/* mobile: respiro do header fixo + badge 01/08 (evita ficar por trás) */}
+      <div className="ref-inner relative z-10 pt-20 md:pt-0">
+        <div className="fp-anim flex items-end justify-between gap-4">
+          <p className="ref-eyebrow" style={{ fontSize: 13 }}>{t("testimonials.eyebrow")}</p>
+          <p aria-hidden className="shrink-0 text-[10px] uppercase tracking-[0.25em] text-white/35 md:hidden">
+            Deslize →
+          </p>
+        </div>
+        {/* mobile: carrossel horizontal fluido (snap) · desktop: grade 3 colunas */}
+        <div
+          data-no-fullpage
+          className="testi-carousel scrollbar-none -mx-5 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-5 pb-3 md:mx-0 md:mt-[4vh] md:grid md:grid-cols-3 md:gap-10 md:overflow-visible md:px-0 md:pb-0 md:[column-gap:80px]"
+          style={{ WebkitOverflowScrolling: "touch" as const, touchAction: "pan-x pan-y" }}
+        >
           {TESTIMONIALS.map((testi) => (
-            <div key={testi.name} className="fp-anim border-l border-white/10 pl-4 md:border-0 md:pl-0">
-              <p className="font-light leading-snug text-[#F4F1EC] md:leading-relaxed" style={{ fontSize: "clamp(13.5px, 3.7vw, 17px)", lineHeight: 1.55 }}>
+            <article
+              key={testi.name}
+              className="fp-anim w-[82vw] max-w-[320px] shrink-0 snap-center rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:w-[60vw] md:w-auto md:max-w-none md:shrink md:rounded-none md:border-0 md:border-l md:bg-transparent md:p-0"
+            >
+              <p className="font-light leading-snug text-[#F4F1EC] md:leading-relaxed" style={{ fontSize: "clamp(13.5px, 3.7vw, 15px)", lineHeight: 1.55 }}>
                 <span className="md:hidden">{testi.quote}</span>
                 <span className="hidden md:block" style={{ fontSize: "clamp(19px, 1.35vw, 25px)", lineHeight: 1.6 }}>{testi.quote}</span>
               </p>
@@ -627,15 +641,15 @@ export function TestimonialsSlide() {
                   ))}
                 </div>
               )}
-            </div>
+            </article>
           ))}
         </div>
-        <p className="fp-anim mt-6 text-white/75 md:mt-[7vh]" style={{ fontSize: 12, letterSpacing: "0.28em" }}>
+        <p className="fp-anim mt-4 text-white/75 md:mt-[7vh]" style={{ fontSize: 12, letterSpacing: "0.28em" }}>
           {t("testimonials.partners").toUpperCase()}
         </p>
         {/* parceiros em loop infinito — carrossel lateral */}
         <div
-          className="fp-anim mt-4 overflow-hidden md:mt-8"
+          className="fp-anim mt-3 overflow-hidden md:mt-8"
           style={{
             maskImage: "linear-gradient(90deg, transparent, black 10%, black 90%, transparent)",
             WebkitMaskImage: "linear-gradient(90deg, transparent, black 10%, black 90%, transparent)",
@@ -733,10 +747,19 @@ export function ContactSlide() {
           </div>
         </div>
 
-        <div className="fp-anim mt-6 flex flex-wrap items-center gap-x-5 gap-y-1 text-[15px] font-light text-[#9DB8E8] md:mt-[6vh] md:justify-between">
+        <div className="fp-anim mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[15px] font-light text-[#9DB8E8] md:mt-[6vh] md:justify-between">
           <span className="text-white/80">© Kayque Brito</span>
           <span>Belém — <LocalTime /></span>
-          <span>2026</span>
+          <span className="flex items-center gap-4">
+            <span>2026</span>
+            <Link
+              href="/entrar"
+              aria-label="Entrar — área do cliente"
+              className="rounded-full border border-white/20 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70 transition hover:border-white/60 hover:bg-white hover:text-black"
+            >
+              Entrar
+            </Link>
+          </span>
         </div>
       </div>
       <p className="hidden">{ABOUT.name} {CONTACT.title}</p>

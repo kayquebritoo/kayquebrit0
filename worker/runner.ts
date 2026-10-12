@@ -22,6 +22,7 @@ import {
   handleLmsWelcome,
   handleNotifyWhatsapp,
 } from "../lib/kbos/job-handlers";
+import { handleMorningBriefing, morningCronPattern } from "../lib/kbos/morning-briefing";
 import type { WhatsappPayload } from "../lib/kbos/whatsapp";
 import { jobAttempts } from "../lib/kbos/jobs";
 
@@ -40,6 +41,8 @@ export async function processJob(
         return await handleBillingReconcile();
       case "briefing.followup":
         return await handleBriefingFollowup();
+      case "briefing.morning":
+        return await handleMorningBriefing();
       case "lms.welcome":
         return await handleLmsWelcome(job.data as { enrollmentId: string });
       case "campaign.dispatch":
@@ -98,6 +101,15 @@ export async function ensureCrons(queue: Queue, everyMs: number) {
       "cron--agenda.reminders",
       { every: reminderPollMs() },
       { name: "agenda.reminders", data: {} }
+    );
+  }
+  // Briefing matinal: 1x/dia (padrão 08:00 America/Sao_Paulo via
+  // BRIEFING_MORNING_CRON; o fuso do "hoje" vive em BRIEFING_TIMEZONE).
+  if (!has("cron--briefing.morning")) {
+    await queue.upsertJobScheduler(
+      "cron--briefing.morning",
+      { pattern: morningCronPattern(), tz: "America/Sao_Paulo" },
+      { name: "briefing.morning", data: {} }
     );
   }
 }

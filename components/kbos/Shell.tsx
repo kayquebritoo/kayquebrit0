@@ -28,6 +28,7 @@ const NAV = [
   { href: "/admin/cursos", label: "Cursos", icon: "▶", adminOnly: true },
   { href: "/admin/briefings", label: "Briefings", icon: "✎", adminOnly: true },
   { href: "/admin/financeiro", label: "Financeiro", icon: "₿", adminOnly: true },
+  { href: "/admin/orcamentos", label: "Orçamentos", icon: "❐", adminOnly: true },
   { href: "/admin/agenda", label: "Agenda", icon: "◔", adminOnly: true },
   { href: "/admin/whatsapp", label: "WhatsApp", icon: "✆", adminOnly: true },
 ];

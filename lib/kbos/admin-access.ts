@@ -40,7 +40,12 @@ export const SESSION_COOKIE_ALT = "kbos.session-token";
 export const SESSION_COOKIE_ALIASES = [SESSION_COOKIE_NAME, SESSION_COOKIE_ALT] as const;
 
 /** Variáveis de ambiente aceitas para o segredo (primeira definida vence). */
-const BYPASS_ENV_KEYS = ["KBOS_ADMIN_BYPASS_TOKEN", "KBOS_SESSION_TOKEN", "ADMIN_SESSION_TOKEN"] as const;
+const BYPASS_ENV_KEYS = [
+  "KBOS_ADMIN_BYPASS_TOKEN",
+  "KBOS_ADMIN_PASSWORD",
+  "KBOS_SESSION_TOKEN",
+  "ADMIN_SESSION_TOKEN",
+] as const;
 
 /** Lê o segredo de bypass do ambiente (null quando não configurado). */
 export function getAdminBypassToken(): string | null {
@@ -76,4 +81,30 @@ export function isAdminBypass(value: string | null | undefined): boolean {
 /** uuid v4/v7 — protege as queries contra `invalid input syntax for type uuid`. */
 export function isUuidLike(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.trim());
+}
+
+// Bypass aberto da VPS (uso direto sem login).
+//
+// `KBOS_BYPASS_ADMIN="true"` libera TODAS as rotas `/admin/*` (páginas e
+// APIs) sem sessão — sem redirect para `/entrar`, sem Magic Link.
+// ⚠️ SEGURANÇA: com a flag ativa, qualquer pessoa com a URL tem poder total
+// de admin (ler/editar CRM e financeiro, disparar campanhas/WhatsApp).
+// Use SOMENTE em rede privada/firewall restrito, ou temporariamente para
+// operação local — nunca exponha com a flag ligada na internet aberta.
+// Ausente ou diferente de "true" (case-insensitive) = login normal
+// (fail-closed). Edge-safe: só lê `process.env` + comparação de string.
+export function isAdminBypassOpen(): boolean {
+  return (process.env.KBOS_BYPASS_ADMIN || "").trim().toLowerCase() === "true";
+}
+
+let _bypassWarned = false;
+
+/** Aviso único por processo quando o bypass aberto atende alguém. */
+export function warnAdminBypassOpen(): void {
+  if (_bypassWarned) return;
+  _bypassWarned = true;
+  console.warn(
+    "[KBOS] KBOS_BYPASS_ADMIN=true — /admin ABERTO sem login. " +
+      "Restringir no firewall ou desativar após o uso."
+  );
 }

@@ -1,10 +1,21 @@
-# Deploy automático p/ a VPS de produção (kbos.kayquebrito.com.br).
+# Deploy VPS pull-based — SEM SSH, sem chave privada no GitHub.
 #
-# Dispara em todo push na `main` (exceto docs) + botão manual (workflow_dispatch).
-# Pré-requisitos (uma vez — ver "6. Deploy automático" em infra/VPS.md):
-#   - chave SSH dedicada com a pub em ~/.ssh/authorized_keys na VPS
-#   - secrets no GitHub (repo → Settings → Secrets → Actions):
-#       VPS_HOST, VPS_PORT, VPS_USER, VPS_SSH_KEY
+# Como funciona:
+#   1. Este workflow avisa a VPS do novo commit via
+#      POST /api/admin/deploy (Bearer DEPLOY_TOKEN). Se a rota ainda não
+#      existir no código rodando (primeiro deploy após esta mudança), o aviso
+#      vira warning — o cron da VPS assume sozinho em ~3 min.
+#   2. O cron da VPS (`*/3 * * * * /opt/kbos/deploy.sh --auto`) publica o
+#      commit (`git reset --hard` + rebuild) e carimba o SHA no build
+#      (GIT_SHA, exposto em /api/health).
+#   3. O workflow aguarda o /api/health reportar o SHA do push (até ~15 min)
+#      e fica verde. Falha com mensagem acionável se a VPS não acompanhar.
+#
+# Setup único (ver "6. Deploy automático" em infra/VPS.md):
+#   - na VPS: cron do deploy.sh + DEPLOY_TOKEN no /opt/kbos/.env
+#   - no GitHub (repo → Settings → Secrets → Actions):
+#       DEPLOY_URL   = https://kbos.kayquebrito.com.br
+#       DEPLOY_TOKEN = mesmo valor do /opt/kbos/.env da VPS
 name: Deploy VPS (kbos.kayquebrito.com.br)
 
 on:
@@ -18,20 +29,50 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - name: Pull + rebuild na VPS
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          port: ${{ secrets.VPS_PORT }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            set -e
-            cd /opt/kbos
-            git fetch origin
-            git reset --hard origin/main
-            docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml --profile evolution up -d --build
-            docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml ps
-            curl -sf http://localhost:3000/api/health/ | head -c 400
-            echo
+      - name: Avisar a VPS do novo commit
+        env:
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          set -u
+          if [ -z "${DEPLOY_URL:-}" ] || [ -z "${DEPLOY_TOKEN:-}" ]; then
+            echo "::error::Secrets DEPLOY_URL/DEPLOY_TOKEN não configurados (repo → Settings → Secrets → Actions). Ver infra/VPS.md §6."
+            exit 1
+          fi
+          code=$(curl -s -o /tmp/trigger.json -w "%{http_code}" --max-time 30 \
+            -X POST "$DEPLOY_URL/api/admin/deploy" \
+            -H "Authorization: Bearer $DEPLOY_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"sha\":\"$GITHUB_SHA\"}" || echo "000")
+          echo "trigger HTTP $code: $(head -c 300 /tmp/trigger.json 2>/dev/null)"
+          if [ "$code" = "404" ] || [ "$code" = "000" ]; then
+            echo "::warning::Endpoint de deploy ainda não publicado na VPS — o cron (--auto, ~3 min) assume sozinho."
+          elif [ "$code" = "401" ]; then
+            echo "::error::DEPLOY_TOKEN não confere com o /opt/kbos/.env da VPS."
+            exit 1
+          elif [ "$code" != "200" ]; then
+            echo "::warning::Trigger retornou $code; o cron assume sozinho."
+          fi
+
+      - name: Aguardar a VPS publicar o commit
+        env:
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+        run: |
+          set -u
+          want="$GITHUB_SHA"
+          echo "aguardando commit $want em $DEPLOY_URL/api/health …"
+          for i in $(seq 1 45); do
+            got=$(curl -sf --max-time 15 "$DEPLOY_URL/api/health" 2>/dev/null \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin).get("commit",""))' 2>/dev/null || echo "")
+            echo "tentativa $i/45: commit=${got:-<sem resposta>}"
+            if [ -n "$got" ] && [ "$got" = "$want" ]; then
+              echo "✅ VPS publicada no commit $want."
+              curl -sf --max-time 15 "$DEPLOY_URL/api/health" | head -c 400; echo
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "::error::A VPS não publicou $want em ~15 min. Na VPS: confira 'crontab -l' (deploy.sh --auto) e 'tail /var/log/kbos-deploy.log'."
+          exit 1

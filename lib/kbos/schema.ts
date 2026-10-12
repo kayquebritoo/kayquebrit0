@@ -6,7 +6,7 @@
 // `userId` -> `user_id`, `tokenHash` -> `token_hash`, ...). Este arquivo é a
 // fonte de verdade e confere 1:1 com `drizzle/*.sql` (aplicado via
 // `npx drizzle-kit push`):
-//   - `users`      <-> kbos_users(id, email, name, role, phone, created_at)
+//   - `users`      <-> kbos_users(id, email, name, role, phone, password_hash, created_at)
 //   - `sessions`   <-> kbos_sessions(id uuid, user_id, expires_at, created_at)
 //   - `loginTokens`<-> kbos_login_tokens(id, email, token_hash, expires_at,
 //                     consumed, created_at)
@@ -48,6 +48,10 @@ export const users = pgTable("kbos_users", {
   name: text("name").notNull(),
   role: roleEnum("role").notNull().default("cliente"),
   phone: text("phone"),
+  // Login e-mail + senha (scrypt, ver `password.ts`). Nullable p/ legado
+  // Magic Link: contas antigas definem a senha via `/api/auth/password`
+  // com o token do link mágico; admin usa o bypass como senha imediata.
+  passwordHash: text("password_hash"),
   createdAt: ts("created_at"),
 });
 
@@ -525,6 +529,47 @@ export const events = pgTable("kbos_events", {
   reminderMinutesBefore: integer("reminder_minutes_before").notNull().default(15),
   notificationSent: boolean("notification_sent").notNull().default(false),
   reminderSentAt: timestamp("reminder_sent_at", { withTimezone: true }),
+  createdAt: ts("created_at"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+// ---------- Orçamentos (quotes/budgets) ----------
+//
+// `kbos_budgets` guarda o orçamento comercial: código sequencial legível
+// (`#14001`), cliente do CRM, itens (JSONB) e total espelhado em `numeric`
+// para ordenação/agregação sem parse de JSON. O PDF é gerado on-demand em
+// `/api/budgets/[id]/pdf` (`lib/kbos/pdf-generator.ts`).
+// SQL em `drizzle/0006_budgets.sql` (aplicar com `npx drizzle-kit push`).
+
+export const budgetStatus = pgEnum("kbos_budget_status", [
+  "draft",
+  "sent",
+  "approved",
+  "rejected",
+]);
+
+export type BudgetItem = {
+  service: string;
+  description?: string | null;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+};
+
+export const budgets = pgTable("kbos_budgets", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: text("code").notNull().unique(),
+  contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
+  title: text("title").notNull(),
+  status: budgetStatus("status").notNull().default("draft"),
+  totalAmount: numeric("total_amount").notNull().default("0"),
+  validUntil: timestamp("valid_until", { withTimezone: true }),
+  terms: text("terms"),
+  bankInfo: text("bank_info"),
+  items: jsonb("items").notNull().$type<BudgetItem[]>().default([]),
   createdAt: ts("created_at"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()

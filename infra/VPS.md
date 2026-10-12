@@ -79,6 +79,25 @@ Depois entre em `https://kbos.kayquebrito.com.br/entrar` com
 `contato@kayquebrito.com.br` + o token no campo "Token de acesso admin".
 Se o token vazar, gere outro e repita o processo.
 
+### 4.2. Bypass aberto (uso direto sem login — perigoso)
+
+Para operar na VPS sem Magic Link nem token (ex.: rede privada):
+
+```bash
+cd /opt/kbos
+echo 'KBOS_BYPASS_ADMIN="true"' >> .env
+docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml up -d
+```
+
+Com a flag ativa, `/admin/*` (páginas e APIs, incluindo `/admin/orcamentos`)
+abre direto — sem redirect para `/entrar`. Para voltar ao login normal,
+remova a linha e suba de novo (`sed -i '/KBOS_BYPASS_ADMIN/d' .env` + `up -d`).
+
+⚠️ **Risco real:** qualquer pessoa com a URL vira admin total (ler/editar
+CRM e financeiro, disparar campanhas e WhatsApp). Use SOMENTE com firewall
+restrito (porta 3000 só para seu IP/VPN) ou temporariamente. Em internet
+aberta, prefira o token de emergência (§4.1).
+
 ## 5. Portas (liberar no firewall da VPS)
 
 | Porta | Serviço | Expor? |
@@ -89,30 +108,88 @@ Se o token vazar, gere outro e repita o processo.
 
 Recomendado depois: reverso com TLS (Caddy/Traefik) + `APP_URL=https://...`.
 
-## 6. Deploy automático (CI/CD) — push na `main` publica sozinho
+### 5.1. Caddy sem 502 (liveness vs readiness)
 
-O workflow `.github/workflows/deploy-vps.yml` faz `git pull` + rebuild na VPS
-a cada push na `main` (docs `*.md` não disparam). Configurar **uma vez**:
+O container `web` expõe duas sondas — não as confunda:
 
-```bash
-# 1. Chave SSH dedicada (na sua máquina local — NUNCA commite a privada)
-ssh-keygen -t ed25519 -f ~/.ssh/kbos-deploy -C "kbos-github-actions" -N ""
-# 2. Autoriza na VPS (sessão SSH existente)
-cat ~/.ssh/kbos-deploy.pub  # anexe em ~/.ssh/authorized_keys do usuário do deploy
-# 3. GitHub: repo → Settings → Secrets and variables → Actions → New secret
-#      VPS_HOST = 109.106.251.173
-#      VPS_PORT = 65002
-#      VPS_USER = <usuário dono de /opt/kbos na VPS>
-#      VPS_SSH_KEY = <conteúdo de ~/.ssh/kbos-deploy, privada>
+| Sonda | Uso | Comportamento |
+|---|---|---|
+| `GET /api/health/live` | Docker `HEALTHCHECK` e Caddy | **sempre 200** com o servidor de pé (sem banco/Redis) |
+| `GET /api/health` | `deploy.sh`, Actions, monitores | diagnóstico profundo; **503** quando db/redis caem |
+
+Apontar o healthcheck do Docker para `/api/health` prendia o container em
+`starting`/`unhealthy` a cada transient do Neon — era a causa do 502. Durante
+o rebuild de um deploy (~1–2 min com 1 réplica) um 502 breve é normal; para
+atravessá-lo sem erro visível, dê retries ao proxy:
+
+```caddy
+kbos.kayquebrito.com.br {
+    reverse_proxy localhost:3000 {
+        lb_try_duration 90s
+        lb_try_interval 5s
+    }
+}
 ```
 
-Depois disso, qualquer `git push origin main` publica sozinho; falhas aparecem
-na aba Actions. Re-execução manual: Actions → "Deploy VPS" → Run workflow.
+> Nota: o driver do app é Neon HTTP (`@neondatabase/serverless`) — o
+> `db: ok` do `/api/health` só passa com `DATABASE_URL` do Neon. Com o
+> postgres local do compose, o `web` fica `healthy` normalmente (liveness) e
+> só o diagnóstico profundo acusa o banco. Em produção (Neon), ambos passam.
 
-> O deploy usa `git reset --hard origin/main` (a VPS nunca tem alteração
-> local) e SEMPRE com `--env-file /opt/kbos/.env -f infra/docker-compose.yml
-> --profile evolution` a partir de `/opt/kbos` — sem o profile, a Evolution
-> não sobe; sem `--env-file`, sobe com banco/e-mail vazios.
+## 6. Deploy automático (CI/CD) — pull-based, sem SSH
+
+Filosofia: a VPS **se atualiza sozinha** (cron a cada ~3 min roda
+`deploy.sh --auto`, que publica `origin/main` só quando há novidade). O
+GitHub Actions não acessa a VPS — ele só **avisa** o commit novo
+(`POST /api/admin/deploy`, token) e **aguarda** o `/api/health` reportar o
+SHA. Nada de chave privada SSH no GitHub (elimina a classe inteira de falhas
+de handshake/autenticação).
+
+Configurar **uma vez** (uma sessão SSH normal na VPS):
+
+```bash
+# 1. Cron do deploy (a cada 3 min; o script tem lock anti-sobreposição)
+(crontab -l 2>/dev/null; echo "*/3 * * * * /opt/kbos/deploy.sh --auto >> /var/log/kbos-deploy.log 2>&1") | crontab -
+# 2. Segredo compartilhado com o GitHub Actions (nunca commitar)
+DEPLOY_TOKEN=$(openssl rand -hex 32)
+echo "DEPLOY_TOKEN=\"$DEPLOY_TOKEN\"" >> /opt/kbos/.env
+# 3. Publica agora (a rota /api/admin/deploy passa a existir)
+cd /opt/kbos && ./deploy.sh
+# 4. GitHub: repo → Settings → Secrets and variables → Actions → New secret
+#      DEPLOY_URL   = https://kbos.kayquebrito.com.br
+#      DEPLOY_TOKEN = <o mesmo valor do passo 2>
+```
+
+Depois disso, `git push origin main` publica sozinho em ~3–8 min; o Actions
+fica verde quando a VPS confirma o SHA, ou falha com mensagem acionável.
+Re-execução manual: Actions → "Deploy VPS" → Run workflow.
+
+Comandos úteis:
+
+```bash
+cd /opt/kbos
+./deploy.sh --help            # modos: (padrão) --deploy | --auto | --sha <sha>
+./deploy.sh --sha <sha40>     # publica um commit específico (rollback rápido)
+tail -f /var/log/kbos-deploy.log
+curl -s http://localhost:3000/api/health | head -c 400
+# estado do último deploy (token):
+curl -s -H "Authorization: Bearer $DEPLOY_TOKEN" http://localhost:3000/api/admin/deploy
+```
+
+> O deploy usa `git reset --hard` (a VPS nunca tem alteração local) e SEMPRE
+> com `--env-file /opt/kbos/.env -f infra/docker-compose.yml --profile
+> evolution` a partir de `/opt/kbos` — sem o profile, a Evolution não sobe;
+> sem `--env-file`, sobe com banco/e-mail vazios. Tudo isso vive no
+> `deploy.sh` (fonte única da verdade) — não reimplemente o comando à mão.
+
+### 6.1. Solução de problemas do pipeline
+
+| Sintoma no Actions | Causa provável | Ação |
+|---|---|---|
+| `Secrets DEPLOY_URL/DEPLOY_TOKEN não configurados` | secrets ausentes | Criar os 2 secrets (§6 passo 4) |
+| `DEPLOY_TOKEN não confere` (401) | token divergente | Regenerar §6 passo 2 e atualizar o secret |
+| Trigger 404 + VPS não atualiza | cron ausente | `crontab -l` na VPS; recriar §6 passo 1 |
+| Timeout ~15 min aguardando o SHA | build falhou ou rede | `tail /var/log/kbos-deploy.log` na VPS |
 
 ### 6.1. Variáveis novas (Fases 2–4) — anexar uma vez ao `/opt/kbos/.env`
 

@@ -468,6 +468,25 @@ a.m-hero-in { animation-delay: 0.18s; }
   display: none;
 }
 
+/* carrossel de depoimentos (mobile): deslize fluido com snap + respiro */
+.testi-carousel {
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 20px;
+  -webkit-overflow-scrolling: touch;
+}
+.testi-carousel > * {
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+}
+@media (min-width: 768px) {
+  .testi-carousel {
+    scroll-snap-type: none;
+  }
+  .testi-carousel > * {
+    scroll-snap-align: none;
+  }
+}
+
 /* ---------- assinatura: seleção, marquee, órbita, foco ---------- */
 ::selection {
   background: #ece7e0;

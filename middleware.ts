@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // NOTA: importar SOMENTE de `admin-access` (módulo edge-safe, sem
 // `next/headers`/drizzle/db). Importar `rbac` aqui puxaria o cliente do banco
 // para o runtime do middleware e quebraria o deploy.
-import { SESSION_COOKIE_ALIASES, isAdminBypass } from "@/lib/kbos/admin-access";
+import { SESSION_COOKIE_ALIASES, isAdminBypass, isAdminBypassOpen } from "@/lib/kbos/admin-access";
 
 // Barreira leve: exige cookie de sessão. A validade do token e o nível
 // de acesso (role) são verificados dentro de cada rota/layout.
@@ -16,9 +16,21 @@ import { SESSION_COOKIE_ALIASES, isAdminBypass } from "@/lib/kbos/admin-access";
 // configurado, o bypass fica inativo (fail-closed).
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  // Bypass aberto da VPS (`KBOS_BYPASS_ADMIN="true"`): acesso livre e direto,
+  // sem redirect para `/entrar` e sem exigir sessão/token. Ver o aviso de
+  // segurança em `isAdminBypassOpen` (admin-access.ts).
+  if (isAdminBypassOpen()) return NextResponse.next();
   // health é público (Docker HEALTHCHECK / monitores de uptime).
   // (com trailingSlash, o Next redireciona /api/health -> /api/health/)
-  if (pathname === "/api/health" || pathname === "/api/health/") return NextResponse.next();
+  // `/live` é a liveness pura (sempre 200); `/api/health` é o diagnóstico
+  // profundo (503 quando db/redis caem — só para readiness, nunca p/ Docker).
+  if (
+    pathname === "/api/health" ||
+    pathname === "/api/health/" ||
+    pathname === "/api/health/live" ||
+    pathname === "/api/health/live/"
+  )
+    return NextResponse.next();
   // Funil público do briefing (sem cookie de sessão):
   // - POST /api/briefings (form de orçamento — conversão principal do site)
   // - GET /api/briefings/[uuid] e .../contrato (links por capacidade pós-envio)

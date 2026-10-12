@@ -9,7 +9,9 @@ import {
   SESSION_COOKIE_ALIASES,
   SESSION_COOKIE_NAME,
   isAdminBypass,
+  isAdminBypassOpen,
   isUuidLike,
+  warnAdminBypassOpen,
 } from "./admin-access";
 
 export const SESSION_COOKIE = SESSION_COOKIE_NAME;
@@ -17,7 +19,7 @@ export const SESSION_COOKIE = SESSION_COOKIE_NAME;
 export { SESSION_COOKIE_ALIASES };
 export const SESSION_DAYS = 30;
 
-export { ROLE_LABELS, PIPELINE, CONTACT_STATUS, DEAL_STAGES, INBOX_CHANNELS, CONVERSATION_STATUS, CAMPAIGN_STATUS, CAMPAIGN_TARGETS, FINANCE_TYPES, FINANCE_STATUS } from "./constants";
+export { ROLE_LABELS, PIPELINE, CONTACT_STATUS, DEAL_STAGES, INBOX_CHANNELS, CONVERSATION_STATUS, CAMPAIGN_STATUS, CAMPAIGN_TARGETS, FINANCE_TYPES, FINANCE_STATUS, BUDGET_STATUS } from "./constants";
 
 export type SessionUser = typeof users.$inferSelect;
 
@@ -65,11 +67,23 @@ async function adminBypassUser(): Promise<SessionUser> {
     name: "Administrador",
     role: "admin" as Role,
     phone: null,
+    passwordHash: null,
     createdAt: new Date(0),
   };
 }
 
 export async function sessionUser(): Promise<SessionUser | null> {
+  const user = await resolveSessionUser();
+  // Bypass aberto da VPS: sem usuário resolvido, atende como admin para que
+  // páginas E dados das APIs funcionem sem login (ver admin-access.ts).
+  if (!user && isAdminBypassOpen()) {
+    warnAdminBypassOpen();
+    return adminBypassUser();
+  }
+  return user;
+}
+
+async function resolveSessionUser(): Promise<SessionUser | null> {
   try {
     const sid = await readSessionCookie();
     if (!sid) return null;

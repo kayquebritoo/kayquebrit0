@@ -20,6 +20,7 @@ export default function Fullpage({
   const track = useRef<HTMLDivElement>(null);
   const animating = useRef(false);
   const touchY = useRef(0);
+  const touchX = useRef(0);
   const indexRef = useRef(0);
   const dotWrap = useRef<HTMLElement>(null);
 
@@ -209,6 +210,10 @@ export default function Fullpage({
 
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
+      const target = e.target as HTMLElement | null;
+      // Trackpads mandam deltaX sobre carrosséis horizontais — deixa o
+      // carrossel (depoimentos) consumir sem trocar de slide.
+      if (target?.closest?.("[data-no-fullpage]") && Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
       e.preventDefault();
       if (animating.current) return;
       goTo(indexRef.current + (e.deltaY > 0 ? 1 : -1));
@@ -217,10 +222,22 @@ export default function Fullpage({
       if (e.key === "ArrowDown" || e.key === "PageDown") goTo(indexRef.current + 1);
       if (e.key === "ArrowUp" || e.key === "PageUp") goTo(indexRef.current - 1);
     };
-    const onTouchStart = (e: TouchEvent) => (touchY.current = e.touches[0].clientY);
+    const onTouchStart = (e: TouchEvent) => {
+      touchY.current = e.touches[0].clientY;
+      touchX.current = e.touches[0].clientX;
+    };
     const onTouchEnd = (e: TouchEvent) => {
-      const d = touchY.current - e.changedTouches[0].clientY;
-      if (Math.abs(d) > 50) goTo(indexRef.current + (d > 0 ? 1 : -1));
+      const dy = touchY.current - e.changedTouches[0].clientY;
+      const dx = touchX.current - e.changedTouches[0].clientX;
+      // Carrosséis horizontais internos (ex.: depoimentos no mobile):
+      // gesto predominantemente horizontal = scroll do carrossel, não troca de slide.
+      if (Math.abs(dx) > Math.abs(dy)) return;
+      // Gesto dentro do carrossel exige intenção vertical maior (evita
+      // troca acidental em scroll diagonal com o dedo sobre os cards).
+      const target = e.target as HTMLElement | null;
+      const inCarousel = !!target?.closest?.("[data-no-fullpage]");
+      const threshold = inCarousel ? 80 : 50;
+      if (Math.abs(dy) > threshold) goTo(indexRef.current + (dy > 0 ? 1 : -1));
     };
     const onGo = (e: Event) => goTo((e as CustomEvent<number>).detail);
 

@@ -17,6 +17,7 @@ export const JOB_TYPES = [
   "notify.whatsapp",
   "billing.reconcile",
   "briefing.followup",
+  "briefing.morning",
   "lms.welcome",
   "campaign.dispatch",
   "campaign.send",

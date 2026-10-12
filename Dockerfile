@@ -15,6 +15,9 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+# SHA publicado (deploy.sh passa via build-arg; /api/health o expõe).
+ARG GIT_SHA=local
+ENV GIT_SHA=$GIT_SHA
 # deps de produção (inclui tsx p/ rodar o worker em TS direto)
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev

@@ -36,6 +36,25 @@ export const authRequestSchema = z.object({
   adminBypass: z.string().trim().max(256).optional(),
 });
 
+/* ---------- auth e-mail + senha (fluxo principal do /entrar) ---------- */
+export const authLoginSchema = z.object({
+  email: emailField,
+  // Aceita o bypass do admin aqui também (acesso imediato na VPS):
+  // se o e-mail for o do admin e a senha conferir com
+  // `KBOS_ADMIN_BYPASS_TOKEN`/`KBOS_ADMIN_PASSWORD`, a sessão é criada
+  // sem exigir `password_hash` no banco.
+  password: z.string().min(1, { error: "Informe a senha." }).max(256),
+});
+
+export const authPasswordSchema = z.object({
+  // Nova senha a definir (mínimo 8 chars).
+  password: z.string().min(8, { error: "Mínimo 8 caracteres." }).max(256),
+  // Bootstrap sem sessão: token bruto do Magic Link (hex) OU segredo admin.
+  // Um dos dois é exigido quando não há sessão válida (ver rota).
+  token: z.string().trim().max(256).optional(),
+  adminBypass: z.string().trim().max(256).optional(),
+});
+
 /* ---------- briefings ---------- */
 export const briefingCreateSchema = z.object({
   categoria: shortText(60),
@@ -394,6 +413,34 @@ export const eventPatchSchema = nonEmpty(
     reminderMinutesBefore: z.coerce.number().int().min(0).max(10080).optional(),
     // Reavisar: zera o flag p/ o worker disparar de novo.
     markUnsent: z.boolean().optional(),
+  })
+);
+
+/* ---------- orçamentos ---------- */
+export const budgetItemSchema = z.object({
+  service: shortText(120),
+  description: z.string().trim().max(500).nullable().optional(),
+  quantity: z.coerce.number().positive().max(100000),
+  unitPrice: z.coerce.number().min(0).max(1e12),
+});
+export const budgetCreateSchema = z.object({
+  title: shortText(160),
+  contactId: uuidField.nullable().optional(),
+  items: z.array(budgetItemSchema).min(1).max(100),
+  status: z.enum(["draft", "sent", "approved", "rejected"]).optional(),
+  validUntil: dateField.nullable().optional(),
+  terms: z.string().trim().max(5000).nullable().optional(),
+  bankInfo: z.string().trim().max(2000).nullable().optional(),
+});
+export const budgetPatchSchema = nonEmpty(
+  z.object({
+    title: shortText(160).optional(),
+    contactId: uuidField.nullable().optional(),
+    items: z.array(budgetItemSchema).min(1).max(100).optional(),
+    status: z.enum(["draft", "sent", "approved", "rejected"]).optional(),
+    validUntil: dateField.nullable().optional(),
+    terms: z.string().trim().max(5000).nullable().optional(),
+    bankInfo: z.string().trim().max(2000).nullable().optional(),
   })
 );
 

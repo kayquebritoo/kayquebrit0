@@ -11,13 +11,22 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { conversations, messages } from "./schema";
 import { findConversation, sendAgentMessage } from "./inbox";
+import {
+  createBudget,
+  findContactByName,
+  formatBRL,
+  looksLikeBudgetCommand,
+  parseBudgetCommand,
+} from "./budgets";
 
 const DEFAULT_SYSTEM = [
   "Você é o assistente da KBOS (Kayque Brito Studio).",
   "Responda em português do Brasil, de forma curta, cordial e objetiva.",
   "Se a mensagem for sobre orçamento, peça o tipo de projeto e o prazo.",
+  "Você também cria orçamentos sozinho: quando o usuário pedir (ex.: “criar orçamento site para Maria: página 3000, blog 800”), o sistema registra no banco e confirma com o número.",
   "Nunca invente preços, prazos ou links.",
 ].join(" ");
+
 
 export function openaiKey(): string | null {
   const k = (process.env.OPENAI_API_KEY || "").trim();
@@ -172,12 +181,71 @@ export type AssistantTurn = {
   messageId: string | null;
   sent: boolean;
   ttsAudio: string | null;
+  budget: BudgetActionResult | null;
+};
+
+export type BudgetActionResult = {
+  created: boolean;
+  id?: string;
+  code?: string;
+  title?: string;
+  total?: number;
+  reason?: string;
 };
 
 function coded(message: string, code: string): Error {
   const e = new Error(message);
   (e as NodeJS.ErrnoException).code = code;
   return e;
+}
+
+/**
+ * Ação autônoma de orçamento: interpreta o texto do turno e, quando for um
+ * comando válido ("criar orçamento … com itens e valores"), grava o registro
+ * no banco. Nunca quebra o turno — falha vira `reason` + orientação.
+ */
+export async function tryBudgetAction(
+  transcript: string
+): Promise<{ note: string; budget: BudgetActionResult | null }> {
+  if (!looksLikeBudgetCommand(transcript)) return { note: "", budget: null };
+  const parsed = parseBudgetCommand(transcript);
+  if (!parsed) {
+    return {
+      note: "\n\n💡 Para eu criar o orçamento sozinho, diga os itens com valores — ex.: “criar orçamento site para Maria: página inicial 3000, blog 800”.",
+      budget: { created: false, reason: "unparsed" },
+    };
+  }
+  try {
+    let contactId: string | null = null;
+    let contactLabel = "sem cliente vinculado";
+    if (parsed.clientName) {
+      const found = await findContactByName(parsed.clientName);
+      if (found) {
+        contactId = found.id;
+        contactLabel = `para ${found.name}`;
+      } else {
+        contactLabel = `para ${parsed.clientName} (cliente não encontrado no CRM — orçamento criado sem vínculo)`;
+      }
+    }
+    const row = await createBudget({
+      title: parsed.title,
+      contactId,
+      items: parsed.items,
+    });
+    const total = Number(row.totalAmount || 0);
+    return {
+      note:
+        `\n\n✅ Orçamento *${row.code}* criado ${contactLabel}: “${parsed.title}” — ` +
+        `${parsed.items.length} item(ns), total *${formatBRL(total)}*. ` +
+        `Veja em /admin/orcamentos ou baixe o PDF em /api/budgets/${row.id}/pdf.`,
+      budget: { created: true, id: row.id, code: row.code, title: parsed.title, total },
+    };
+  } catch (e) {
+    return {
+      note: "\n\n⚠️ Entendi o orçamento, mas não consegui gravá-lo agora. Tente de novo em instantes.",
+      budget: { created: false, reason: e instanceof Error ? e.message : "db_error" },
+    };
+  }
 }
 
 export async function handleAssistantTurn(input: AssistantTurnInput): Promise<AssistantTurn> {
@@ -210,8 +278,13 @@ export async function handleAssistantTurn(input: AssistantTurnInput): Promise<As
   const system = buildSystemPrompt(input.voicePrompt);
   const reply = await chatReply(system, transcript);
 
+  // 3b) Ação autônoma: comando de orçamento vira registro no banco e
+  // confirmação anexada à resposta (funciona até no modo base, sem LLM).
+  const action = await tryBudgetAction(transcript);
+  const replyText = action.note ? `${reply.text}${action.note}` : reply.text;
+
   // 4) Voz opcional (não fatal).
-  const ttsAudio = input.tts ? await synthesizeSpeech(reply.text, input.voice) : null;
+  const ttsAudio = input.tts ? await synthesizeSpeech(replyText, input.voice) : null;
 
   // 5) Persiste o turno como `ai` e envia se pedido.
   let messageId: string | null = null;
@@ -222,7 +295,7 @@ export async function handleAssistantTurn(input: AssistantTurnInput): Promise<As
       .values({
         conversationId: conv.id,
         senderType: "ai",
-        content: reply.text,
+        content: replyText,
         mediaUrl: null,
         messageType: "text",
         status: "sent",
@@ -230,7 +303,7 @@ export async function handleAssistantTurn(input: AssistantTurnInput): Promise<As
       .returning({ id: messages.id });
     messageId = ins[0].id;
     if (input.send) {
-      await sendAgentMessage(conv, { content: reply.text });
+      await sendAgentMessage(conv, { content: replyText });
       sent = true;
     }
   } else if (input.send) {
@@ -240,11 +313,12 @@ export async function handleAssistantTurn(input: AssistantTurnInput): Promise<As
   return {
     transcript,
     transcriptStub,
-    reply: reply.text,
+    reply: replyText,
     replyStub: reply.stub,
     conversationId: conv?.id ?? null,
     messageId,
     sent,
     ttsAudio,
+    budget: action.budget,
   };
 }

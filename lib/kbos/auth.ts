@@ -1,4 +1,4 @@
-// Magic Link: token de uso único (15 min) -> sessão de 30 dias.
+// Magic Link (legado/fallback) + login e-mail + senha (fluxo principal).
 // Envio via serviço central (`./email`: Resend -> SMTP -> log); em dev sem
 // provedor, o link volta na resposta (e no log) para testar sem SMTP.
 import { createHash, randomBytes } from "crypto";
@@ -7,6 +7,7 @@ import { db } from "./db";
 import { appUrl, buildMagicLinkEmail, sendEmail } from "./email";
 import { loginTokens, sessions, users } from "./schema";
 import { ADMIN_EMAIL, isAdminBypass, isAdminEmail, isUuidLike } from "./admin-access";
+import { hashPassword, isPasswordStrongEnough, verifyPassword } from "./password";
 
 export { ADMIN_EMAIL, isAdminEmail, isAdminBypass };
 
@@ -142,4 +143,89 @@ export async function destroySession(sessionId: string) {
   } catch {
     /* sessão já inválida */
   }
+}
+
+// ---------- Login e-mail + senha (fluxo principal) ----------
+
+export type PasswordLoginResult =
+  | { ok: true; sessionId: string; user: typeof users.$inferSelect; adminBypass: boolean }
+  | { ok: false; code: "INVALID" | "NO_PASSWORD" };
+
+/**
+ * Login padrão por e-mail + senha.
+ * - Admin + senha == bypass (`KBOS_ADMIN_BYPASS_TOKEN`/`KBOS_ADMIN_PASSWORD`):
+ *   sessão imediata (acesso direto na VPS, sem depender do banco de senhas).
+ * - Demais: exige `password_hash` (scrypt) válido.
+ * - Conta sem senha: `NO_PASSWORD` (client orienta a definir via Magic Link).
+ * Fail-closed: nunca distingue "e-mail inexistente" de "senha errada".
+ */
+export async function loginWithPassword(emailRaw: string, password: string): Promise<PasswordLoginResult> {
+  const email = emailRaw.trim().toLowerCase();
+  // Bypass do admin vale como senha imediata (VPS).
+  if (isAdminEmail(email) && isAdminBypass(password)) {
+    const direct = await createAdminSession(email, password);
+    if (direct) return { ok: true, sessionId: direct.sessionId, user: direct.user, adminBypass: true };
+    return { ok: false, code: "INVALID" };
+  }
+  const d = db();
+  const user = (await d.select().from(users).where(eq(users.email, email)).limit(1))[0];
+  if (!user || !user.passwordHash) {
+    // Timing similar ao verify p/ não vazar existência (hash dummy).
+    verifyPassword(password, `${"scrypt"}$${"0".repeat(32)}$${"0".repeat(128)}`);
+    return { ok: false, code: user ? "NO_PASSWORD" : "INVALID" };
+  }
+  if (!verifyPassword(password, user.passwordHash)) {
+    return { ok: false, code: "INVALID" };
+  }
+  // Promove o admin principal mesmo se a linha nasceu como cliente.
+  let current = user;
+  if (isAdminEmail(email) && user.role !== "admin") {
+    const rows = await d.update(users).set({ role: "admin" }).where(eq(users.id, user.id)).returning();
+    current = rows[0] ?? ({ ...user, role: "admin" as const });
+  }
+  const sess = (
+    await d
+      .insert(sessions)
+      .values({ userId: current.id, expiresAt: new Date(Date.now() + 30 * 86_400_000) })
+      .returning()
+  )[0];
+  return { ok: true, sessionId: sess.id, user: current, adminBypass: false };
+}
+
+/**
+ * Define/troca a senha (scrypt) de um usuário.
+ * Chamadores autorizados:
+ * - sessão válida (troca direta, `userId`),
+ * - token bruto do Magic Link (bootstrap: prova posse do e-mail),
+ * - bypass do admin (somente p/ o e-mail do admin).
+ */
+export async function setUserPasswordByToken(emailRaw: string, token: string, newPassword: string) {
+  if (!isPasswordStrongEnough(newPassword)) throw new Error("Mínimo 8 caracteres.");
+  if (!/^[0-9a-f]{32,128}$/i.test(token.trim())) return null;
+  const d = db();
+  const row = (
+    await d.select().from(loginTokens).where(eq(loginTokens.tokenHash, hashToken(token.trim()))).limit(1)
+  )[0];
+  if (!row || row.consumed || row.expiresAt.getTime() < Date.now()) return null;
+  const email = row.email;
+  if (emailRaw.trim() && emailRaw.trim().toLowerCase() !== email) return null;
+  const user = (await d.select().from(users).where(eq(users.email, email)).limit(1))[0];
+  if (!user) return null;
+  const rows = await d
+    .update(users)
+    .set({ passwordHash: hashPassword(newPassword) })
+    .where(eq(users.id, user.id))
+    .returning();
+  return rows[0] ?? null;
+}
+
+export async function setUserPasswordById(userId: string, newPassword: string) {
+  if (!isPasswordStrongEnough(newPassword)) throw new Error("Mínimo 8 caracteres.");
+  const d = db();
+  const rows = await d
+    .update(users)
+    .set({ passwordHash: hashPassword(newPassword) })
+    .where(eq(users.id, userId))
+    .returning();
+  return rows[0] ?? null;
 }
