@@ -56,6 +56,12 @@ export default function WhatsappConnect() {
     phoneRef.current = phone.replace(/\D/g, "");
     modeRef.current = mode;
   });
+  // Espelho da escuta p/ o polling decidir o auto-reparo (fora do render).
+  const webhookOkRef = useRef(false);
+  const lastRepairRef = useRef(0);
+  useEffect(() => {
+    if (data?.webhook) webhookOkRef.current = data.webhook.ok;
+  }, [data?.webhook]);
 
   // Núcleo do pareamento: busca o código p/ os dígitos e atualiza a UI em
   // cada desfecho (código, sem-código ou erro) — nunca deixa parado no limbo.
@@ -133,9 +139,43 @@ export default function WhatsappConnect() {
           qrcode: prev?.qrcode ?? null,
           pairingCode: prev?.pairingCode ?? null,
           webhook: s.webhook ?? prev?.webhook ?? null,
+          created: prev?.created ?? false,
         }));
         if (s.state === "open") {
-          stop();
+          // Sessão ativa: só para quando a escuta estiver ok. Sem escuta
+          // (ex.: conectou antes do webhook existir), repara ativamente
+          // com throttle — é o que alimenta o Inbox.
+          if (webhookOkRef.current) {
+            stop();
+            return;
+          }
+          if (s.configured && Date.now() - lastRepairRef.current > QR_TTL_MS) {
+            lastRepairRef.current = Date.now();
+            const r = await fetch("/api/admin/whatsapp?repair=1")
+              .then((res) => res.json())
+              .catch(() => null);
+            if (r && alive && r.webhook) {
+              webhookOkRef.current = r.webhook.ok === true;
+              setData((prev) =>
+                prev
+                  ? {
+                      ...s,
+                      qrcode: prev.qrcode ?? null,
+                      pairingCode: prev.pairingCode ?? null,
+                      webhook: r.webhook,
+                      created: r.created || prev.created,
+                      fallback: r.fallback ?? prev.fallback,
+                      usingDefaultKey: r.usingDefaultKey ?? prev.usingDefaultKey,
+                      checkedAt: r.checkedAt ?? prev.checkedAt,
+                    }
+                  : prev
+              );
+              if (r.webhook.ok === true) {
+                stop();
+                return;
+              }
+            }
+          }
           return;
         }
         if (s.configured && Date.now() - qrAt.current > QR_TTL_MS) {
@@ -223,17 +263,21 @@ export default function WhatsappConnect() {
   }
 
   const st = STATE_STYLE[data?.state ?? "unknown"] ?? STATE_STYLE.unknown;
+  // Operacional (sessão ativa): banners de endurecimento somem — vira nota
+  // discreta no cartão de status. Fora do open, seguem visíveis e explicativos.
+  const operational = data?.state === "open";
+  const needsHardening = !!(data?.usingDefaultKey || data?.fallback);
 
   return (
     <div>
-      {data?.usingDefaultKey && (
+      {!operational && data?.usingDefaultKey && (
         <div className="mb-4 rounded-2xl border border-amber-300/30 bg-amber-300/10 px-5 py-3 text-sm text-amber-100">
           Chave padrão de desenvolvimento em uso (<code>kbos-dev-key</code>). Funciona, mas defina uma{" "}
           <code>EVOLUTION_API_KEY</code> forte no <code>/opt/kbos/.env</code> e rode{" "}
           <code>up -d --build</code> para endurecer a produção.
         </div>
       )}
-      {data?.fallback && !data?.usingDefaultKey && (
+      {!operational && data?.fallback && !data?.usingDefaultKey && (
         <div className="mb-4 rounded-2xl border border-amber-300/30 bg-amber-300/10 px-5 py-3 text-sm text-amber-100">
           Zero-config ativo: variáveis <code>EVOLUTION_*</code> ausentes no ambiente — usando padrões internos{" "}
           (<code>http://evolution:8080</code> + <code>kbos-primary</code>). Para produção, defina as chaves no{" "}
@@ -354,6 +398,12 @@ export default function WhatsappConnect() {
               {st.label}
             </p>
             <p className="mt-2 font-mono text-[12px] text-white/45">instância: {data?.instance}</p>
+            {/* Operacional com padrão interno: nota discreta, sem banner. */}
+            {operational && needsHardening && (
+              <p className="mt-1 text-[12px] font-light text-white/35">
+                Configuração padrão em uso — defina <code>EVOLUTION_API_KEY</code> forte no .env p/ endurecer.
+              </p>
+            )}
             {data?.created && (
               <p className="mt-1 text-[12px] font-light text-emerald-200/80">
                 Instância criada agora com escuta ativa — escaneie o QR.

@@ -30,6 +30,31 @@ export async function GET(req: Request) {
   warnEvoFallbackOnce();
   try {
     const params = new URL(req.url).searchParams;
+    // Reparo dedicado da escuta (?repair=1): re-registra o webhook e devolve
+    // o status — usado quando a sessão JÁ está ativa (open), caso em que o
+    // polling normal para e o repair do ?qr=1 não roda mais.
+    if (params.get("repair") === "1") {
+      const st = await getConnectionState();
+      let created = false;
+      let state = st.state;
+      if (st.status === 404) {
+        const ensured = await ensureInstance(req);
+        created = ensured.created;
+        state = ensured.state;
+      }
+      await setInstanceWebhook(req);
+      const webhook = await getWebhookStatus(req);
+      return NextResponse.json({
+        ok: true,
+        instance: waInstance(),
+        state,
+        webhook,
+        created,
+        fallback: evoFallbackActive(),
+        usingDefaultKey: waUsingDefaultKey(),
+        checkedAt: new Date().toISOString(),
+      });
+    }
     const wantQr = params.get("qr") === "1";
     // Pareamento por número (código de 8 dígitos): `?qr=1&phone=5511999998888`.
     const phoneRaw = (params.get("phone") || "").trim();
