@@ -26,8 +26,9 @@ const STATE_STYLE: Record<string, { dot: string; label: string }> = {
 const POLL_MS = 5000;
 const QR_TTL_MS = 45_000; // QR expira em ~60s: renova sozinho aos 45s
 
-async function fetchStatus(withQr: boolean): Promise<Status> {
-  const res = await fetch(`/api/admin/whatsapp${withQr ? "?qr=1" : ""}`);
+async function fetchStatus(withQr: boolean, phone?: string): Promise<Status> {
+  const params = withQr ? `?qr=1${phone ? `&phone=${encodeURIComponent(phone)}` : ""}` : "";
+  const res = await fetch(`/api/admin/whatsapp${params}`);
   const data = await res.json();
   if (!res.ok && res.status !== 503) throw new Error(data.error || "Falha.");
   return data;
@@ -37,7 +38,16 @@ export default function WhatsappConnect() {
   const [data, setData] = useState<Status | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [mode, setMode] = useState<"qr" | "phone">("qr");
+  const [phone, setPhone] = useState("");
   const qrAt = useRef(0);
+  const phoneRef = useRef("");
+  const modeRef = useRef<"qr" | "phone">("qr");
+  // Espelha estado nos refs p/ o polling (fora do render, sem recriar timers).
+  useEffect(() => {
+    phoneRef.current = phone.replace(/\D/g, "");
+    modeRef.current = mode;
+  });
 
   // Montagem: status + QR fresco. Depois, status a cada 5s (para ao conectar);
   // QR renova sozinho antes de expirar.
@@ -81,8 +91,9 @@ export default function WhatsappConnect() {
           return;
         }
         if (s.configured && Date.now() - qrAt.current > QR_TTL_MS) {
-          const f = await fetchStatus(true).catch(() => null);
-          if (f && alive && f.qrcode) {
+          // Renova QR ou código com o modo atual (código expira como o QR).
+          const f = await fetchStatus(true, modeRef.current === "phone" ? phoneRef.current : "").catch(() => null);
+          if (f && alive && (f.qrcode || f.pairingCode)) {
             qrAt.current = Date.now();
             setData(f);
           }
@@ -95,7 +106,7 @@ export default function WhatsappConnect() {
     };
   }, []);
 
-  async function action(kind: "refresh" | "restart" | "logout") {
+  async function action(kind: "refresh" | "restart" | "logout" | "pairing") {
     if (busy) return;
     if (
       (kind === "restart" || kind === "logout") &&
@@ -107,10 +118,14 @@ export default function WhatsappConnect() {
     ) {
       return;
     }
+    if (kind === "pairing" && phoneRef.current.length < 10) {
+      setError("Informe o número com DDI+DDD (10–15 dígitos) para gerar o código.");
+      return;
+    }
     setBusy(kind);
     setError("");
     try {
-      if (kind !== "refresh") {
+      if (kind === "restart" || kind === "logout") {
         const res = await fetch("/api/admin/whatsapp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -119,9 +134,10 @@ export default function WhatsappConnect() {
         const d = await res.json();
         if (!res.ok) throw new Error(d.error || "Falha.");
       }
-      const d = await fetchStatus(true);
+      const withPhone = kind === "pairing" || modeRef.current === "phone" ? phoneRef.current : "";
+      const d = await fetchStatus(true, withPhone);
       setData(d);
-      if (d.qrcode) qrAt.current = Date.now();
+      if (d.qrcode || d.pairingCode) qrAt.current = Date.now();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro.");
     } finally {
@@ -173,11 +189,59 @@ export default function WhatsappConnect() {
       )}
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 text-center">
-          <p className="text-[11px] uppercase tracking-[0.25em] text-white/40">Escaneie com o WhatsApp Business</p>
+          <p className="text-[11px] uppercase tracking-[0.25em] text-white/40">
+            {mode === "phone" ? "Conecte com o número de telefone" : "Escaneie com o WhatsApp Business"}
+          </p>
           {data?.state === "open" ? (
             <div className="py-10">
               <p className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-emerald-300/40 bg-emerald-300/10 text-2xl text-emerald-200" aria-hidden>✓</p>
               <p className="mt-4 text-white/80">Sessão ativa — nada a fazer.</p>
+            </div>
+          ) : mode === "phone" ? (
+            <div className="mt-5">
+              <label htmlFor="wa-phone" className="block text-[11px] uppercase tracking-[0.2em] text-white/50">
+                Número com DDI + DDD
+              </label>
+              <input
+                id="wa-phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="Ex.: 5591999998888"
+                className="mx-auto mt-2 w-full max-w-[280px] rounded-xl border border-white/15 bg-black/30 px-4 py-3 text-center font-mono text-[15px] tracking-[0.1em] outline-none placeholder:text-white/25 focus:border-white/50"
+              />
+              <button
+                onClick={() => action("pairing")}
+                disabled={!!busy}
+                className="mx-auto mt-3 block w-full max-w-[280px] rounded-xl bg-white py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-black transition hover:scale-[1.01] disabled:opacity-60"
+              >
+                {busy === "pairing" ? "Gerando..." : "Gerar código de pareamento"}
+              </button>
+              {data?.pairingCode ? (
+                <div className="mx-auto mt-5 max-w-[320px] rounded-2xl border border-emerald-300/30 bg-emerald-300/[0.07] p-5">
+                  <p className="text-[11px] uppercase tracking-[0.25em] text-white/50">Digite no celular</p>
+                  <p className="mt-2 font-mono text-4xl font-bold tracking-[0.3em] text-emerald-200">{data.pairingCode}</p>
+                  <ol className="mx-auto mt-4 max-w-[260px] list-decimal space-y-1.5 pl-5 text-left text-[13px] font-light leading-relaxed text-white/70">
+                    <li>Abra o WhatsApp no celular.</li>
+                    <li>Toque em <strong className="font-semibold">Aparelhos conectados</strong>.</li>
+                    <li>Toque em <strong className="font-semibold">Conectar aparelho</strong> e escolha <strong className="font-semibold">Conectar com número de telefone</strong>.</li>
+                    <li>Digite o código acima (vale ~1 min — renova sozinho).</li>
+                  </ol>
+                </div>
+              ) : (
+                <div className="py-6">
+                  <p className="animate-pulse text-sm text-white/50">Aguardando número para gerar o código...</p>
+                  {data?.detail && <p className="mt-2 text-[12px] text-white/40">{data.detail}</p>}
+                </div>
+              )}
+              <button
+                onClick={() => { setMode("qr"); setError(""); action("refresh"); }}
+                disabled={!!busy}
+                className="mt-4 text-[12px] uppercase tracking-[0.2em] text-white/45 underline-offset-4 hover:text-white hover:underline disabled:opacity-60"
+              >
+                ← Voltar ao QR Code
+              </button>
             </div>
           ) : data?.qrcode ? (
             <>
@@ -187,11 +251,25 @@ export default function WhatsappConnect() {
               {data.pairingCode && (
                 <p className="mt-2 font-mono text-sm tracking-[0.2em] text-white/70">{data.pairingCode}</p>
               )}
+              <button
+                onClick={() => { setMode("phone"); setError(""); }}
+                disabled={!!busy}
+                className="mx-auto mt-4 block rounded-full border border-white/25 px-6 py-2.5 text-[11px] font-bold uppercase tracking-[0.18em] text-white/80 transition hover:border-white/60 hover:text-white disabled:opacity-60"
+              >
+                Conectar com número de telefone
+              </button>
             </>
           ) : (
             <div className="py-10">
               <p className="animate-pulse text-sm text-white/50">Gerando QR code...</p>
               {data?.detail && <p className="mt-2 text-[12px] text-white/40">{data.detail}</p>}
+              <button
+                onClick={() => { setMode("phone"); setError(""); }}
+                disabled={!!busy}
+                className="mx-auto mt-4 block rounded-full border border-white/25 px-6 py-2.5 text-[11px] font-bold uppercase tracking-[0.18em] text-white/80 transition hover:border-white/60 hover:text-white disabled:opacity-60"
+              >
+                Conectar com número de telefone
+              </button>
             </div>
           )}
         </div>
@@ -228,7 +306,7 @@ export default function WhatsappConnect() {
           </div>
           <div className="grid grid-cols-1 gap-2">
             <button onClick={() => action("refresh")} disabled={!!busy} className="rounded-xl bg-white py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-black transition hover:scale-[1.01] disabled:opacity-60">
-              {busy === "refresh" ? "Atualizando..." : "Atualizar QR"}
+              {busy === "refresh" ? "Atualizando..." : mode === "phone" ? "Atualizar código" : "Atualizar QR"}
             </button>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => action("restart")} disabled={!!busy} className="rounded-xl border border-white/25 py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:bg-white hover:text-black disabled:opacity-60">
@@ -240,7 +318,7 @@ export default function WhatsappConnect() {
             </div>
           </div>
           <p className="text-[12px] font-light leading-relaxed text-white/40">
-            O status atualiza sozinho a cada 5 segundos e o QR se renova antes de expirar. Ao conectar, o polling para automaticamente.
+            O status atualiza sozinho a cada 5 segundos e o QR/código se renova antes de expirar. Ao conectar, o polling para automaticamente.
           </p>
         </div>
       </div>

@@ -120,6 +120,12 @@ export function mapState(raw: unknown): WaState {
   return raw === "open" || raw === "connecting" || raw === "close" ? raw : "unknown";
 }
 
+/** Normaliza telefone p/ pareamento (só dígitos, 10–15). Null se inválido. */
+export function normalizePhoneNumber(value: unknown): string | null {
+  const digits = typeof value === "string" ? value.replace(/\D/g, "") : "";
+  return digits.length >= 10 && digits.length <= 15 ? digits : null;
+}
+
 /** Normaliza o QR para data-uri pronta p/ <img> (ou null). */
 export function normalizeQr(base64: unknown): string | null {
   if (typeof base64 !== "string" || !base64) return null;
@@ -141,10 +147,23 @@ export async function getConnectionState(): Promise<{ state: WaState; detail?: s
   }
 }
 
-export async function getQrCode(): Promise<{ qrcode: string | null; pairingCode: string | null; detail?: string; status?: number }> {
+/**
+ * QR e/ou código de pareamento (`GET /instance/connect`).
+ * Com `phone` (dígitos, ex. `5511999998888`), a Evolution v2 gera o código
+ * numérico de 8 dígitos p/ parear no celular sem ler o QR.
+ */
+export async function getQrCode(phone?: string | null): Promise<{ qrcode: string | null; pairingCode: string | null; detail?: string; status?: number }> {
   warnEvoFallbackOnce();
+  const number = normalizePhoneNumber(phone ?? null);
+  // Telefone inválido quando explicitamente pedido: não cai p/ QR silencioso.
+  if (phone && !number) {
+    return { qrcode: null, pairingCode: null, detail: "Telefone inválido (use DDI+DDD+número, 10–15 dígitos)." };
+  }
   try {
-    const r = await evoFetch(`/instance/connect/${encodeURIComponent(waInstance())}`);
+    const path =
+      `/instance/connect/${encodeURIComponent(waInstance())}` +
+      (number ? `?number=${encodeURIComponent(number)}` : "");
+    const r = await evoFetch(path);
     if (r.status === 404) return { qrcode: null, pairingCode: null, status: 404, detail: "Instância ainda não criada na Evolution." };
     if (r.status === 401 || r.status === 403) return { qrcode: null, pairingCode: null, status: r.status, detail: "Chave da Evolution rejeitada (401/403) — confira EVOLUTION_API_KEY." };
     if (!r.ok) return { qrcode: null, pairingCode: null, status: r.status, detail: `Evolution respondeu ${r.status}.` };

@@ -6,8 +6,10 @@ import {
   evoConfig,
   evoExplicitConfigured,
   evoFallbackActive,
+  getQrCode,
   getWebhookStatus,
   mapState,
+  normalizePhoneNumber,
   normalizeQr,
   setInstanceWebhook,
   waUsingDefaultKey,
@@ -194,5 +196,39 @@ describe("getWebhookStatus", () => {
     expect((await getWebhookStatus()).ok).toBe(false);
     mockEvo(() => ({ status: 404, body: {} }));
     expect(await getWebhookStatus()).toMatchObject({ ok: false, url: null });
+  });
+});
+
+describe("normalizePhoneNumber", () => {
+  it("aceita DDI+DDD+número (10–15 dígitos)", () => {
+    expect(normalizePhoneNumber("+55 (11) 99999-8888")).toBe("5511999998888");
+    expect(normalizePhoneNumber("5511999998888")).toBe("5511999998888");
+  });
+  it("rejeita curto, longo e vazio", () => {
+    expect(normalizePhoneNumber("123456789")).toBeNull();
+    expect(normalizePhoneNumber("1".repeat(16))).toBeNull();
+    expect(normalizePhoneNumber("")).toBeNull();
+    expect(normalizePhoneNumber(null)).toBeNull();
+  });
+});
+
+describe("getQrCode com pareamento", () => {
+  it("anexa ?number= e retorna o pairing code", async () => {
+    for (const [k, v] of Object.entries(BASE_ENV)) vi.stubEnv(k, v);
+    let seenUrl = "";
+    mockEvo((url) => {
+      seenUrl = url;
+      return { status: 200, body: { base64: "iVBOR", pairingCode: "ABCD-1234" } };
+    });
+    const r = await getQrCode("5511999998888");
+    expect(seenUrl).toContain("?number=5511999998888");
+    expect(r.pairingCode).toBe("ABCD-1234");
+  });
+  it("telefone inválido explícito não cai p/ QR silencioso", async () => {
+    for (const [k, v] of Object.entries(BASE_ENV)) vi.stubEnv(k, v);
+    const r = await getQrCode("abc");
+    expect(r.qrcode).toBeNull();
+    expect(r.pairingCode).toBeNull();
+    expect(r.detail).toMatch(/inválido/);
   });
 });

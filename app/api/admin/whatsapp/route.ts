@@ -9,6 +9,7 @@ import {
   getQrCode,
   getWebhookStatus,
   logoutInstance,
+  normalizePhoneNumber,
   restartInstance,
   setInstanceWebhook,
   waInstance,
@@ -28,7 +29,20 @@ export async function GET(req: Request) {
   if (limited) return limited;
   warnEvoFallbackOnce();
   try {
-    const wantQr = new URL(req.url).searchParams.get("qr") === "1";
+    const params = new URL(req.url).searchParams;
+    const wantQr = params.get("qr") === "1";
+    // Pareamento por número (código de 8 dígitos): `?qr=1&phone=5511999998888`.
+    const phoneRaw = (params.get("phone") || "").trim();
+    let phone: string | null = null;
+    if (phoneRaw) {
+      phone = normalizePhoneNumber(phoneRaw);
+      if (!phone) {
+        return NextResponse.json(
+          { error: "Telefone inválido (use DDI+DDD+número, 10–15 dígitos)." },
+          { status: 400 }
+        );
+      }
+    }
     const conn = await getConnectionState();
     let { state, detail } = conn;
     // Auto-provisionamento: instância inexistente (404) é criada na hora
@@ -48,7 +62,7 @@ export async function GET(req: Request) {
     let webhook: { ok: boolean; url: string | null } | null = null;
     if (wantQr && conn.status !== undefined) {
       const [qr, wh] = await Promise.all([
-        state !== "open" ? getQrCode() : Promise.resolve(null),
+        state !== "open" ? getQrCode(phone) : Promise.resolve(null),
         (async () => {
           await setInstanceWebhook(req);
           return getWebhookStatus(req);
@@ -62,7 +76,7 @@ export async function GET(req: Request) {
       }
     } else if (wantQr && state !== "open") {
       // QR só faz sentido fora do `open` — e só quando pedido (expira rápido).
-      const qr = await getQrCode();
+      const qr = await getQrCode(phone);
       qrcode = qr.qrcode;
       pairingCode = qr.pairingCode;
       if (!qrcode && qr.detail) detail = qr.detail;
