@@ -7,6 +7,7 @@
 // - Rede: `tgApi` genérico + `getMe`, `getWebhookInfo`, `setWebhook`, `deleteWebhook`,
 //   `sendTelegramText`, `telegramFileUrl` (resolve `file_id` → URL https).
 import type { InboundMessage } from "./inbox";
+import { hostBaseFromRequest } from "./email";
 
 export function tgToken(): string | null {
   const t = (process.env.TELEGRAM_BOT_TOKEN || "").trim();
@@ -211,13 +212,15 @@ export async function getTelegramStatus(): Promise<TgStatus> {
   }
 }
 
-export function telegramWebhookUrl(): string | null {
-  const app = (process.env.APP_URL || "").replace(/\/$/, "");
-  return app ? `${app}/api/webhooks/telegram` : null;
+export function telegramWebhookUrl(req?: Request): string | null {
+  // Backend canônico primeiro (APP_URL), senão a origem do request.
+  const env = (process.env.APP_URL || "").replace(/\/$/, "");
+  const base = env || hostBaseFromRequest(req);
+  return base ? `${base}/api/webhooks/telegram` : null;
 }
 
-export async function connectTelegram(): Promise<{ ok: boolean; detail?: string }> {
-  const url = telegramWebhookUrl();
+export async function connectTelegram(req?: Request): Promise<{ ok: boolean; detail?: string }> {
+  const url = telegramWebhookUrl(req);
   if (!tgConfigured()) return { ok: false, detail: "TELEGRAM_BOT_TOKEN não configurado." };
   if (!url) return { ok: false, detail: "APP_URL não configurado (URL pública do webhook)." };
   try {

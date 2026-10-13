@@ -3,6 +3,7 @@
 // URL/instância têm default de zero-config no compose (`http://evolution:8080`);
 // a chave default (`kbos-dev-key`) espelha `AUTHENTICATION_API_KEY` do compose.
 import { randomUUID } from "crypto";
+import { hostBaseFromRequest } from "./email";
 
 export type WaState = "open" | "connecting" | "close" | "unknown";
 
@@ -75,12 +76,24 @@ export function waUsingDefaultKey() {
 }
 
 /**
+ * Base canônica do backend p/ webhooks (quem a Evolution chama de volta).
+ * `APP_URL` explícito primeiro: o receiver precisa ser o deploy COM banco
+ * (VPS), não qualquer origem que abriu o painel. Sem env, cai no host do
+ * request; sem request, null (best-effort desiste).
+ */
+export function resolveAppUrl(req?: Request): string | null {
+  const env = (process.env.APP_URL || "").trim().replace(/\/$/, "");
+  if (env) return env;
+  return hostBaseFromRequest(req);
+}
+
+/**
  * URL pública do webhook inbound (`/api/webhooks/evolution`).
  * Inclui `?token=` quando `EVOLUTION_WEBHOOK_TOKEN` está configurado —
  * sem ele, o receiver responderia 401 e nada chegaria ao inbox.
  */
-export function buildWebhookUrl(): string | null {
-  const appUrl = (process.env.APP_URL || "").replace(/\/$/, "");
+export function buildWebhookUrl(req?: Request): string | null {
+  const appUrl = resolveAppUrl(req);
   if (!appUrl) return null;
   const secret = (process.env.EVOLUTION_WEBHOOK_TOKEN || "").trim();
   const base = `${appUrl}/api/webhooks/evolution`;
@@ -152,7 +165,7 @@ export async function getQrCode(): Promise<{ qrcode: string | null; pairingCode:
  * inbound p/ `/api/webhooks/evolution` (best-effort, nunca lança).
  * Retorna `{ created }` + estado atualizado.
  */
-export async function ensureInstance(): Promise<{ created: boolean; state: WaState; detail?: string }> {
+export async function ensureInstance(req?: Request): Promise<{ created: boolean; state: WaState; detail?: string }> {
   const check = await getConnectionState();
   if (check.status !== 404) return { created: false, state: check.state, detail: check.detail };
   try {
@@ -168,7 +181,7 @@ export async function ensureInstance(): Promise<{ created: boolean; state: WaSta
       return { created: false, state: "unknown", detail: `Falha ao criar instância (${r.status}).` };
     }
     // Webhook inbound (best-effort): sem ele, mensagens recebidas não chegam.
-    await setInstanceWebhook().catch(() => {});
+    await setInstanceWebhook(req).catch(() => {});
     const after = await getConnectionState();
     return { created: true, state: after.state, detail: after.detail };
   } catch (e) {
@@ -177,9 +190,9 @@ export async function ensureInstance(): Promise<{ created: boolean; state: WaSta
 }
 
 /** Aponta o webhook da instância p/ o inbound do KBOS. Best-effort (nunca lança). */
-export async function setInstanceWebhook(): Promise<boolean> {
+export async function setInstanceWebhook(req?: Request): Promise<boolean> {
   try {
-    const url = buildWebhookUrl();
+    const url = buildWebhookUrl(req);
     if (!url) return false;
     const r = await evoFetch(`/webhook/set/${encodeURIComponent(waInstance())}`, {
       method: "POST",
@@ -198,14 +211,14 @@ export async function setInstanceWebhook(): Promise<boolean> {
 }
 
 /** Lê a config atual do webhook (`GET /webhook/find`) e confere se é a nossa. */
-export async function getWebhookStatus(): Promise<{ ok: boolean; url: string | null }> {
+export async function getWebhookStatus(req?: Request): Promise<{ ok: boolean; url: string | null }> {
   try {
     const r = await evoFetch(`/webhook/find/${encodeURIComponent(waInstance())}`);
     if (!r.ok) return { ok: false, url: null };
     const j = r.json as Record<string, unknown>;
     const enabled = j.enabled !== false;
     const url = typeof j.url === "string" && j.url ? j.url : null;
-    const ours = buildWebhookUrl();
+    const ours = buildWebhookUrl(req);
     const same =
       !!url && !!ours && url.replace(/\/$/, "") === ours.replace(/\/$/, "");
     return { ok: enabled && same, url };

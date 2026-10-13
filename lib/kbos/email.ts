@@ -35,8 +35,42 @@ export type EmailConfig = {
   } | null;
 };
 
-/** Base pública usada nos links (Magic Link, callbacks). */
-export function appUrl(): string {
+/** Base pública usada nos links (Magic Link, callbacks).
+ *
+ * Mesma origem primeiro: o host do request (`x-forwarded-host`/`host`)
+ * vence, para o link cair no domínio que o usuário está usando — o cookie de
+ * sessão criado no `/verify` vale para aquele host (evita o comportamento
+ * "dividido" entre raiz e subdomínio). Sem request, vale `APP_URL`, depois o
+ * canônico/local. Host validado (anti header-injection no e-mail).
+ */
+export function appUrl(req?: Request): string {
+  return hostBaseFromRequest(req) ?? appUrlEnv();
+}
+
+/** Extrai `scheme://host` do request (proxy incluso). Null se ausente/inválido. */
+export function hostBaseFromRequest(req?: Request): string | null {
+  try {
+    const h = req?.headers;
+    if (!h) return null;
+    const fwd = h.get("x-forwarded-host")?.split(",")[0].trim();
+    const rawHost = fwd || h.get("host")?.trim();
+    if (!rawHost) return null;
+    if (!/^[a-z0-9.-]+(:[0-9]{1,5})?$/i.test(rawHost)) return null;
+    const fproto = h.get("x-forwarded-proto")?.split(",")[0].trim().toLowerCase();
+    const scheme =
+      fproto === "http" || fproto === "https"
+        ? fproto
+        : process.env.NODE_ENV === "production"
+          ? "https"
+          : "http";
+    return `${scheme}://${rawHost}`;
+  } catch {
+    return null;
+  }
+}
+
+/** Base via ambiente (sem request): `APP_URL`, senão canônico/local. */
+export function appUrlEnv(): string {
   const raw = (process.env.APP_URL || "").trim().replace(/\/$/, "");
   if (raw) return raw;
   // Em produção sem APP_URL, aponta para o domínio canônico em vez de localhost.

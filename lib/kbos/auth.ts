@@ -17,7 +17,7 @@ export function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export async function requestMagicLink(emailRaw: string, name?: string) {
+export async function requestMagicLink(emailRaw: string, name?: string, req?: Request) {
   const email = emailRaw.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new Error("E-mail inválido.");
@@ -53,7 +53,7 @@ export async function requestMagicLink(emailRaw: string, name?: string) {
     tokenHash: hashToken(token),
     expiresAt: new Date(Date.now() + TOKEN_MINUTES * 60_000),
   });
-  const link = `${appUrl()}/api/auth/verify?token=${token}`;
+  const link = `${appUrl(req)}/api/auth/verify?token=${token}`;
   const { subject, html } = buildMagicLinkEmail(link);
   // sendEmail nunca lança — falha só marca `sent: false` (sem quebrar o fluxo).
   const r = await sendEmail(email, subject, html);

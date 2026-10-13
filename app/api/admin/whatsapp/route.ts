@@ -35,7 +35,8 @@ export async function GET(req: Request) {
     // (com webhook de inbound) para o QR renderizar sem erro.
     let created = false;
     if (wantQr && conn.status === 404) {
-      const ensured = await ensureInstance();
+      // Webhook mira o backend canônico (APP_URL) ou a origem do request.
+      const ensured = await ensureInstance(req);
       created = ensured.created;
       state = ensured.state;
       detail = ensured.detail;
@@ -49,8 +50,8 @@ export async function GET(req: Request) {
       const [qr, wh] = await Promise.all([
         state !== "open" ? getQrCode() : Promise.resolve(null),
         (async () => {
-          await setInstanceWebhook();
-          return getWebhookStatus();
+          await setInstanceWebhook(req);
+          return getWebhookStatus(req);
         })(),
       ]);
       webhook = wh;

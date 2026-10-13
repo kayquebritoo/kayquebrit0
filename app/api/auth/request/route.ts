@@ -32,7 +32,8 @@ export async function POST(req: Request) {
       return res;
     }
 
-    const r = await requestMagicLink(email, name || undefined);
+    // Link na mesma origem do request: a sessão do /verify vale nesse host.
+    const r = await requestMagicLink(email, name || undefined, req);
     return NextResponse.json({
       ok: true,
       emailEnviado: r.sent,
