@@ -148,7 +148,7 @@ export default function Header() {
       {isHome ? (
         /* HOME: flutuante sobre o hero fullscreen (composição original) */
         <header className="fixed inset-x-0 top-0 z-[60]">
-          <div className="flex items-start justify-between px-5 pt-5 sm:px-8 sm:pt-7 md:px-[80px] md:pt-[42px]">
+          <div className="flex items-start justify-between px-5 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-8 sm:pt-[max(1.75rem,env(safe-area-inset-top))] md:px-[80px] md:pt-[42px]">
             {logoBtn()}
             <div className="flex items-center gap-2.5 sm:gap-3">
               {loginBtn()}
@@ -158,7 +158,7 @@ export default function Header() {
         </header>
       ) : (
         /* DEMAIS PÁGINAS: pill compacta em vidro — nunca colide com o conteúdo */
-        <header className="fixed inset-x-0 top-0 z-[60] px-4 pt-3 sm:px-6 sm:pt-4">
+        <header className="fixed inset-x-0 top-0 z-[60] px-4 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6 sm:pt-[max(1rem,env(safe-area-inset-top))]">
           <div className="header-glass mx-auto flex max-w-6xl items-center justify-between rounded-2xl border border-white/10 bg-[#0B0B1E]/70 py-2 pl-4 pr-2.5 shadow-2xl shadow-black/30 backdrop-blur-xl">
             {logoBtn(true)}
             <div className="flex items-center gap-2">

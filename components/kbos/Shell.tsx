@@ -104,7 +104,7 @@ export function KbosShell({
 
   const sidebar = (
     <div className="flex h-full flex-col">
-      <Link href="/admin" className="group flex items-center gap-3 px-5 pb-6 pt-6">
+      <Link href="/admin" className="group flex items-center gap-3 px-5 pb-6 pt-[max(1.5rem,env(safe-area-inset-top))]">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-lg font-bold text-black transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105">
           K
         </span>
@@ -210,7 +210,7 @@ export function KbosShell({
 
       {/* Coluna principal */}
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-[40] border-b border-white/10 bg-[#0B0B1E]/85 backdrop-blur-xl">
+        <header className="sticky top-0 z-[40] border-b border-white/10 bg-[#0B0B1E]/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
           <div className="mx-auto flex max-w-6xl items-center gap-3 px-5 py-4 md:px-10">
             <button
               onClick={() => setOpen(true)}

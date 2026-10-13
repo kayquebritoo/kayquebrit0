@@ -17,7 +17,7 @@ export function SlideProgress() {
   return (
     <div
       aria-hidden
-      className="fixed right-5 top-[72px] z-40 flex items-center gap-2 rounded-full bg-black/30 px-3 py-1.5 backdrop-blur-md md:hidden"
+      className="fixed right-5 top-[max(4.5rem,calc(env(safe-area-inset-top)+3.25rem))] z-40 flex items-center gap-2 rounded-full bg-black/30 px-3 py-1.5 backdrop-blur-md md:hidden"
     >
       <span className="text-[11px] font-medium tabular-nums tracking-[0.2em] text-white/80">
         {String(index + 1).padStart(2, "0")}

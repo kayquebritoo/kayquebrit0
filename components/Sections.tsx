@@ -552,7 +552,7 @@ export function TestimonialsSlide() {
       {/* mobile: ancorado ABAIXO do header fixo + badge 01/08 (72→~100px).
           Top-anchored de propósito: se a tela for curta, o excesso corta
           EMBAIXO (marquee), nunca atrás do menu. Desktop segue centralizado. */}
-      <div className="ref-inner relative z-10 pb-6 pt-[108px] md:pb-0 md:pt-0">
+      <div className="ref-inner relative z-10 pb-6 pt-[calc(6.75rem+env(safe-area-inset-top))] md:pb-0 md:pt-0">
         <div className="fp-anim flex items-end justify-between gap-4">
           <p className="ref-eyebrow" style={{ fontSize: 13 }}>{t("testimonials.eyebrow")}</p>
           <p aria-hidden className="shrink-0 text-[10px] uppercase tracking-[0.25em] text-white/35 md:hidden">
