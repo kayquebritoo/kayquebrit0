@@ -548,9 +548,11 @@ export function BrandingSlide() {
 export function TestimonialsSlide() {
   const { t } = useLang();
   return (
-    <section className="relative isolate z-0 flex h-full flex-col justify-center overflow-hidden bg-[#0B0B1E]">
-      {/* mobile: respiro do header fixo + badge 01/08 (evita ficar por trás) */}
-      <div className="ref-inner relative z-10 pt-20 md:pt-0">
+    <section className="relative isolate z-0 flex h-full flex-col justify-start overflow-hidden bg-[#0B0B1E] md:justify-center">
+      {/* mobile: ancorado ABAIXO do header fixo + badge 01/08 (72→~100px).
+          Top-anchored de propósito: se a tela for curta, o excesso corta
+          EMBAIXO (marquee), nunca atrás do menu. Desktop segue centralizado. */}
+      <div className="ref-inner relative z-10 pb-6 pt-[108px] md:pb-0 md:pt-0">
         <div className="fp-anim flex items-end justify-between gap-4">
           <p className="ref-eyebrow" style={{ fontSize: 13 }}>{t("testimonials.eyebrow")}</p>
           <p aria-hidden className="shrink-0 text-[10px] uppercase tracking-[0.25em] text-white/35 md:hidden">
@@ -560,7 +562,7 @@ export function TestimonialsSlide() {
         {/* mobile: carrossel horizontal fluido (snap) · desktop: grade 3 colunas */}
         <div
           data-no-fullpage
-          className="testi-carousel scrollbar-none -mx-5 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-5 pb-3 md:mx-0 md:mt-[4vh] md:grid md:grid-cols-3 md:gap-10 md:overflow-visible md:px-0 md:pb-0 md:[column-gap:80px]"
+          className="testi-carousel scrollbar-none -mx-5 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-5 pb-3 md:mx-0 md:mt-[4vh] md:grid md:grid-cols-3 md:gap-10 md:overflow-visible md:px-0 md:pb-0 md:[column-gap:80px]"
           style={{ WebkitOverflowScrolling: "touch" as const, touchAction: "pan-x pan-y" }}
         >
           {TESTIMONIALS.map((testi) => (
