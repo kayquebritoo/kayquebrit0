@@ -148,9 +148,25 @@ export async function getConnectionState(): Promise<{ state: WaState; detail?: s
 }
 
 /**
- * QR e/ou código de pareamento (`GET /instance/connect`).
- * Com `phone` (dígitos, ex. `5511999998888`), a Evolution v2 gera o código
- * numérico de 8 dígitos p/ parear no celular sem ler o QR.
+ * Extrai o código de pareamento aceitando as variações de campo entre builds
+ * da v2 (`pairingCode`, `pairing_code`, `code`). O QR em base64 tem centenas
+ * de chars — o guarda de tamanho (<32) impede confundir os dois.
+ */
+export function extractPairingCode(json: unknown): string | null {
+  if (!json || typeof json !== "object") return null;
+  const j = json as Record<string, unknown>;
+  for (const key of ["pairingCode", "pairing_code", "code"]) {
+    const v = j[key];
+    if (typeof v === "string" && v.trim() && v.trim().length < 32) return v.trim();
+  }
+  return null;
+}
+
+/**
+ * QR e/ou código de pareamento (`/instance/connect`).
+ * Com `phone` (dígitos, ex. `5511999998888`), tenta gerar o código numérico
+ * de 8 dígitos p/ parear no celular sem ler o QR: primeiro `GET ?number=`,
+ * depois (se veio sem código) `POST { number }` — builds variam no formato.
  */
 export async function getQrCode(phone?: string | null): Promise<{ qrcode: string | null; pairingCode: string | null; detail?: string; status?: number }> {
   warnEvoFallbackOnce();
@@ -160,17 +176,35 @@ export async function getQrCode(phone?: string | null): Promise<{ qrcode: string
     return { qrcode: null, pairingCode: null, detail: "Telefone inválido (use DDI+DDD+número, 10–15 dígitos)." };
   }
   try {
-    const path =
-      `/instance/connect/${encodeURIComponent(waInstance())}` +
-      (number ? `?number=${encodeURIComponent(number)}` : "");
-    const r = await evoFetch(path);
-    if (r.status === 404) return { qrcode: null, pairingCode: null, status: 404, detail: "Instância ainda não criada na Evolution." };
-    if (r.status === 401 || r.status === 403) return { qrcode: null, pairingCode: null, status: r.status, detail: "Chave da Evolution rejeitada (401/403) — confira EVOLUTION_API_KEY." };
-    if (!r.ok) return { qrcode: null, pairingCode: null, status: r.status, detail: `Evolution respondeu ${r.status}.` };
-    const pairing = r.json.pairingCode;
+    const basePath = `/instance/connect/${encodeURIComponent(waInstance())}`;
+    const read = (json: Record<string, unknown>) => ({
+      qrcode: normalizeQr(json.base64),
+      pairingCode: extractPairingCode(json),
+    });
+    const fail = (status: number) => {
+      if (status === 404) return { qrcode: null, pairingCode: null, status, detail: "Instância ainda não criada na Evolution." };
+      if (status === 401 || status === 403) return { qrcode: null, pairingCode: null, status, detail: "Chave da Evolution rejeitada (401/403) — confira EVOLUTION_API_KEY." };
+      return { qrcode: null, pairingCode: null, status, detail: `Evolution respondeu ${status}.` };
+    };
+    const r = await evoFetch(basePath + (number ? `?number=${encodeURIComponent(number)}` : ""));
+    if (!r.ok) return fail(r.status);
+    let out = read(r.json);
+    if (out.pairingCode || !number) return { ...out };
+    // GET ok mas sem código: tenta o formato alternativo (POST com o número).
+    const r2 = await evoFetch(basePath, {
+      method: "POST",
+      body: JSON.stringify({ number }),
+    }).catch(() => null);
+    if (r2 && r2.ok) {
+      const alt = read(r2.json);
+      if (alt.pairingCode || alt.qrcode) out = alt;
+    }
+    if (out.pairingCode) return { ...out };
+    // Diagnóstico (sem vazar segredo): lista os campos que vieram.
+    const keys = Object.keys(r.json).join(",");
     return {
-      qrcode: normalizeQr(r.json.base64),
-      pairingCode: typeof pairing === "string" && pairing ? pairing : null,
+      ...out,
+      detail: `Evolution não retornou pairingCode p/ ${number} (campos: ${keys || "vazio"}). Confira se o número tem WhatsApp ativo.`,
     };
   } catch (e) {
     return { qrcode: null, pairingCode: null, detail: e instanceof Error ? e.message : "Falha de rede." };

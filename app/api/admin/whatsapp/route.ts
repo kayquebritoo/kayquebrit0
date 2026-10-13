@@ -72,14 +72,16 @@ export async function GET(req: Request) {
       if (qr) {
         qrcode = qr.qrcode;
         pairingCode = qr.pairingCode;
-        if (!qrcode && qr.detail) detail = qr.detail;
+        // Sem QR, o motivo importa; com pedido de pareamento, o diagnóstico
+        // do código importa mesmo havendo QR.
+        if ((!qrcode || (phone && !qr.pairingCode)) && qr.detail) detail = qr.detail;
       }
     } else if (wantQr && state !== "open") {
       // QR só faz sentido fora do `open` — e só quando pedido (expira rápido).
       const qr = await getQrCode(phone);
       qrcode = qr.qrcode;
       pairingCode = qr.pairingCode;
-      if (!qrcode && qr.detail) detail = qr.detail;
+      if ((!qrcode || (phone && !qr.pairingCode)) && qr.detail) detail = qr.detail;
     }
     return NextResponse.json({
       configured: true,

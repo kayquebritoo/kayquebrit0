@@ -6,6 +6,7 @@ import {
   evoConfig,
   evoExplicitConfigured,
   evoFallbackActive,
+  extractPairingCode,
   getQrCode,
   getWebhookStatus,
   mapState,
@@ -230,5 +231,42 @@ describe("getQrCode com pareamento", () => {
     expect(r.qrcode).toBeNull();
     expect(r.pairingCode).toBeNull();
     expect(r.detail).toMatch(/inválido/);
+  });
+  it("aceita pairing em campo alternativo (code)", async () => {
+    for (const [k, v] of Object.entries(BASE_ENV)) vi.stubEnv(k, v);
+    mockEvo(() => ({ status: 200, body: { base64: "iVBOR", code: "WXYZ-9876" } }));
+    const r = await getQrCode("5511999998888");
+    expect(r.pairingCode).toBe("WXYZ-9876");
+  });
+  it("sem código no GET, tenta POST { number } uma vez", async () => {
+    for (const [k, v] of Object.entries(BASE_ENV)) vi.stubEnv(k, v);
+    const calls: string[] = [];
+    mockEvo((url, init) => {
+      calls.push(`${init?.method || "GET"} ${url}`);
+      if ((init?.method || "GET") === "POST") {
+        return { status: 200, body: { pairingCode: "POST-1122" } };
+      }
+      return { status: 200, body: { base64: "iVBOR" } };
+    });
+    const r = await getQrCode("5511999998888");
+    expect(r.pairingCode).toBe("POST-1122");
+    expect(calls.some((c) => c.startsWith("POST"))).toBe(true);
+  });
+  it("sem código em nenhum formato: diagnóstico com campos", async () => {
+    for (const [k, v] of Object.entries(BASE_ENV)) vi.stubEnv(k, v);
+    mockEvo(() => ({ status: 200, body: { base64: "iVBOR", count: 3 } }));
+    const r = await getQrCode("5511999998888");
+    expect(r.pairingCode).toBeNull();
+    expect(r.detail).toMatch(/base64,count/);
+  });
+});
+
+describe("extractPairingCode", () => {
+  it("prefere pairingCode; ignora base64 longo em code", () => {
+    expect(extractPairingCode({ pairingCode: "AB12-CD34" })).toBe("AB12-CD34");
+    expect(extractPairingCode({ code: "XY98-ZW76" })).toBe("XY98-ZW76");
+    expect(extractPairingCode({ code: "iVBOR".repeat(20) })).toBeNull();
+    expect(extractPairingCode({})).toBeNull();
+    expect(extractPairingCode(null)).toBeNull();
   });
 });
