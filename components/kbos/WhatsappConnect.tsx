@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type Status = {
   configured: boolean;
@@ -47,11 +47,55 @@ export default function WhatsappConnect() {
   const qrAt = useRef(0);
   const phoneRef = useRef("");
   const modeRef = useRef<"qr" | "phone">("qr");
+  // Anti-duplicação do auto-pareamento (último número já pedido).
+  const lastPairingRef = useRef("");
+  // Trava de sobreposição entre clique, auto-pareamento e polling.
+  const inflightRef = useRef(false);
   // Espelha estado nos refs p/ o polling (fora do render, sem recriar timers).
   useEffect(() => {
     phoneRef.current = phone.replace(/\D/g, "");
     modeRef.current = mode;
   });
+
+  // Núcleo do pareamento: busca o código p/ os dígitos e atualiza a UI em
+  // cada desfecho (código, sem-código ou erro) — nunca deixa parado no limbo.
+  const requestPairing = useCallback(async (digits: string) => {
+    if (inflightRef.current) return;
+    inflightRef.current = true;
+    setBusy("pairing");
+    setError("");
+    setNoCode(false);
+    try {
+      const d = await fetchStatus(true, digits);
+      setData(d);
+      if (d.qrcode || d.pairingCode) qrAt.current = Date.now();
+      if (d.pairingCode) {
+        setCodeFor(digits);
+      } else {
+        setNoCode(true);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro.");
+    } finally {
+      inflightRef.current = false;
+      setBusy(null);
+    }
+  }, []);
+
+  // Auto-pareamento: ao digitar um número válido, gera sozinho (~900ms após
+  // parar de digitar) — sem exigir o clique. Cada número dispara uma vez.
+  const connected = data?.state === "open";
+  useEffect(() => {
+    if (mode !== "phone" || connected) return;
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 10 || digits.length > 15) return;
+    if (digits === lastPairingRef.current) return;
+    const t = setTimeout(() => {
+      lastPairingRef.current = digits;
+      void requestPairing(digits);
+    }, 900);
+    return () => clearTimeout(t);
+  }, [phone, mode, connected, requestPairing]);
 
   // Montagem: status + QR fresco. Depois, status a cada 5s (para ao conectar);
   // QR renova sozinho antes de expirar.
@@ -123,16 +167,18 @@ export default function WhatsappConnect() {
       return;
     }
     if (kind === "pairing") {
-      // Lê o state direto (nunca ref desatualizado) e valida antes de chamar.
+      // Clique manual: valida, registra (p/ o auto não repetir) e delega.
       const digits = phone.replace(/\D/g, "");
       if (digits.length < 10 || digits.length > 15) {
         setError("Informe o número com DDI+DDD (10–15 dígitos) para gerar o código.");
         return;
       }
+      lastPairingRef.current = digits;
+      await requestPairing(digits);
+      return;
     }
     setBusy(kind);
     setError("");
-    if (kind === "pairing") setNoCode(false);
     try {
       if (kind === "restart" || kind === "logout") {
         const res = await fetch("/api/admin/whatsapp", {
@@ -143,22 +189,11 @@ export default function WhatsappConnect() {
         const d = await res.json();
         if (!res.ok) throw new Error(d.error || "Falha.");
       }
-      // Pedido explícito de pareamento usa o número digitado; refresh em modo
-      // telefone reutiliza o último número.
-      const withPhone =
-        kind === "pairing" ? phone.replace(/\D/g, "") : modeRef.current === "phone" ? phoneRef.current : "";
+      // Refresh em modo telefone reutiliza o último número digitado.
+      const withPhone = modeRef.current === "phone" ? phoneRef.current : "";
       const d = await fetchStatus(true, withPhone);
       setData(d);
       if (d.qrcode || d.pairingCode) qrAt.current = Date.now();
-      if (kind === "pairing") {
-        if (d.pairingCode) {
-          setCodeFor(withPhone);
-        } else {
-          // Resposta sem código após pedido explícito: não deixa parado no
-          // "aguardando" — explica (backend antigo sem ?phone= é a causa #1).
-          setNoCode(true);
-        }
-      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro.");
     } finally {
@@ -260,7 +295,9 @@ export default function WhatsappConnect() {
                 </div>
               ) : (
                 <div className="py-6">
-                  <p className="animate-pulse text-sm text-white/50">Aguardando número para gerar o código...</p>
+                  <p className="animate-pulse text-sm text-white/50">
+                    Digite o número acima — o código é gerado sozinho — ou clique em Gerar código.
+                  </p>
                   {data?.detail && <p className="mt-2 text-[12px] text-white/40">{data.detail}</p>}
                   {noCode && (
                     <div className="mx-auto mt-3 max-w-[320px] rounded-xl border border-amber-300/30 bg-amber-300/10 p-3 text-left text-[12px] font-light leading-relaxed text-amber-100/90">
@@ -287,7 +324,7 @@ export default function WhatsappConnect() {
                 <p className="mt-2 font-mono text-sm tracking-[0.2em] text-white/70">{data.pairingCode}</p>
               )}
               <button
-                onClick={() => { setMode("phone"); setError(""); setNoCode(false); }}
+                onClick={() => { setMode("phone"); setError(""); setNoCode(false); lastPairingRef.current = ""; }}
                 disabled={!!busy}
                 className="mx-auto mt-4 block rounded-full border border-white/25 px-6 py-2.5 text-[11px] font-bold uppercase tracking-[0.18em] text-white/80 transition hover:border-white/60 hover:text-white disabled:opacity-60"
               >
@@ -299,7 +336,7 @@ export default function WhatsappConnect() {
               <p className="animate-pulse text-sm text-white/50">Gerando QR code...</p>
               {data?.detail && <p className="mt-2 text-[12px] text-white/40">{data.detail}</p>}
               <button
-                onClick={() => { setMode("phone"); setError(""); setNoCode(false); }}
+                onClick={() => { setMode("phone"); setError(""); setNoCode(false); lastPairingRef.current = ""; }}
                 disabled={!!busy}
                 className="mx-auto mt-4 block rounded-full border border-white/25 px-6 py-2.5 text-[11px] font-bold uppercase tracking-[0.18em] text-white/80 transition hover:border-white/60 hover:text-white disabled:opacity-60"
               >
