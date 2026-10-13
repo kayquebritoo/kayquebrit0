@@ -9,6 +9,7 @@ type Status = {
   pairingCode: string | null;
   created?: boolean;
   usingDefaultKey?: boolean;
+  fallback?: boolean;
   webhook?: { ok: boolean; url: string | null } | null;
   detail?: string;
   error?: string;
@@ -158,6 +159,13 @@ export default function WhatsappConnect() {
           Chave padrão de desenvolvimento em uso (<code>kbos-dev-key</code>). Funciona, mas defina uma{" "}
           <code>EVOLUTION_API_KEY</code> forte no <code>/opt/kbos/.env</code> e rode{" "}
           <code>up -d --build</code> para endurecer a produção.
+        </div>
+      )}
+      {data?.fallback && !data?.usingDefaultKey && (
+        <div className="mb-4 rounded-2xl border border-amber-300/30 bg-amber-300/10 px-5 py-3 text-sm text-amber-100">
+          Zero-config ativo: variáveis <code>EVOLUTION_*</code> ausentes no ambiente — usando padrões internos{" "}
+          (<code>http://evolution:8080</code> + <code>kbos-primary</code>). Para produção, defina as chaves no{" "}
+          <code>/opt/kbos/.env</code> e recrie com <code>up -d --build</code>.
         </div>
       )}
       {error && (

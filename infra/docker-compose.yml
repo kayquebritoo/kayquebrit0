@@ -39,6 +39,11 @@ services:
       dockerfile: Dockerfile
       args:
         GIT_SHA: ${GIT_SHA:-local}
+        # Build-time (ver Dockerfile): garante defaults mesmo com .env antigo.
+        # O `environment` abaixo sempre vence no runtime.
+        EVOLUTION_API_URL: ${EVOLUTION_API_URL:-http://evolution:8080}
+        EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-kbos-dev-key}
+        EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-kbos-primary}
     ports:
       - "${WEB_PORT:-3000}:3000"
     environment:
@@ -105,6 +110,10 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
+      args:
+        EVOLUTION_API_URL: ${EVOLUTION_API_URL:-http://evolution:8080}
+        EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-kbos-dev-key}
+        EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-kbos-primary}
     command: ["npx", "tsx", "worker/index.ts"]
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgres://postgres:kbos@db:5432/kbos}

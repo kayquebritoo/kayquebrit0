@@ -4,39 +4,30 @@ import { readBody, waAdminActionSchema } from "@/lib/kbos/validators";
 import { withRateLimit } from "@/lib/kbos/rate-limit";
 import {
   ensureInstance,
+  evoFallbackActive,
   getConnectionState,
   getQrCode,
   getWebhookStatus,
   logoutInstance,
   restartInstance,
   setInstanceWebhook,
-  waConfigured,
   waInstance,
   waUsingDefaultKey,
+  warnEvoFallbackOnce,
 } from "@/lib/kbos/evolution";
 
 // GET ?qr=1 — status da instância; com qr=1 inclui QR fresco (expira em ~60s)
 // + auto-cria a instância quando ausente e repara/verifica o webhook.
-// Só admin. Sem Evolution configurada → 503 explicativo (não 500).
+// Só admin. Zero-config: env vazia usa os padrões internos (compose) em vez
+// de 503 — a resposta sinaliza `fallback: true` para a UI avisar.
 export async function GET(req: Request) {
   const user = await sessionUser();
   const denied = deny(user, "admin");
   if (denied) return denied;
   const limited = await withRateLimit(req, "admin:whatsapp");
   if (limited) return limited;
+  warnEvoFallbackOnce();
   try {
-    if (!waConfigured()) {
-      return NextResponse.json(
-        {
-          configured: false,
-          instance: waInstance(),
-          state: "unknown",
-          qrcode: null,
-          error: "Evolution API não configurada (EVOLUTION_API_URL/EVOLUTION_API_KEY).",
-        },
-        { status: 503 }
-      );
-    }
     const wantQr = new URL(req.url).searchParams.get("qr") === "1";
     const conn = await getConnectionState();
     let { state, detail } = conn;
@@ -83,6 +74,8 @@ export async function GET(req: Request) {
       pairingCode,
       created,
       webhook,
+      // Zero-config ativo (padrões internos em uso): a UI orienta a endurecer.
+      fallback: evoFallbackActive(),
       // Produção com a chave default de dev: funciona, mas a UI avisa p/ trocar.
       usingDefaultKey: waUsingDefaultKey(),
       ...(detail ? { detail } : {}),

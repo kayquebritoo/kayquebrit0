@@ -8,6 +8,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "./db";
 import { contacts, conversations, messages } from "./schema";
 import { sendTelegramText } from "./telegram";
+import { evoConfig, warnEvoFallbackOnce } from "./evolution";
 
 export type InboundMessage = {
   /** Identificador remoto do chat (ex. `5511999998888@s.whatsapp.net`). */
@@ -312,17 +313,20 @@ export async function ingestInbound(
 /* ---------------- envio outbound via Evolution ---------------- */
 
 function evoBase() {
-  return (process.env.EVOLUTION_API_URL || "").replace(/\/$/, "");
+  return evoConfig().url.replace(/\/$/, "");
 }
 
 export function evoOutboundConfigured() {
-  return !!(process.env.EVOLUTION_API_URL && process.env.EVOLUTION_API_KEY);
+  // Zero-config: sempre resolve (env ou padrões internos).
+  const { url, key } = evoConfig();
+  return !!(url && key);
 }
 
 async function evoPost(path: string, body: Record<string, unknown>) {
+  warnEvoFallbackOnce();
   const res = await fetch(`${evoBase()}${path}`, {
     method: "POST",
-    headers: { apikey: process.env.EVOLUTION_API_KEY || "", "Content-Type": "application/json" },
+    headers: { apikey: evoConfig().key, "Content-Type": "application/json" },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(15000),
   });
@@ -385,7 +389,7 @@ export async function sendAgentMessage(
     (err as NodeJS.ErrnoException).code = "CHAT_NOT_DIALABLE";
     throw err;
   }
-  const instance = process.env.EVOLUTION_INSTANCE || "kbos-primary";
+  const instance = evoConfig().instance;
   let externalId: string | null = null;
   if (input.mediaUrl) {
     const mediatype = type === "audio" ? "audio" : type === "document" ? "document" : "image";

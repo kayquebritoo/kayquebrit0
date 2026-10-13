@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { notifications, projects, users } from "./schema";
 import { buildIdempotencyKey, enqueueJob } from "./jobs";
+import { evoConfig, warnEvoFallbackOnce } from "./evolution";
 
 export type WhatsappPayload = {
   notificationId: string;
@@ -17,11 +18,11 @@ export type WhatsappPayload = {
 
 /** Envio real à Evolution API — roda SÓ no worker (pode lançar erro p/ retry). */
 export async function sendEvolutionText(destino: string, mensagem: string) {
-  const base = process.env.EVOLUTION_API_URL?.replace(/\/$/, "");
-  const key = process.env.EVOLUTION_API_KEY;
-  // Instância cai p/ a padrão do compose/código (`kbos-primary`).
-  const instance = process.env.EVOLUTION_INSTANCE || "kbos-primary";
-  if (!base || !key) {
+  warnEvoFallbackOnce();
+  // Zero-config: env vazia cai nos padrões internos (compose).
+  const { url, key, instance } = evoConfig();
+  const base = url.replace(/\/$/, "");
+  if (!base || !key || !instance) {
     const err = new Error("Evolution API não configurada (EVOLUTION_API_URL/KEY/INSTANCE).");
     (err as NodeJS.ErrnoException).code = "EVOLUTION_MISCONFIGURED";
     throw err;

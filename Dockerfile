@@ -18,6 +18,14 @@ ENV NODE_ENV=production
 # SHA publicado (deploy.sh passa via build-arg; /api/health o expõe).
 ARG GIT_SHA=local
 ENV GIT_SHA=$GIT_SHA
+# Evolution zero-config (build-time): o compose passa via `args` (ou valem os
+# defaults abaixo, iguais aos do compose). O `environment` do compose SEMPRE
+# vence no runtime — estes só garantem que a imagem nunca suba "cega", mesmo
+# com `.env` antigo sem as chaves. Comunicação via rede interna (`evolution`).
+ARG EVOLUTION_API_URL=http://evolution:8080
+ARG EVOLUTION_API_KEY=kbos-dev-key
+ARG EVOLUTION_INSTANCE=kbos-primary
+ENV EVOLUTION_API_URL=$EVOLUTION_API_URL EVOLUTION_API_KEY=$EVOLUTION_API_KEY EVOLUTION_INSTANCE=$EVOLUTION_INSTANCE
 # deps de produção (inclui tsx p/ rodar o worker em TS direto)
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev

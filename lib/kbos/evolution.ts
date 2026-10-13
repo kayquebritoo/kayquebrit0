@@ -12,17 +12,66 @@ export const DEFAULT_INSTANCE = "kbos-primary";
 /** Chave default de dev do compose — produção deve trocar (ver aviso na UI). */
 export const DEFAULT_API_KEY = "kbos-dev-key";
 
+/**
+ * URL default: nome do serviço na rede interna do Docker (web → evolution).
+ * Nunca `localhost` — dentro do container, localhost é o próprio `web`.
+ */
+export const DEFAULT_API_URL = "http://evolution:8080";
+
+export type EvoConfig = { url: string; key: string; instance: string };
+
+/**
+ * Zero-config: resolve a config com fallback por variável — env vazia usa o
+ * padrão de desenvolvimento em vez de quebrar ("Evolution não configurada").
+ * Com isso, a VPS funciona mesmo com o `.env` antigo (sem as chaves).
+ */
+export function evoConfig(): EvoConfig {
+  return {
+    url: (process.env.EVOLUTION_API_URL || "").trim() || DEFAULT_API_URL,
+    key: (process.env.EVOLUTION_API_KEY || "").trim() || DEFAULT_API_KEY,
+    instance: (process.env.EVOLUTION_INSTANCE || "").trim() || DEFAULT_INSTANCE,
+  };
+}
+
+/** True quando todas as três vars vieram explícitas do ambiente. */
+export function evoExplicitConfigured(): boolean {
+  return !!(
+    (process.env.EVOLUTION_API_URL || "").trim() &&
+    (process.env.EVOLUTION_API_KEY || "").trim() &&
+    (process.env.EVOLUTION_INSTANCE || "").trim()
+  );
+}
+
+/** True quando algum padrão interno está em uso (UI avisa p/ endurecer). */
+export function evoFallbackActive(): boolean {
+  return !evoExplicitConfigured();
+}
+
+let _fallbackWarned = false;
+
+/** Log único por processo quando o zero-config entra em ação. */
+export function warnEvoFallbackOnce(): void {
+  if (_fallbackWarned || evoExplicitConfigured()) return;
+  _fallbackWarned = true;
+  console.warn(
+    "[KBOS] EVOLUTION_* parcial/ausente — usando padrões internos " +
+      `(${DEFAULT_API_URL}, instância ${DEFAULT_INSTANCE}). ` +
+      "Defina EVOLUTION_API_KEY forte no .env e recrie os containers."
+  );
+}
+
 export function waInstance() {
-  return process.env.EVOLUTION_INSTANCE || DEFAULT_INSTANCE;
+  return evoConfig().instance;
 }
 
 export function waConfigured() {
-  return !!(process.env.EVOLUTION_API_URL && process.env.EVOLUTION_API_KEY);
+  // Zero-config: a config sempre resolve (env ou padrões internos).
+  return true;
 }
 
 /** True quando a chave em uso é a default de dev (UI avisa p/ trocar em prod). */
 export function waUsingDefaultKey() {
-  return (process.env.EVOLUTION_API_KEY || "") === DEFAULT_API_KEY;
+  return evoConfig().key === DEFAULT_API_KEY;
 }
 
 /**
@@ -39,13 +88,14 @@ export function buildWebhookUrl(): string | null {
 }
 
 function base() {
-  return (process.env.EVOLUTION_API_URL || "").replace(/\/$/, "");
+  return evoConfig().url.replace(/\/$/, "");
 }
 
 async function evoFetch(path: string, init?: RequestInit) {
+  const { key } = evoConfig();
   const res = await fetch(`${base()}${path}`, {
     ...init,
-    headers: { apikey: process.env.EVOLUTION_API_KEY || "", "Content-Type": "application/json", ...(init?.headers || {}) },
+    headers: { apikey: key, "Content-Type": "application/json", ...(init?.headers || {}) },
     signal: AbortSignal.timeout(10000),
   });
   const json = await res.json().catch(() => ({}));
@@ -65,7 +115,7 @@ export function normalizeQr(base64: unknown): string | null {
 }
 
 export async function getConnectionState(): Promise<{ state: WaState; detail?: string; status?: number }> {
-  if (!waConfigured()) return { state: "unknown", detail: "Evolution não configurada." };
+  warnEvoFallbackOnce();
   try {
     const r = await evoFetch(`/instance/connectionState/${encodeURIComponent(waInstance())}`);
     if (r.status === 404) return { state: "unknown", status: 404, detail: "Instância ainda não criada na Evolution." };
@@ -79,7 +129,7 @@ export async function getConnectionState(): Promise<{ state: WaState; detail?: s
 }
 
 export async function getQrCode(): Promise<{ qrcode: string | null; pairingCode: string | null; detail?: string; status?: number }> {
-  if (!waConfigured()) return { qrcode: null, pairingCode: null, detail: "Evolution não configurada." };
+  warnEvoFallbackOnce();
   try {
     const r = await evoFetch(`/instance/connect/${encodeURIComponent(waInstance())}`);
     if (r.status === 404) return { qrcode: null, pairingCode: null, status: 404, detail: "Instância ainda não criada na Evolution." };
@@ -150,7 +200,6 @@ export async function setInstanceWebhook(): Promise<boolean> {
 /** Lê a config atual do webhook (`GET /webhook/find`) e confere se é a nossa. */
 export async function getWebhookStatus(): Promise<{ ok: boolean; url: string | null }> {
   try {
-    if (!waConfigured()) return { ok: false, url: null };
     const r = await evoFetch(`/webhook/find/${encodeURIComponent(waInstance())}`);
     if (!r.ok) return { ok: false, url: null };
     const j = r.json as Record<string, unknown>;
@@ -166,7 +215,6 @@ export async function getWebhookStatus(): Promise<{ ok: boolean; url: string | n
 }
 
 export async function restartInstance(): Promise<{ ok: boolean; detail?: string }> {
-  if (!waConfigured()) return { ok: false, detail: "Evolution não configurada." };
   try {
     const r = await evoFetch(`/instance/restart/${encodeURIComponent(waInstance())}`, { method: "PUT" });
     return r.ok ? { ok: true } : { ok: false, detail: `Evolution respondeu ${r.status}.` };
@@ -176,7 +224,6 @@ export async function restartInstance(): Promise<{ ok: boolean; detail?: string 
 }
 
 export async function logoutInstance(): Promise<{ ok: boolean; detail?: string }> {
-  if (!waConfigured()) return { ok: false, detail: "Evolution não configurada." };
   try {
     const r = await evoFetch(`/instance/logout/${encodeURIComponent(waInstance())}`, { method: "DELETE" });
     return r.ok ? { ok: true } : { ok: false, detail: `Evolution respondeu ${r.status}.` };

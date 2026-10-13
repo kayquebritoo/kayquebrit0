@@ -3,6 +3,9 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 import {
   buildWebhookUrl,
   ensureInstance,
+  evoConfig,
+  evoExplicitConfigured,
+  evoFallbackActive,
   getWebhookStatus,
   mapState,
   normalizeQr,
@@ -66,6 +69,38 @@ describe("waUsingDefaultKey", () => {
     expect(waUsingDefaultKey()).toBe(true);
     vi.stubEnv("EVOLUTION_API_KEY", "outra-forte");
     expect(waUsingDefaultKey()).toBe(false);
+  });
+});
+
+describe("evoConfig (zero-config)", () => {
+  it("env vazia resolve para os padrões internos", () => {
+    vi.stubEnv("EVOLUTION_API_URL", "");
+    vi.stubEnv("EVOLUTION_API_KEY", "");
+    vi.stubEnv("EVOLUTION_INSTANCE", "");
+    expect(evoConfig()).toEqual({
+      url: "http://evolution:8080",
+      key: "kbos-dev-key",
+      instance: "kbos-primary",
+    });
+    expect(evoExplicitConfigured()).toBe(false);
+    expect(evoFallbackActive()).toBe(true);
+  });
+  it("env preenchida vence os padrões", () => {
+    for (const [k, v] of Object.entries(BASE_ENV)) vi.stubEnv(k, v);
+    expect(evoConfig()).toEqual({
+      url: "http://evolution:8080",
+      key: "test-key",
+      instance: "kbos-primary",
+    });
+    expect(evoExplicitConfigured()).toBe(true);
+    expect(evoFallbackActive()).toBe(false);
+  });
+  it("fallback parcial: mantém o que veio do env", () => {
+    vi.stubEnv("EVOLUTION_API_URL", "https://evo.externa:8080");
+    vi.stubEnv("EVOLUTION_API_KEY", "");
+    vi.stubEnv("EVOLUTION_INSTANCE", "");
+    expect(evoConfig()).toMatchObject({ url: "https://evo.externa:8080", key: "kbos-dev-key" });
+    expect(evoFallbackActive()).toBe(true);
   });
 });
 
