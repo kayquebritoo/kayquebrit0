@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import Header from "@/components/Header";
+import SplashScreen from "@/components/SplashScreen";
 import { SlideProgress } from "@/components/MobileChrome";
 import { Providers } from "@/components/Providers";
 import { Grain } from "@/components/fx";
@@ -58,6 +59,8 @@ export const metadata: Metadata = {
     images: ["/assets/portfolio/manafest-capa.webp"],
   },
   robots: { index: true, follow: true },
+  // PWA iOS: abre sem chrome do Safari, status bar fundida no tema escuro.
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {
@@ -99,6 +102,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
         />
         <Providers>
+          {/* Splash do PWA: cobre a primeira pintura (SSR) e sai em fade. */}
+          <SplashScreen />
           <Header />
           {children}
           <SlideProgress />
