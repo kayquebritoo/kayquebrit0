@@ -1,11 +1,13 @@
 // PDF de orçamentos — @react-pdf/renderer, A4, dark theme integral.
 //
-// Identidade do ecossistema: fundo `#0B0B1E` em todas as páginas, tinta
-// `#F4F1EC`, gelo `#9DB8E8`, tipografia display Cottorway Pro (a mesma do
-// site) + Helvetica no corpo. Estrutura em grid: cabeçalho (logo discreta
-// à esquerda, ID/data/status à direita), cards Cliente/Projeto, badges de
-// datas, tabela limpa, totalizador, 3 cards de pagamento, Pix em destaque,
-// trio Prazo/Revisões/Validade, termos e assinaturas.
+// Identidade do ecossistema: fundo `#0B0B1E` em todas as páginas com brilho
+// ambiente sutil (gelo/violeta translúcidos, sem clarear a página), tinta
+// branca, gelo `#9DBBE8`, tipografia display Cottorway Pro (a mesma do site)
+// + Helvetica no corpo. Estrutura em grid com respiro: cabeçalho (logo
+// íntegra 36px + ID/data/status espaçados), cards Cliente/Projeto, tabela
+// emoldurada com data por item, escopo padrão por evento, totalizador,
+// 3 cards de pagamento, Pix em destaque, trio Prazo/Revisões/Validade,
+// termos e assinaturas (Contratado em estilo manuscrito).
 import { Document, Page, Text, View, StyleSheet, Image as PdfImage, Font, Svg, Defs, LinearGradient, Stop, Rect, renderToBuffer } from "@react-pdf/renderer";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -78,26 +80,29 @@ function brandLogo(): string | null {
 
 const BG = "#0b0b1e";
 const INK = "#ffffff";
-const ICE = "#9dbbe8";
-const VIOLET = "#8b7cf6";
 const SOFT = "rgba(255,255,255,0.66)";
 const FAINT = "rgba(255,255,255,0.42)";
-const CARD = "rgba(255,255,255,0.03)";
-const HAIR = "rgba(255,255,255,0.12)";
+const ICE = "#9dbbe8";
+const VIOLET = "#8b7cf6";
+const CARD = "rgba(255,255,255,0.04)";
+const HAIR = "rgba(255,255,255,0.1)";
+
+/** Escopo padrão de entrega por evento (coberturas). */
+const EVENT_SCOPE = "1 vídeo de até 1m (horizontal/vertical) + 20 fotos editadas por evento + material bruto sem edição";
 
 const s = StyleSheet.create({
   page: { backgroundColor: BG, color: INK, padding: 44, fontSize: 10, lineHeight: 1.5, fontFamily: "Helvetica" },
   // Cabeçalho: logo íntegra (36px) + bloco do documento em coluna alinhada
-  // à direita com respiro vertical (sem sobreposição entre linhas).
+  // à direita com respiro vertical generoso (sem sobreposição).
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   logo: { height: 36 },
   brandFallback: { fontSize: 15, letterSpacing: 3, color: INK, fontFamily: DISPLAY, fontWeight: 700 },
   docSide: { flexDirection: "column", alignItems: "flex-end" },
   docLabel: { fontSize: 7.5, letterSpacing: 3, color: FAINT, fontFamily: DISPLAY, fontWeight: 700 },
-  docCode: { fontSize: 21, color: INK, marginTop: 5, fontFamily: DISPLAY, fontWeight: 700 },
-  docMeta: { fontSize: 8.5, color: SOFT, marginTop: 5 },
+  docCode: { fontSize: 21, color: INK, marginTop: 8, fontFamily: DISPLAY, fontWeight: 700 },
+  docMeta: { fontSize: 8.5, color: SOFT, marginTop: 7 },
   statusPill: {
-    marginTop: 8,
+    marginTop: 10,
     borderWidth: 1,
     borderColor: ICE,
     borderRadius: 999,
@@ -108,19 +113,18 @@ const s = StyleSheet.create({
   gradRuleWrap: { marginTop: 14, marginBottom: 4 },
   // Cards Cliente / Projeto (glassmorphism: véu claro + borda com reflexo + radius).
   grid: { flexDirection: "row", gap: 10, marginTop: 12 },
-  card: { flex: 1, backgroundColor: CARD, borderWidth: 1, borderColor: HAIR, borderRadius: 8, padding: 11 },
+  card: { flex: 1, backgroundColor: CARD, borderWidth: 1, borderColor: HAIR, borderRadius: 8, padding: 14 },
   cardLabel: { fontSize: 7, letterSpacing: 2, color: FAINT, fontFamily: DISPLAY, fontWeight: 700 },
-  cardTitle: { fontSize: 11, color: INK, marginTop: 4, fontFamily: DISPLAY, fontWeight: 700 },
-  cardText: { fontSize: 9, color: INK, marginTop: 4, fontFamily: DISPLAY, fontWeight: 700 },
-  cardLine: { fontSize: 8.5, color: SOFT, marginTop: 1 },
-  sectionTitle: { fontSize: 8, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 2, color: FAINT, marginTop: 16, marginBottom: 6 },
+  cardTitle: { fontSize: 11, color: INK, marginTop: 5, fontFamily: DISPLAY, fontWeight: 700 },
+  cardText: { fontSize: 9, color: INK, marginTop: 5, fontFamily: DISPLAY, fontWeight: 700 },
+  cardLine: { fontSize: 8.5, color: SOFT, marginTop: 2 },
+  sectionTitle: { fontSize: 8, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 2, color: FAINT, marginTop: 16, marginBottom: 7 },
   // Datas: badges compactos em pílula.
   dateRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  dateBadge: { borderWidth: 1, borderColor: HAIR, borderRadius: 999, paddingVertical: 3, paddingHorizontal: 9 },
+  dateBadge: { borderWidth: 1, borderColor: HAIR, borderRadius: 999, paddingVertical: 4, paddingHorizontal: 12, backgroundColor: CARD },
   dateText: { fontSize: 8.5, color: ICE, fontFamily: DISPLAY, fontWeight: 700 },
   // Tabela emoldurada em vidro: cabeçalho discreto + filetes finos.
-  tableWrap: { borderWidth: 1, borderColor: HAIR, borderRadius: 6, overflow: "hidden", backgroundColor: CARD },
-  // Tabela limpa: cabeçalho discreto + filetes finos, sem preenchimento.
+  tableWrap: { borderWidth: 1, borderColor: HAIR, borderRadius: 8, overflow: "hidden", backgroundColor: CARD },
   tableHead: {
     flexDirection: "row",
     fontFamily: DISPLAY,
@@ -128,49 +132,53 @@ const s = StyleSheet.create({
     fontSize: 7.5,
     letterSpacing: 1.5,
     color: FAINT,
-    paddingVertical: 6,
-    paddingHorizontal: 2,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: HAIR,
   },
-  tableRow: { flexDirection: "row", paddingVertical: 7, paddingHorizontal: 2, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)", fontSize: 9.5 },
+  tableRow: { flexDirection: "row", paddingVertical: 9, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)", fontSize: 9.5 },
   colItem: { width: "46%" },
   colQty: { width: "10%", textAlign: "right", fontFamily: DISPLAY, fontWeight: 700 },
   colUnit: { width: "22%", textAlign: "right", fontFamily: DISPLAY, fontWeight: 700 },
   colTotal: { width: "22%", textAlign: "right", fontFamily: DISPLAY, fontWeight: 700 },
   itemName: { fontFamily: DISPLAY, fontWeight: 700, color: INK },
-  desc: { fontSize: 8, color: SOFT, marginTop: 1 },
-  itemDate: { fontSize: 8, color: ICE, marginTop: 2, fontFamily: DISPLAY, fontWeight: 700 },
+  desc: { fontSize: 8, color: SOFT, marginTop: 2 },
+  itemDate: { fontSize: 8, color: ICE, marginTop: 3, fontFamily: DISPLAY, fontWeight: 700 },
+  // Escopo padrão por evento.
+  scopeBox: { marginTop: 8, backgroundColor: CARD, borderWidth: 1, borderColor: HAIR, borderRadius: 8, padding: 12 },
+  scopeLabel: { fontSize: 7, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 2, color: FAINT },
+  scopeText: { fontSize: 9.5, color: INK, marginTop: 4 },
   // Totalizador à direita.
-  totals: { marginTop: 10, alignItems: "flex-end" },
-  totRow: { flexDirection: "row", justifyContent: "flex-end", gap: 14, marginTop: 1 },
+  totals: { marginTop: 12, alignItems: "flex-end" },
+  totRow: { flexDirection: "row", justifyContent: "flex-end", gap: 14, marginTop: 2 },
   totLabel: { fontSize: 8.5, color: SOFT },
   totValue: { fontSize: 9.5, color: INK, width: 110, textAlign: "right", fontFamily: DISPLAY, fontWeight: 700 },
   grandLabel: { fontSize: 8, letterSpacing: 2, color: ICE, fontFamily: DISPLAY, fontWeight: 700 },
   grandValue: { fontSize: 22, color: INK, fontFamily: DISPLAY, fontWeight: 300 },
   // Pagamento: 3 cards em vidro; preferida com borda gelo.
   payRow: { flexDirection: "row", gap: 8 },
-  payCard: { flex: 1, borderWidth: 1, borderColor: HAIR, borderRadius: 8, backgroundColor: CARD, padding: 9 },
-  payCardHot: { flex: 1, borderWidth: 1, borderColor: ICE, borderRadius: 8, backgroundColor: "rgba(157,184,232,0.07)", padding: 9 },
+  payCard: { flex: 1, borderWidth: 1, borderColor: HAIR, borderRadius: 8, backgroundColor: CARD, padding: 12 },
+  payCardHot: { flex: 1, borderWidth: 1, borderColor: ICE, borderRadius: 8, backgroundColor: "rgba(157,184,232,0.07)", padding: 12 },
   payTitle: { fontSize: 7.5, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 1.2, color: SOFT },
   payTitleHot: { fontSize: 7.5, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 1.2, color: ICE },
-  payValue: { fontSize: 12, color: INK, marginTop: 3, fontFamily: DISPLAY, fontWeight: 700 },
-  payHint: { fontSize: 8, color: SOFT, marginTop: 1 },
+  payValue: { fontSize: 12, color: INK, marginTop: 4, fontFamily: DISPLAY, fontWeight: 700 },
+  payHint: { fontSize: 8, color: SOFT, marginTop: 2 },
   // Pix em destaque.
-  pixBox: { marginTop: 8, backgroundColor: CARD, borderWidth: 1, borderColor: HAIR, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: ICE, padding: 9 },
+  pixBox: { marginTop: 8, backgroundColor: CARD, borderWidth: 1, borderColor: HAIR, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: ICE, padding: 14 },
   pixLabel: { fontSize: 7, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 2, color: FAINT },
-  pixValue: { fontSize: 10.5, fontFamily: DISPLAY, fontWeight: 700, color: INK, marginTop: 3 },
+  pixValue: { fontSize: 10.5, fontFamily: DISPLAY, fontWeight: 700, color: INK, marginTop: 4 },
   // Trio + termos + assinaturas.
   trio: { flexDirection: "row", gap: 10, marginTop: 12 },
-  trioCard: { flex: 1, borderTopWidth: 1, borderTopColor: HAIR, paddingTop: 7 },
+  trioCard: { flex: 1, backgroundColor: CARD, borderWidth: 1, borderColor: HAIR, borderRadius: 8, padding: 12 },
   trioLabel: { fontSize: 7, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 1.8, color: FAINT },
-  trioValue: { fontSize: 9.5, color: INK, marginTop: 3, fontFamily: DISPLAY, fontWeight: 700 },
+  trioValue: { fontSize: 9.5, color: INK, marginTop: 4, fontFamily: DISPLAY, fontWeight: 700 },
   sectionText: { fontSize: 9.5, color: SOFT, textAlign: "justify" },
-  sign: { marginTop: 34, flexDirection: "row", justifyContent: "space-between" },
+  sign: { marginTop: 36, flexDirection: "row", justifyContent: "space-between" },
   signCol: { width: "44%", flexDirection: "column", alignItems: "center" },
-  signScript: { fontSize: 19, color: INK, fontFamily: "Helvetica-Oblique", marginBottom: 2, minHeight: 26 },
+  signScript: { fontSize: 22, color: ICE, fontFamily: "Helvetica-BoldOblique", marginBottom: 3, minHeight: 28 },
   signBox: { width: "100%", borderTopWidth: 1, borderTopColor: SOFT, paddingTop: 6, fontSize: 8.5, color: SOFT, textAlign: "center", fontFamily: DISPLAY, fontWeight: 700 },
-  footer: { position: "absolute", bottom: 24, left: 44, right: 44, flexDirection: "row", justifyContent: "space-between" },
+  footer: { marginTop: 26, paddingTop: 10, borderTopWidth: 1, borderTopColor: HAIR, flexDirection: "row", justifyContent: "space-between" },
   footerText: { fontSize: 7, color: FAINT, fontFamily: DISPLAY, fontWeight: 700 },
 });
 
@@ -276,22 +284,7 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
           </View>
         </View>
 
-        {/* ── Datas de execução (fallback compacto: o padrão é a data
-            por item, dentro da tabela) ─────────────────────── */}
-        {eventDates.length && itemsWithDate === 0 ? (
-          <View wrap={false}>
-            <Text style={s.sectionTitle}>DATAS DE EXECUÇÃO</Text>
-            <View style={s.dateRow}>
-              {eventDates.map((d, i) => (
-                <View key={`${d}-${i}`} style={s.dateBadge}>
-                  <Text style={s.dateText}>{fmtDate(d)}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        ) : null}
-
-        {/* ── Itens ────────────────────────────────────── */}
+        {/* ── Itens (data de execução por linha) ───────── */}
         <Text style={s.sectionTitle}>SERVIÇOS</Text>
         <View style={s.tableWrap}>
           <View style={s.tableHead}>
@@ -314,6 +307,28 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
           ))}
         </View>
 
+        {/* ── Escopo padrão por evento ─────────────────── */}
+        {itemsWithDate > 0 ? (
+          <View style={s.scopeBox} wrap={false}>
+            <Text style={s.scopeLabel}>ESCOPO PADRÃO POR EVENTO</Text>
+            <Text style={s.scopeText}>{EVENT_SCOPE}</Text>
+          </View>
+        ) : null}
+
+        {/* ── Datas (fallback legado: sem data por item) ── */}
+        {eventDates.length && itemsWithDate === 0 ? (
+          <View wrap={false}>
+            <Text style={s.sectionTitle}>DATAS DE EXECUÇÃO</Text>
+            <View style={s.dateRow}>
+              {eventDates.map((d, i) => (
+                <View key={`${d}-${i}`} style={s.dateBadge}>
+                  <Text style={s.dateText}>{fmtDate(d)}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
         {/* ── Totalizador ──────────────────────────────── */}
         <View style={s.totals} wrap={false}>
           <View style={s.totRow}>
@@ -328,7 +343,7 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
               <Text style={s.totValue}>−{formatBRL(discountAmount)}</Text>
             </View>
           ) : null}
-          <View style={[s.totRow, { marginTop: 5 }]}>
+          <View style={[s.totRow, { marginTop: 6 }]}>
             <Text style={s.grandLabel}>TOTAL</Text>
             <Text style={s.grandValue}>{formatBRL(total)}</Text>
           </View>
@@ -391,13 +406,13 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
             <Text style={s.signBox}>Kayque Brito — Contratado</Text>
           </View>
           <View style={s.signCol}>
-            <View style={{ minHeight: 26, marginBottom: 2 }} />
+            <View style={{ minHeight: 28, marginBottom: 3 }} />
             <Text style={s.signBox}>{clientName === "—" ? "Cliente" : clientName} — Contratante</Text>
           </View>
         </View>
 
         {/* ── Rodapé (todas as páginas) ────────────────── */}
-        <View style={s.footer} fixed>
+        <View style={s.footer}>
           <Text style={s.footerText}>Orçamento {data.code} · Studio Kayque Brito</Text>
           <Text
             style={s.footerText}
