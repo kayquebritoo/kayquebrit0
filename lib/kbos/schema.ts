@@ -561,6 +561,8 @@ export type BudgetItem = {
   quantity: number;
   unitPrice: number;
   total: number;
+  /** Data de execução do item (coberturas/eventos) — ISO `yyyy-mm-dd`. */
+  date?: string | null;
 };
 
 export const budgets = pgTable("kbos_budgets", {

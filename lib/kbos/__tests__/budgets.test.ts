@@ -29,6 +29,15 @@ describe("calcBudgetTotals", () => {
     ]);
     expect(total).toBe(0);
   });
+
+  it("preserva a data de execução do item (e descarta inválida)", () => {
+    const { items } = calcBudgetTotals([
+      { service: "Cobertura", quantity: 1, unitPrice: 1500, total: 0, date: "2026-10-01" },
+      { service: "Extra", quantity: 1, unitPrice: 100, total: 0, date: "ontem" },
+    ]);
+    expect(items[0].date).toBe("2026-10-01");
+    expect(items[1].date).toBeNull();
+  });
 });
 
 describe("calcBudgetWithDiscount", () => {

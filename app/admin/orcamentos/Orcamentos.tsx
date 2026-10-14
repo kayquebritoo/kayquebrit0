@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BUDGET_STATUS, DEFAULT_PIX_INFO } from "@/lib/kbos/constants";
 
-type Item = { service: string; description?: string | null; quantity: number; unitPrice: number; total: number };
+type Item = { service: string; description?: string | null; quantity: number; unitPrice: number; total: number; date?: string | null };
 type Budget = {
   id: string;
   code: string;
@@ -34,10 +34,6 @@ const num = (v: unknown): number => {
   if (typeof v === "string") v = v.replace(/\./g, "").replace(",", ".");
   const n = Number(v);
   return Number.isFinite(n) && n > 0 ? n : 0;
-};
-const fmtDay = (iso: string) => {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
 };
 const STATUS_LABEL: Record<string, string> = Object.fromEntries(BUDGET_STATUS.map((s) => [s.id, s.label]));
 const STATUS_STYLE: Record<string, string> = {
@@ -74,7 +70,6 @@ type FormState = {
   company: string;
   responsible: string;
   items: Item[];
-  eventDates: string[];
   discountType: "fixed" | "percent";
   discountValue: string;
   paymentCondition: PaymentId;
@@ -91,7 +86,6 @@ const blankForm = (): FormState => ({
   company: "",
   responsible: "",
   items: [emptyItem()],
-  eventDates: [],
   discountType: "fixed",
   discountValue: "",
   paymentCondition: "cash",
@@ -196,13 +190,18 @@ export default function Orcamentos() {
   const openEdit = (b: Budget) => {
     setEditing(b);
     const dv = Number(b.discountValue || 0);
+    // Legado: orçamentos com lista global de datas distribuem uma por item.
+    const legacyDates = (b.eventDates || []).filter(Boolean);
+    const items = b.items.length ? b.items.map((i) => ({ ...i })) : [emptyItem()];
+    items.forEach((it, idx) => {
+      if (!it.date && legacyDates[idx]) it.date = legacyDates[idx];
+    });
     setForm({
       title: b.title,
       contactId: b.contactId || "",
       company: b.contactCompany || b.clientCompany || "",
       responsible: b.contactName || b.clientName || "",
-      items: b.items.length ? b.items.map((i) => ({ ...i })) : [emptyItem()],
-      eventDates: (b.eventDates || []).filter(Boolean),
+      items,
       discountType: b.discountType === "percent" ? "percent" : "fixed",
       discountValue: dv ? String(dv).replace(".", ",") : "",
       paymentCondition:
@@ -268,11 +267,14 @@ export default function Orcamentos() {
         description: i.description?.trim() || null,
         quantity: num(i.quantity) || 1,
         unitPrice: num(i.unitPrice),
+        date: i.date || null,
       }));
     if (!form.title.trim() || cleanItems.length === 0) {
       setError("Informe o título da proposta e ao menos 1 item com descrição.");
       return;
     }
+    // Resumo global derivado das datas por item (compatibilidade + PDF legado).
+    const derivedDates = [...new Set(cleanItems.map((i) => i.date).filter((d): d is string => !!d))].sort();
     setSaving(true);
     try {
       const body = {
@@ -281,7 +283,7 @@ export default function Orcamentos() {
         clientName: form.responsible.trim() || null,
         clientCompany: form.company.trim() || null,
         items: cleanItems,
-        eventDates: form.eventDates.length ? form.eventDates : null,
+        eventDates: derivedDates.length ? derivedDates : null,
         discountType: form.discountType,
         discountValue: num(form.discountValue),
         paymentCondition: form.paymentCondition,
@@ -321,6 +323,9 @@ export default function Orcamentos() {
 
   const displayClient = (b: Budget) => b.contactName || b.clientName || "Sem cliente";
   const displayCompany = (b: Budget) => b.contactCompany || b.clientCompany || "";
+  // Datas distintas: por item (novo) + lista global (legado).
+  const budgetDateCount = (b: Budget) =>
+    new Set([...(b.items || []).map((i) => i.date).filter(Boolean), ...((b.eventDates || []).filter(Boolean))]).size;
 
   return (
     <div className="space-y-4">
@@ -387,7 +392,7 @@ export default function Orcamentos() {
                   <p className="text-xs text-white/45">
                     {displayClient(b)}
                     {displayCompany(b) ? ` · ${displayCompany(b)}` : ""} · {b.items.length} item(ns)
-                    {(b.eventDates?.length || 0) > 0 ? ` · ${b.eventDates!.length} data(s)` : ""}
+                    {budgetDateCount(b) > 0 ? ` · ${budgetDateCount(b)} data(s)` : ""}
                   </p>
                 </td>
                 <td className="px-4 py-3 text-right font-medium">{brl(b.totalAmount)}</td>
@@ -593,50 +598,61 @@ export default function Orcamentos() {
             {/* ── 2 · ITENS + DATAS ───────────────────────── */}
             <section className={sectionCls}>
               <p className={sectionTitleCls}>2 · Itens e datas de execução</p>
+              <p className="mt-1 text-xs text-white/35">Uma data por item — ideal para coberturas em dias diferentes.</p>
               <div className="mt-3 space-y-2">
                 {form.items.map((it, i) => (
                   <div
                     key={i}
-                    className="grid grid-cols-2 gap-2 rounded-xl border border-white/5 bg-black/20 p-2 sm:grid-cols-[1fr_76px_132px_110px_36px] sm:items-center sm:border-0 sm:bg-transparent sm:p-0"
+                    className="space-y-2 rounded-xl border border-white/5 bg-black/20 p-2.5"
                   >
-                    <input
-                      className={inputCls}
-                      list="orc-service-hints"
-                      placeholder={`Serviço ${i + 1} — ex.: Cobertura fotográfica`}
-                      value={it.service}
-                      onChange={(e) => setItem(i, { service: e.target.value })}
-                    />
-                    <input
-                      className={`${inputCls} col-span-1`}
-                      type="number"
-                      min={1}
-                      placeholder="Qtd"
-                      aria-label="Quantidade"
-                      value={it.quantity}
-                      onChange={(e) => setItem(i, { quantity: Number(e.target.value) })}
-                    />
-                    <input
-                      className={inputCls}
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      placeholder="Valor unit. (R$)"
-                      aria-label="Valor unitário"
-                      value={it.unitPrice || ""}
-                      onChange={(e) => setItem(i, { unitPrice: Number(e.target.value) })}
-                    />
-                    <div className="flex items-center justify-between gap-2 sm:justify-end">
-                      <span className="text-sm font-medium text-white/80">
-                        {brl(num(it.quantity) * num(it.unitPrice))}
-                      </span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        className={inputCls}
+                        list="orc-service-hints"
+                        placeholder={`Serviço ${i + 1} — ex.: Cobertura fotográfica`}
+                        value={it.service}
+                        onChange={(e) => setItem(i, { service: e.target.value })}
+                      />
                       <button
                         onClick={() => setForm((f) => ({ ...f, items: f.items.filter((_, j) => j !== i) }))}
-                        className="rounded-lg border border-white/10 px-2 py-1 text-white/50 hover:border-red-300/50 hover:text-red-200 sm:px-1"
+                        className="shrink-0 rounded-lg border border-white/10 px-2 py-1 text-white/50 hover:border-red-300/50 hover:text-red-200"
                         disabled={form.items.length <= 1}
                         aria-label="Remover item"
                       >
                         ×
                       </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-[150px_76px_1fr_110px] sm:items-center">
+                      <input
+                        className={inputCls}
+                        type="date"
+                        aria-label={`Data de execução do item ${i + 1}`}
+                        title="Data de execução"
+                        value={it.date || ""}
+                        onChange={(e) => setItem(i, { date: e.target.value || null })}
+                      />
+                      <input
+                        className={inputCls}
+                        type="number"
+                        min={1}
+                        placeholder="Qtd"
+                        aria-label="Quantidade"
+                        value={it.quantity}
+                        onChange={(e) => setItem(i, { quantity: Number(e.target.value) })}
+                      />
+                      <input
+                        className={inputCls}
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        placeholder="Valor unit. (R$)"
+                        aria-label="Valor unitário"
+                        value={it.unitPrice || ""}
+                        onChange={(e) => setItem(i, { unitPrice: Number(e.target.value) })}
+                      />
+                      <span className="text-right text-sm font-medium text-white/80 max-sm:col-span-2">
+                        {brl(num(it.quantity) * num(it.unitPrice))}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -652,48 +668,6 @@ export default function Orcamentos() {
               >
                 + Adicionar novo item
               </button>
-
-              <div className="mt-4 border-t border-white/5 pt-3">
-                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
-                  Datas de execução <span className="normal-case tracking-normal text-white/30">(coberturas/eventos)</span>
-                </p>
-                {form.eventDates.length ? (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {form.eventDates.map((d, i) => (
-                      <span
-                        key={`${d}-${i}`}
-                        className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 py-1 pl-3 pr-1.5 text-xs"
-                      >
-                        📅 {fmtDay(d)}
-                        <button
-                          onClick={() => setForm((f) => ({ ...f, eventDates: f.eventDates.filter((_, j) => j !== i) }))}
-                          className="rounded-full px-1.5 text-white/50 hover:text-red-200"
-                          aria-label={`Remover data ${fmtDay(d)}`}
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-1.5 text-xs text-white/35">Nenhuma data — adicione uma por dia de cobertura.</p>
-                )}
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <input
-                    className={`${inputCls} w-auto`}
-                    type="date"
-                    aria-label="Nova data de execução"
-                    id="orc-new-date"
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (!v) return;
-                      setForm((f) => (f.eventDates.includes(v) ? f : { ...f, eventDates: [...f.eventDates, v].sort() }));
-                      e.target.value = "";
-                    }}
-                  />
-                  <span className="text-xs text-white/35">Escolha a data para adicioná-la à lista.</span>
-                </div>
-              </div>
             </section>
 
             {/* ── 3 · VALORES + PAGAMENTO ─────────────────── */}

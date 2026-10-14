@@ -23,12 +23,14 @@ export function calcBudgetTotals(items: BudgetItem[]): { items: BudgetItem[]; to
     const quantity = Math.max(0, Number(it.quantity) || 0);
     const unitPrice = Math.max(0, Number(it.unitPrice) || 0);
     const total = Math.round(quantity * unitPrice * 100) / 100;
+    const rawDate = typeof it.date === "string" ? it.date.trim() : "";
     return {
       service: String(it.service || "").trim(),
       description: it.description ? String(it.description).trim() || null : null,
       quantity,
       unitPrice,
       total,
+      date: /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : null,
     };
   });
   const total = Math.round(norm.reduce((a, i) => a + i.total, 0) * 100) / 100;

@@ -66,6 +66,7 @@ export async function POST(req: Request) {
         quantity: i.quantity,
         unitPrice: i.unitPrice,
         total: i.quantity * i.unitPrice,
+        date: i.date ?? null,
       })),
       status: b.status,
       validUntil: b.validUntil ? new Date(b.validUntil) : null,

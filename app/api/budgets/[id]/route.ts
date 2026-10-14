@@ -67,6 +67,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
               quantity: i.quantity,
               unitPrice: i.unitPrice,
               total: i.quantity * i.unitPrice,
+              date: i.date ?? null,
             }))
           : (current.items as BudgetItem[]) || [];
       const { items, total } = calcBudgetWithDiscount(

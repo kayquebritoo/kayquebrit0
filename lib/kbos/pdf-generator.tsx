@@ -6,7 +6,7 @@
 // à esquerda, ID/data/status à direita), cards Cliente/Projeto, badges de
 // datas, tabela limpa, totalizador, 3 cards de pagamento, Pix em destaque,
 // trio Prazo/Revisões/Validade, termos e assinaturas.
-import { Document, Page, Text, View, StyleSheet, Image as PdfImage, Font, renderToBuffer } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, Image as PdfImage, Font, Svg, Defs, LinearGradient, Stop, Rect, renderToBuffer } from "@react-pdf/renderer";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { BudgetItem } from "./schema";
@@ -62,13 +62,13 @@ function ensureFonts() {
     /* sem display: cai para Helvetica-Bold */
   }
 }
-/** Logo do estúdio sem o selo "WEB DEVELOPER" (`public/logo-kayque-pdf.png`,
- *  derivada da original com o badge apagado) em data URI para o PDF escuro. */
+/** Logotipo íntegro do estúdio (`public/logo-kayque.png`, original sem cortes,
+ *  altura elegante de 36px no cabeçalho) em data URI para o PDF escuro. */
 let logoCache: string | null | undefined;
 function brandLogo(): string | null {
   if (logoCache !== undefined) return logoCache;
   try {
-    const p = join(process.cwd(), "public", "logo-kayque-pdf.png");
+    const p = join(process.cwd(), "public", "logo-kayque.png");
     logoCache = existsSync(p) ? `data:image/png;base64,${readFileSync(p).toString("base64")}` : null;
   } catch {
     logoCache = null;
@@ -79,6 +79,7 @@ function brandLogo(): string | null {
 const BG = "#0b0b1e";
 const INK = "#ffffff";
 const ICE = "#9dbbe8";
+const VIOLET = "#8b7cf6";
 const SOFT = "rgba(255,255,255,0.66)";
 const FAINT = "rgba(255,255,255,0.42)";
 const CARD = "rgba(255,255,255,0.03)";
@@ -86,35 +87,39 @@ const HAIR = "rgba(255,255,255,0.12)";
 
 const s = StyleSheet.create({
   page: { backgroundColor: BG, color: INK, padding: 44, fontSize: 10, lineHeight: 1.5, fontFamily: "Helvetica" },
-  // Cabeçalho: logo discreta (34px) + bloco do documento.
+  // Cabeçalho: logo íntegra (36px) + bloco do documento em coluna alinhada
+  // à direita com respiro vertical (sem sobreposição entre linhas).
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  logo: { height: 34 },
+  logo: { height: 36 },
   brandFallback: { fontSize: 15, letterSpacing: 3, color: INK, fontFamily: DISPLAY, fontWeight: 700 },
-  docLabel: { fontSize: 7.5, letterSpacing: 3, color: FAINT, textAlign: "right", fontFamily: DISPLAY, fontWeight: 700 },
-  docCode: { fontSize: 21, color: INK, marginTop: 1, textAlign: "right", fontFamily: DISPLAY, fontWeight: 700 },
-  docMeta: { fontSize: 8.5, color: SOFT, marginTop: 2, textAlign: "right" },
+  docSide: { flexDirection: "column", alignItems: "flex-end" },
+  docLabel: { fontSize: 7.5, letterSpacing: 3, color: FAINT, fontFamily: DISPLAY, fontWeight: 700 },
+  docCode: { fontSize: 21, color: INK, marginTop: 5, fontFamily: DISPLAY, fontWeight: 700 },
+  docMeta: { fontSize: 8.5, color: SOFT, marginTop: 5 },
   statusPill: {
-    marginTop: 6,
-    marginLeft: "auto",
+    marginTop: 8,
     borderWidth: 1,
     borderColor: ICE,
-    paddingVertical: 2,
-    paddingHorizontal: 9,
+    borderRadius: 999,
+    paddingVertical: 3,
+    paddingHorizontal: 10,
   },
-  statusText: { fontSize: 7.5, color: ICE, letterSpacing: 2, textAlign: "right", fontFamily: DISPLAY, fontWeight: 700 },
-  rule: { marginTop: 14, marginBottom: 4, borderBottomWidth: 1, borderBottomColor: HAIR },
-  // Cards Cliente / Projeto.
+  statusText: { fontSize: 7.5, color: ICE, letterSpacing: 2, fontFamily: DISPLAY, fontWeight: 700 },
+  gradRuleWrap: { marginTop: 14, marginBottom: 4 },
+  // Cards Cliente / Projeto (glassmorphism: véu claro + borda com reflexo + radius).
   grid: { flexDirection: "row", gap: 10, marginTop: 12 },
-  card: { flex: 1, backgroundColor: CARD, borderWidth: 1, borderColor: HAIR, padding: 11 },
+  card: { flex: 1, backgroundColor: CARD, borderWidth: 1, borderColor: HAIR, borderRadius: 8, padding: 11 },
   cardLabel: { fontSize: 7, letterSpacing: 2, color: FAINT, fontFamily: DISPLAY, fontWeight: 700 },
   cardTitle: { fontSize: 11, color: INK, marginTop: 4, fontFamily: DISPLAY, fontWeight: 700 },
   cardText: { fontSize: 9, color: INK, marginTop: 4, fontFamily: DISPLAY, fontWeight: 700 },
   cardLine: { fontSize: 8.5, color: SOFT, marginTop: 1 },
   sectionTitle: { fontSize: 8, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 2, color: FAINT, marginTop: 16, marginBottom: 6 },
-  // Datas: badges compactos com borda fina.
+  // Datas: badges compactos em pílula.
   dateRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  dateBadge: { borderWidth: 1, borderColor: HAIR, paddingVertical: 3, paddingHorizontal: 9 },
+  dateBadge: { borderWidth: 1, borderColor: HAIR, borderRadius: 999, paddingVertical: 3, paddingHorizontal: 9 },
   dateText: { fontSize: 8.5, color: ICE, fontFamily: DISPLAY, fontWeight: 700 },
+  // Tabela emoldurada em vidro: cabeçalho discreto + filetes finos.
+  tableWrap: { borderWidth: 1, borderColor: HAIR, borderRadius: 6, overflow: "hidden", backgroundColor: CARD },
   // Tabela limpa: cabeçalho discreto + filetes finos, sem preenchimento.
   tableHead: {
     flexDirection: "row",
@@ -135,6 +140,7 @@ const s = StyleSheet.create({
   colTotal: { width: "22%", textAlign: "right", fontFamily: DISPLAY, fontWeight: 700 },
   itemName: { fontFamily: DISPLAY, fontWeight: 700, color: INK },
   desc: { fontSize: 8, color: SOFT, marginTop: 1 },
+  itemDate: { fontSize: 8, color: ICE, marginTop: 2, fontFamily: DISPLAY, fontWeight: 700 },
   // Totalizador à direita.
   totals: { marginTop: 10, alignItems: "flex-end" },
   totRow: { flexDirection: "row", justifyContent: "flex-end", gap: 14, marginTop: 1 },
@@ -142,17 +148,16 @@ const s = StyleSheet.create({
   totValue: { fontSize: 9.5, color: INK, width: 110, textAlign: "right", fontFamily: DISPLAY, fontWeight: 700 },
   grandLabel: { fontSize: 8, letterSpacing: 2, color: ICE, fontFamily: DISPLAY, fontWeight: 700 },
   grandValue: { fontSize: 22, color: INK, fontFamily: DISPLAY, fontWeight: 300 },
-  cashNote: { fontSize: 8, color: SOFT, marginTop: 2 },
-  // Pagamento: 3 cards com borda fina; preferida com borda gelo.
+  // Pagamento: 3 cards em vidro; preferida com borda gelo.
   payRow: { flexDirection: "row", gap: 8 },
-  payCard: { flex: 1, borderWidth: 1, borderColor: HAIR, backgroundColor: CARD, padding: 9 },
-  payCardHot: { flex: 1, borderWidth: 1, borderColor: ICE, backgroundColor: "rgba(157,184,232,0.07)", padding: 9 },
+  payCard: { flex: 1, borderWidth: 1, borderColor: HAIR, borderRadius: 8, backgroundColor: CARD, padding: 9 },
+  payCardHot: { flex: 1, borderWidth: 1, borderColor: ICE, borderRadius: 8, backgroundColor: "rgba(157,184,232,0.07)", padding: 9 },
   payTitle: { fontSize: 7.5, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 1.2, color: SOFT },
   payTitleHot: { fontSize: 7.5, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 1.2, color: ICE },
   payValue: { fontSize: 12, color: INK, marginTop: 3, fontFamily: DISPLAY, fontWeight: 700 },
   payHint: { fontSize: 8, color: SOFT, marginTop: 1 },
   // Pix em destaque.
-  pixBox: { marginTop: 8, backgroundColor: CARD, borderWidth: 1, borderColor: HAIR, borderLeftWidth: 3, borderLeftColor: ICE, padding: 9 },
+  pixBox: { marginTop: 8, backgroundColor: CARD, borderWidth: 1, borderColor: HAIR, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: ICE, padding: 9 },
   pixLabel: { fontSize: 7, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 2, color: FAINT },
   pixValue: { fontSize: 10.5, fontFamily: DISPLAY, fontWeight: 700, color: INK, marginTop: 3 },
   // Trio + termos + assinaturas.
@@ -161,8 +166,10 @@ const s = StyleSheet.create({
   trioLabel: { fontSize: 7, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 1.8, color: FAINT },
   trioValue: { fontSize: 9.5, color: INK, marginTop: 3, fontFamily: DISPLAY, fontWeight: 700 },
   sectionText: { fontSize: 9.5, color: SOFT, textAlign: "justify" },
-  sign: { marginTop: 40, flexDirection: "row", justifyContent: "space-between" },
-  signBox: { width: "44%", borderTopWidth: 1, borderTopColor: SOFT, paddingTop: 6, fontSize: 8.5, color: SOFT, textAlign: "center", fontFamily: DISPLAY, fontWeight: 700 },
+  sign: { marginTop: 34, flexDirection: "row", justifyContent: "space-between" },
+  signCol: { width: "44%", flexDirection: "column", alignItems: "center" },
+  signScript: { fontSize: 19, color: INK, fontFamily: "Helvetica-Oblique", marginBottom: 2, minHeight: 26 },
+  signBox: { width: "100%", borderTopWidth: 1, borderTopColor: SOFT, paddingTop: 6, fontSize: 8.5, color: SOFT, textAlign: "center", fontFamily: DISPLAY, fontWeight: 700 },
   footer: { position: "absolute", bottom: 24, left: 44, right: 44, flexDirection: "row", justifyContent: "space-between" },
   footerText: { fontSize: 7, color: FAINT, fontFamily: DISPLAY, fontWeight: 700 },
 });
@@ -200,6 +207,7 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
   const clientName = data.contactName || data.clientName || "—";
   const clientCompany = data.contactCompany || data.clientCompany;
   const eventDates = (data.eventDates || []).filter(Boolean);
+  const itemsWithDate = items.filter((it) => !!it.date).length;
   const { subtotal, discountAmount, total } = calcBudgetWithDiscount(
     items,
     data.discountType,
@@ -227,7 +235,7 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
               <Text style={s.brandFallback}>KAYQUE BRITO</Text>
             )}
           </View>
-          <View>
+          <View style={s.docSide}>
             <Text style={s.docLabel}>ORÇAMENTO</Text>
             <Text style={s.docCode}>{data.code}</Text>
             <Text style={s.docMeta}>Emitido em {fmtDate(data.createdAt)}</Text>
@@ -236,7 +244,18 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
             </View>
           </View>
         </View>
-        <View style={s.rule} />
+        <View style={s.gradRuleWrap}>
+          <Svg width="100%" height={2}>
+            <Defs>
+              <LinearGradient id="kb-rule" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0%" stopColor={ICE} />
+                <Stop offset="55%" stopColor={VIOLET} />
+                <Stop offset="100%" stopColor={VIOLET} stopOpacity={0.15} />
+              </LinearGradient>
+            </Defs>
+            <Rect x={0} y={0} width="100%" height={2} rx={1} fill="url(#kb-rule)" />
+          </Svg>
+        </View>
 
         {/* ── Cliente & Projeto ────────────────────────── */}
         <View style={s.grid}>
@@ -257,8 +276,9 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
           </View>
         </View>
 
-        {/* ── Datas de execução ────────────────────────── */}
-        {eventDates.length ? (
+        {/* ── Datas de execução (fallback compacto: o padrão é a data
+            por item, dentro da tabela) ─────────────────────── */}
+        {eventDates.length && itemsWithDate === 0 ? (
           <View wrap={false}>
             <Text style={s.sectionTitle}>DATAS DE EXECUÇÃO</Text>
             <View style={s.dateRow}>
@@ -273,23 +293,26 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
 
         {/* ── Itens ────────────────────────────────────── */}
         <Text style={s.sectionTitle}>SERVIÇOS</Text>
-        <View style={s.tableHead}>
-          <Text style={s.colItem}>ITEM</Text>
-          <Text style={s.colQty}>QTD</Text>
-          <Text style={s.colUnit}>VALOR UNIT.</Text>
-          <Text style={s.colTotal}>SUBTOTAL</Text>
-        </View>
-        {items.map((it, i) => (
-          <View key={i} style={s.tableRow} wrap={false}>
-            <View style={s.colItem}>
-              <Text style={s.itemName}>{it.service}</Text>
-              {it.description ? <Text style={s.desc}>{it.description}</Text> : null}
-            </View>
-            <Text style={s.colQty}>{it.quantity}</Text>
-            <Text style={s.colUnit}>{formatBRL(it.unitPrice)}</Text>
-            <Text style={s.colTotal}>{formatBRL(it.total)}</Text>
+        <View style={s.tableWrap}>
+          <View style={s.tableHead}>
+            <Text style={s.colItem}>ITEM</Text>
+            <Text style={s.colQty}>QTD</Text>
+            <Text style={s.colUnit}>VALOR UNIT.</Text>
+            <Text style={s.colTotal}>SUBTOTAL</Text>
           </View>
-        ))}
+          {items.map((it, i) => (
+            <View key={i} style={s.tableRow} wrap={false}>
+              <View style={s.colItem}>
+                <Text style={s.itemName}>{it.service}</Text>
+                {it.description ? <Text style={s.desc}>{it.description}</Text> : null}
+                {it.date ? <Text style={s.itemDate}>Execução: {fmtDate(it.date)}</Text> : null}
+              </View>
+              <Text style={s.colQty}>{it.quantity}</Text>
+              <Text style={s.colUnit}>{formatBRL(it.unitPrice)}</Text>
+              <Text style={s.colTotal}>{formatBRL(it.total)}</Text>
+            </View>
+          ))}
+        </View>
 
         {/* ── Totalizador ──────────────────────────────── */}
         <View style={s.totals} wrap={false}>
@@ -309,9 +332,6 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
             <Text style={s.grandLabel}>TOTAL</Text>
             <Text style={s.grandValue}>{formatBRL(total)}</Text>
           </View>
-          <Text style={s.cashNote}>
-            À vista com 10% off: {formatBRL(pay.cash)} · economia de {formatBRL(pay.cashSavings)}
-          </Text>
         </View>
 
         {/* ── Pagamento ────────────────────────────────── */}
@@ -366,8 +386,14 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
 
         {/* ── Assinaturas ──────────────────────────────── */}
         <View style={s.sign} wrap={false}>
-          <Text style={s.signBox}>Kayque Brito — Contratado</Text>
-          <Text style={s.signBox}>{clientName === "—" ? "Cliente" : clientName} — Contratante</Text>
+          <View style={s.signCol}>
+            <Text style={s.signScript}>Kayque Brito</Text>
+            <Text style={s.signBox}>Kayque Brito — Contratado</Text>
+          </View>
+          <View style={s.signCol}>
+            <View style={{ minHeight: 26, marginBottom: 2 }} />
+            <Text style={s.signBox}>{clientName === "—" ? "Cliente" : clientName} — Contratante</Text>
+          </View>
         </View>
 
         {/* ── Rodapé (todas as páginas) ────────────────── */}

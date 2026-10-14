@@ -429,6 +429,7 @@ export const budgetItemSchema = z.object({
   description: z.string().trim().max(500).nullable().optional(),
   quantity: z.coerce.number().positive().max(100000),
   unitPrice: z.coerce.number().min(0).max(1e12),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Data inválida." }).nullable().optional(),
 });
 export const budgetCreateSchema = z.object({
   title: shortText(160),
