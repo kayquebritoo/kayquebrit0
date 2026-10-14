@@ -1,6 +1,6 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { BUDGET_STATUS } from "@/lib/kbos/constants";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BUDGET_STATUS, DEFAULT_PIX_INFO } from "@/lib/kbos/constants";
 
 type Item = { service: string; description?: string | null; quantity: number; unitPrice: number; total: number };
 type Budget = {
@@ -8,41 +8,79 @@ type Budget = {
   code: string;
   contactId: string | null;
   title: string;
-  status: "draft" | "sent" | "approved" | "rejected";
+  status: string;
   totalAmount: string;
   validUntil: string | null;
   terms: string | null;
   bankInfo: string | null;
   items: Item[];
+  clientName?: string | null;
+  clientCompany?: string | null;
+  eventDates?: string[] | null;
+  discountType?: string | null;
+  discountValue?: string | number | null;
   createdAt: string;
   contactName?: string | null;
   contactCompany?: string | null;
 };
-type Contact = { id: string; name: string; company: string | null };
+type Contact = { id: string; name: string; company: string | null; phone?: string | null; email?: string | null };
 
 const brl = (v: number | string) =>
   Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const num = (v: unknown): number => {
+  if (typeof v === "string") v = v.replace(/\./g, "").replace(",", ".");
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
+const fmtDay = (iso: string) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+};
 const STATUS_LABEL: Record<string, string> = Object.fromEntries(BUDGET_STATUS.map((s) => [s.id, s.label]));
 const STATUS_STYLE: Record<string, string> = {
   draft: "border-white/15 bg-white/[0.04] text-white/70",
   sent: "border-sky-300/30 bg-sky-400/10 text-sky-200",
   approved: "border-emerald-300/30 bg-emerald-400/10 text-emerald-200",
+  completed: "border-violet-300/30 bg-violet-400/10 text-violet-200",
+  cancelled: "border-white/15 bg-white/[0.02] text-white/40",
   rejected: "border-red-300/30 bg-red-400/10 text-red-200",
 };
 
 const emptyItem = (): Item => ({ service: "", description: "", quantity: 1, unitPrice: 0, total: 0 });
-const emptyForm = {
+type FormState = {
+  title: string;
+  contactId: string;
+  company: string;
+  responsible: string;
+  items: Item[];
+  eventDates: string[];
+  discountType: "fixed" | "percent";
+  discountValue: string;
+  status: string;
+  validUntil: string;
+  terms: string;
+  bankInfo: string;
+};
+const blankForm = (): FormState => ({
   title: "",
   contactId: "",
-  items: [emptyItem()] as Item[],
+  company: "",
+  responsible: "",
+  items: [emptyItem()],
+  eventDates: [],
+  discountType: "fixed",
+  discountValue: "",
   status: "draft",
   validUntil: "",
   terms: "",
-  bankInfo: "",
-};
+  bankInfo: DEFAULT_PIX_INFO,
+});
 
 const inputCls =
-  "w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none placeholder:text-white/25 focus:border-white/40";
+  "w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/40";
+const labelCls = "mb-1.5 block text-[11px] font-medium uppercase tracking-[0.18em] text-white/45";
+const sectionCls = "rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5";
+const sectionTitleCls = "mb-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-white/50";
 
 export default function Orcamentos() {
   const [items, setItems] = useState<Budget[]>([]);
@@ -51,8 +89,15 @@ export default function Orcamentos() {
   const [filter, setFilter] = useState("all");
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState<Budget | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState<FormState>(blankForm);
   const [saving, setSaving] = useState(false);
+  // Autocomplete do responsável + cadastro rápido de cliente.
+  const [respOpen, setRespOpen] = useState(false);
+  const [quickAdd, setQuickAdd] = useState(false);
+  const [qa, setQa] = useState({ name: "", company: "", phone: "", email: "" });
+  const [qaSaving, setQaSaving] = useState(false);
+  const [qaError, setQaError] = useState("");
+  const respBlur = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -62,7 +107,7 @@ export default function Orcamentos() {
       ]);
       if (!b.ok) throw new Error(b.j.error || "Falha ao carregar orçamentos.");
       setItems(b.j.items || []);
-      if (c.ok) setContacts((c.j.items || []).map((x: Contact) => ({ id: x.id, name: x.name, company: x.company })));
+      if (c.ok) setContacts((c.j.items || []).map((x: Contact) => ({ id: x.id, name: x.name, company: x.company, phone: x.phone, email: x.email })));
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro.");
@@ -76,44 +121,112 @@ export default function Orcamentos() {
   const shown = useMemo(() => items.filter((b) => filter === "all" || b.status === filter), [items, filter]);
   const summary = useMemo(() => {
     const open = items.filter((b) => b.status === "draft" || b.status === "sent");
-    const approved = items.filter((b) => b.status === "approved");
+    const closed = items.filter((b) => b.status === "approved" || b.status === "completed");
     const sum = (xs: Budget[]) => xs.reduce((a, b) => a + Number(b.totalAmount || 0), 0);
-    return {
-      openCount: open.length,
-      openValue: sum(open),
-      approvedCount: approved.length,
-      approvedValue: sum(approved),
-    };
+    return { openCount: open.length, openValue: sum(open), closedCount: closed.length, closedValue: sum(closed) };
   }, [items]);
-  const formTotal = useMemo(
-    () => form.items.reduce((a, i) => a + Number(i.quantity || 0) * Number(i.unitPrice || 0), 0),
+  // Sugestões: serviços já usados em orçamentos + empresas do CRM.
+  const serviceHints = useMemo(() => {
+    const seen = new Set<string>();
+    for (const b of items) for (const it of b.items || []) if (it.service.trim()) seen.add(it.service.trim());
+    return [...seen].slice(0, 60);
+  }, [items]);
+  const companyHints = useMemo(() => {
+    const seen = new Set<string>();
+    for (const c of contacts) if (c.company?.trim()) seen.add(c.company.trim());
+    for (const b of items) if (b.clientCompany?.trim()) seen.add(b.clientCompany.trim());
+    return [...seen].slice(0, 60);
+  }, [contacts, items]);
+
+  // Totais do formulário (espelho da regra do servidor): subtotal − desconto.
+  const subtotal = useMemo(
+    () => form.items.reduce((a, i) => a + num(i.quantity) * num(i.unitPrice), 0),
     [form.items]
   );
+  const discountAmount = useMemo(() => {
+    const v = num(form.discountValue);
+    if (!v) return 0;
+    if (form.discountType === "percent") return Math.round(subtotal * Math.min(v, 100)) / 100;
+    return Math.min(v, subtotal);
+  }, [form.discountValue, form.discountType, subtotal]);
+  const formTotal = Math.round((subtotal - discountAmount) * 100) / 100;
+
+  const linkedContact = contacts.find((c) => c.id === form.contactId) || null;
+  const respMatches = useMemo(() => {
+    const q = form.responsible.trim().toLowerCase();
+    if (!q) return contacts.slice(0, 6);
+    return contacts
+      .filter((c) => c.name.toLowerCase().includes(q) || (c.company || "").toLowerCase().includes(q))
+      .slice(0, 6);
+  }, [contacts, form.responsible]);
 
   const openNew = () => {
     setEditing(null);
-    setForm(emptyForm);
+    setForm(blankForm());
+    setQuickAdd(false);
     setModal(true);
   };
   const openEdit = (b: Budget) => {
     setEditing(b);
+    const dv = Number(b.discountValue || 0);
     setForm({
       title: b.title,
       contactId: b.contactId || "",
+      company: b.contactCompany || b.clientCompany || "",
+      responsible: b.contactName || b.clientName || "",
       items: b.items.length ? b.items.map((i) => ({ ...i })) : [emptyItem()],
+      eventDates: (b.eventDates || []).filter(Boolean),
+      discountType: b.discountType === "percent" ? "percent" : "fixed",
+      discountValue: dv ? String(dv).replace(".", ",") : "",
       status: b.status,
       validUntil: b.validUntil ? b.validUntil.slice(0, 10) : "",
       terms: b.terms || "",
-      bankInfo: b.bankInfo || "",
+      bankInfo: b.bankInfo || DEFAULT_PIX_INFO,
     });
+    setQuickAdd(false);
     setModal(true);
   };
 
+  const pickContact = (c: Contact) => {
+    setForm((f) => ({ ...f, contactId: c.id, responsible: c.name, company: c.company || f.company }));
+    setRespOpen(false);
+  };
+
+  const createQuickClient = async () => {
+    if (!qa.name.trim()) {
+      setQaError("Informe ao menos o nome do responsável.");
+      return;
+    }
+    setQaSaving(true);
+    setQaError("");
+    try {
+      const res = await fetch("/api/contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: qa.name.trim(),
+          company: qa.company.trim() || undefined,
+          phone: qa.phone.trim() || undefined,
+          email: qa.email.trim() || undefined,
+          status: "client",
+        }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Falha ao cadastrar cliente.");
+      const c: Contact = { id: j.item.id, name: j.item.name, company: j.item.company };
+      setContacts((xs) => [c, ...xs]);
+      pickContact(c);
+      setQa({ name: "", company: "", phone: "", email: "" });
+      setQuickAdd(false);
+    } catch (e) {
+      setQaError(e instanceof Error ? e.message : "Erro.");
+    } finally {
+      setQaSaving(false);
+    }
+  };
+
   const setItem = (idx: number, patch: Partial<Item>) => {
-    setForm((f) => {
-      const next = f.items.map((it, i) => (i === idx ? { ...it, ...patch } : it));
-      return { ...f, items: next };
-    });
+    setForm((f) => ({ ...f, items: f.items.map((it, i) => (i === idx ? { ...it, ...patch } : it)) }));
   };
 
   const save = async () => {
@@ -122,11 +235,11 @@ export default function Orcamentos() {
       .map((i) => ({
         service: i.service.trim(),
         description: i.description?.trim() || null,
-        quantity: Number(i.quantity) || 0,
-        unitPrice: Number(i.unitPrice) || 0,
+        quantity: num(i.quantity) || 1,
+        unitPrice: num(i.unitPrice),
       }));
     if (!form.title.trim() || cleanItems.length === 0) {
-      setError("Informe o título e ao menos 1 item com serviço.");
+      setError("Informe o título da proposta e ao menos 1 item com descrição.");
       return;
     }
     setSaving(true);
@@ -134,7 +247,12 @@ export default function Orcamentos() {
       const body = {
         title: form.title.trim(),
         contactId: form.contactId || null,
+        clientName: form.responsible.trim() || null,
+        clientCompany: form.company.trim() || null,
         items: cleanItems,
+        eventDates: form.eventDates.length ? form.eventDates : null,
+        discountType: form.discountType,
+        discountValue: num(form.discountValue),
         status: form.status,
         validUntil: form.validUntil || null,
         terms: form.terms.trim() || null,
@@ -167,10 +285,13 @@ export default function Orcamentos() {
     }
   };
 
+  const displayClient = (b: Budget) => b.contactName || b.clientName || "Sem cliente";
+  const displayCompany = (b: Budget) => b.contactCompany || b.clientCompany || "";
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {[{ id: "all", label: "Todos" }, ...BUDGET_STATUS].map((s) => (
             <button
               key={s.id}
@@ -200,9 +321,9 @@ export default function Orcamentos() {
           <p className="mt-1 text-[13px] font-light text-white/50">{brl(summary.openValue)} em rascunho/enviados</p>
         </div>
         <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/[0.05] p-5">
-          <p className="text-[11px] uppercase tracking-[0.25em] text-emerald-200/60">✓ Aprovados</p>
-          <p className="font-display mt-2 text-3xl font-light">{summary.approvedCount}</p>
-          <p className="mt-1 text-[13px] font-light text-white/50">{brl(summary.approvedValue)} fechados</p>
+          <p className="text-[11px] uppercase tracking-[0.25em] text-emerald-200/60">✓ Fechados</p>
+          <p className="font-display mt-2 text-3xl font-light">{summary.closedCount}</p>
+          <p className="mt-1 text-[13px] font-light text-white/50">{brl(summary.closedValue)} aprovados/concluídos</p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
           <p className="text-[11px] uppercase tracking-[0.25em] text-white/40">◔ Total</p>
@@ -230,13 +351,14 @@ export default function Orcamentos() {
                 <td className="px-4 py-3">
                   <p className="font-medium">{b.title}</p>
                   <p className="text-xs text-white/45">
-                    {b.contactName || "Sem cliente"}
-                    {b.contactCompany ? ` · ${b.contactCompany}` : ""} · {b.items.length} item(ns)
+                    {displayClient(b)}
+                    {displayCompany(b) ? ` · ${displayCompany(b)}` : ""} · {b.items.length} item(ns)
+                    {(b.eventDates?.length || 0) > 0 ? ` · ${b.eventDates!.length} data(s)` : ""}
                   </p>
                 </td>
                 <td className="px-4 py-3 text-right font-medium">{brl(b.totalAmount)}</td>
                 <td className="px-4 py-3">
-                  <span className={`rounded-full border px-2.5 py-0.5 text-xs ${STATUS_STYLE[b.status]}`}>
+                  <span className={`rounded-full border px-2.5 py-0.5 text-xs ${STATUS_STYLE[b.status] || STATUS_STYLE.draft}`}>
                     {STATUS_LABEL[b.status] ?? b.status}
                   </span>
                 </td>
@@ -279,127 +401,371 @@ export default function Orcamentos() {
       </div>
 
       {modal ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4">
-          <div className="w-full max-w-2xl space-y-4 rounded-2xl border border-white/10 bg-[#14141c] p-6">
-            <p className="font-display text-xl font-light">{editing ? `Editar ${editing.code}` : "Novo orçamento"}</p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input
-                className={inputCls}
-                placeholder="Título (ex.: Site institucional)"
-                value={form.title}
-                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              />
-              <select
-                className={inputCls}
-                value={form.contactId}
-                onChange={(e) => setForm((f) => ({ ...f, contactId: e.target.value }))}
-              >
-                <option value="">Sem cliente</option>
-                {contacts.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                    {c.company ? ` — ${c.company}` : ""}
-                  </option>
-                ))}
-              </select>
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-3 sm:p-4">
+          <div className="my-4 w-full max-w-3xl space-y-4 rounded-2xl border border-white/10 bg-[#14141c] p-4 sm:p-6">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-display text-xl font-light">{editing ? `Editar ${editing.code}` : "Novo orçamento"}</p>
+              <span className={`rounded-full border px-2.5 py-0.5 text-xs ${STATUS_STYLE[form.status] || STATUS_STYLE.draft}`}>
+                {STATUS_LABEL[form.status]}
+              </span>
             </div>
 
-            <div className="space-y-2">
-              <p className="text-[11px] uppercase tracking-widest text-white/40">Itens</p>
-              {form.items.map((it, i) => (
-                <div key={i} className="grid grid-cols-[1fr_70px_110px_110px_32px] items-center gap-2">
+            {/* ── 1 · CLIENTE ─────────────────────────────── */}
+            <section className={sectionCls}>
+              <p className={sectionTitleCls}>1 · Cliente</p>
+              <div className="mt-3 grid gap-3">
+                <div>
+                  <label className={labelCls} htmlFor="orc-title">Título da proposta</label>
                   <input
+                    id="orc-title"
                     className={inputCls}
-                    placeholder="Serviço"
-                    value={it.service}
-                    onChange={(e) => setItem(i, { service: e.target.value })}
+                    placeholder="Ex.: Cobertura audiovisual — Casamento Ana & Rafa"
+                    value={form.title}
+                    onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                   />
-                  <input
-                    className={inputCls}
-                    type="number"
-                    min={0}
-                    placeholder="Qtd"
-                    value={it.quantity}
-                    onChange={(e) => setItem(i, { quantity: Number(e.target.value) })}
-                  />
-                  <input
-                    className={inputCls}
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    placeholder="Valor unit."
-                    value={it.unitPrice}
-                    onChange={(e) => setItem(i, { unitPrice: Number(e.target.value) })}
-                  />
-                  <span className="text-right text-sm text-white/70">
-                    {brl(Number(it.quantity || 0) * Number(it.unitPrice || 0))}
-                  </span>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className={labelCls} htmlFor="orc-company">Empresa</label>
+                    <input
+                      id="orc-company"
+                      className={inputCls}
+                      list="orc-company-hints"
+                      placeholder="Ex.: Produtora Manafest"
+                      value={form.company}
+                      onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+                    />
+                    <datalist id="orc-company-hints">
+                      {companyHints.map((c) => (
+                        <option key={c} value={c} />
+                      ))}
+                    </datalist>
+                  </div>
+                  <div className="relative">
+                    <label className={labelCls} htmlFor="orc-resp">Responsável</label>
+                    <input
+                      id="orc-resp"
+                      className={inputCls}
+                      placeholder="Ex.: Maria Silva"
+                      value={form.responsible}
+                      autoComplete="off"
+                      onFocus={() => setRespOpen(true)}
+                      onBlur={() => {
+                        respBlur.current = setTimeout(() => setRespOpen(false), 150);
+                      }}
+                      onChange={(e) => {
+                        setForm((f) => ({ ...f, responsible: e.target.value, contactId: "" }));
+                        setRespOpen(true);
+                      }}
+                    />
+                    {respOpen && respMatches.length > 0 ? (
+                      <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-white/15 bg-[#1c1c2a] py-1 shadow-2xl">
+                        {respMatches.map((c) => (
+                          <li key={c.id}>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => pickContact(c)}
+                              className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-white/10"
+                            >
+                              <span>
+                                <span className="block font-medium">{c.name}</span>
+                                {c.company ? <span className="block text-xs text-white/50">{c.company}</span> : null}
+                              </span>
+                              <span className="text-[10px] uppercase tracking-widest text-white/30">CRM</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {linkedContact ? (
+                    <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200">
+                      ✓ {linkedContact.name} vinculado ao CRM
+                      <button
+                        onClick={() => setForm((f) => ({ ...f, contactId: "" }))}
+                        className="text-emerald-200/60 hover:text-emerald-100"
+                        aria-label="Desvincular cliente"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="text-xs text-white/40">Digitando livremente ou escolha um cliente do CRM acima.</span>
+                  )}
                   <button
-                    onClick={() => setForm((f) => ({ ...f, items: f.items.filter((_, j) => j !== i) }))}
-                    className="rounded-lg border border-white/10 px-1 py-1 text-white/50 hover:border-red-300/50 hover:text-red-200"
-                    disabled={form.items.length <= 1}
+                    onClick={() => {
+                      setQaError("");
+                      setQa((q) => ({ ...q, name: q.name || form.responsible, company: q.company || form.company }));
+                      setQuickAdd((v) => !v);
+                    }}
+                    className="ml-auto rounded-xl border border-dashed border-white/25 px-3 py-1.5 text-xs text-white/70 transition-colors hover:border-white/60 hover:text-white"
                   >
-                    ×
+                    + Adicionar cliente
                   </button>
                 </div>
-              ))}
+                {quickAdd ? (
+                  <div className="rounded-xl border border-white/15 bg-black/30 p-3">
+                    <p className="mb-2 text-xs font-medium uppercase tracking-[0.2em] text-white/50">Cadastro rápido</p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <input
+                        className={inputCls}
+                        placeholder="Responsável *"
+                        value={qa.name}
+                        onChange={(e) => setQa((q) => ({ ...q, name: e.target.value }))}
+                      />
+                      <input
+                        className={inputCls}
+                        placeholder="Empresa"
+                        value={qa.company}
+                        onChange={(e) => setQa((q) => ({ ...q, company: e.target.value }))}
+                      />
+                      <input
+                        className={inputCls}
+                        placeholder="Telefone / WhatsApp"
+                        value={qa.phone}
+                        onChange={(e) => setQa((q) => ({ ...q, phone: e.target.value }))}
+                      />
+                      <input
+                        className={inputCls}
+                        placeholder="E-mail"
+                        value={qa.email}
+                        onChange={(e) => setQa((q) => ({ ...q, email: e.target.value }))}
+                      />
+                    </div>
+                    {qaError ? <p className="mt-2 text-xs text-red-300">{qaError}</p> : null}
+                    <div className="mt-2 flex justify-end gap-2">
+                      <button
+                        onClick={() => setQuickAdd(false)}
+                        className="rounded-lg border border-white/15 px-3 py-1.5 text-xs hover:border-white/40"
+                      >
+                        Fechar
+                      </button>
+                      <button
+                        onClick={() => void createQuickClient()}
+                        disabled={qaSaving}
+                        className="rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-xs hover:bg-white/20 disabled:opacity-50"
+                      >
+                        {qaSaving ? "Salvando…" : "Cadastrar e vincular"}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+
+            {/* ── 2 · ITENS + DATAS ───────────────────────── */}
+            <section className={sectionCls}>
+              <p className={sectionTitleCls}>2 · Itens e datas de execução</p>
+              <div className="mt-3 space-y-2">
+                {form.items.map((it, i) => (
+                  <div
+                    key={i}
+                    className="grid grid-cols-2 gap-2 rounded-xl border border-white/5 bg-black/20 p-2 sm:grid-cols-[1fr_76px_132px_110px_36px] sm:items-center sm:border-0 sm:bg-transparent sm:p-0"
+                  >
+                    <input
+                      className={inputCls}
+                      list="orc-service-hints"
+                      placeholder={`Serviço ${i + 1} — ex.: Cobertura fotográfica`}
+                      value={it.service}
+                      onChange={(e) => setItem(i, { service: e.target.value })}
+                    />
+                    <input
+                      className={`${inputCls} col-span-1`}
+                      type="number"
+                      min={1}
+                      placeholder="Qtd"
+                      aria-label="Quantidade"
+                      value={it.quantity}
+                      onChange={(e) => setItem(i, { quantity: Number(e.target.value) })}
+                    />
+                    <input
+                      className={inputCls}
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      placeholder="Valor unit. (R$)"
+                      aria-label="Valor unitário"
+                      value={it.unitPrice || ""}
+                      onChange={(e) => setItem(i, { unitPrice: Number(e.target.value) })}
+                    />
+                    <div className="flex items-center justify-between gap-2 sm:justify-end">
+                      <span className="text-sm font-medium text-white/80">
+                        {brl(num(it.quantity) * num(it.unitPrice))}
+                      </span>
+                      <button
+                        onClick={() => setForm((f) => ({ ...f, items: f.items.filter((_, j) => j !== i) }))}
+                        className="rounded-lg border border-white/10 px-2 py-1 text-white/50 hover:border-red-300/50 hover:text-red-200 sm:px-1"
+                        disabled={form.items.length <= 1}
+                        aria-label="Remover item"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <datalist id="orc-service-hints">
+                {serviceHints.map((s) => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
               <button
                 onClick={() => setForm((f) => ({ ...f, items: [...f.items, emptyItem()] }))}
-                className="text-xs text-white/60 hover:text-white"
+                className="mt-2 rounded-xl border border-dashed border-white/20 px-3 py-2 text-xs text-white/70 transition-colors hover:border-white/50 hover:text-white"
               >
-                + Adicionar item
+                + Adicionar novo item
               </button>
-            </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              <select
-                className={inputCls}
-                value={form.status}
-                onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-              >
-                {BUDGET_STATUS.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-              <input
-                className={inputCls}
-                type="date"
-                value={form.validUntil}
-                onChange={(e) => setForm((f) => ({ ...f, validUntil: e.target.value }))}
-              />
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm">
-                Total: <strong>{brl(formTotal)}</strong>
+              <div className="mt-4 border-t border-white/5 pt-3">
+                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">
+                  Datas de execução <span className="normal-case tracking-normal text-white/30">(coberturas/eventos)</span>
+                </p>
+                {form.eventDates.length ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {form.eventDates.map((d, i) => (
+                      <span
+                        key={`${d}-${i}`}
+                        className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 py-1 pl-3 pr-1.5 text-xs"
+                      >
+                        📅 {fmtDay(d)}
+                        <button
+                          onClick={() => setForm((f) => ({ ...f, eventDates: f.eventDates.filter((_, j) => j !== i) }))}
+                          className="rounded-full px-1.5 text-white/50 hover:text-red-200"
+                          aria-label={`Remover data ${fmtDay(d)}`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-1.5 text-xs text-white/35">Nenhuma data — adicione uma por dia de cobertura.</p>
+                )}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <input
+                    className={`${inputCls} w-auto`}
+                    type="date"
+                    aria-label="Nova data de execução"
+                    id="orc-new-date"
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (!v) return;
+                      setForm((f) => (f.eventDates.includes(v) ? f : { ...f, eventDates: [...f.eventDates, v].sort() }));
+                      e.target.value = "";
+                    }}
+                  />
+                  <span className="text-xs text-white/35">Escolha a data para adicioná-la à lista.</span>
+                </div>
               </div>
-            </div>
+            </section>
 
-            <textarea
-              className={`${inputCls} min-h-[64px]`}
-              placeholder="Termos e condições (validade, pagamento, revisões…)"
-              value={form.terms}
-              onChange={(e) => setForm((f) => ({ ...f, terms: e.target.value }))}
-            />
-            <textarea
-              className={`${inputCls} min-h-[48px]`}
-              placeholder="Dados bancários / chave PIX"
-              value={form.bankInfo}
-              onChange={(e) => setForm((f) => ({ ...f, bankInfo: e.target.value }))}
-            />
+            {/* ── 3 · VALORES + PAGAMENTO ─────────────────── */}
+            <section className={sectionCls}>
+              <p className={sectionTitleCls}>3 · Valores, status e pagamento</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm">
+                  <span className="text-white/50">Subtotal</span>
+                  <strong className="float-right">{brl(subtotal)}</strong>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex rounded-xl border border-white/10 p-0.5 text-xs" role="group" aria-label="Tipo de desconto">
+                    {(["fixed", "percent"] as const).map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setForm((f) => ({ ...f, discountType: t }))}
+                        className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${
+                          form.discountType === t ? "bg-white/15 text-white" : "text-white/45 hover:text-white"
+                        }`}
+                      >
+                        {t === "fixed" ? "R$" : "%"}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    className={inputCls}
+                    inputMode="decimal"
+                    placeholder={form.discountType === "percent" ? "Desconto %" : "Desconto R$"}
+                    aria-label="Desconto"
+                    value={form.discountValue}
+                    onChange={(e) => setForm((f) => ({ ...f, discountValue: e.target.value.replace(/[^\d.,]/g, "") }))}
+                  />
+                </div>
+              </div>
+              <div className="mt-3 flex items-center justify-between rounded-xl border border-emerald-300/25 bg-emerald-400/[0.07] px-4 py-3">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-emerald-200/70">
+                  Total{discountAmount > 0 ? ` (−${brl(discountAmount)})` : ""}
+                </span>
+                <strong className="font-display text-2xl font-light text-emerald-100">{brl(formTotal)}</strong>
+              </div>
 
-            <div className="flex justify-end gap-2">
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className={labelCls} htmlFor="orc-valid">Validade do orçamento</label>
+                  <input
+                    id="orc-valid"
+                    className={inputCls}
+                    type="date"
+                    value={form.validUntil}
+                    onChange={(e) => setForm((f) => ({ ...f, validUntil: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <span className={labelCls}>Status</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {BUDGET_STATUS.map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => setForm((f) => ({ ...f, status: s.id }))}
+                        className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                          form.status === s.id
+                            ? "border-white/60 bg-white/15 text-white"
+                            : "border-white/10 text-white/50 hover:border-white/30 hover:text-white/80"
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <label className={labelCls} htmlFor="orc-pix">Dados bancários / chave Pix</label>
+                <textarea
+                  id="orc-pix"
+                  className={`${inputCls} min-h-[48px]`}
+                  value={form.bankInfo}
+                  onChange={(e) => setForm((f) => ({ ...f, bankInfo: e.target.value }))}
+                />
+              </div>
+              <div className="mt-3">
+                <label className={labelCls} htmlFor="orc-terms">Termos, condições e informações adicionais</label>
+                <textarea
+                  id="orc-terms"
+                  className={`${inputCls} min-h-[88px]`}
+                  placeholder="Validade da proposta, condições de pagamento (entrada + restante), nº de revisões inclusas, prazos de entrega, deslocamento, horas extras…"
+                  value={form.terms}
+                  onChange={(e) => setForm((f) => ({ ...f, terms: e.target.value }))}
+                />
+              </div>
+            </section>
+
+            <div className="sticky bottom-0 flex justify-end gap-2 rounded-2xl border border-white/10 bg-[#14141c]/95 p-2 backdrop-blur">
               <button
                 onClick={() => setModal(false)}
-                className="rounded-xl border border-white/15 px-4 py-2 text-sm hover:border-white/40"
+                className="rounded-xl border border-white/15 px-4 py-2.5 text-sm hover:border-white/40"
               >
                 Cancelar
               </button>
               <button
                 onClick={() => void save()}
                 disabled={saving}
-                className="rounded-xl border border-white/30 bg-white/10 px-4 py-2 text-sm hover:bg-white/20 disabled:opacity-50"
+                className="rounded-xl border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-medium hover:bg-white/20 disabled:opacity-50"
               >
-                {saving ? "Salvando…" : editing ? "Salvar" : "Criar orçamento"}
+                {saving ? "Salvando…" : editing ? `Salvar · ${brl(formTotal)}` : `Criar orçamento · ${brl(formTotal)}`}
               </button>
             </div>
           </div>

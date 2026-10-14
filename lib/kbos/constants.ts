@@ -85,5 +85,11 @@ export const BUDGET_STATUS = [
   { id: "draft", label: "Rascunho" },
   { id: "sent", label: "Enviado" },
   { id: "approved", label: "Aprovado" },
+  { id: "completed", label: "Concluído" },
+  { id: "cancelled", label: "Cancelado" },
+  // Legado: orçamentos antigos marcados como recusados.
   { id: "rejected", label: "Recusado" },
 ] as const;
+
+// Chave Pix padrão pré-preenchida no formulário de orçamento.
+export const DEFAULT_PIX_INFO = "Pix Picpay: (91) 9 9374-3109 — Kayque Brito";

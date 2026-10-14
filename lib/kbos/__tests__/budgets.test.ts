@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   budgetTotal,
   calcBudgetTotals,
+  calcBudgetWithDiscount,
+  calcDiscountAmount,
   looksLikeBudgetCommand,
   parseBudgetCommand,
   parseMoney,
@@ -25,6 +27,33 @@ describe("calcBudgetTotals", () => {
       { service: "X", quantity: NaN, unitPrice: -5, total: 10 },
     ]);
     expect(total).toBe(0);
+  });
+});
+
+describe("calcBudgetWithDiscount", () => {
+  const items = [
+    { service: "Cobertura", quantity: 4, unitPrice: 1500, total: 0 },
+  ];
+  it("sem desconto o total é o subtotal", () => {
+    const r = calcBudgetWithDiscount(items, "fixed", 0);
+    expect(r.subtotal).toBe(6000);
+    expect(r.discountAmount).toBe(0);
+    expect(r.total).toBe(6000);
+  });
+  it("desconto fixo em R$ abate do subtotal", () => {
+    const r = calcBudgetWithDiscount(items, "fixed", 500);
+    expect(r.discountAmount).toBe(500);
+    expect(r.total).toBe(5500);
+  });
+  it("desconto percentual calcula sobre o subtotal", () => {
+    const r = calcBudgetWithDiscount(items, "percent", 10);
+    expect(r.discountAmount).toBe(600);
+    expect(r.total).toBe(5400);
+  });
+  it("trava desconto acima do subtotal / acima de 100%", () => {
+    expect(calcDiscountAmount(1000, "fixed", 5000)).toBe(1000);
+    expect(calcDiscountAmount(1000, "percent", 150)).toBe(1000);
+    expect(calcBudgetWithDiscount(items, "percent", 200).total).toBe(0);
   });
 });
 

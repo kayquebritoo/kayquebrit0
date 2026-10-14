@@ -24,6 +24,11 @@ export async function GET() {
         terms: budgets.terms,
         bankInfo: budgets.bankInfo,
         items: budgets.items,
+        clientName: budgets.clientName,
+        clientCompany: budgets.clientCompany,
+        eventDates: budgets.eventDates,
+        discountType: budgets.discountType,
+        discountValue: budgets.discountValue,
         createdAt: budgets.createdAt,
         updatedAt: budgets.updatedAt,
         contactName: contacts.name,
@@ -63,6 +68,11 @@ export async function POST(req: Request) {
       validUntil: b.validUntil ? new Date(b.validUntil) : null,
       terms: b.terms ?? null,
       bankInfo: b.bankInfo ?? null,
+      clientName: b.clientName ?? null,
+      clientCompany: b.clientCompany ?? null,
+      eventDates: b.eventDates ?? null,
+      discountType: b.discountType ?? null,
+      discountValue: b.discountValue ?? null,
     });
     return NextResponse.json({ ok: true, item: row }, { status: 201 });
   } catch (e) {

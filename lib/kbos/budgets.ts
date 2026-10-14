@@ -40,6 +40,37 @@ export const budgetTotal = (items: BudgetItem[]): number => calcBudgetTotals(ite
 export const formatBRL = (v: number | string | null | undefined): string =>
   Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+/* ---------------- desconto + total final (0008) ---------------- */
+
+export type DiscountType = "fixed" | "percent";
+export type BudgetStatus = "draft" | "sent" | "approved" | "completed" | "cancelled" | "rejected";
+
+export const normalizeDiscountType = (v: unknown): DiscountType =>
+  v === "percent" ? "percent" : "fixed";
+
+/** Desconto em R$ a partir do subtotal (percentual limitado a 0–100). */
+export function calcDiscountAmount(subtotal: number, type: DiscountType, value: number): number {
+  const base = Math.max(0, Number(subtotal) || 0);
+  const v = Math.max(0, Number(value) || 0);
+  if (type === "percent") {
+    return Math.round(base * Math.min(v, 100)) / 100;
+  }
+  return Math.round(Math.min(v, base) * 100) / 100;
+}
+
+export function calcBudgetWithDiscount(
+  items: BudgetItem[],
+  discountType?: DiscountType | string | null,
+  discountValue?: number | string | null
+): { items: BudgetItem[]; subtotal: number; discountAmount: number; total: number } {
+  const { items: norm, total: subtotal } = calcBudgetTotals(items);
+  const type = normalizeDiscountType(discountType);
+  const value = Math.max(0, Number(discountValue) || 0);
+  const discountAmount = calcDiscountAmount(subtotal, type, value);
+  const total = Math.round((subtotal - discountAmount) * 100) / 100;
+  return { items: norm, subtotal, discountAmount, total };
+}
+
 /** Próximo código (`#14001`, `#14002`, …) a partir do maior já gravado. */
 export async function nextBudgetCode(): Promise<string> {
   const rows = await db()
@@ -57,18 +88,27 @@ export type BudgetCreateInput = {
   title: string;
   contactId?: string | null;
   items: BudgetItem[];
-  status?: "draft" | "sent" | "approved" | "rejected";
+  status?: BudgetStatus;
   validUntil?: Date | null;
   terms?: string | null;
   bankInfo?: string | null;
+  // Retrato do cliente (0008): preenchido mesmo sem vínculo no CRM.
+  clientName?: string | null;
+  clientCompany?: string | null;
+  // Datas de execução da proposta (coberturas/eventos) — ISO `yyyy-mm-dd`.
+  eventDates?: string[] | null;
+  discountType?: DiscountType | null;
+  discountValue?: number | null;
 };
 
 /**
  * Cria o orçamento com código sequencial (retry em colisão de `code`).
+ * O total final aplica o desconto sobre o subtotal dos itens.
  * Retorna a linha inserida.
  */
 export async function createBudget(input: BudgetCreateInput) {
-  const { items, total } = calcBudgetTotals(input.items);
+  const { items, total } = calcBudgetWithDiscount(input.items, input.discountType, input.discountValue);
+  const eventDates = (input.eventDates || []).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d));
   let lastError: unknown = null;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
@@ -85,6 +125,11 @@ export async function createBudget(input: BudgetCreateInput) {
           terms: input.terms ?? null,
           bankInfo: input.bankInfo ?? null,
           items,
+          clientName: input.clientName?.trim() || null,
+          clientCompany: input.clientCompany?.trim() || null,
+          eventDates: eventDates.length ? eventDates : null,
+          discountType: input.discountType ?? null,
+          discountValue: input.discountValue != null ? String(input.discountValue) : null,
         })
         .returning();
       return rows[0];

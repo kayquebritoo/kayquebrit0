@@ -417,6 +417,12 @@ export const eventPatchSchema = nonEmpty(
 );
 
 /* ---------- orçamentos ---------- */
+const budgetStatusEnum = z.enum(["draft", "sent", "approved", "completed", "cancelled", "rejected"]);
+const discountTypeEnum = z.enum(["fixed", "percent"]);
+const discountValueField = z.coerce.number().min(0).max(1e12);
+const eventDatesField = z
+  .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Data inválida." }))
+  .max(60);
 export const budgetItemSchema = z.object({
   service: shortText(120),
   description: z.string().trim().max(500).nullable().optional(),
@@ -427,20 +433,30 @@ export const budgetCreateSchema = z.object({
   title: shortText(160),
   contactId: uuidField.nullable().optional(),
   items: z.array(budgetItemSchema).min(1).max(100),
-  status: z.enum(["draft", "sent", "approved", "rejected"]).optional(),
+  status: budgetStatusEnum.optional(),
   validUntil: dateField.nullable().optional(),
   terms: z.string().trim().max(5000).nullable().optional(),
   bankInfo: z.string().trim().max(2000).nullable().optional(),
+  clientName: z.string().trim().max(160).nullable().optional(),
+  clientCompany: z.string().trim().max(160).nullable().optional(),
+  eventDates: eventDatesField.nullable().optional(),
+  discountType: discountTypeEnum.nullable().optional(),
+  discountValue: discountValueField.nullable().optional(),
 });
 export const budgetPatchSchema = nonEmpty(
   z.object({
     title: shortText(160).optional(),
     contactId: uuidField.nullable().optional(),
     items: z.array(budgetItemSchema).min(1).max(100).optional(),
-    status: z.enum(["draft", "sent", "approved", "rejected"]).optional(),
+    status: budgetStatusEnum.optional(),
     validUntil: dateField.nullable().optional(),
     terms: z.string().trim().max(5000).nullable().optional(),
     bankInfo: z.string().trim().max(2000).nullable().optional(),
+    clientName: z.string().trim().max(160).nullable().optional(),
+    clientCompany: z.string().trim().max(160).nullable().optional(),
+    eventDates: eventDatesField.nullable().optional(),
+    discountType: discountTypeEnum.nullable().optional(),
+    discountValue: discountValueField.nullable().optional(),
   })
 );
 

@@ -10,7 +10,10 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV DOCKER_BUILD=1
-RUN npm run build
+# Build hermético: descarta qualquer .next residual do contexto (o
+# .dockerignore já o exclui; isto cobre builds sem Dockerignore atualizado)
+# para nenhuma página estática/antiga sobreviver ao docker build.
+RUN rm -rf .next && npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app

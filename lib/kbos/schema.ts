@@ -542,12 +542,15 @@ export const events = pgTable("kbos_events", {
 // (`#14001`), cliente do CRM, itens (JSONB) e total espelhado em `numeric`
 // para ordenação/agregação sem parse de JSON. O PDF é gerado on-demand em
 // `/api/budgets/[id]/pdf` (`lib/kbos/pdf-generator.ts`).
-// SQL em `drizzle/0006_budgets.sql` (aplicar com `npx drizzle-kit push`).
+// SQL em `drizzle/0006_budgets.sql` (+ `drizzle/0008_budgets_pro.sql`:
+// status Concluído/Cancelado, retrato do cliente, datas e desconto).
 
 export const budgetStatus = pgEnum("kbos_budget_status", [
   "draft",
   "sent",
   "approved",
+  "completed",
+  "cancelled",
   "rejected",
 ]);
 
@@ -570,6 +573,15 @@ export const budgets = pgTable("kbos_budgets", {
   terms: text("terms"),
   bankInfo: text("bank_info"),
   items: jsonb("items").notNull().$type<BudgetItem[]>().default([]),
+  // Proposta comercial p/ serviços e coberturas (0008):
+  // - retrato do cliente mesmo sem vínculo no CRM;
+  // - datas de execução (coberturas/eventos em dias diferentes);
+  // - desconto fixo (R$) ou percentual aplicado sobre o subtotal.
+  clientName: text("client_name"),
+  clientCompany: text("client_company"),
+  eventDates: jsonb("event_dates").$type<string[]>(),
+  discountType: text("discount_type"),
+  discountValue: numeric("discount_value"),
   createdAt: ts("created_at"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()

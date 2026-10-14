@@ -4,7 +4,7 @@ import { db } from "@/lib/kbos/db";
 import { budgets } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { budgetPatchSchema, checkId, readBody } from "@/lib/kbos/validators";
-import { calcBudgetTotals } from "@/lib/kbos/budgets";
+import { calcBudgetWithDiscount, type BudgetItem } from "@/lib/kbos/budgets";
 
 // /api/budgets/[id] — detalhe, atualização e exclusão (admin).
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -34,6 +34,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const parsed = await readBody(req, budgetPatchSchema);
     if ("error" in parsed) return parsed.error;
     const b = parsed.data;
+    const current = (await db().select().from(budgets).where(eq(budgets.id, id)).limit(1))[0];
+    if (!current) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
     const patch: Record<string, unknown> = { updatedAt: new Date() };
     if (b.title !== undefined) patch.title = b.title;
     if (b.contactId !== undefined) patch.contactId = b.contactId;
@@ -41,15 +43,33 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (b.validUntil !== undefined) patch.validUntil = b.validUntil ? new Date(b.validUntil) : null;
     if (b.terms !== undefined) patch.terms = b.terms;
     if (b.bankInfo !== undefined) patch.bankInfo = b.bankInfo;
-    if (b.items !== undefined) {
-      const { items, total } = calcBudgetTotals(
-        b.items.map((i) => ({
-          service: i.service,
-          description: i.description ?? null,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
-          total: i.quantity * i.unitPrice,
-        }))
+    if (b.clientName !== undefined) patch.clientName = b.clientName?.trim() || null;
+    if (b.clientCompany !== undefined) patch.clientCompany = b.clientCompany?.trim() || null;
+    if (b.eventDates !== undefined) {
+      patch.eventDates =
+        b.eventDates && b.eventDates.length
+          ? b.eventDates.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+          : null;
+    }
+    if (b.discountType !== undefined) patch.discountType = b.discountType;
+    if (b.discountValue !== undefined) patch.discountValue = b.discountValue != null ? String(b.discountValue) : null;
+    // Itens e/ou desconto mudaram → recalcula subtotal, desconto e total
+    // final a partir do estado resultante (novo + atual).
+    if (b.items !== undefined || b.discountType !== undefined || b.discountValue !== undefined) {
+      const itemsInput: BudgetItem[] =
+        b.items !== undefined
+          ? b.items.map((i) => ({
+              service: i.service,
+              description: i.description ?? null,
+              quantity: i.quantity,
+              unitPrice: i.unitPrice,
+              total: i.quantity * i.unitPrice,
+            }))
+          : (current.items as BudgetItem[]) || [];
+      const { items, total } = calcBudgetWithDiscount(
+        itemsInput,
+        b.discountType !== undefined ? b.discountType : (current.discountType as never),
+        b.discountValue !== undefined ? b.discountValue : Number(current.discountValue || 0)
       );
       patch.items = items;
       patch.totalAmount = String(total);

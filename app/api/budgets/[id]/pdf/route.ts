@@ -40,6 +40,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       contactEmail: row.contact?.email ?? null,
       contactPhone: row.contact?.phone ?? null,
       contactCompany: row.contact?.company ?? null,
+      clientName: row.budget.clientName,
+      clientCompany: row.budget.clientCompany,
+      eventDates: row.budget.eventDates,
+      discountType: row.budget.discountType,
+      discountValue: row.budget.discountValue,
     };
     const buf = await renderBudgetPdf(data);
     return new NextResponse(new Uint8Array(buf), {

@@ -1,0 +1,11 @@
+# KBOS — contexto de build hermético: nada de artefatos locais/segredos na imagem.
+.next/
+out/
+node_modules/
+.git/
+.vercel/
+.env*
+*.local
+*.log
+.DS_Store
+midia-fonte/

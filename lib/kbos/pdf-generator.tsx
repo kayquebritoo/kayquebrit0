@@ -6,7 +6,7 @@
 // padrão visual de `contract-pdf.tsx` (Helvetica, A4, cinza+preto).
 import { Document, Page, Text, View, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
 import type { BudgetItem } from "@/lib/kbos/schema";
-import { formatBRL } from "@/lib/kbos/budgets";
+import { calcBudgetWithDiscount, formatBRL } from "@/lib/kbos/budgets";
 
 export type BudgetPdfData = {
   code: string;
@@ -22,6 +22,12 @@ export type BudgetPdfData = {
   contactEmail: string | null;
   contactPhone: string | null;
   contactCompany: string | null;
+  // Retrato do cliente + proposta (0008, opcionais p/ orçamentos antigos).
+  clientName?: string | null;
+  clientCompany?: string | null;
+  eventDates?: string[] | null;
+  discountType?: string | null;
+  discountValue?: string | number | null;
 };
 
 const BRAND = "#0e0e14";
@@ -71,17 +77,34 @@ const STATUS_LABEL: Record<string, string> = {
   draft: "Rascunho",
   sent: "Enviado",
   approved: "Aprovado",
+  completed: "Concluído",
+  cancelled: "Cancelado",
   rejected: "Recusado",
 };
 
 const fmtDate = (v: Date | string | null | undefined): string => {
   if (!v) return "—";
+  // Datas de execução vêm como `yyyy-mm-dd`: formata sem fuso (evita o
+  // clássico off-by-one do `new Date("2026-01-01")` em UTC−X).
+  if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    const [y, m, d] = v.split("-");
+    return `${d}/${m}/${y}`;
+  }
   const d = v instanceof Date ? v : new Date(v);
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("pt-BR");
 };
 
 export function BudgetPdf({ data }: { data: BudgetPdfData }) {
   const items = data.items || [];
+  const clientName = data.contactName || data.clientName || "—";
+  const clientCompany = data.contactCompany || data.clientCompany;
+  const eventDates = (data.eventDates || []).filter(Boolean);
+  const { subtotal, discountAmount, total } = calcBudgetWithDiscount(
+    items,
+    data.discountType,
+    data.discountValue
+  );
+  const showDiscount = discountAmount > 0;
   return (
     <Document title={`Orçamento ${data.code} — Kayque Brito`}>
       <Page size="A4" style={s.page}>
@@ -96,14 +119,20 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
         <View style={s.metaRow}>
           <View style={s.metaBox}>
             <Text style={s.metaLabel}>CLIENTE</Text>
-            <Text style={s.metaValue}>{data.contactName || "—"}</Text>
-            {data.contactCompany ? <Text style={s.metaValue}>{data.contactCompany}</Text> : null}
+            <Text style={s.metaValue}>{clientName}</Text>
+            {clientCompany ? <Text style={s.metaValue}>{clientCompany}</Text> : null}
             {data.contactEmail ? <Text style={s.metaValue}>{data.contactEmail}</Text> : null}
             {data.contactPhone ? <Text style={s.metaValue}>{data.contactPhone}</Text> : null}
           </View>
           <View style={s.metaBox}>
             <Text style={s.metaLabel}>VALIDADE</Text>
             <Text style={s.metaValue}>Válido até {fmtDate(data.validUntil)}</Text>
+            {eventDates.length ? (
+              <Text style={s.metaValue}>
+                {eventDates.length === 1 ? "Data de execução: " : "Datas de execução: "}
+                {eventDates.map(fmtDate).join(" · ")}
+              </Text>
+            ) : null}
           </View>
         </View>
 
@@ -127,8 +156,20 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
 
         <View style={s.totalBox}>
           <View style={s.totalInner}>
-            <Text style={s.totalLabel}>TOTAL DO ORÇAMENTO</Text>
-            <Text style={s.totalValue}>{formatBRL(data.totalAmount)}</Text>
+            <Text style={s.totalLabel}>SUBTOTAL</Text>
+            <Text style={{ fontSize: 12, fontFamily: "Helvetica-Bold", marginTop: 2 }}>
+              {formatBRL(subtotal)}
+            </Text>
+            {showDiscount ? (
+              <Text style={{ fontSize: 10, marginTop: 4 }}>
+                Desconto: −{formatBRL(discountAmount)}
+                {data.discountType === "percent" && Number(data.discountValue) > 0
+                  ? ` (${Number(data.discountValue)}%)`
+                  : ""}
+              </Text>
+            ) : null}
+            <Text style={{ ...s.totalLabel, marginTop: 6 }}>TOTAL DO ORÇAMENTO</Text>
+            <Text style={s.totalValue}>{formatBRL(total)}</Text>
           </View>
         </View>
 
@@ -147,7 +188,7 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
 
         <View style={s.sign}>
           <Text style={s.signBox}>Kayque Brito — Contratado</Text>
-          <Text style={s.signBox}>{data.contactName || "Cliente"} — Contratante</Text>
+          <Text style={s.signBox}>{clientName === "—" ? "Cliente" : clientName} — Contratante</Text>
         </View>
         <Text style={s.rodape}>
           Orçamento {data.code} gerado pelo Portal KBOS · kayquebrito.com.br
