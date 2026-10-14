@@ -29,6 +29,9 @@ export async function GET() {
         eventDates: budgets.eventDates,
         discountType: budgets.discountType,
         discountValue: budgets.discountValue,
+        paymentCondition: budgets.paymentCondition,
+        deliveryDeadline: budgets.deliveryDeadline,
+        revisionsCount: budgets.revisionsCount,
         createdAt: budgets.createdAt,
         updatedAt: budgets.updatedAt,
         contactName: contacts.name,
@@ -73,6 +76,9 @@ export async function POST(req: Request) {
       eventDates: b.eventDates ?? null,
       discountType: b.discountType ?? null,
       discountValue: b.discountValue ?? null,
+      paymentCondition: b.paymentCondition ?? null,
+      deliveryDeadline: b.deliveryDeadline ?? null,
+      revisionsCount: b.revisionsCount ?? null,
     });
     return NextResponse.json({ ok: true, item: row }, { status: 201 });
   } catch (e) {

@@ -53,6 +53,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
     if (b.discountType !== undefined) patch.discountType = b.discountType;
     if (b.discountValue !== undefined) patch.discountValue = b.discountValue != null ? String(b.discountValue) : null;
+    if (b.paymentCondition !== undefined) patch.paymentCondition = b.paymentCondition;
+    if (b.deliveryDeadline !== undefined) patch.deliveryDeadline = b.deliveryDeadline?.trim() || null;
+    if (b.revisionsCount !== undefined) patch.revisionsCount = b.revisionsCount;
     // Itens e/ou desconto mudaram → recalcula subtotal, desconto e total
     // final a partir do estado resultante (novo + atual).
     if (b.items !== undefined || b.discountType !== undefined || b.discountValue !== undefined) {

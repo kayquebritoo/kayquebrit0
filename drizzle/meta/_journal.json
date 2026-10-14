@@ -64,6 +64,13 @@
       "when": 1792200000000,
       "tag": "0008_budgets_pro",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792300000000,
+      "tag": "0009_budgets_terms",
+      "breakpoints": true
     }
   ]
 }

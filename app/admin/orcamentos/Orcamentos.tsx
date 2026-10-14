@@ -19,6 +19,9 @@ type Budget = {
   eventDates?: string[] | null;
   discountType?: string | null;
   discountValue?: string | number | null;
+  paymentCondition?: string | null;
+  deliveryDeadline?: string | null;
+  revisionsCount?: number | null;
   createdAt: string;
   contactName?: string | null;
   contactCompany?: string | null;
@@ -46,6 +49,24 @@ const STATUS_STYLE: Record<string, string> = {
   rejected: "border-red-300/30 bg-red-400/10 text-red-200",
 };
 
+// Condições de pagamento (espelho client-safe de `lib/kbos/budgets.ts` —
+/// aquele módulo importa o banco e não pode entrar no bundle do cliente).
+const PAYMENT_OPTIONS = [
+  { id: "cash", label: "À vista", hint: "10% de desconto" },
+  { id: "installments", label: "Parcelado", hint: "50% entrada + 50% entrega" },
+  { id: "card", label: "Cartão", hint: "Crédito ou débito" },
+] as const;
+type PaymentId = (typeof PAYMENT_OPTIONS)[number]["id"];
+const payValues = (total: number) => {
+  const base = Math.max(0, total || 0);
+  const half = Math.round((base / 2) * 100) / 100;
+  return {
+    cash: Math.round(base * 0.9 * 100) / 100,
+    entry: half,
+    balance: Math.round((base - half) * 100) / 100,
+  };
+};
+
 const emptyItem = (): Item => ({ service: "", description: "", quantity: 1, unitPrice: 0, total: 0 });
 type FormState = {
   title: string;
@@ -56,6 +77,9 @@ type FormState = {
   eventDates: string[];
   discountType: "fixed" | "percent";
   discountValue: string;
+  paymentCondition: PaymentId;
+  deliveryDeadline: string;
+  revisionsCount: string;
   status: string;
   validUntil: string;
   terms: string;
@@ -70,6 +94,9 @@ const blankForm = (): FormState => ({
   eventDates: [],
   discountType: "fixed",
   discountValue: "",
+  paymentCondition: "cash",
+  deliveryDeadline: "",
+  revisionsCount: "",
   status: "draft",
   validUntil: "",
   terms: "",
@@ -178,6 +205,10 @@ export default function Orcamentos() {
       eventDates: (b.eventDates || []).filter(Boolean),
       discountType: b.discountType === "percent" ? "percent" : "fixed",
       discountValue: dv ? String(dv).replace(".", ",") : "",
+      paymentCondition:
+        b.paymentCondition === "installments" || b.paymentCondition === "card" ? b.paymentCondition : "cash",
+      deliveryDeadline: b.deliveryDeadline || "",
+      revisionsCount: b.revisionsCount != null ? String(b.revisionsCount) : "",
       status: b.status,
       validUntil: b.validUntil ? b.validUntil.slice(0, 10) : "",
       terms: b.terms || "",
@@ -253,6 +284,9 @@ export default function Orcamentos() {
         eventDates: form.eventDates.length ? form.eventDates : null,
         discountType: form.discountType,
         discountValue: num(form.discountValue),
+        paymentCondition: form.paymentCondition,
+        deliveryDeadline: form.deliveryDeadline.trim() || null,
+        revisionsCount: form.revisionsCount.trim() === "" ? null : Math.max(0, parseInt(form.revisionsCount, 10) || 0),
         status: form.status,
         validUntil: form.validUntil || null,
         terms: form.terms.trim() || null,
@@ -699,6 +733,63 @@ export default function Orcamentos() {
                   Total{discountAmount > 0 ? ` (−${brl(discountAmount)})` : ""}
                 </span>
                 <strong className="font-display text-2xl font-light text-emerald-100">{brl(formTotal)}</strong>
+              </div>
+
+              <div className="mt-3">
+                <span className={labelCls}>Condição de pagamento preferida</span>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {PAYMENT_OPTIONS.map((p) => {
+                    const active = form.paymentCondition === p.id;
+                    const v = payValues(formTotal);
+                    const value =
+                      p.id === "cash" ? brl(v.cash) : p.id === "installments" ? `2× ${brl(v.entry)}` : brl(formTotal);
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => setForm((f) => ({ ...f, paymentCondition: p.id }))}
+                        aria-pressed={active}
+                        className={`rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                          active
+                            ? "border-emerald-300/50 bg-emerald-400/10"
+                            : "border-white/10 bg-black/20 hover:border-white/30"
+                        }`}
+                      >
+                        <span className="flex items-center justify-between text-sm font-medium">
+                          {p.label}
+                          <span className={active ? "text-emerald-300" : "text-white/30"}>{active ? "✓" : ""}</span>
+                        </span>
+                        <span className="mt-0.5 block text-[11px] text-white/45">{p.hint}</span>
+                        <span className="mt-1 block text-sm font-semibold text-white/90">{value}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className={labelCls} htmlFor="orc-deadline">Prazo de entrega</label>
+                  <input
+                    id="orc-deadline"
+                    className={inputCls}
+                    placeholder="Ex.: 15 dias úteis"
+                    value={form.deliveryDeadline}
+                    onChange={(e) => setForm((f) => ({ ...f, deliveryDeadline: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls} htmlFor="orc-rev">Revisões inclusas</label>
+                  <input
+                    id="orc-rev"
+                    className={inputCls}
+                    type="number"
+                    min={0}
+                    max={100}
+                    placeholder="Ex.: 2"
+                    value={form.revisionsCount}
+                    onChange={(e) => setForm((f) => ({ ...f, revisionsCount: e.target.value.replace(/\D/g, "").slice(0, 3) }))}
+                  />
+                </div>
               </div>
 
               <div className="mt-3 grid gap-3 sm:grid-cols-2">

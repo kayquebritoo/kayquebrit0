@@ -419,6 +419,7 @@ export const eventPatchSchema = nonEmpty(
 /* ---------- orçamentos ---------- */
 const budgetStatusEnum = z.enum(["draft", "sent", "approved", "completed", "cancelled", "rejected"]);
 const discountTypeEnum = z.enum(["fixed", "percent"]);
+const paymentConditionEnum = z.enum(["cash", "installments", "card"]);
 const discountValueField = z.coerce.number().min(0).max(1e12);
 const eventDatesField = z
   .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Data inválida." }))
@@ -442,6 +443,9 @@ export const budgetCreateSchema = z.object({
   eventDates: eventDatesField.nullable().optional(),
   discountType: discountTypeEnum.nullable().optional(),
   discountValue: discountValueField.nullable().optional(),
+  paymentCondition: paymentConditionEnum.nullable().optional(),
+  deliveryDeadline: z.string().trim().max(120).nullable().optional(),
+  revisionsCount: z.coerce.number().int().min(0).max(100).nullable().optional(),
 });
 export const budgetPatchSchema = nonEmpty(
   z.object({
@@ -457,6 +461,9 @@ export const budgetPatchSchema = nonEmpty(
     eventDates: eventDatesField.nullable().optional(),
     discountType: discountTypeEnum.nullable().optional(),
     discountValue: discountValueField.nullable().optional(),
+    paymentCondition: paymentConditionEnum.nullable().optional(),
+    deliveryDeadline: z.string().trim().max(120).nullable().optional(),
+    revisionsCount: z.coerce.number().int().min(0).max(100).nullable().optional(),
   })
 );
 

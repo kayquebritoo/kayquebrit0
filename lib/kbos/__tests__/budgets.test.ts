@@ -5,6 +5,7 @@ import {
   calcBudgetTotals,
   calcBudgetWithDiscount,
   calcDiscountAmount,
+  calcPaymentOptions,
   looksLikeBudgetCommand,
   parseBudgetCommand,
   parseMoney,
@@ -54,6 +55,25 @@ describe("calcBudgetWithDiscount", () => {
     expect(calcDiscountAmount(1000, "fixed", 5000)).toBe(1000);
     expect(calcDiscountAmount(1000, "percent", 150)).toBe(1000);
     expect(calcBudgetWithDiscount(items, "percent", 200).total).toBe(0);
+  });
+});
+
+describe("calcPaymentOptions", () => {
+  it("à vista aplica 10% e parcelado divide 50/50", () => {
+    const p = calcPaymentOptions(6000);
+    expect(p.cash).toBe(5400);
+    expect(p.cashSavings).toBe(600);
+    expect(p.entry).toBe(3000);
+    expect(p.balance).toBe(3000);
+    expect(p.card).toBe(6000);
+  });
+  it("centavo do arredondamento cai na parcela da entrega", () => {
+    const p = calcPaymentOptions(1001);
+    expect(p.entry + p.balance).toBe(1001);
+    expect(p.cash + p.cashSavings).toBe(1001);
+  });
+  it("total zerado zera as opções", () => {
+    expect(calcPaymentOptions(0)).toMatchObject({ cash: 0, entry: 0, balance: 0, card: 0 });
   });
 });
 

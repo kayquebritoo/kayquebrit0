@@ -543,7 +543,8 @@ export const events = pgTable("kbos_events", {
 // para ordenação/agregação sem parse de JSON. O PDF é gerado on-demand em
 // `/api/budgets/[id]/pdf` (`lib/kbos/pdf-generator.ts`).
 // SQL em `drizzle/0006_budgets.sql` (+ `drizzle/0008_budgets_pro.sql`:
-// status Concluído/Cancelado, retrato do cliente, datas e desconto).
+// status Concluído/Cancelado, retrato do cliente, datas e desconto;
+// + `drizzle/0009_budgets_terms.sql`: condição de pagamento, prazo e revisões).
 
 export const budgetStatus = pgEnum("kbos_budget_status", [
   "draft",
@@ -582,6 +583,11 @@ export const budgets = pgTable("kbos_budgets", {
   eventDates: jsonb("event_dates").$type<string[]>(),
   discountType: text("discount_type"),
   discountValue: numeric("discount_value"),
+  // Condições comerciais (0009): forma preferida, prazo de entrega
+  // (texto livre: "15 dias úteis", "48h"…) e nº de revisões inclusas.
+  paymentCondition: text("payment_condition"),
+  deliveryDeadline: text("delivery_deadline"),
+  revisionsCount: integer("revisions_count"),
   createdAt: ts("created_at"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()

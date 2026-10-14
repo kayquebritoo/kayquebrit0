@@ -71,6 +71,42 @@ export function calcBudgetWithDiscount(
   return { items: norm, subtotal, discountAmount, total };
 }
 
+/* ---------------- condições de pagamento (0009) ---------------- */
+
+export type PaymentCondition = "cash" | "installments" | "card";
+
+export const PAYMENT_CONDITIONS: { id: PaymentCondition; label: string; hint: string }[] = [
+  { id: "cash", label: "À vista", hint: "10% de desconto" },
+  { id: "installments", label: "Parcelado", hint: "50% entrada + 50% entrega" },
+  { id: "card", label: "Cartão", hint: "Crédito ou débito" },
+];
+
+export const normalizePaymentCondition = (v: unknown): PaymentCondition =>
+  v === "installments" || v === "card" ? v : "cash";
+
+const round2 = (v: number): number => Math.round(v * 100) / 100;
+
+/** Opções calculadas sobre o total final (2 casas, sem float fantasma). */
+export function calcPaymentOptions(total: number): {
+  cash: number;
+  cashSavings: number;
+  entry: number;
+  balance: number;
+  card: number;
+} {
+  const base = Math.max(0, Number(total) || 0);
+  const cash = round2(base * 0.9);
+  const half = round2(base / 2);
+  return {
+    cash,
+    cashSavings: round2(base - cash),
+    entry: half,
+    // Segunda parcela absorve o centavo do arredondamento.
+    balance: round2(base - half),
+    card: round2(base),
+  };
+}
+
 /** Próximo código (`#14001`, `#14002`, …) a partir do maior já gravado. */
 export async function nextBudgetCode(): Promise<string> {
   const rows = await db()
@@ -99,6 +135,9 @@ export type BudgetCreateInput = {
   eventDates?: string[] | null;
   discountType?: DiscountType | null;
   discountValue?: number | null;
+  paymentCondition?: PaymentCondition | null;
+  deliveryDeadline?: string | null;
+  revisionsCount?: number | null;
 };
 
 /**
@@ -130,6 +169,12 @@ export async function createBudget(input: BudgetCreateInput) {
           eventDates: eventDates.length ? eventDates : null,
           discountType: input.discountType ?? null,
           discountValue: input.discountValue != null ? String(input.discountValue) : null,
+          paymentCondition: input.paymentCondition ?? null,
+          deliveryDeadline: input.deliveryDeadline?.trim() || null,
+          revisionsCount:
+            input.revisionsCount != null && Number.isFinite(Number(input.revisionsCount))
+              ? Math.max(0, Math.floor(Number(input.revisionsCount)))
+              : null,
         })
         .returning();
       return rows[0];

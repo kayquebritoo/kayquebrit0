@@ -45,6 +45,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       eventDates: row.budget.eventDates,
       discountType: row.budget.discountType,
       discountValue: row.budget.discountValue,
+      paymentCondition: row.budget.paymentCondition,
+      deliveryDeadline: row.budget.deliveryDeadline,
+      revisionsCount: row.budget.revisionsCount,
     };
     const buf = await renderBudgetPdf(data);
     return new NextResponse(new Uint8Array(buf), {
