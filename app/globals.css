@@ -927,3 +927,44 @@ html.light .reveal-info h3 { text-shadow: 0 2px 20px rgba(0, 0, 0, 0.55); }
 @media (prefers-reduced-motion: reduce) {
   .hero-cta-shine { display: none; }
 }
+
+/* ============================================================
+   PWA STANDALONE — safe-area + anti-colisão Hero/Header
+   No navegador comum env(safe-area-inset-*) = 0, então o layout
+   não muda. No app instalado (display-mode: standalone, iOS /
+   Android com viewport-fit=cover + statusBar black-translucent)
+   a status bar/notch sobrepõe o topo — o header é fixo e a Hero
+   mobile tinha pt fixo de 86px, daí o "Tecnólogo Criativo"
+   colidir com a barra superior. Aqui:
+   1) a Hero mobile usa sempre env() (inócuo no browser);
+   2) no standalone (media query OU classe .is-standalone via JS,
+      que cobre o iOS antigo com navigator.standalone) ganha um
+      respiro extra abaixo do header fixo.
+   ============================================================ */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+}
+/* base: hero mobile já nasce à prova de notch (0px no browser) */
+.hero-standalone-safe {
+  padding-top: calc(86px + env(safe-area-inset-top, 0px)) !important;
+}
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  /* respiro extra = altura do header fixo + notch, só no app instalado */
+  .hero-standalone-safe {
+    padding-top: calc(86px + env(safe-area-inset-top, 0px) + 28px) !important;
+  }
+  /* slides fullscreen e menu respeitam a gesture bar inferior */
+  .fp-slide-0,
+  .glass-menu {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+/* fallback iOS (navigator.standalone não responde à media query antiga) */
+html.is-standalone .hero-standalone-safe {
+  padding-top: calc(86px + env(safe-area-inset-top, 0px) + 28px) !important;
+}
+html.is-standalone .fp-slide-0,
+html.is-standalone .glass-menu {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

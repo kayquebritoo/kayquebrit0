@@ -176,7 +176,7 @@ export default function Header() {
           open ? "visible opacity-100" : "invisible opacity-0"
         }`}
       >
-        <div className="flex flex-1 flex-col items-center justify-center px-6 py-24 text-center">
+        <div className="flex flex-1 flex-col items-center justify-center px-6 pb-10 pt-[calc(6rem+env(safe-area-inset-top))] text-center">
           <p
             className={`relative text-[10px] uppercase text-white/50 transition-all duration-500 sm:text-[11px] ${
               open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
@@ -319,7 +319,7 @@ export default function Header() {
 
         {/* marquee inferior do menu */}
         <div
-          className={`relative overflow-hidden border-t border-white/10 py-4 transition-opacity duration-500 sm:py-5 ${
+          className={`relative overflow-hidden border-t border-white/10 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 transition-opacity duration-500 sm:pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pt-5 ${
             open ? "opacity-100" : "opacity-0"
           }`}
         >

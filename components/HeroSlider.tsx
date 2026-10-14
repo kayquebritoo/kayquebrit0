@@ -187,7 +187,7 @@ export default function HeroSlide() {
   return (
     <section ref={root} className="relative h-[100svh] overflow-hidden bg-[#0B0B1E]">
       {/* ============ MOBILE: camadas distribuídas na página toda ============ */}
-      <div className="relative flex h-full flex-col px-5 pb-3 pt-[86px] md:hidden">
+      <div className="hero-standalone-safe relative flex h-full flex-col px-5 pb-3 pt-[86px] md:hidden">
         {/* fundo animado livre em tela cheia */}
         <div aria-hidden className="pointer-events-none absolute inset-0 opacity-45">
           <PanelWaves subtle />
