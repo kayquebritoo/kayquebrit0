@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { BRIEFING_STATUS } from "@/lib/kbos/constants";
 
 type B = {
   id: string;
@@ -10,7 +11,7 @@ type B = {
   createdAt: string;
 };
 
-const STATUS = ["novo", "em_analise", "aprovado", "contrato_gerado", "arquivado"];
+
 
 export default function BriefingsList() {
   const [items, setItems] = useState<B[]>([]);
@@ -71,8 +72,8 @@ export default function BriefingsList() {
           <a href={`/briefing/ver/${b.id}`} target="_blank" className="text-[12px] uppercase tracking-[0.15em] text-white/60 hover:text-white">Ver</a>
           <a href={`/api/briefings/${b.id}/contrato`} className="text-[12px] uppercase tracking-[0.15em] text-white/60 hover:text-white">PDF</a>
           <select value={b.status} onChange={(e) => setStatus(b.id, e.target.value)} className="rounded-lg border border-white/15 bg-black/30 px-3 py-1.5 text-[12px] outline-none">
-            {STATUS.map((s) => (
-              <option key={s} value={s} className="bg-[#12122a]">{s}</option>
+            {BRIEFING_STATUS.map((s) => (
+              <option key={s.id} value={s.id} className="bg-[#1a1828]">{s.label}</option>
             ))}
           </select>
         </div>

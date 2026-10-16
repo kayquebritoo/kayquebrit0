@@ -56,7 +56,7 @@ export default function WorksPage() {
   }, [filter]);
 
   return (
-    <main className="min-h-screen bg-[#0B0B1E] text-[#F4F1EC]">
+    <main className="min-h-screen bg-[#11101E] text-[#EDE6EC]">
       {/* cursor ver projeto */}
       <div ref={cursor} className="cursor-view" aria-hidden>
         <small>↗</small>
@@ -86,7 +86,7 @@ export default function WorksPage() {
           >
             Todos os
             <br />
-            <em className="font-light italic text-[#9DB8E8]">trabalhos</em>
+            <em className="font-light italic text-[#E80EFD]">trabalhos</em>
           </h1>
           <p className="mt-5 max-w-xl text-[15px] font-light leading-relaxed text-white/60">
             Uma seleção de projetos em audiovisual, desenvolvimento e branding —
@@ -170,7 +170,7 @@ export default function WorksPage() {
             Tem um projeto em mente?
           </p>
           <h3 className="font-display mx-auto mt-4 max-w-2xl text-balance text-3xl font-light leading-tight md:text-5xl">
-            Vamos criar algo <em className="italic text-[#9DB8E8]">incrível</em> juntos?
+            Vamos criar algo <em className="italic text-[#E80EFD]">incrível</em> juntos?
           </h3>
           <Link
             href="/briefing"

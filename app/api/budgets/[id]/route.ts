@@ -5,6 +5,7 @@ import { budgets } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { budgetPatchSchema, checkId, readBody } from "@/lib/kbos/validators";
 import { calcBudgetWithDiscount, type BudgetItem } from "@/lib/kbos/budgets";
+import { serverError } from "@/lib/kbos/http";
 
 // /api/budgets/[id] — detalhe, atualização e exclusão (admin).
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -19,7 +20,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!row) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
     return NextResponse.json({ item: row });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 
@@ -82,7 +83,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!rows[0]) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
     return NextResponse.json({ ok: true, item: rows[0] });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 
@@ -98,6 +99,6 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     if (!rows[0]) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

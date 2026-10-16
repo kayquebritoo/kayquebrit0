@@ -64,7 +64,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0B0B1E",
+  themeColor: "#11101E",
   viewportFit: "cover",
   // App-like: bloqueia o zoom por gesto/toque duplo (PWA mobile-first).
   width: "device-width",
@@ -96,7 +96,7 @@ const JSON_LD = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className="h-full antialiased">
-      <body className={`${manrope.className} min-h-full flex flex-col bg-[#0B0B1E] text-[#F4F1EC]`}>
+      <body className={`${manrope.className} min-h-full flex flex-col bg-[#11101E] text-[#EDE6EC]`}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}

@@ -1,7 +1,7 @@
 // Smoke test do PDF de orçamentos: renderiza com dados no formato do
 // modelo de referência (`public/ORÇAMENTO-AL-MARE.pdf`) e garante buffer válido.
 import { describe, expect, it } from "vitest";
-import { renderBudgetPdf } from "../pdf-generator";
+import { buildContractClauses, isRecurringBudget, renderBudgetPdf, type BudgetPdfData } from "../pdf-generator";
 
 describe("renderBudgetPdf", () => {
   it("gera o PDF estilo Al Mare sem quebrar", async () => {
@@ -38,5 +38,57 @@ describe("renderBudgetPdf", () => {
     expect(Buffer.isBuffer(buf)).toBe(true);
     expect(buf.length).toBeGreaterThan(5000);
     expect(buf.subarray(0, 5).toString()).toBe("%PDF-");
+    // Regra do KBOS: resumo comercial + contrato = exatamente 2 páginas.
+    expect(buf.toString("latin1").match(/\/Type \/Page(?!s)/g)?.length).toBe(2);
   }, 30000);
+});
+
+const base: BudgetPdfData = {
+  code: "#14002",
+  title: "Identidade visual + site",
+  status: "draft",
+  totalAmount: "5000",
+  validUntil: null,
+  terms: null,
+  bankInfo: null,
+  items: [
+    { service: "Logo", description: null, quantity: 1, unitPrice: 2000, total: 2000, date: "2026-10-01" },
+    { service: "Site", description: null, quantity: 1, unitPrice: 1000, total: 1000, date: "2026-10-05" },
+    { service: "Manual", description: null, quantity: 1, unitPrice: 1000, total: 1000 },
+    { service: "Social kit", description: null, quantity: 1, unitPrice: 1000, total: 1000 },
+  ],
+  createdAt: "2026-09-10",
+  contactName: "Natan",
+  contactEmail: null,
+  contactPhone: null,
+  contactCompany: "Pará Super",
+  paymentCondition: "cash",
+};
+
+describe("contrato (página 2)", () => {
+  it("projeto pontual: nunca por nome de cliente nem por nº de itens", () => {
+    expect(isRecurringBudget(base)).toBe(false);
+  });
+
+  it("recorrente por palavra-chave ou por 3+ meses de execução", () => {
+    expect(isRecurringBudget({ ...base, title: "Social media mensal" })).toBe(true);
+    const months = ["2026-10-01", "2026-11-01", "2026-12-01"].map((date) => ({ ...base.items[0], date }));
+    expect(isRecurringBudget({ ...base, items: months })).toBe(true);
+  });
+
+  it("gera as 7 cláusulas; pontual não fala em mensalidade", () => {
+    const clauses = buildContractClauses(base, 5000);
+    expect(clauses).toHaveLength(7);
+    const text = clauses.map((c) => c.body).join(" ");
+    expect(text).not.toMatch(/mensalidade|dia 10/i);
+    expect(text).toMatch(/R\$\s4\.500,00/); // à vista com 10%
+  });
+
+  it("recorrente: cobrança mensal e rescisão com aviso de 30 dias", () => {
+    const text = buildContractClauses({ ...base, title: "Acompanhamento recorrente" }, 5000)
+      .map((c) => c.body)
+      .join(" ");
+    expect(text).toMatch(/dia 10 de cada mês/);
+    expect(text).toMatch(/aviso prévio de 30 dias/);
+  });
 });

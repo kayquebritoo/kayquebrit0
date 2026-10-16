@@ -4,6 +4,7 @@ import { isAdminBypass, isAdminEmail } from "@/lib/kbos/admin-access";
 import { SESSION_COOKIE, sessionCookieOptions, SESSION_DAYS } from "@/lib/kbos/rbac";
 import { authRequestSchema, readBody } from "@/lib/kbos/validators";
 import { withRateLimit } from "@/lib/kbos/rate-limit";
+import { serverError } from "@/lib/kbos/http";
 
 export async function POST(req: Request) {
   const limited = await withRateLimit(req, "auth:request");
@@ -44,8 +45,6 @@ export async function POST(req: Request) {
       ...(!r.sent && r.emailError ? { detalhe: r.emailError } : {}),
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Erro interno.";
-    const status = msg.includes("DATABASE_URL") ? 503 : 400;
-    return NextResponse.json({ error: msg }, { status });
+    return serverError(e);
   }
 }

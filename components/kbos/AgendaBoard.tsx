@@ -39,6 +39,12 @@ export default function AgendaBoard() {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  // Relógio da tela (render puro): reclassifica próximos/passados a cada minuto.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -53,15 +59,15 @@ export default function AgendaBoard() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch assíncrono: o setState só ocorre após o await.
     load();
   }, [load]);
 
   const { upcoming, past } = useMemo(() => {
-    const now = Date.now();
     const up = items.filter((e) => new Date(e.startTime).getTime() >= now - 60_000);
     const pa = items.filter((e) => new Date(e.startTime).getTime() < now - 60_000).reverse();
     return { upcoming: up, past: pa };
-  }, [items]);
+  }, [items, now]);
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -140,7 +146,7 @@ export default function AgendaBoard() {
               ✓ avisado{e.reminderSentAt ? ` ${new Date(e.reminderSentAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : ""}
             </span>
           )}
-          {!e.notificationSent && e.reminderMinutesBefore > 0 && new Date(e.startTime).getTime() > Date.now() && (
+          {!e.notificationSent && e.reminderMinutesBefore > 0 && new Date(e.startTime).getTime() > now && (
             <span className="text-[11px] text-amber-200/80">○ alerta pendente</span>
           )}
         </div>
@@ -162,7 +168,7 @@ export default function AgendaBoard() {
         <p className="text-[11px] uppercase tracking-[0.25em] text-white/45">
           {upcoming.length} próximo{upcoming.length === 1 ? "" : "s"} · alertas via WhatsApp no automático
         </p>
-        <button onClick={() => setModal(true)} className="ml-auto rounded-xl bg-white px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-black transition hover:opacity-90 active:scale-95">
+        <button onClick={() => setModal(true)} className="ml-auto rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:opacity-90 active:scale-95">
           + Compromisso
         </button>
       </div>
@@ -186,7 +192,7 @@ export default function AgendaBoard() {
 
       {modal && (
         <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-6" onClick={() => setModal(false)}>
-          <form onSubmit={create} onClick={(e) => e.stopPropagation()} className="w-full max-w-md animate-[kbosUp_0.25s_ease] rounded-t-3xl border border-white/10 bg-[#12122a] p-6 sm:rounded-3xl">
+          <form onSubmit={create} onClick={(e) => e.stopPropagation()} className="w-full max-w-md animate-[kbosUp_0.25s_ease] rounded-t-3xl border border-white/10 bg-[#1a1828] p-6 sm:rounded-3xl">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-xl">Novo compromisso</h2>
               <button type="button" onClick={() => setModal(false)} aria-label="Fechar" className="rounded-lg px-2 text-2xl leading-none text-white/60 hover:text-white">×</button>
@@ -209,12 +215,12 @@ export default function AgendaBoard() {
                 Alerta WhatsApp
                 <select value={form.reminder} onChange={(e) => setForm({ ...form, reminder: e.target.value })} className={input}>
                   {REMINDER_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value} className="bg-[#12122a]">{o.label}</option>
+                    <option key={o.value} value={o.value} className="bg-[#1a1828]">{o.label}</option>
                   ))}
                 </select>
               </label>
             </div>
-            <button type="submit" disabled={saving} className="mt-4 w-full rounded-xl bg-white py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-black transition hover:opacity-90 disabled:opacity-50">
+            <button type="submit" disabled={saving} className="mt-4 w-full rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:opacity-90 disabled:opacity-50">
               {saving ? "Salvando..." : "Agendar"}
             </button>
           </form>

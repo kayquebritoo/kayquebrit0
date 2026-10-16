@@ -10,7 +10,7 @@
 // - O token NUNCA é gravado no banco (a coluna `kbos_sessions.id` é uuid; o
 //   bypass é comparado em memória, antes de qualquer query — evita erros
 //   `invalid input syntax for type uuid`).
-// - `middleware.ts` aceita o token no cookie de sessão e libera `/admin/*`
+// - `proxy.ts` aceita o token no cookie de sessão e libera `/admin/*`
 //   (e demais rotas protegidas) sem redirect para `/entrar`.
 // - `sessionUser()` (rbac) resolve o token para o usuário admin (do banco,
 //   ou sintético se o banco estiver inacessível) com `role: "admin"`.
@@ -30,13 +30,13 @@ export const ADMIN_EMAIL = "contato@kayquebrito.com.br";
 export const SESSION_COOKIE_NAME = "kbos_session";
 
 /**
- * Nome alternativo do cookie aceito pelo middleware/RBAC.
+ * Nome alternativo do cookie aceito pelo proxy/RBAC.
  * Existe por compatibilidade com a convenção `kbos.session-token` usada no
  * deploy da VPS — ambos os nomes são lidos; a escrita usa o principal.
  */
 export const SESSION_COOKIE_ALT = "kbos.session-token";
 
-/** Cookies lidos (nesta ordem) pelo middleware e pelo RBAC. Edge-safe. */
+/** Cookies lidos (nesta ordem) pelo proxy e pelo RBAC. Edge-safe. */
 export const SESSION_COOKIE_ALIASES = [SESSION_COOKIE_NAME, SESSION_COOKIE_ALT] as const;
 
 /** Variáveis de ambiente aceitas para o segredo (primeira definida vence). */

@@ -117,10 +117,10 @@ export default function AdminCourses() {
           className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none md:col-span-1"
         >
           {["rascunho", "publicado", "arquivado"].map((s) => (
-            <option key={s} value={s} className="bg-[#12122a]">{s}</option>
+            <option key={s} value={s} className="bg-[#1a1828]">{s}</option>
           ))}
         </select>
-        <button type="submit" className="rounded-xl bg-white py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-black md:col-span-2">
+        <button type="submit" className="rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-white md:col-span-2">
           Criar curso
         </button>
       </form>

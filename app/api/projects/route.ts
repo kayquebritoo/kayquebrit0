@@ -4,6 +4,7 @@ import { db } from "@/lib/kbos/db";
 import { projects, users } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { projectCreateSchema, readBody } from "@/lib/kbos/validators";
+import { serverError } from "@/lib/kbos/http";
 
 // GET: equipe vê tudo; cliente vê só os próprios.
 export async function GET() {
@@ -17,7 +18,7 @@ export async function GET() {
         : await d.select().from(projects).orderBy(desc(projects.updatedAt)).limit(200);
     return NextResponse.json({ items: rows });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 
@@ -61,6 +62,6 @@ export async function POST(req: Request) {
     if (/slug|unique|duplicate/i.test(msg)) {
       return NextResponse.json({ error: "Slug já em uso." }, { status: 409 });
     }
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return serverError(e);
   }
 }

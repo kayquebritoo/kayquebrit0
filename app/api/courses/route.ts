@@ -5,10 +5,11 @@ import { courses } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { courseCreateSchema, readBody } from "@/lib/kbos/validators";
 import { uniqueSlug, isConflict } from "@/lib/kbos/lms";
+import { serverError } from "@/lib/kbos/http";
 
 // Alias administrativo de `/api/lms/courses` (Fase 1: UI de Projetos/Cursos
 // consome `/api/courses`; o LMS segue em `/api/lms/courses`). Protegido por
-// admin/bypass via `deny` + middleware.
+// admin/bypass via `deny` + proxy.
 export async function GET() {
   const user = await sessionUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
@@ -16,7 +17,7 @@ export async function GET() {
     const rows = await db().select().from(courses).orderBy(desc(courses.updatedAt)).limit(200);
     return NextResponse.json({ items: rows });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 
@@ -48,6 +49,6 @@ export async function POST(req: Request) {
       throw e;
     }
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

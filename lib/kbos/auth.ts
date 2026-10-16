@@ -8,6 +8,7 @@ import { appUrl, buildMagicLinkEmail, sendEmail } from "./email";
 import { loginTokens, sessions, users } from "./schema";
 import { ADMIN_EMAIL, isAdminBypass, isAdminEmail, isUuidLike } from "./admin-access";
 import { hashPassword, isPasswordStrongEnough, verifyPassword } from "./password";
+import { PublicError } from "./http";
 
 export { ADMIN_EMAIL, isAdminEmail, isAdminBypass };
 
@@ -20,7 +21,7 @@ export function hashToken(token: string) {
 export async function requestMagicLink(emailRaw: string, name?: string, req?: Request) {
   const email = emailRaw.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error("E-mail inválido.");
+    throw new PublicError("E-mail inválido.");
   }
   const admin = isAdminEmail(email);
   const d = db();
@@ -200,7 +201,7 @@ export async function loginWithPassword(emailRaw: string, password: string): Pro
  * - bypass do admin (somente p/ o e-mail do admin).
  */
 export async function setUserPasswordByToken(emailRaw: string, token: string, newPassword: string) {
-  if (!isPasswordStrongEnough(newPassword)) throw new Error("Mínimo 8 caracteres.");
+  if (!isPasswordStrongEnough(newPassword)) throw new PublicError("Mínimo 8 caracteres.");
   if (!/^[0-9a-f]{32,128}$/i.test(token.trim())) return null;
   const d = db();
   const row = (
@@ -220,7 +221,7 @@ export async function setUserPasswordByToken(emailRaw: string, token: string, ne
 }
 
 export async function setUserPasswordById(userId: string, newPassword: string) {
-  if (!isPasswordStrongEnough(newPassword)) throw new Error("Mínimo 8 caracteres.");
+  if (!isPasswordStrongEnough(newPassword)) throw new PublicError("Mínimo 8 caracteres.");
   const d = db();
   const rows = await d
     .update(users)

@@ -5,6 +5,7 @@ import { transactions } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { checkId, financePatchSchema, readBody } from "@/lib/kbos/validators";
 import { toDbPatch, toFinanceEntry } from "@/lib/kbos/finance";
+import { serverError } from "@/lib/kbos/http";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await sessionUser();
@@ -31,7 +32,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     await db().update(transactions).set(toDbPatch(parsed.data)).where(eq(transactions.id, id));
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 

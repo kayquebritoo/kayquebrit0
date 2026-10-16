@@ -28,13 +28,13 @@ export default async function CategoriaDetail({ params }: { params: Promise<{ ca
   const others = BRIEFING_CATEGORIES.filter((c) => c.id !== cat.id).slice(0, 3);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#0B0B1E] text-[#F4F1EC]">
+    <main className="relative min-h-screen overflow-hidden bg-[#11101E] text-[#EDE6EC]">
       <CategoryAnim />
       {/* glow de fundo */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-[480px]"
-        style={{ background: "radial-gradient(70% 90% at 50% 0%, rgba(157,184,232,0.16), transparent 70%)" }}
+        style={{ background: "radial-gradient(70% 90% at 50% 0%, rgba(232,14,253,0.16), transparent 70%)" }}
       />
 
       <div className="relative mx-auto max-w-[1280px] px-5 pb-24 pt-24 sm:px-8 md:px-14 md:pt-32">
@@ -56,7 +56,7 @@ export default async function CategoriaDetail({ params }: { params: Promise<{ ca
         >
           {cat.label}
           <br />
-          <em className="font-light italic text-[#9DB8E8]" style={{ fontSize: "clamp(20px, 4.5vw, 40px)", letterSpacing: "-0.01em" }}>
+          <em className="font-light italic text-[#E80EFD]" style={{ fontSize: "clamp(20px, 4.5vw, 40px)", letterSpacing: "-0.01em" }}>
             {cat.tagline}
           </em>
         </h1>
@@ -81,7 +81,7 @@ export default async function CategoriaDetail({ params }: { params: Promise<{ ca
               href={`/briefing/${cat.id}/orcamento`}
               className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-white px-8 py-3.5 text-[13px] font-bold uppercase tracking-[0.18em] text-black transition hover:scale-[1.03]"
             >
-              <span aria-hidden className="cat-cta-shine pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-[#9DB8E8]/60 to-transparent" />
+              <span aria-hidden className="cat-cta-shine pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-[#E80EFD]/60 to-transparent" />
               <span className="relative">Eu quero {cat.label.toLowerCase()} →</span>
             </Link>
           </div>
@@ -99,7 +99,7 @@ export default async function CategoriaDetail({ params }: { params: Promise<{ ca
             <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-1">
               {cat.bullets.map((b) => (
                 <p key={b} className="cat-in flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-[14px] font-light text-white/80">
-                  <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#9DB8E8]/15 text-[13px] text-[#9DB8E8]">✓</span>
+                  <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#E80EFD]/15 text-[13px] text-[#E80EFD]">✓</span>
                   {b}
                 </p>
               ))}
@@ -112,7 +112,7 @@ export default async function CategoriaDetail({ params }: { params: Promise<{ ca
             <div className="cat-in grid gap-3 pt-2 sm:grid-cols-3">
               {cat.process.map((s, i) => (
                 <div key={s.title} className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-                  <p className="text-[11px] tabular-nums tracking-[0.3em] text-[#9DB8E8]">0{i + 1}</p>
+                  <p className="text-[11px] tabular-nums tracking-[0.3em] text-[#E80EFD]">0{i + 1}</p>
                   <p className="font-display mt-2 text-lg font-light text-white">{s.title}</p>
                   <p className="mt-1.5 text-[13px] font-light leading-relaxed text-white/55">{s.desc}</p>
                 </div>
@@ -125,7 +125,7 @@ export default async function CategoriaDetail({ params }: { params: Promise<{ ca
         <div className="mt-14 md:mt-20">
           <div className="cat-in flex items-end justify-between gap-4">
             <h2 className="font-display text-2xl font-light md:text-4xl">
-              Projetos de <em className="italic text-[#9DB8E8]">{cat.label.toLowerCase()}</em>
+              Projetos de <em className="italic text-[#E80EFD]">{cat.label.toLowerCase()}</em>
             </h2>
             <span className="text-[11px] uppercase tracking-[0.28em] text-white/35">
               {related.length} {related.length === 1 ? "projeto" : "projetos"}
@@ -161,10 +161,10 @@ export default async function CategoriaDetail({ params }: { params: Promise<{ ca
 
           {/* CTA formulário */}
           <div className="cat-in relative mt-10 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.02] px-6 py-12 text-center backdrop-blur md:py-16">
-            <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(60% 80% at 50% 100%, rgba(157,184,232,0.18), transparent 70%)" }} />
+            <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(60% 80% at 50% 100%, rgba(232,14,253,0.18), transparent 70%)" }} />
             <p className="relative text-[11px] uppercase tracking-[0.32em] text-white/40">Pronto quando você estiver</p>
             <h3 className="font-display relative mx-auto mt-4 max-w-2xl text-balance text-3xl font-light leading-tight md:text-5xl">
-              Quer um orçamento de <em className="italic text-[#9DB8E8]">{cat.label.toLowerCase()}</em>?
+              Quer um orçamento de <em className="italic text-[#E80EFD]">{cat.label.toLowerCase()}</em>?
             </h3>
             <p className="relative mx-auto mt-4 max-w-xl text-[14px] font-light leading-relaxed text-white/55">
               Leva 2 minutos. Suas respostas viram a base do orçamento e do contrato.
@@ -174,8 +174,8 @@ export default async function CategoriaDetail({ params }: { params: Promise<{ ca
                 href={`/briefing/${cat.id}/orcamento`}
                 className="group relative inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-white px-10 py-4 text-sm font-bold uppercase tracking-[0.18em] text-black transition hover:scale-[1.03] sm:w-auto"
               >
-                <span aria-hidden className="cat-cta-shine pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-[#9DB8E8]/60 to-transparent" />
-                <span className="relative">Eu quero →</span>
+                <span aria-hidden className="cat-cta-shine pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-[#E80EFD]/60 to-transparent" />
+                <span className="relative">Quero meu orçamento →</span>
               </Link>
             </div>
           </div>

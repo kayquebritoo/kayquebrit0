@@ -5,6 +5,7 @@ import { briefings } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { getCategory } from "@/lib/kbos/briefing-forms";
 import { briefingStatusSchema, checkId, readBody } from "@/lib/kbos/validators";
+import { serverError } from "@/lib/kbos/http";
 
 // GET por id: público via uuid (link retornado após o envio).
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -17,8 +18,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const cat = getCategory(row.categoria);
     return NextResponse.json({ ...row, categoriaLabel: cat?.label ?? row.categoria, fields: cat?.fields ?? [] });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Erro interno.";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return serverError(e);
   }
 }
 
@@ -37,8 +37,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     await db().update(briefings).set({ status, updatedAt: new Date() }).where(eq(briefings.id, id));
     return NextResponse.json({ ok: true });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Erro interno.";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return serverError(e);
   }
 }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ensureRedis, getRedis } from "@/lib/kbos/jobs";
 import { withRateLimit } from "@/lib/kbos/rate-limit";
+import { serverError } from "@/lib/kbos/http";
 import {
   DEPLOY_STATE_KEY,
   DEPLOY_WANT_KEY,
@@ -48,7 +49,7 @@ export async function GET(req: Request) {
       want,
     });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 
@@ -72,6 +73,6 @@ export async function POST(req: Request) {
     await getRedis().set(DEPLOY_WANT_KEY, sha.toLowerCase(), "EX", DEPLOY_WANT_TTL_S);
     return NextResponse.json({ ok: true, want: sha.toLowerCase() });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

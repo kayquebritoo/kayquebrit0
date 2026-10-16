@@ -4,6 +4,7 @@ import { isAdminBypass, isAdminEmail } from "@/lib/kbos/admin-access";
 import { sessionUser } from "@/lib/kbos/rbac";
 import { authPasswordSchema, readBody } from "@/lib/kbos/validators";
 import { withRateLimit } from "@/lib/kbos/rate-limit";
+import { serverError } from "@/lib/kbos/http";
 
 // Define/troca senha (bootstrap via Magic Link ou troca logada).
 // - Logado: `{ password }` troca direto.
@@ -54,8 +55,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Erro interno.";
-    const status = msg.includes("DATABASE_URL") ? 503 : 400;
-    return NextResponse.json({ error: msg }, { status });
+    return serverError(e);
   }
 }

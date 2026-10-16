@@ -3,6 +3,7 @@ import { loginWithPassword } from "@/lib/kbos/auth";
 import { SESSION_COOKIE, sessionCookieOptions, SESSION_DAYS } from "@/lib/kbos/rbac";
 import { authLoginSchema, readBody } from "@/lib/kbos/validators";
 import { withRateLimit } from "@/lib/kbos/rate-limit";
+import { serverError } from "@/lib/kbos/http";
 
 // Login padrão e-mail + senha (fluxo principal do /entrar).
 // Admin: a senha pode ser o bypass (`KBOS_ADMIN_BYPASS_TOKEN`/
@@ -29,8 +30,6 @@ export async function POST(req: Request) {
     res.cookies.set(SESSION_COOKIE, r.sessionId, sessionCookieOptions(SESSION_DAYS * 86_400));
     return res;
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Erro interno.";
-    const status = msg.includes("DATABASE_URL") ? 503 : 400;
-    return NextResponse.json({ error: msg }, { status });
+    return serverError(e);
   }
 }

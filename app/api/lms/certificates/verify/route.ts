@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyCertificate } from "@/lib/kbos/lms";
+import { serverError } from "@/lib/kbos/http";
 
 // GET ?codigo=KBOS-XXXX-XXXX — verificação pública de autenticidade.
 export async function GET(req: Request) {
@@ -14,6 +15,6 @@ export async function GET(req: Request) {
     }
     return NextResponse.json(result);
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

@@ -4,6 +4,7 @@ import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { withRateLimit } from "@/lib/kbos/rate-limit";
 import { assistantTurnSchema, readBody } from "@/lib/kbos/validators";
 import { handleAssistantTurn } from "@/lib/kbos/assistant";
+import { serverError } from "@/lib/kbos/http";
 
 const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as const;
 
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
   try {
     db();
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 503 });
+    return serverError(e, 503);
   }
   const user = await sessionUser();
   const denied = deny(user, ...STAFF);
@@ -63,6 +64,6 @@ export async function POST(req: Request) {
       throw e;
     }
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

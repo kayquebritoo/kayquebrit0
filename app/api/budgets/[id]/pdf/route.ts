@@ -5,10 +5,11 @@ import { budgets, contacts } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { checkId } from "@/lib/kbos/validators";
 import { renderBudgetPdf, type BudgetPdfData } from "@/lib/kbos/pdf-generator";
+import { serverError } from "@/lib/kbos/http";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/budgets/[id]/pdf — baixa o orçamento em PDF estilizado (admin).
+// GET /api/budgets/[id]/pdf — baixa o orçamento + contrato em PDF estilizado (admin, 2 páginas).
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await sessionUser();
   const denied = deny(user, "admin");
@@ -57,6 +58,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       },
     });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

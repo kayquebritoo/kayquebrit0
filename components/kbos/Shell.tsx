@@ -50,6 +50,13 @@ export function KbosShell({
   const pathname = usePathname();
   const [user, setUser] = useState<Me | null>(null);
   const [open, setOpen] = useState(false);
+  // Fecha o drawer ao navegar (mobile): ajuste de estado durante o render,
+  // padrão recomendado pelo React em vez de setState dentro de efeito.
+  const [navPath, setNavPath] = useState(pathname);
+  if (navPath !== pathname) {
+    setNavPath(pathname);
+    setOpen(false);
+  }
 
   useEffect(() => {
     let alive = true;
@@ -72,18 +79,13 @@ export function KbosShell({
     };
   }, [admin, router]);
 
-  // Fecha o drawer ao navegar (mobile).
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
-
   // Trava o scroll do body com o drawer aberto.
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [open ]);
+  }, [open]);
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -92,7 +94,7 @@ export function KbosShell({
 
   if (!user) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#0B0B1E] text-white/50">
+      <main className="flex min-h-screen items-center justify-center bg-[#11101E] text-white/50">
         <p className="animate-pulse text-sm uppercase tracking-[0.3em]">KBOS · verificando acesso...</p>
       </main>
     );
@@ -105,7 +107,7 @@ export function KbosShell({
   const sidebar = (
     <div className="flex h-full flex-col">
       <Link href="/admin" className="group flex items-center gap-3 px-5 pb-6 pt-[max(1.5rem,env(safe-area-inset-top))]">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-lg font-bold text-black transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-blue to-brand-mag text-lg font-bold text-white transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105">
           K
         </span>
         <span>
@@ -123,19 +125,19 @@ export function KbosShell({
               aria-current={active ? "page" : undefined}
               className={`group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm transition-all duration-200 ${
                 active
-                  ? "bg-white font-semibold text-black shadow-lg shadow-black/30"
+                  ? "bg-gradient-to-r from-brand-blue to-brand-mag font-semibold text-white shadow-lg shadow-brand-mag/20"
                   : "text-white/65 hover:translate-x-1 hover:bg-white/10 hover:text-white active:scale-[0.98]"
               }`}
             >
               <span
                 className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[13px] transition-colors ${
-                  active ? "bg-black/10" : "bg-white/10 group-hover:bg-white/20"
+                  active ? "bg-white/15" : "bg-white/10 group-hover:bg-white/20"
                 }`}
               >
                 {n.icon}
               </span>
               {n.label}
-              {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+              {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-white" />}
             </Link>
           );
         })}
@@ -177,9 +179,9 @@ export function KbosShell({
   );
 
   return (
-    <div className="min-h-screen bg-[#0B0B1E] text-[#F4F1EC] lg:flex">
+    <div className="min-h-screen bg-[#11101E] text-[#EDE6EC] lg:flex">
       {/* Sidebar desktop */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-white/10 bg-[#0e0e22]/80 backdrop-blur lg:block">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-white/10 bg-[#15132a]/80 backdrop-blur lg:block">
         {sidebar}
       </aside>
 
@@ -192,7 +194,7 @@ export function KbosShell({
         aria-hidden={!open}
       />
       <aside
-        className={`fixed inset-y-0 left-0 z-[90] w-[280px] max-w-[85vw] border-r border-white/10 bg-[#0e0e22] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-[90] w-[280px] max-w-[85vw] border-r border-white/10 bg-[#15132a] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:hidden ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
         role="dialog"
@@ -210,7 +212,7 @@ export function KbosShell({
 
       {/* Coluna principal */}
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-[40] border-b border-white/10 bg-[#0B0B1E]/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+        <header className="sticky top-0 z-[40] border-b border-white/10 bg-[#11101E]/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
           <div className="mx-auto flex max-w-6xl items-center gap-3 px-5 py-4 md:px-10">
             <button
               onClick={() => setOpen(true)}
@@ -228,6 +230,8 @@ export function KbosShell({
               {ROLE_LABELS[user.role] ?? user.role}
             </span>
           </div>
+          {/* Filete de identidade: BluePurple → PurpleMag. */}
+          <div aria-hidden className="h-px bg-gradient-to-r from-brand-blue via-brand-mag to-transparent opacity-70" />
         </header>
         <main className="mx-auto max-w-6xl animate-[kbosIn_0.35s_ease] px-5 pb-20 pt-6 md:px-10 md:pt-8">
           {children}

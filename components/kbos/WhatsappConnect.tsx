@@ -314,7 +314,7 @@ export default function WhatsappConnect() {
               <button
                 onClick={() => action("pairing")}
                 disabled={!!busy}
-                className="mx-auto mt-3 block w-full max-w-[280px] rounded-xl bg-white py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-black transition hover:scale-[1.01] disabled:opacity-60"
+                className="mx-auto mt-3 block w-full max-w-[280px] rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:scale-[1.01] disabled:opacity-60"
               >
                 {busy === "pairing" ? "Gerando..." : "Gerar código de pareamento"}
               </button>
@@ -427,7 +427,7 @@ export default function WhatsappConnect() {
             )}
           </div>
           <div className="grid grid-cols-1 gap-2">
-            <button onClick={() => action("refresh")} disabled={!!busy} className="rounded-xl bg-white py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-black transition hover:scale-[1.01] disabled:opacity-60">
+            <button onClick={() => action("refresh")} disabled={!!busy} className="rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:scale-[1.01] disabled:opacity-60">
               {busy === "refresh" ? "Atualizando..." : mode === "phone" ? "Atualizar código" : "Atualizar QR"}
             </button>
             <div className="grid grid-cols-2 gap-2">

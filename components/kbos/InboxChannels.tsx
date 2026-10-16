@@ -36,6 +36,7 @@ export default function InboxChannels() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch assíncrono: o setState só ocorre após o await.
     load();
   }, [load]);
 
@@ -107,7 +108,7 @@ export default function InboxChannels() {
                 onClick={() => tgAction("connect")}
                 disabled={busy === "connect" || !tg?.configured}
                 title={!tg?.configured ? "Defina TELEGRAM_BOT_TOKEN primeiro" : "Registrar webhook"}
-                className="flex-1 rounded-xl bg-white py-2 text-[12px] font-bold uppercase tracking-[0.12em] text-black transition hover:opacity-90 active:scale-[0.99] disabled:opacity-40"
+                className="flex-1 rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag py-2 text-[12px] font-bold uppercase tracking-[0.12em] text-white transition hover:opacity-90 active:scale-[0.99] disabled:opacity-40"
               >
                 {busy === "connect" ? "…" : "Conectar"}
               </button>

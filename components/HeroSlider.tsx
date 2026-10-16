@@ -185,7 +185,7 @@ export default function HeroSlide() {
   }, []);
 
   return (
-    <section ref={root} className="relative h-[100svh] overflow-hidden bg-[#0B0B1E]">
+    <section ref={root} className="relative h-[100svh] overflow-hidden bg-[#11101E]">
       {/* ============ MOBILE: camadas distribuídas na página toda ============ */}
       <div className="hero-standalone-safe relative flex h-full flex-col px-5 pb-3 pt-[86px] md:hidden">
         {/* fundo animado livre em tela cheia */}
@@ -193,7 +193,7 @@ export default function HeroSlide() {
           <PanelWaves subtle />
         </div>
         {/* véu de leitura: protege topo (título) e base (vidro + CTA) */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0B0B1E]/75 via-transparent to-[#0B0B1E]/85" />
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#11101E]/75 via-transparent to-[#11101E]/85" />
 
         {/* Kayque fixado no canto inferior direito — por trás do vidro e do botão */}
         <div className="hero-person-float absolute bottom-0 right-[-12%] top-[10%] z-[5] w-[112%]">
@@ -210,7 +210,7 @@ export default function HeroSlide() {
 
         {/* topo: respiro do menu + tipografia com sombra sobre a foto */}
         <div className="relative z-10">
-          <p className="m-hero-in text-[13px] font-light leading-snug text-[#F4F1EC]" style={{ textShadow: "0 2px 18px rgba(0,0,0,0.6)" }}>
+          <p className="m-hero-in text-[13px] font-light leading-snug text-[#EDE6EC]" style={{ textShadow: "0 2px 18px rgba(0,0,0,0.6)" }}>
             {t("hero.roleA")}
             <br />
             {t("hero.roleB")}
@@ -236,15 +236,15 @@ export default function HeroSlide() {
 
         {/* base: vidro com frase centralizada + CTA */}
         <div className="relative z-10">
-          <div className="fp-anim rounded-2xl border border-white/20 bg-[#0B0B1E]/45 px-4 py-3 backdrop-blur-xl" style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.35)" }}>
+          <div className="fp-anim rounded-2xl border border-white/20 bg-[#11101E]/45 px-4 py-3 backdrop-blur-xl" style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.35)" }}>
             <p className="text-center text-[12.5px] font-light leading-snug text-white">
-              {t("hero.taglineA")} <em className="italic text-[#9DB8E8]">{t("hero.taglineB")}</em>
+              {t("hero.taglineA")} <em className="italic text-[#E80EFD]">{t("hero.taglineB")}</em>
             </p>
           </div>
           <Link
             ref={magCtaM as unknown as React.RefObject<HTMLAnchorElement>}
             href="/briefing"
-            className="m-hero-in relative mt-3 flex h-[52px] w-full shrink-0 items-center justify-center overflow-hidden rounded-full border-[1.5px] border-white/90 text-[15px] uppercase text-white transition active:bg-white active:text-[#0B0B1E]"
+            className="m-hero-in relative mt-3 flex h-[52px] w-full shrink-0 items-center justify-center overflow-hidden rounded-full border-[1.5px] border-white/90 text-[15px] uppercase text-white transition active:bg-white active:text-[#11101E]"
             style={{ letterSpacing: "0.12em" }}
           >
             <span aria-hidden className="hero-cta-shine pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
@@ -258,9 +258,9 @@ export default function HeroSlide() {
       <div aria-hidden className="hero-waves-desk absolute inset-0 hidden opacity-50 md:block">
         <PanelWaves />
       </div>
-      <div aria-hidden className="pointer-events-none absolute inset-0 hidden bg-gradient-to-t from-[#0B0B1E]/60 via-transparent to-[#0B0B1E]/45 md:block" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 hidden bg-gradient-to-t from-[#11101E]/60 via-transparent to-[#11101E]/45 md:block" />
       {/* auroras flutuantes */}
-      <div aria-hidden className="hero-aurora-a absolute left-[2%] top-[22%] hidden h-[420px] w-[420px] rounded-full bg-[#9DB8E8]/15 blur-[110px] md:block" />
+      <div aria-hidden className="hero-aurora-a absolute left-[2%] top-[22%] hidden h-[420px] w-[420px] rounded-full bg-[#E80EFD]/15 blur-[110px] md:block" />
       <div aria-hidden className="hero-aurora-b absolute bottom-[6%] right-[2%] hidden h-[380px] w-[380px] rounded-full bg-white/[0.07] blur-[110px] md:block" />
 
       {/* pessoa em recorte — desktop 44vw com flutuação */}
@@ -282,7 +282,7 @@ export default function HeroSlide() {
             ref={magBadge}
             onClick={() => goToSlide(1)}
             aria-label="Rolar para a próxima seção"
-            className="flex h-[124px] w-[124px] items-center justify-center rounded-full border border-white/20 bg-[#0B0B1E]/60 text-white/80 backdrop-blur-md transition-colors hover:border-white/60 hover:text-white"
+            className="flex h-[124px] w-[124px] items-center justify-center rounded-full border border-white/20 bg-[#11101E]/60 text-white/80 backdrop-blur-md transition-colors hover:border-white/60 hover:text-white"
           >
             <svg viewBox="0 0 120 120" className="animate-spin-slow absolute inset-0 h-full w-full p-2" aria-hidden>
               <defs>
@@ -300,7 +300,7 @@ export default function HeroSlide() {
       {/* bloco tipográfico */}
       <div className="hero-title absolute left-[15%] top-[27%] z-10 hidden max-w-[60%] md:block">
         <p
-          className="fp-anim font-light text-[#F4F1EC]"
+          className="fp-anim font-light text-[#EDE6EC]"
           style={{ fontSize: "clamp(20px, 1.6vw, 30px)", lineHeight: 1.35 }}
         >
           {t("hero.roleA")}
@@ -337,7 +337,7 @@ export default function HeroSlide() {
         <Link
           ref={magCta as unknown as React.RefObject<HTMLAnchorElement>}
           href="/briefing"
-          className="relative flex items-center justify-center overflow-hidden rounded-full border-[1.5px] border-white/90 text-white transition hover:bg-white hover:text-[#0B0B1E]"
+          className="relative flex items-center justify-center overflow-hidden rounded-full border-[1.5px] border-white/90 text-white transition hover:bg-white hover:text-[#11101E]"
           style={{
             width: "min(24vw, 470px)",
             height: 68,
@@ -351,14 +351,14 @@ export default function HeroSlide() {
         </Link>
       </div>
       <div
-        className="absolute bottom-0 right-[9%] z-10 hidden items-center rounded-tl-[24px] border border-white/10 border-b-0 bg-[#0B0B1E]/70 backdrop-blur-xl pl-14 pr-10 md:flex"
+        className="absolute bottom-0 right-[9%] z-10 hidden items-center rounded-tl-[24px] border border-white/10 border-b-0 bg-[#11101E]/70 backdrop-blur-xl pl-14 pr-10 md:flex"
         style={{ width: "min(37vw, 700px)", height: 140 }}
       >
         <p
-          className="fp-anim font-light text-[#F4F1EC]"
+          className="fp-anim font-light text-[#EDE6EC]"
           style={{ fontSize: "clamp(17px, 1.25vw, 23px)", lineHeight: 1.5 }}
         >
-          {t("hero.taglineA")} <em className="italic text-[#9DB8E8]">{t("hero.taglineB")}</em>
+          {t("hero.taglineA")} <em className="italic text-[#E80EFD]">{t("hero.taglineB")}</em>
         </p>
       </div>
 

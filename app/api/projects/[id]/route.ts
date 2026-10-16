@@ -5,6 +5,7 @@ import { projects } from "@/lib/kbos/schema";
 import { deny, sessionUser, PIPELINE } from "@/lib/kbos/rbac";
 import { notifyProject } from "@/lib/kbos/whatsapp";
 import { checkId, projectPatchSchema, readBody } from "@/lib/kbos/validators";
+import { serverError } from "@/lib/kbos/http";
 
 const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as const;
 
@@ -61,7 +62,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 

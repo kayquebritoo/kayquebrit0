@@ -4,6 +4,7 @@ import { db } from "@/lib/kbos/db";
 import { events } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { checkId, eventPatchSchema, readBody } from "@/lib/kbos/validators";
+import { serverError } from "@/lib/kbos/http";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await sessionUser();
@@ -44,7 +45,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     await db().update(events).set(patch).where(eq(events.id, id));
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 

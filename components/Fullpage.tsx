@@ -256,7 +256,7 @@ export default function Fullpage({
   }, [goTo]);
 
   return (
-    <div className="relative h-[100svh] w-full overflow-hidden bg-[#0B0B1E] [touch-action:pan-x]">
+    <div className="relative h-[100svh] w-full overflow-hidden bg-[#11101E] [touch-action:pan-x]">
       <div ref={track} className="will-change-transform">
         {children.map((c, i) => (
           <div

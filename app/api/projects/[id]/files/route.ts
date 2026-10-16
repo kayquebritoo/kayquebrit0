@@ -5,6 +5,7 @@ import { projectFiles, projects } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { notifyProject } from "@/lib/kbos/whatsapp";
 import { checkId, fileCreateSchema, readBody } from "@/lib/kbos/validators";
+import { serverError } from "@/lib/kbos/http";
 
 // GET arquivos do projeto (dono ou equipe).
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -43,7 +44,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     await notifyProject(id, "arquivo", `Novo arquivo para aprovação: *${body.nome}*\nAbra o portal para revisar.`);
     return NextResponse.json({ ok: true, item: rows[0] }, { status: 201 });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 

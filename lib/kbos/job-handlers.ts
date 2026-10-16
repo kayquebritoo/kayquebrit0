@@ -367,7 +367,7 @@ export async function handleAgendaReminders(now: Date = new Date()) {
     try {
       await queueWhatsApp(phone, reminderMessage(ev), "agenda.reminder");
       sent++;
-    } catch (e) {
+    } catch {
       errors++;
       try {
         await d

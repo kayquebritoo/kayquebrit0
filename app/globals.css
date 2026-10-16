@@ -1,14 +1,21 @@
 @import "tailwindcss";
 
 @theme {
-  /* Azul-noite extraído dos prints /public/ref (fundo dominante) */
-  --color-bg: #0b0b1e;
-  --color-surface: #12122a;
+  /* Paleta oficial LDP (AGENTS.md): Blackweb · Off White · PurpleMag */
+  --color-bg: #11101e;
+  --color-surface: #1a1828;
   --color-line: rgba(255, 255, 255, 0.14);
-  --color-ink: #f4f1ec;
-  --color-muted: rgba(244, 241, 236, 0.62);
-  --color-faint: rgba(244, 241, 236, 0.38);
-  --color-accent: #9db8e8;
+  --color-ink: #ede6ec;
+  --color-muted: rgba(237, 230, 236, 0.62);
+  --color-faint: rgba(237, 230, 236, 0.38);
+  --color-accent: #e80efd;
+  /* Tokens nomeados da marca (painel admin, PDF e site). */
+  --color-brand-mag: #e80efd;
+  --color-brand-blue: #4f12c7;
+  --color-brand-energy: #350c85;
+  --color-brand-black: #11101e;
+  --color-brand-offwhite: #ede6ec;
+  --color-brand-gray: #bdb7bc;
   --font-display: "Cottorway Pro", "Manrope", sans-serif;
   --font-body: "Manrope", system-ui, sans-serif;
 }
@@ -46,8 +53,8 @@ html,
 body {
   max-width: 100%;
   overflow-x: hidden;
-  background: #0b0b1e;
-  color: #f4f1ec;
+  background: #11101e;
+  color: #ede6ec;
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   /* App-like: sem elástico/pull-to-refresh do navegador móvel… */
@@ -132,7 +139,7 @@ html.fullpage-locked body {
   font-size: 17px;
   letter-spacing: 0.32em;
   text-transform: uppercase;
-  color: rgba(244, 241, 236, 0.75);
+  color: rgba(237, 230, 236, 0.75);
   font-weight: 300;
 }
 
@@ -145,7 +152,7 @@ html.fullpage-locked body {
 }
 
 .glass {
-  background: linear-gradient(135deg, rgba(11, 11, 30, 0.42), rgba(11, 11, 30, 0.62));
+  background: linear-gradient(135deg, rgba(17, 16, 30, 0.42), rgba(17, 16, 30, 0.62));
   backdrop-filter: blur(28px) saturate(1.4) brightness(1.08);
   -webkit-backdrop-filter: blur(28px) saturate(1.4) brightness(1.08);
 }
@@ -166,8 +173,8 @@ html.fullpage-locked body {
    o blur dá o acabamento frosted sem comprometer a leitura */
 .glass-menu {
   background:
-    radial-gradient(120% 90% at 50% 0%, rgba(157, 184, 232, 0.12), transparent 60%),
-    linear-gradient(180deg, rgba(11, 11, 30, 0.94), rgba(11, 11, 30, 0.97));
+    radial-gradient(120% 90% at 50% 0%, rgba(232, 14, 253, 0.12), transparent 60%),
+    linear-gradient(180deg, rgba(17, 16, 30, 0.94), rgba(17, 16, 30, 0.97));
   backdrop-filter: blur(28px) saturate(1.4);
   -webkit-backdrop-filter: blur(28px) saturate(1.4);
 }
@@ -178,7 +185,7 @@ html.fullpage-locked body {
   pointer-events: none;
   background:
     radial-gradient(60% 40% at 15% 20%, rgba(255, 255, 255, 0.07), transparent 70%),
-    radial-gradient(50% 35% at 85% 80%, rgba(157, 184, 232, 0.1), transparent 70%);
+    radial-gradient(50% 35% at 85% 80%, rgba(232, 14, 253, 0.1), transparent 70%);
 }
 
 /* big titles do menu — medida contida p/ caber na composição desktop */
@@ -215,15 +222,15 @@ html.fullpage-locked body {
   width: 13px;
   height: 13px;
   border-radius: 999px;
-  border: 1.5px solid rgba(244, 241, 236, 0.28);
+  border: 1.5px solid rgba(237, 230, 236, 0.28);
   transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
 }
 .fp-dot:hover {
-  border-color: rgba(244, 241, 236, 0.7);
+  border-color: rgba(237, 230, 236, 0.7);
 }
 .fp-dot.active {
-  background: #f4f1ec;
-  border-color: #f4f1ec;
+  background: #ede6ec;
+  border-color: #ede6ec;
 }
 
 /* rails verticais */
@@ -251,7 +258,7 @@ html.fullpage-locked body {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  background: #12122a;
+  background: #1a1828;
 }
 .fx-photo-wrap::after {
   content: "";
@@ -279,7 +286,7 @@ html.fullpage-locked body {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  background: #12122a;
+  background: #1a1828;
 }
 .about-photo img {
   transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1), filter 0.5s ease;
@@ -317,7 +324,7 @@ html.fullpage-locked body {
   letter-spacing: 0.28em;
   text-transform: uppercase;
   color: #fff;
-  background: rgba(11,11,30,0.55);
+  background: rgba(17,16,30,0.55);
   border: 1px solid rgba(255,255,255,0.2);
   backdrop-filter: blur(8px);
   padding: 7px 12px;
@@ -349,7 +356,7 @@ html.fullpage-locked body {
 .loop-media {
   position: relative;
   overflow: hidden;
-  background: #12122a;
+  background: #1a1828;
 }
 .loop-media img {
   animation: looppan 10s ease-in-out infinite alternate;
@@ -379,7 +386,7 @@ html.fullpage-locked body {
   letter-spacing: 0.22em;
   text-transform: uppercase;
   font-weight: 600;
-  color: #0b0b1e;
+  color: #11101e;
   background: #ece7e0;
   box-shadow: 0 20px 60px rgba(0,0,0,0.4);
   pointer-events: none;
@@ -521,7 +528,7 @@ a.m-hero-in { animation-delay: 0.18s; }
 
 .single-hero-glow {
   background:
-    radial-gradient(80% 60% at 50% 0%, rgba(157, 184, 232, 0.16), transparent 70%),
+    radial-gradient(80% 60% at 50% 0%, rgba(232, 14, 253, 0.16), transparent 70%),
     linear-gradient(180deg, rgba(255,255,255,0.04), transparent);
 }
 
@@ -555,11 +562,11 @@ a.m-hero-in { animation-delay: 0.18s; }
 /* ---------- assinatura: seleção, marquee, órbita, foco ---------- */
 ::selection {
   background: #ece7e0;
-  color: #0b0b1e;
+  color: #11101e;
 }
 
 :focus-visible {
-  outline: 2px solid #9db8e8;
+  outline: 2px solid #e80efd;
   outline-offset: 3px;
 }
 
@@ -600,9 +607,9 @@ a.m-hero-in { animation-delay: 0.18s; }
 /* ============================================================
    MODO CLARO PREMIUM — "Papel Quente"
    Paleta harmônica ao dark validado (não dói a vista):
-   - dark: fundo #0B0B1E (azul-noite) · tinta #F4F1EC (off-white quente) · acento #9DB8E8 (gelo)
-   - light: fundo #F1EEE7 (mesmo off-white quente, como papel) · tinta #17172E (azul-noite
-     suavizado p/ leitura) · acento #2D4B9B (mesmo matiz do gelo, escurecido p/ contraste)
+   - dark: fundo #11101E (Blackweb) · tinta #EDE6EC (Off White) · acento #E80EFD (PurpleMag)
+   - light: fundo #F1EEE7 (off-white quente, como papel) · tinta #17172E (noite
+     suavizada p/ leitura) · acento #4F12C7 (BluePurple: o magenta não tem contraste no papel)
    NUNCA branco puro #FFF como fundo — causa fadiga. Superfícies são #FFFFFF sobre o
    papel, com borda tinta 12% + sombra quente suave (elevação premium).
    Ativação: classe `light` no <html> (Providers.tsx) + color-scheme.
@@ -615,7 +622,7 @@ html.light {
   --lb-bg-soft: #e9e4d6;
   --lb-surface: #ffffff;
   --lb-ink: #17172e;
-  --lb-accent: #2d4b9b;
+  --lb-accent: #4f12c7;
   color-scheme: light;
 }
 html.light body {
@@ -629,19 +636,19 @@ html.light body, html.light main, html.light section, html.light header {
 
 /* ---------- 1 · fundos base (seções, páginas, fullpage) ---------- */
 html.light main,
-html.light section[class*="bg-[#0B0B1E]"],
-html.light div[class*="bg-[#0B0B1E]"]:not([class*="bg-[#0B0B1E]/"]),
-html.light .bg-\[\#0B0B1E\] {
+html.light section[class*="bg-[#11101E]"],
+html.light div[class*="bg-[#11101E]"]:not([class*="bg-[#11101E]/"]),
+html.light .bg-\[\#11101E\] {
   background-color: var(--lb-bg) !important;
 }
 /* vidros translúcidos sobre o hero/foto: viram vidro CLARO legível */
-html.light [class*="bg-[#0B0B1E]/"] {
+html.light [class*="bg-[#11101E]/"] {
   background-color: rgba(255, 255, 255, 0.72) !important;
 }
 /* cards escuros sólidos → superfície branca premium com elevação */
 html.light [class*="bg-[#131316]"],
-html.light [class*="bg-[#12122a]"],
-html.light [class*="bg-[#0e0e22]"] {
+html.light [class*="bg-[#1a1828]"],
+html.light [class*="bg-[#15132a]"] {
   background-color: var(--lb-surface) !important;
   border-color: rgba(23, 23, 46, 0.1) !important;
   box-shadow: 0 24px 60px -28px rgba(23, 23, 46, 0.22) !important;
@@ -658,7 +665,7 @@ html.light [class*="bg-[#e8e4dc]"] {
 }
 
 /* véus de leitura do hero (gradientes escuros) → véus de papel */
-html.light [class*="from-[#0B0B1E]"] {
+html.light [class*="from-[#11101E]"] {
   background-image: linear-gradient(to bottom, rgba(241, 238, 231, 0.88), transparent 45%, rgba(241, 238, 231, 0.94)) !important;
 }
 html.light .hero-person-float {
@@ -667,10 +674,10 @@ html.light .hero-person-float {
 
 /* ---------- 2 · textos ---------- */
 html.light .text-white,
-html.light [class*="text-[#F4F1EC]"] {
+html.light [class*="text-[#EDE6EC]"] {
   color: var(--lb-ink) !important;
 }
-html.light [class*="text-[#9DB8E8]"] {
+html.light [class*="text-[#E80EFD]"] {
   color: var(--lb-accent) !important;
 }
 html.light .text-black {
@@ -717,18 +724,18 @@ html.light [class*="hover:bg-white"]:hover {
   background-color: var(--lb-ink) !important;
   color: var(--lb-bg) !important;
 }
-html.light [class*="hover:text-[#0B0B1E]"]:hover { color: var(--lb-bg) !important; }
+html.light [class*="hover:text-[#11101E]"]:hover { color: var(--lb-bg) !important; }
 html.light [class*="active:bg-white"]:active {
   background-color: var(--lb-ink) !important;
   color: var(--lb-bg) !important;
 }
-html.light [class*="active:text-[#0B0B1E]"]:active { color: var(--lb-bg) !important; }
+html.light [class*="active:text-[#11101E]"]:active { color: var(--lb-bg) !important; }
 html.light [class*="hover:text-white"]:hover { color: var(--lb-ink) !important; }
 html.light [class*="hover:border-white"]:hover { border-color: rgba(23, 23, 46, 0.5) !important; }
 html.light [class*="group-hover:bg-white"] { --tw-bg-opacity: 1; }
 /* brilho varrendo os CTAs: branco invisível no papel → véu de acento */
 html.light .hero-cta-shine {
-  background-image: linear-gradient(to right, transparent, rgba(45, 75, 155, 0.22), transparent) !important;
+  background-image: linear-gradient(to right, transparent, rgba(79, 18, 199, 0.22), transparent) !important;
 }
 /* cards sutis bg-white/[0.0x] → brancos reais com borda */
 html.light [class*="bg-white/[0.02]"],
@@ -768,10 +775,10 @@ html.light input, html.light textarea, html.light select {
 html.light header img[class*="brightness-0"] {
   filter: brightness(0) !important;
 }
-html.light header [class*="bg-[#F4F1EC]"] { background-color: var(--lb-ink) !important; }
+html.light header [class*="bg-[#EDE6EC]"] { background-color: var(--lb-ink) !important; }
 html.light .glass-menu {
   background:
-    radial-gradient(120% 90% at 50% 0%, rgba(45, 75, 155, 0.1), transparent 60%),
+    radial-gradient(120% 90% at 50% 0%, rgba(79, 18, 199, 0.1), transparent 60%),
     linear-gradient(180deg, rgba(241, 238, 231, 0.92), rgba(241, 238, 231, 0.97));
   border-bottom: 1px solid rgba(23, 23, 46, 0.1);
   box-shadow: 0 30px 80px -30px rgba(23, 23, 46, 0.25);
@@ -794,12 +801,12 @@ html.light [class*="bg-black/30"].fixed {
   box-shadow: 0 10px 28px -12px rgba(23, 23, 46, 0.3);
 }
 /* auroras: mantém o acento, só suaviza p/ papel */
-html.light [class*="bg-[#9DB8E8]/"] {
-  background-color: rgba(45, 75, 155, 0.1) !important;
+html.light [class*="bg-[#E80EFD]/"] {
+  background-color: rgba(79, 18, 199, 0.1) !important;
 }
 html.light .single-hero-glow {
   background:
-    radial-gradient(80% 60% at 50% 0%, rgba(45, 75, 155, 0.14), transparent 70%),
+    radial-gradient(80% 60% at 50% 0%, rgba(79, 18, 199, 0.14), transparent 70%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.6), transparent);
 }
 /* grain fílmico: overlay suja o papel → multiply sutil */
@@ -820,10 +827,10 @@ html.light .animate-marquee img[class*="invert"] {
 html.light [class*="border-white/20"].rounded-full { border-color: rgba(23, 23, 46, 0.16) !important; }
 
 /* ---------- 8 · contato / links de acento ---------- */
-html.light a[class*="text-[#9DB8E8]"],
-html.light span[class*="text-[#9DB8E8]"],
-html.light div[class*="text-[#9DB8E8]"],
-html.light em[class*="text-[#9DB8E8]"] {
+html.light a[class*="text-[#E80EFD]"],
+html.light span[class*="text-[#E80EFD]"],
+html.light div[class*="text-[#E80EFD]"],
+html.light em[class*="text-[#E80EFD]"] {
   color: var(--lb-accent) !important;
 }
 html.light ::selection { background: var(--lb-ink); color: var(--lb-bg); }
@@ -880,7 +887,7 @@ html.light .work-card .relative {
 }
 html.light .proj-card .text-white,
 html.light .proj-card [class*="text-white/"],
-html.light .proj-card [class*="text-[#F4F1EC]"],
+html.light .proj-card [class*="text-[#EDE6EC]"],
 html.light .work-card .text-white,
 html.light .work-card [class*="text-white/"] {
   color: #fff !important;

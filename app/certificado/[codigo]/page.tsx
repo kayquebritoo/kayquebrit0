@@ -39,7 +39,7 @@ export default async function CertificadoPage({ params }: { params: Promise<{ co
   if (!data) notFound();
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#0B0B1E] px-5 py-16 text-[#F4F1EC]">
+    <main className="flex min-h-screen items-center justify-center bg-[#11101E] px-5 py-16 text-[#EDE6EC]">
       <div className="w-full max-w-xl overflow-hidden rounded-3xl border border-white/15 bg-white/[0.03] text-center backdrop-blur">
         <div className="border-b border-white/10 bg-white/[0.03] px-8 py-6">
           <p className="text-[11px] uppercase tracking-[0.35em] text-white/45">Kayque Brito · KBOS</p>
@@ -52,13 +52,13 @@ export default async function CertificadoPage({ params }: { params: Promise<{ co
           <p className="mt-5 text-sm font-light text-white/55">Este certificado é autêntico e foi emitido para</p>
           <p className="font-display mt-1 text-2xl">{data.aluno}</p>
           <p className="mt-1 text-sm font-light text-white/55">pela conclusão do curso</p>
-          <p className="font-display mt-1 text-xl text-[#9DB8E8]">{data.curso}</p>
+          <p className="font-display mt-1 text-xl text-[#E80EFD]">{data.curso}</p>
           <div className="mx-auto mt-6 grid max-w-sm grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 text-left">
-            <div className="bg-[#0B0B1E] px-4 py-3">
+            <div className="bg-[#11101E] px-4 py-3">
               <p className="text-[10px] uppercase tracking-[0.25em] text-white/40">Código</p>
               <p className="mt-1 font-mono text-sm tracking-[0.08em]">{data.codigo}</p>
             </div>
-            <div className="bg-[#0B0B1E] px-4 py-3">
+            <div className="bg-[#11101E] px-4 py-3">
               <p className="text-[10px] uppercase tracking-[0.25em] text-white/40">Emitido em</p>
               <p className="mt-1 text-sm">{new Date(data.emitidaEm).toLocaleDateString("pt-BR")}</p>
             </div>

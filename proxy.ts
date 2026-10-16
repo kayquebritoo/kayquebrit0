@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 // NOTA: importar SOMENTE de `admin-access` (módulo edge-safe, sem
 // `next/headers`/drizzle/db). Importar `rbac` aqui puxaria o cliente do banco
-// para o runtime do middleware e quebraria o deploy.
+// para o proxy (barreira de rede) e acoplaria o banco a cada request.
 import { SESSION_COOKIE_ALIASES, isAdminBypass, isAdminBypassOpen } from "@/lib/kbos/admin-access";
 
 // Barreira leve: exige cookie de sessão. A validade do token e o nível
@@ -9,12 +9,12 @@ import { SESSION_COOKIE_ALIASES, isAdminBypass, isAdminBypassOpen } from "@/lib/
 //
 // Bypass do admin (produção/VPS): quando `KBOS_ADMIN_BYPASS_TOKEN` está
 // configurado e o cookie de sessão contém exatamente esse segredo, o
-// middleware libera o acesso — inclusive às rotas `/admin/*` — sem redirect
+// proxy libera o acesso — inclusive às rotas `/admin/*` — sem redirect
 // para `/entrar`. O `sessionUser()` (rbac) resolve o mesmo token para o
 // usuário `contato@kayquebrito.com.br` com role admin, então guards
 // client-side e `deny()` nas rotas seguem autorizando. Sem o segredo
 // configurado, o bypass fica inativo (fail-closed).
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   // Bypass aberto da VPS (`KBOS_BYPASS_ADMIN="true"`): acesso livre e direto,
   // sem redirect para `/entrar` e sem exigir sessão/token. Ver o aviso de
@@ -65,7 +65,11 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/api/finance") ||
     pathname.startsWith("/api/events") ||
     pathname.startsWith("/api/ai") ||
-    pathname.startsWith("/api/briefings");
+    pathname.startsWith("/api/briefings") ||
+    pathname.startsWith("/api/budgets") ||
+    pathname.startsWith("/api/lms") ||
+    // `/api/admin/deploy` usa Bearer próprio (CI), sem cookie — fica de fora.
+    pathname.startsWith("/api/admin/whatsapp");
   if (!needsAuth) return NextResponse.next();
   // Aceita o cookie principal (`kbos_session`) e o alternativo
   // (`kbos.session-token`, convenção usada no deploy da VPS).

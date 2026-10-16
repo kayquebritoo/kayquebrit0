@@ -4,6 +4,7 @@ import { db } from "@/lib/kbos/db";
 import { lessons } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { checkId, lessonPatchSchema, readBody } from "@/lib/kbos/validators";
+import { serverError } from "@/lib/kbos/http";
 
 // PATCH: edita aula (admin).
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -19,6 +20,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     await db().update(lessons).set({ ...parsed.data, updatedAt: new Date() }).where(eq(lessons.id, id));
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

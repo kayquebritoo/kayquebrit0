@@ -80,6 +80,7 @@ export default function Financeiro() {
   }, [typeFilter, statusFilter]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch assíncrono: o setState só ocorre após o await.
     load();
   }, [load]);
 
@@ -193,7 +194,7 @@ export default function Financeiro() {
             {s.label}
           </button>
         ))}
-        <button onClick={() => setModal(true)} className="ml-auto rounded-xl bg-white px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-black transition hover:opacity-90 active:scale-95">
+        <button onClick={() => setModal(true)} className="ml-auto rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:opacity-90 active:scale-95">
           + Lançar
         </button>
       </div>
@@ -224,7 +225,7 @@ export default function Financeiro() {
 
       {modal && (
         <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-6" onClick={() => setModal(false)}>
-          <form onSubmit={create} onClick={(e) => e.stopPropagation()} className="w-full max-w-md animate-[kbosUp_0.25s_ease] rounded-t-3xl border border-white/10 bg-[#12122a] p-6 sm:rounded-3xl">
+          <form onSubmit={create} onClick={(e) => e.stopPropagation()} className="w-full max-w-md animate-[kbosUp_0.25s_ease] rounded-t-3xl border border-white/10 bg-[#1a1828] p-6 sm:rounded-3xl">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-xl">Lançamento rápido</h2>
               <button type="button" onClick={() => setModal(false)} aria-label="Fechar" className="rounded-lg px-2 text-2xl leading-none text-white/60 hover:text-white">×</button>
@@ -247,11 +248,11 @@ export default function Financeiro() {
               <input value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} type="date" aria-label="Vencimento" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none" />
               <input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Categoria" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50" />
               <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none">
-                <option value="pending" className="bg-[#12122a]">Pendente</option>
-                <option value="paid" className="bg-[#12122a]">Pago</option>
+                <option value="pending" className="bg-[#1a1828]">Pendente</option>
+                <option value="paid" className="bg-[#1a1828]">Pago</option>
               </select>
             </div>
-            <button type="submit" disabled={saving} className="mt-4 w-full rounded-xl bg-white py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-black transition hover:opacity-90 disabled:opacity-50">
+            <button type="submit" disabled={saving} className="mt-4 w-full rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:opacity-90 disabled:opacity-50">
               {saving ? "Lançando..." : "Lançar"}
             </button>
           </form>

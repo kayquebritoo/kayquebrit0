@@ -5,6 +5,7 @@ import { projectFiles, projects } from "@/lib/kbos/schema";
 import { sessionUser } from "@/lib/kbos/rbac";
 import { notifyProject } from "@/lib/kbos/whatsapp";
 import { checkId, fileReviewSchema, readBody } from "@/lib/kbos/validators";
+import { serverError } from "@/lib/kbos/http";
 
 // PATCH: cliente aprova/reprova (só arquivos dos próprios projetos); equipe também pode.
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string; fileId: string }> }) {
@@ -35,7 +36,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     );
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 

@@ -80,6 +80,15 @@ export const FINANCE_STATUS = [
   { id: "overdue", label: "Vencido" },
 ] as const;
 
+// Funil do briefing (enum `kbos_briefing_status`), com rótulos para a UI.
+export const BRIEFING_STATUS = [
+  { id: "novo", label: "Recebido" },
+  { id: "em_analise", label: "Em análise" },
+  { id: "aprovado", label: "Aprovado" },
+  { id: "contrato_gerado", label: "Contrato gerado" },
+  { id: "arquivado", label: "Arquivado" },
+] as const;
+
 // Orçamentos (client-safe: sem imports server).
 export const BUDGET_STATUS = [
   { id: "draft", label: "Rascunho" },

@@ -5,6 +5,7 @@ import { certificates, enrollments } from "@/lib/kbos/schema";
 import { sessionUser } from "@/lib/kbos/rbac";
 import { checkId } from "@/lib/kbos/validators";
 import { ensureCertificate } from "@/lib/kbos/lms";
+import { serverError } from "@/lib/kbos/http";
 
 // GET ?enrollmentId= — certificado (emite na hora se 100% e ainda não emitido).
 export async function GET(req: Request) {
@@ -35,6 +36,6 @@ export async function GET(req: Request) {
     const cert = await ensureCertificate(enr.id);
     return NextResponse.json({ item: cert }, { status: 201 });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

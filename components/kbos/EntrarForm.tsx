@@ -104,7 +104,7 @@ export default function EntrarForm() {
     "mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-4 py-3 text-[15px] outline-none placeholder:text-white/25 focus:border-white/50";
 
   return (
-    <main className="flex min-h-[100svh] items-center justify-center bg-[#0B0B1E] px-4 py-10 text-[#F4F1EC] sm:px-5">
+    <main className="flex min-h-[100svh] items-center justify-center bg-[#11101E] px-4 py-10 text-[#EDE6EC] sm:px-5">
       <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur sm:p-8">
         <p className="text-[11px] uppercase tracking-[0.3em] text-white/40">KBOS · Portal do Cliente</p>
         <h1 className="font-display mt-2 text-3xl font-light">Entrar</h1>

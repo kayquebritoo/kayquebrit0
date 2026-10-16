@@ -2,7 +2,7 @@
 // Instância via EVOLUTION_INSTANCE (padrão: "kbos-primary").
 // URL/instância têm default de zero-config no compose (`http://evolution:8080`);
 // a chave default (`kbos-dev-key`) espelha `AUTHENTICATION_API_KEY` do compose.
-import { randomUUID } from "crypto";
+import { randomUUID, timingSafeEqual } from "crypto";
 import { hostBaseFromRequest } from "./email";
 
 export type WaState = "open" | "connecting" | "close" | "unknown";
@@ -301,4 +301,24 @@ export async function logoutInstance(): Promise<{ ok: boolean; detail?: string }
 /** request-id p/ correlação nos logs. */
 export function waTrace() {
   return randomUUID().slice(0, 8);
+}
+
+/**
+ * Token opcional dos webhooks da Evolution (`EVOLUTION_WEBHOOK_TOKEN` ≥8 chars),
+ * via `?token=`, `x-webhook-token` ou `apikey`. Sem token configurado, aceita
+ * (fail-open documentado); com token, compara em tempo constante.
+ */
+export function isEvolutionWebhookAuthorized(req: Request): boolean {
+  const token = (process.env.EVOLUTION_WEBHOOK_TOKEN || "").trim();
+  if (token.length < 8) return true;
+  const url = new URL(req.url);
+  const got =
+    req.headers.get("x-webhook-token") ||
+    req.headers.get("apikey") ||
+    url.searchParams.get("token") ||
+    "";
+  // Comparação em tempo constante (não vaza o segredo via timing).
+  const a = Buffer.from(got);
+  const b = Buffer.from(token);
+  return a.length === b.length && timingSafeEqual(a, b);
 }

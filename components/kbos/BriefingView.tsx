@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { BRIEFING_STATUS } from "@/lib/kbos/constants";
 
 type Briefing = {
   id: string;
@@ -36,27 +37,31 @@ export default function BriefingView() {
 
   if (error) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#0B0B1E] px-5 text-[#F4F1EC]">
+      <main className="flex min-h-screen items-center justify-center bg-[#11101E] px-5 text-[#EDE6EC]">
         <p className="text-white/60">{error}</p>
       </main>
     );
   }
   if (!b) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#0B0B1E] px-5 text-[#F4F1EC]">
-        <p className="text-white/50">Carregando...</p>
+      <main className="flex min-h-screen items-center justify-center bg-[#11101E] px-5 text-[#EDE6EC]">
+        <p className="text-white/50">Carregando…</p>
       </main>
     );
   }
   return (
-    <main className="min-h-screen bg-[#0B0B1E] px-5 pb-20 pt-24 text-[#F4F1EC] md:pt-28">
+    <main className="min-h-screen bg-[#11101E] px-5 pb-20 pt-24 text-[#EDE6EC] md:pt-28">
       <div className="mx-auto max-w-2xl">
         <p className="text-[11px] uppercase tracking-[0.32em] text-emerald-300">✓ Briefing recebido</p>
         <h1 className="font-display mt-3 text-4xl font-light md:text-5xl">
-          Valeu, {b.clienteNome.split(" ")[0]}!
+          Obrigado, {b.clienteNome.split(" ")[0]}.
         </h1>
         <p className="mt-3 text-[15px] font-light text-white/60">
-          Categoria: {b.categoriaLabel} · Status: {b.status}
+          Seu briefing de {b.categoriaLabel.toLowerCase()} já está com a equipe. O próximo passo é a
+          proposta com escopo, prazos e valores.
+        </p>
+        <p className="mt-2 text-[12px] uppercase tracking-[0.2em] text-white/40">
+          Status · {BRIEFING_STATUS.find((s) => s.id === b.status)?.label ?? b.status}
         </p>
         <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
           <h2 className="text-[12px] uppercase tracking-[0.25em] text-white/45">Suas respostas</h2>
@@ -73,7 +78,7 @@ export default function BriefingView() {
           href={`/api/briefings/${b.id}/contrato`}
           className="mt-6 block rounded-full bg-white py-4 text-center text-sm font-bold uppercase tracking-[0.18em] text-black transition hover:scale-[1.02]"
         >
-          Baixar contrato (PDF)
+          Baixar minuta do contrato (PDF)
         </a>
         <div className="mt-4 flex justify-center gap-6 text-[12px] uppercase tracking-[0.2em] text-white/45">
           <Link href="/briefing" className="hover:text-white">Novo briefing</Link>

@@ -128,7 +128,7 @@ export default function CrmBoard() {
           ))}
           <button
             onClick={openCreate}
-            className="ml-auto rounded-xl bg-white px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-black transition hover:opacity-90 active:scale-95"
+            className="ml-auto rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:opacity-90 active:scale-95"
           >
             + Novo contato
           </button>
@@ -224,7 +224,7 @@ export default function CrmBoard() {
           <form
             onSubmit={save}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg animate-[kbosUp_0.25s_ease] rounded-t-3xl border border-white/10 bg-[#12122a] p-6 sm:rounded-3xl"
+            className="w-full max-w-lg animate-[kbosUp_0.25s_ease] rounded-t-3xl border border-white/10 bg-[#1a1828] p-6 sm:rounded-3xl"
           >
             <div className="flex items-center justify-between">
               <h2 className="font-display text-xl">{"item" in modal ? "Editar contato" : "Novo contato"}</h2>
@@ -239,12 +239,12 @@ export default function CrmBoard() {
               <input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="Empresa" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50" />
               <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none">
                 {CONTACT_STATUS.map((s) => (
-                  <option key={s.id} value={s.id} className="bg-[#12122a]">{s.label}</option>
+                  <option key={s.id} value={s.id} className="bg-[#1a1828]">{s.label}</option>
                 ))}
               </select>
               <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Notas (contexto, origem do lead...)" rows={3} className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 sm:col-span-2" />
             </div>
-            <button type="submit" disabled={saving} className="mt-4 w-full rounded-xl bg-white py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-black transition hover:opacity-90 active:scale-[0.99] disabled:opacity-50">
+            <button type="submit" disabled={saving} className="mt-4 w-full rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:opacity-90 active:scale-[0.99] disabled:opacity-50">
               {saving ? "Salvando..." : "item" in modal ? "Salvar alterações" : "Cadastrar contato"}
             </button>
           </form>

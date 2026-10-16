@@ -13,7 +13,9 @@ export async function GET() {
     await db().execute(sql`SELECT 1`);
     checks.db = { ok: true, ms: Date.now() - t0 };
   } catch (e) {
-    checks.db = { ok: false, detail: e instanceof Error ? e.message : String(e) };
+    // Rota pública: detalhe do driver (host, credencial, SQL) só no log.
+    console.error("[KBOS health] db", e);
+    checks.db = { ok: false, detail: "Banco de dados indisponível" };
   }
 
   const t1 = Date.now();

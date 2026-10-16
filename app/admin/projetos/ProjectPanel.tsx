@@ -96,7 +96,7 @@ export default function ProjectPanel({ project, onClose }: { project: { id: stri
 
   return (
     <div className="fixed inset-0 z-[70] flex justify-end bg-black/60" onClick={onClose}>
-      <div className="h-full w-full max-w-md overflow-y-auto bg-[#0e0e22] p-6" onClick={(e) => e.stopPropagation()}>
+      <div className="h-full w-full max-w-md overflow-y-auto bg-[#15132a] p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3">
           <h2 className="font-display text-xl">{project.titulo}</h2>
           <button onClick={onClose} aria-label="Fechar" className="text-2xl leading-none text-white/60 hover:text-white">×</button>
@@ -118,7 +118,7 @@ export default function ProjectPanel({ project, onClose }: { project: { id: stri
         <p className="mt-6 text-[12px] uppercase tracking-[0.2em] text-white/50">Tarefas</p>
         <form onSubmit={addTask} className="mt-2 flex gap-2">
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nova tarefa..." className="flex-1 rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50" />
-          <button type="submit" className="rounded-xl bg-white px-4 text-[12px] font-bold uppercase text-black">+</button>
+          <button type="submit" className="rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag px-4 text-[12px] font-bold uppercase text-white">+</button>
         </form>
         <div className="mt-3 space-y-2">
           {tasks.map((t) => (

@@ -9,6 +9,7 @@ import { db } from "./db";
 import { contacts, conversations, messages } from "./schema";
 import { sendTelegramText } from "./telegram";
 import { evoConfig, warnEvoFallbackOnce } from "./evolution";
+import { PublicError } from "./http";
 
 export type InboundMessage = {
   /** Identificador remoto do chat (ex. `5511999998888@s.whatsapp.net`). */
@@ -362,7 +363,7 @@ export async function sendAgentMessage(
 
   if (conv.channel === "telegram") {
     if (input.mediaUrl) {
-      throw new Error("Envio de mídia no Telegram ainda não suportado — envie texto.");
+      throw new PublicError("Envio de mídia no Telegram ainda não suportado — envie texto.", 422);
     }
     const { messageId } = await sendTelegramText(conv.channelChatId, text);
     return persistAgentMessage(conv, {

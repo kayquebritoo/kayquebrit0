@@ -118,13 +118,13 @@ const ABOUT_PHOTOS = [
 export function AboutSlide() {
   const { t } = useLang();
   return (
-    <section className="relative flex h-full flex-col justify-center overflow-hidden bg-[#0B0B1E]">
+    <section className="relative flex h-full flex-col justify-center overflow-hidden bg-[#11101E]">
       <p className="fp-anim ref-eyebrow absolute left-1/2 top-[70px] -translate-x-1/2 whitespace-nowrap md:top-[72px]">
         {t("about.eyebrow")}
       </p>
       <div className="ref-inner">
         {/* mobile: texto compacto para caber em 100svh */}
-        <p className="fp-anim text-[16px] font-light leading-[1.6] text-[#F4F1EC] md:hidden">
+        <p className="fp-anim text-[16px] font-light leading-[1.6] text-[#EDE6EC] md:hidden">
           <strong className="font-semibold">Tecnólogo Criativo</strong> especializado em
           converter <em className="italic">tecnologia em impacto visual.</em> Formado em
           Análise e Desenvolvimento de Sistemas, integro programação, design criativo e
@@ -132,7 +132,7 @@ export function AboutSlide() {
         </p>
         {/* desktop: medida do ref */}
         <p
-          className="fp-anim hidden font-light text-[#F4F1EC] md:block"
+          className="fp-anim hidden font-light text-[#EDE6EC] md:block"
           style={{ fontSize: "clamp(24px, 2.05vw, 39px)", lineHeight: 1.55, fontWeight: 300 }}
         >
           <strong style={{ fontWeight: 600 }}>Tecnólogo Criativo</strong> especializado em
@@ -259,7 +259,7 @@ export function ServicesSlide() {
     }
   }, [preview]);
   return (
-    <section className="relative flex h-full flex-col justify-center overflow-hidden bg-[#0B0B1E]">
+    <section className="relative flex h-full flex-col justify-center overflow-hidden bg-[#11101E]">
       <div ref={prevBox} className="pointer-events-none fixed left-0 top-0 z-40 hidden w-[300px] overflow-hidden md:block" aria-hidden>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -331,7 +331,7 @@ export function AudiovisualSlide() {
   const cursor = useViewCursor();
   const b = bindCursor(cursor);
   return (
-    <section className="relative flex h-full flex-col bg-[#0B0B1E] p-2 md:p-[18px]">
+    <section className="relative flex h-full flex-col bg-[#11101E] p-2 md:p-[18px]">
       <ViewCursor cursor={cursor} />
       <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-2 gap-2 md:grid-cols-2 md:grid-rows-none md:gap-[10px]">
         <Link
@@ -397,7 +397,7 @@ export function DevSlide() {
   const cursor = useViewCursor();
   const b = bindCursor(cursor);
   return (
-    <section className="relative flex h-full flex-col gap-2 bg-[#0B0B1E] p-2 md:gap-[10px] md:p-[18px]">
+    <section className="relative flex h-full flex-col gap-2 bg-[#11101E] p-2 md:gap-[10px] md:p-[18px]">
       <ViewCursor cursor={cursor} />
       <Link
         href="/trabalho/plugbra"
@@ -477,7 +477,7 @@ export function BrandingSlide() {
   const cursor = useViewCursor();
   const b = bindCursor(cursor);
   return (
-    <section className="relative flex h-full flex-col gap-2 bg-[#0B0B1E] p-2 md:grid md:grid-cols-2 md:gap-[10px] md:p-[18px]">
+    <section className="relative flex h-full flex-col gap-2 bg-[#11101E] p-2 md:grid md:grid-cols-2 md:gap-[10px] md:p-[18px]">
       <ViewCursor cursor={cursor} />
       <Link
         href="/trabalho/acai-norte-mix"
@@ -532,7 +532,7 @@ export function BrandingSlide() {
         </Link>
         <Link
           href="/trabalho"
-          className="fp-anim flex h-[60px] flex-none items-center justify-center rounded-lg bg-[#12122a] transition hover:bg-[#1a1a3a] md:h-auto md:flex-1 md:rounded-none"
+          className="fp-anim flex h-[60px] flex-none items-center justify-center rounded-lg bg-[#1a1828] transition hover:bg-[#1a1a3a] md:h-auto md:flex-1 md:rounded-none"
         >
           <span className="font-light uppercase text-white" style={{ fontSize: "clamp(16px, 4.5vw, 22px)", letterSpacing: "0.02em" }}>
             <span className="flex items-center justify-center gap-2 md:hidden">Todos trabalhos <ArrowRight size={20} /></span>
@@ -548,7 +548,7 @@ export function BrandingSlide() {
 export function TestimonialsSlide() {
   const { t } = useLang();
   return (
-    <section className="relative isolate z-0 flex h-full flex-col justify-start overflow-hidden bg-[#0B0B1E] md:justify-center">
+    <section className="relative isolate z-0 flex h-full flex-col justify-start overflow-hidden bg-[#11101E] md:justify-center">
       {/* mobile: ancorado ABAIXO do header fixo + badge 01/08 (72→~100px).
           Top-anchored de propósito: se a tela for curta, o excesso corta
           EMBAIXO (marquee), nunca atrás do menu. Desktop segue centralizado. */}
@@ -570,7 +570,7 @@ export function TestimonialsSlide() {
               key={testi.name}
               className="fp-anim w-[82vw] max-w-[320px] shrink-0 snap-center rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:w-[60vw] md:w-auto md:max-w-none md:shrink md:rounded-none md:border-0 md:border-l md:bg-transparent md:p-0"
             >
-              <p className="font-light leading-snug text-[#F4F1EC] md:leading-relaxed" style={{ fontSize: "clamp(13.5px, 3.7vw, 15px)", lineHeight: 1.55 }}>
+              <p className="font-light leading-snug text-[#EDE6EC] md:leading-relaxed" style={{ fontSize: "clamp(13.5px, 3.7vw, 15px)", lineHeight: 1.55 }}>
                 <span className="md:hidden">{testi.quote}</span>
                 <span className="hidden md:block" style={{ fontSize: "clamp(19px, 1.35vw, 25px)", lineHeight: 1.6 }}>{testi.quote}</span>
               </p>
@@ -622,7 +622,7 @@ export function TestimonialsSlide() {
                         href={s.href}
                         aria-label={`${s.name} — ${testi.companyName}`}
                         title={`${s.name} — ${testi.companyName}`}
-                        className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-[#9DB8E8] transition hover:text-white"
+                        className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-[#E80EFD] transition hover:text-white"
                       >
                         <SocialIcon icon={s.icon} size={15} />
                         <span className="hidden md:inline">{t("testimonials.case")}</span>
@@ -635,7 +635,7 @@ export function TestimonialsSlide() {
                         rel="noopener"
                         aria-label={`${s.name} — ${testi.companyName}`}
                         title={`${s.name} — ${testi.companyName}`}
-                        className="text-[#9DB8E8] transition hover:text-white"
+                        className="text-[#E80EFD] transition hover:text-white"
                       >
                         <SocialIcon icon={s.icon} size={16} />
                       </a>
@@ -689,9 +689,9 @@ export function ContactSlide() {
     return () => { tm.kill(); };
   }, []);
   return (
-    <section className="relative flex h-full flex-col justify-center overflow-hidden bg-[#0B0B1E]">
+    <section className="relative flex h-full flex-col justify-center overflow-hidden bg-[#11101E]">
       {/* aurora de fundo do contato */}
-      <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-[60vmin] w-[80vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#9DB8E8]/10 blur-[120px]" />
+      <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-[60vmin] w-[80vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#E80EFD]/10 blur-[120px]" />
       <div className="ref-inner relative">
         <h2
           className="fp-anim font-display font-light text-white"
@@ -726,13 +726,13 @@ export function ContactSlide() {
           <Link
             ref={magContact as unknown as React.RefObject<HTMLAnchorElement>}
             href="/briefing"
-            className="relative flex h-[60px] w-full items-center justify-center overflow-hidden rounded-full border border-white/80 px-10 text-center text-[18px] font-light text-[#9DB8E8] transition hover:bg-white hover:text-[#0B0B1E] md:h-[76px] md:min-w-[320px]"
+            className="relative flex h-[60px] w-full items-center justify-center overflow-hidden rounded-full border border-white/80 px-10 text-center text-[18px] font-light text-[#E80EFD] transition hover:bg-white hover:text-[#11101E] md:h-[76px] md:min-w-[320px]"
           >
             <span aria-hidden className="pointer-events-none absolute inset-y-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/40 to-transparent" style={{ animation: "ctaSweep 3.2s ease-in-out infinite" }} />
             <span className="relative md:text-[22px]">{t("contact.cta")}</span>
           </Link>
           </div>
-          <div className="flex flex-wrap items-center gap-3 text-[#9DB8E8] md:gap-4">
+          <div className="flex flex-wrap items-center gap-3 text-[#E80EFD] md:gap-4">
             {SOCIALS.map((s) => (
               <a
                 key={s.name}
@@ -749,7 +749,7 @@ export function ContactSlide() {
           </div>
         </div>
 
-        <div className="fp-anim mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[15px] font-light text-[#9DB8E8] md:mt-[6vh] md:justify-between">
+        <div className="fp-anim mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[15px] font-light text-[#E80EFD] md:mt-[6vh] md:justify-between">
           <span className="text-white/80">© Kayque Brito</span>
           <span>Belém — <LocalTime /></span>
           <span className="flex items-center gap-4">

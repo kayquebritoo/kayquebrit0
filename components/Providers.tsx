@@ -34,7 +34,7 @@ function ThemeProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle("light", theme === "light");
     document.documentElement.style.colorScheme = theme === "light" ? "light" : "dark";
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", theme === "light" ? "#f1eee7" : "#0B0B1E");
+    if (meta) meta.setAttribute("content", theme === "light" ? "#f1eee7" : "#11101E");
     try {
       localStorage.setItem("kb-theme", theme);
     } catch {

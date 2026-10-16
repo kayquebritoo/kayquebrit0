@@ -186,10 +186,10 @@ export default function AdminCourseDetail({ courseId }: { courseId: string }) {
         <input value={course.thumbnailUrl} onChange={(e) => setCourse({ ...course, thumbnailUrl: e.target.value })} placeholder="Thumb URL (https://...)" inputMode="url" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 md:col-span-3" />
         <select value={course.status} onChange={(e) => setCourse({ ...course, status: e.target.value })} className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none">
           {["rascunho", "publicado", "arquivado"].map((s) => (
-            <option key={s} value={s} className="bg-[#12122a]">{s}</option>
+            <option key={s} value={s} className="bg-[#1a1828]">{s}</option>
           ))}
         </select>
-        <button type="submit" className="rounded-xl bg-white py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-black md:col-span-1">Salvar</button>
+        <button type="submit" className="rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-white md:col-span-1">Salvar</button>
       </form>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -217,7 +217,7 @@ export default function AdminCourseDetail({ courseId }: { courseId: string }) {
                   <input value={newLesson[m.id]?.titulo || ""} onChange={(e) => setF(m.id, "titulo", e.target.value)} placeholder="Nova aula..." className="rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-[13px] outline-none placeholder:text-white/25 focus:border-white/50 md:col-span-4" />
                   <select value={newLesson[m.id]?.tipo || "video"} onChange={(e) => setF(m.id, "tipo", e.target.value)} className="rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-[13px] outline-none md:col-span-2">
                     {TIPOS.map((t) => (
-                      <option key={t} value={t} className="bg-[#12122a]">{t}</option>
+                      <option key={t} value={t} className="bg-[#1a1828]">{t}</option>
                     ))}
                   </select>
                   <input value={newLesson[m.id]?.videoUrl || ""} onChange={(e) => setF(m.id, "videoUrl", e.target.value)} placeholder="URL do vídeo" className="rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-[13px] outline-none placeholder:text-white/25 focus:border-white/50 md:col-span-4" />

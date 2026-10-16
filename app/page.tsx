@@ -37,7 +37,7 @@ export const SLIDE_INDEX = {
 
 export default function Home() {
   return (
-    <main className="bg-[#0B0B1E] text-[#F4F1EC]">
+    <main className="bg-[#11101E] text-[#EDE6EC]">
       <Fullpage slides={SLIDES}>
         <HeroSlide />
         <AboutSlide />

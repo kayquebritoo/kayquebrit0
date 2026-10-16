@@ -3,6 +3,7 @@ import { db } from "@/lib/kbos/db";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { withRateLimit } from "@/lib/kbos/rate-limit";
 import { handleMorningBriefing } from "@/lib/kbos/morning-briefing";
+import { serverError } from "@/lib/kbos/http";
 
 // POST /api/ai/briefing/trigger — disparo manual do briefing matinal (admin).
 //
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
   try {
     db();
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 503 });
+    return serverError(e, 503);
   }
   const user = await sessionUser();
   const denied = deny(user, "admin");
@@ -37,6 +38,6 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

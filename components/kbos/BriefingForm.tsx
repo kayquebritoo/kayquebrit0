@@ -18,7 +18,7 @@ function Field({ f, value, onChange }: { f: BriefingField; value: string; onChan
         <select value={value} onChange={(e) => onChange(e.target.value)} className={`${cls} appearance-none`}>
           <option value="">Selecionar...</option>
           {f.options?.map((o) => (
-            <option key={o} value={o} className="bg-[#12122a]">{o}</option>
+            <option key={o} value={o} className="bg-[#1a1828]">{o}</option>
           ))}
         </select>
       ) : (
@@ -45,7 +45,7 @@ export default function BriefingForm() {
 
   if (!cat) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#0B0B1E] px-5 text-[#F4F1EC]">
+      <main className="flex min-h-screen items-center justify-center bg-[#11101E] px-5 text-[#EDE6EC]">
         <div className="text-center">
           <p className="text-white/60">Categoria não encontrada.</p>
           <Link href="/briefing" className="mt-4 inline-block text-white underline">Ver categorias</Link>
@@ -78,7 +78,7 @@ export default function BriefingForm() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0B0B1E] px-5 pb-20 pt-24 text-[#F4F1EC] md:pt-28">
+    <main className="min-h-screen bg-[#11101E] px-5 pb-20 pt-24 text-[#EDE6EC] md:pt-28">
       <form onSubmit={submit} className="mx-auto max-w-2xl">
         <Link href={backHref} className="text-[11px] uppercase tracking-[0.3em] text-white/45 hover:text-white">
           ← Sobre {cat.label}

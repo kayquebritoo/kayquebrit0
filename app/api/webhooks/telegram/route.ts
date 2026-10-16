@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { withRateLimit } from "@/lib/kbos/rate-limit";
 import { ingestInbound, isMessagesUpsert } from "@/lib/kbos/inbox";
 import { parseTelegramUpdate, resolveTelegramMedia } from "@/lib/kbos/telegram";
+import { serverError } from "@/lib/kbos/http";
 
 // Webhook inbound do Telegram (Bot API) — PÚBLICO (o Telegram não tem cookie
-// de sessão; o middleware não exige auth em `/api/webhooks/*`).
+// de sessão; o proxy não exige auth em `/api/webhooks/*`).
 //
 // Conexão: `POST /api/channels/telegram {action:"connect"}` registra este URL
 // via setWebhook. Segurança opcional: `TELEGRAM_WEBHOOK_SECRET` (≥8 chars) —
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
     });
   } catch (e) {
     // 500 = o Telegram retenta depois; a ingestão idempotente evita duplicatas.
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 

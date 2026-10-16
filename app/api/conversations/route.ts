@@ -4,6 +4,7 @@ import { db } from "@/lib/kbos/db";
 import { contacts, conversations } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { conversationCreateSchema, readBody } from "@/lib/kbos/validators";
+import { serverError } from "@/lib/kbos/http";
 
 const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as const;
 const CHANNELS = ["whatsapp", "instagram", "telegram", "messenger", "webchat"] as const;
@@ -61,7 +62,7 @@ export async function GET(req: Request) {
     const unreadTotal = rows.reduce((a, r) => a + (r.unreadCount ?? 0), 0);
     return NextResponse.json({ items: rows, unreadTotal });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 
@@ -105,6 +106,6 @@ export async function POST(req: Request) {
       throw e;
     }
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

@@ -6,6 +6,7 @@ import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { getCategory } from "@/lib/kbos/briefing-forms";
 import { briefingCreateSchema, readBody } from "@/lib/kbos/validators";
 import { withRateLimit } from "@/lib/kbos/rate-limit";
+import { serverError } from "@/lib/kbos/http";
 
 // POST público: cria briefing a partir do form dinâmico.
 export async function POST(req: Request) {
@@ -41,8 +42,7 @@ export async function POST(req: Request) {
       .returning({ id: briefings.id });
     return NextResponse.json({ ok: true, id: rows[0].id }, { status: 201 });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Erro interno.";
-    return NextResponse.json({ error: msg }, { status: msg.includes("DATABASE_URL") ? 503 : 500 });
+    return serverError(e);
   }
 }
 
@@ -55,7 +55,6 @@ export async function GET() {
     const rows = await db().select().from(briefings).orderBy(desc(briefings.createdAt)).limit(100);
     return NextResponse.json({ items: rows });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Erro interno.";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return serverError(e);
   }
 }

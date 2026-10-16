@@ -68,8 +68,11 @@ export default function InboxBoard() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [channelFilter, setChannelFilter] = useState("whatsapp");
   const [q, setQ] = useState("");
+  // Busca com debounce: só o termo "assentado" dispara a consulta.
+  const [qDebounced, setQDebounced] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [msgs, setMsgs] = useState<Message[]>([]);
+  // Histórico com o id de origem: nunca exibe mensagens de outra conversa.
+  const [msgs, setMsgs] = useState<{ convId: string | null; items: Message[] }>({ convId: null, items: [] });
   const [chatError, setChatError] = useState("");
   const [draft, setDraft] = useState("");
   const [mediaUrl, setMediaUrl] = useState("");
@@ -79,14 +82,16 @@ export default function InboxBoard() {
   const [chatStatus, setChatStatus] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<string | null>(null);
-  selectedRef.current = selectedId;
+  useEffect(() => {
+    selectedRef.current = selectedId;
+  }, [selectedId]);
 
   const loadConvs = useCallback(async () => {
     try {
       const p = new URLSearchParams();
       if (statusFilter !== "all") p.set("status", statusFilter);
       if (channelFilter !== "all") p.set("channel", channelFilter);
-      if (q.trim()) p.set("q", q.trim());
+      if (qDebounced) p.set("q", qDebounced);
       const res = await fetch(`/api/conversations?${p.toString()}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Falha ao carregar conversas.");
@@ -96,7 +101,7 @@ export default function InboxBoard() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro.");
     }
-  }, [statusFilter, channelFilter, q]);
+  }, [statusFilter, channelFilter, qDebounced]);
 
   const loadMsgs = useCallback(async (id: string, silent = true) => {
     try {
@@ -104,7 +109,7 @@ export default function InboxBoard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Falha no histórico.");
       if (selectedRef.current !== id) return;
-      setMsgs(data.items || []);
+      setMsgs({ convId: id, items: data.items || [] });
       if (!silent) setChatError("");
     } catch (e) {
       if (!silent) setChatError(e instanceof Error ? e.message : "Erro.");
@@ -113,6 +118,7 @@ export default function InboxBoard() {
 
   // Lista: carga inicial + polling otimizado (pausa com aba oculta).
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch assíncrono: o setState só ocorre após o await.
     loadConvs();
     const t = setInterval(() => {
       if (document.visibilityState === "visible") loadConvs();
@@ -120,19 +126,18 @@ export default function InboxBoard() {
     return () => clearInterval(t);
   }, [loadConvs]);
 
-  // Busca digitada: debounce (filtros de status/canal recarregam na hora).
+  // Busca digitada: debounce de 350ms (filtros de status/canal recarregam na
+  // hora). Antes, `q` entrava direto nas deps de `loadConvs` e cada tecla
+  // disparava um fetch e reiniciava o polling.
   useEffect(() => {
-    if (!q) return;
-    const t = setTimeout(loadConvs, 350);
+    const t = setTimeout(() => setQDebounced(q.trim()), 350);
     return () => clearTimeout(t);
-  }, [q, loadConvs]);
+  }, [q]);
 
   // Chat: carrega ao selecionar + polling; marca como lida.
   useEffect(() => {
-    if (!selectedId) {
-      setMsgs([]);
-      return;
-    }
+    if (!selectedId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch assíncrono: o setState só ocorre após o await.
     loadMsgs(selectedId, false);
     const t = setInterval(() => {
       if (document.visibilityState === "visible") loadMsgs(selectedId);
@@ -150,15 +155,19 @@ export default function InboxBoard() {
         })
         .catch(() => {});
     }
+    // Sem este cleanup, cada conversa aberta deixava um polling vivo.
+    return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
   // Auto-scroll p/ a última mensagem quando o chat atualiza.
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [msgs.length, selectedId]);
+  }, [msgs.items.length, selectedId]);
 
   const selected = useMemo(() => convs.find((c) => c.id === selectedId) ?? null, [convs, selectedId]);
+  // Derivado (sem setState em efeito): só o histórico da conversa aberta.
+  const shownMsgs = selectedId && msgs.convId === selectedId ? msgs.items : [];
   const effectiveStatus = chatStatus ?? selected?.status ?? "open";
 
   async function changeStatus(next: string) {
@@ -278,9 +287,9 @@ export default function InboxBoard() {
           aria-label="Filtrar por canal"
           className="rounded-xl border border-white/15 bg-black/30 px-2.5 py-2 text-[13px] outline-none"
         >
-          <option value="all" className="bg-[#12122a]">Todos os canais</option>
+          <option value="all" className="bg-[#1a1828]">Todos os canais</option>
           {INBOX_CHANNELS.map((c) => (
-            <option key={c.id} value={c.id} className="bg-[#12122a]">{c.label}</option>
+            <option key={c.id} value={c.id} className="bg-[#1a1828]">{c.label}</option>
           ))}
         </select>
       </div>
@@ -366,7 +375,7 @@ export default function InboxBoard() {
             className="rounded-xl border border-white/15 bg-black/30 px-2.5 py-2 text-[12px] uppercase tracking-wider outline-none"
           >
             {CONVERSATION_STATUS.map((s) => (
-              <option key={s.id} value={s.id} className="bg-[#12122a]">{s.label}</option>
+              <option key={s.id} value={s.id} className="bg-[#1a1828]">{s.label}</option>
             ))}
           </select>
         </div>
@@ -387,9 +396,9 @@ export default function InboxBoard() {
       )}
       {/* Bolhas */}
       <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto p-3.5">
-        {msgs.map(bubble)}
+        {shownMsgs.map(bubble)}
         <div ref={bottomRef} />
-        {msgs.length === 0 && <p className="pt-10 text-center text-[13px] text-white/35">Sem mensagens ainda. Diga oi 👋</p>}
+        {shownMsgs.length === 0 && <p className="pt-10 text-center text-[13px] text-white/35">Sem mensagens ainda. Diga oi 👋</p>}
       </div>
       {/* Composer */}
       <form onSubmit={send} className="border-t border-white/10 p-3">
@@ -403,9 +412,9 @@ export default function InboxBoard() {
               className="min-w-0 flex-1 rounded-xl border border-white/15 bg-black/30 px-3.5 py-2 text-[13px] outline-none placeholder:text-white/25 focus:border-white/50"
             />
             <select value={mediaType} onChange={(e) => setMediaType(e.target.value)} aria-label="Tipo de anexo" className="rounded-xl border border-white/15 bg-black/30 px-2 py-2 text-[13px] outline-none">
-              <option value="image" className="bg-[#12122a]">Imagem</option>
-              <option value="audio" className="bg-[#12122a]">Áudio</option>
-              <option value="document" className="bg-[#12122a]">Doc</option>
+              <option value="image" className="bg-[#1a1828]">Imagem</option>
+              <option value="audio" className="bg-[#1a1828]">Áudio</option>
+              <option value="document" className="bg-[#1a1828]">Doc</option>
             </select>
           </div>
         )}
@@ -433,7 +442,7 @@ export default function InboxBoard() {
           <button
             type="submit"
             disabled={sending || (!draft.trim() && !mediaUrl.trim())}
-            className="shrink-0 rounded-xl bg-white px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.12em] text-black transition hover:opacity-90 active:scale-95 disabled:opacity-40"
+            className="shrink-0 rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.12em] text-white transition hover:opacity-90 active:scale-95 disabled:opacity-40"
           >
             {sending ? "..." : "➤"}
           </button>
@@ -460,7 +469,7 @@ export default function InboxBoard() {
         {!selectedId ? (
           <div className="max-h-[70vh]">{listPanel}</div>
         ) : (
-          <div className="fixed inset-0 z-[60] flex flex-col bg-[#0B0B1E]">{chatPanel}</div>
+          <div className="fixed inset-0 z-[60] flex flex-col bg-[#11101E]">{chatPanel}</div>
         )}
       </div>
     </div>

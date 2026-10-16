@@ -4,6 +4,7 @@ import { db } from "@/lib/kbos/db";
 import { tasks } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { checkId, readBody, taskCreateSchema } from "@/lib/kbos/validators";
+import { serverError } from "@/lib/kbos/http";
 
 const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as const;
 
@@ -43,6 +44,6 @@ export async function POST(req: Request) {
       .returning();
     return NextResponse.json({ ok: true, item: rows[0] }, { status: 201 });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

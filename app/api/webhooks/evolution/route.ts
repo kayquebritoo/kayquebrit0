@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { timingSafeEqual } from "crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/kbos/db";
 import { messages } from "@/lib/kbos/schema";
 import { withRateLimit } from "@/lib/kbos/rate-limit";
+import { serverError } from "@/lib/kbos/http";
+import { isEvolutionWebhookAuthorized } from "@/lib/kbos/evolution";
 import {
   extractInbound,
   ingestInbound,
@@ -12,7 +13,7 @@ import {
 } from "@/lib/kbos/inbox";
 
 // Webhook inbound da Evolution API — PÚBLICO (a Evolution não tem cookie de
-// sessão; o middleware não exige auth em `/api/webhooks/*`).
+// sessão; o proxy não exige auth em `/api/webhooks/*`).
 //
 // Configurado SOZINHO pelo app (`ensureInstance`/`setInstanceWebhook` ao abrir
 // /admin/whatsapp): URL `https://<APP_URL>/api/webhooks/evolution` (+ `?token=`
@@ -25,20 +26,6 @@ import {
 //
 // Idempotência: `ingestInbound` deduplica por `external_id`, então reentregas
 // da Evolution retornam `{ deduped: true }` sem duplicar linhas.
-function checkSecret(req: Request): boolean {
-  const token = (process.env.EVOLUTION_WEBHOOK_TOKEN || "").trim();
-  if (token.length < 8) return true;
-  const url = new URL(req.url);
-  const got =
-    req.headers.get("x-webhook-token") ||
-    req.headers.get("apikey") ||
-    url.searchParams.get("token") ||
-    "";
-  // Comparação em tempo constante (não vaza o segredo via timing).
-  const a = Buffer.from(got);
-  const b = Buffer.from(token);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
 
 function str(v: unknown): string | null {
   return typeof v === "string" && v.trim() ? v.trim() : null;
@@ -70,7 +57,7 @@ async function handleReceipt(data: unknown): Promise<boolean> {
 export async function POST(req: Request) {
   const limited = await withRateLimit(req, "webhooks:evolution");
   if (limited) return limited;
-  if (!checkSecret(req)) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+  if (!isEvolutionWebhookAuthorized(req)) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   let body: unknown;
   try {
     body = await req.json();
@@ -109,7 +96,7 @@ export async function POST(req: Request) {
     });
   } catch (e) {
     // 500 = a Evolution retenta depois; a ingestão idempotente evita duplicatas.
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 

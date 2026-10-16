@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 type Project = {
@@ -50,6 +51,7 @@ export default function ShowcaseManager() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch assíncrono: o setState só ocorre após o await.
     load();
   }, [load]);
 
@@ -140,7 +142,7 @@ export default function ShowcaseManager() {
 
       {editing && (
         <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-6" onClick={() => setEditing(null)}>
-          <form onSubmit={save} onClick={(e) => e.stopPropagation()} className="max-h-[92vh] w-full max-w-lg animate-[kbosUp_0.25s_ease] overflow-y-auto rounded-t-3xl border border-white/10 bg-[#12122a] p-6 sm:rounded-3xl">
+          <form onSubmit={save} onClick={(e) => e.stopPropagation()} className="max-h-[92vh] w-full max-w-lg animate-[kbosUp_0.25s_ease] overflow-y-auto rounded-t-3xl border border-white/10 bg-[#1a1828] p-6 sm:rounded-3xl">
             <div className="flex items-center justify-between gap-3">
               <h3 className="font-display truncate text-lg">{editing.titulo}</h3>
               <button type="button" onClick={() => setEditing(null)} aria-label="Fechar" className="rounded-lg px-2 text-2xl leading-none text-white/60 hover:text-white">×</button>
@@ -169,19 +171,19 @@ export default function ShowcaseManager() {
               <label className="grid gap-1 text-[12px] uppercase tracking-[0.15em] text-white/45">
                 Curso associado
                 <select value={form.courseId} onChange={(e) => setForm({ ...form, courseId: e.target.value })} className={input}>
-                  <option value="" className="bg-[#12122a]">Nenhum curso</option>
+                  <option value="" className="bg-[#1a1828]">Nenhum curso</option>
                   {courses.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-[#12122a]">{c.titulo} · /{c.slug}</option>
+                    <option key={c.id} value={c.id} className="bg-[#1a1828]">{c.titulo} · /{c.slug}</option>
                   ))}
                 </select>
               </label>
               {courses.length === 0 && (
                 <p className="text-[12px] text-white/40">
-                  Nenhum curso cadastrado. <a href="/admin/cursos" className="underline hover:text-white">Criar curso →</a>
+                  Nenhum curso cadastrado. <Link href="/admin/cursos" className="underline hover:text-white">Criar curso →</Link>
                 </p>
               )}
             </div>
-            <button type="submit" disabled={saving} className="mt-4 w-full rounded-xl bg-white py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-black transition hover:opacity-90 active:scale-[0.99] disabled:opacity-50">
+            <button type="submit" disabled={saving} className="mt-4 w-full rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:opacity-90 active:scale-[0.99] disabled:opacity-50">
               {saving ? "Salvando..." : "Salvar vitrine"}
             </button>
           </form>

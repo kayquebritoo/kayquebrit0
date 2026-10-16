@@ -122,7 +122,7 @@ export default function Header() {
     >
       <span className="relative block h-[18px] w-[32px] md:w-[34px]">
         <span
-          className="absolute left-0 h-[2px] w-full bg-[#F4F1EC] transition-all duration-500"
+          className="absolute left-0 h-[2px] w-full bg-[#EDE6EC] transition-all duration-500"
           style={
             open
               ? { top: "50%", transform: "translateY(-50%) rotate(45deg)" }
@@ -130,7 +130,7 @@ export default function Header() {
           }
         />
         <span
-          className="absolute left-0 h-[2px] w-full bg-[#F4F1EC] transition-all duration-500"
+          className="absolute left-0 h-[2px] w-full bg-[#EDE6EC] transition-all duration-500"
           style={
             open
               ? { top: "50%", transform: "translateY(-50%) rotate(-45deg)" }
@@ -159,7 +159,7 @@ export default function Header() {
       ) : (
         /* DEMAIS PÁGINAS: pill compacta em vidro — nunca colide com o conteúdo */
         <header className="fixed inset-x-0 top-0 z-[60] px-4 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6 sm:pt-[max(1rem,env(safe-area-inset-top))]">
-          <div className="header-glass mx-auto flex max-w-6xl items-center justify-between rounded-2xl border border-white/10 bg-[#0B0B1E]/70 py-2 pl-4 pr-2.5 shadow-2xl shadow-black/30 backdrop-blur-xl">
+          <div className="header-glass mx-auto flex max-w-6xl items-center justify-between rounded-2xl border border-white/10 bg-[#11101E]/70 py-2 pl-4 pr-2.5 shadow-2xl shadow-black/30 backdrop-blur-xl">
             {logoBtn(true)}
             <div className="flex items-center gap-2">
               {loginBtn(true)}
@@ -213,7 +213,7 @@ export default function Header() {
               href="/trabalho"
               onClick={() => setOpen(false)}
               tabIndex={open ? 0 : -1}
-              className={`menu-big group relative mt-1 px-4 py-1.5 text-[#9DB8E8] transition-all duration-500 hover:text-white ${
+              className={`menu-big group relative mt-1 px-4 py-1.5 text-[#E80EFD] transition-all duration-500 hover:text-white ${
                 open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
               }`}
               style={{ transitionDelay: open ? "420ms" : "0ms" }}
@@ -342,7 +342,7 @@ function MenuItem({ label, num, open, delay, onClick }: { label: string; num: st
       onClick={onClick}
       type="button"
       tabIndex={open ? 0 : -1}
-      className={`menu-big group relative touch-manipulation px-4 py-1 text-[#F4F1EC]/90 transition-all duration-500 hover:text-white sm:py-1.5 ${
+      className={`menu-big group relative touch-manipulation px-4 py-1 text-[#EDE6EC]/90 transition-all duration-500 hover:text-white sm:py-1.5 ${
         open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
       }`}
       style={{ transitionDelay: open ? `${delay}ms` : "0ms" }}

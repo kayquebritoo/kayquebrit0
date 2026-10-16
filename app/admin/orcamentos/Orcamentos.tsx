@@ -1,6 +1,13 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BUDGET_STATUS, DEFAULT_PIX_INFO } from "@/lib/kbos/constants";
+import {
+  PAYMENT_CONDITIONS,
+  calcDiscountAmount,
+  calcPaymentOptions,
+  formatBRL as brl,
+  type PaymentCondition,
+} from "@/lib/kbos/budget-calc";
 
 type Item = { service: string; description?: string | null; quantity: number; unitPrice: number; total: number; date?: string | null };
 type Budget = {
@@ -28,8 +35,6 @@ type Budget = {
 };
 type Contact = { id: string; name: string; company: string | null; phone?: string | null; email?: string | null };
 
-const brl = (v: number | string) =>
-  Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const num = (v: unknown): number => {
   if (typeof v === "string") v = v.replace(/\./g, "").replace(",", ".");
   const n = Number(v);
@@ -45,23 +50,6 @@ const STATUS_STYLE: Record<string, string> = {
   rejected: "border-red-300/30 bg-red-400/10 text-red-200",
 };
 
-// Condições de pagamento (espelho client-safe de `lib/kbos/budgets.ts` —
-/// aquele módulo importa o banco e não pode entrar no bundle do cliente).
-const PAYMENT_OPTIONS = [
-  { id: "cash", label: "À vista", hint: "10% de desconto" },
-  { id: "installments", label: "Parcelado", hint: "50% entrada + 50% entrega" },
-  { id: "card", label: "Cartão", hint: "Crédito ou débito" },
-] as const;
-type PaymentId = (typeof PAYMENT_OPTIONS)[number]["id"];
-const payValues = (total: number) => {
-  const base = Math.max(0, total || 0);
-  const half = Math.round((base / 2) * 100) / 100;
-  return {
-    cash: Math.round(base * 0.9 * 100) / 100,
-    entry: half,
-    balance: Math.round((base - half) * 100) / 100,
-  };
-};
 
 const emptyItem = (): Item => ({ service: "", description: "", quantity: 1, unitPrice: 0, total: 0 });
 type FormState = {
@@ -72,7 +60,7 @@ type FormState = {
   items: Item[];
   discountType: "fixed" | "percent";
   discountValue: string;
-  paymentCondition: PaymentId;
+  paymentCondition: PaymentCondition;
   deliveryDeadline: string;
   revisionsCount: string;
   status: string;
@@ -136,6 +124,7 @@ export default function Orcamentos() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch assíncrono: o setState só ocorre após o await.
     void load();
   }, [load]);
 
@@ -159,17 +148,15 @@ export default function Orcamentos() {
     return [...seen].slice(0, 60);
   }, [contacts, items]);
 
-  // Totais do formulário (espelho da regra do servidor): subtotal − desconto.
+  // Totais do formulário: mesma regra do servidor (`budget-calc.ts`).
   const subtotal = useMemo(
     () => form.items.reduce((a, i) => a + num(i.quantity) * num(i.unitPrice), 0),
     [form.items]
   );
-  const discountAmount = useMemo(() => {
-    const v = num(form.discountValue);
-    if (!v) return 0;
-    if (form.discountType === "percent") return Math.round(subtotal * Math.min(v, 100)) / 100;
-    return Math.min(v, subtotal);
-  }, [form.discountValue, form.discountType, subtotal]);
+  const discountAmount = useMemo(
+    () => calcDiscountAmount(subtotal, form.discountType, num(form.discountValue)),
+    [form.discountValue, form.discountType, subtotal]
+  );
   const formTotal = Math.round((subtotal - discountAmount) * 100) / 100;
 
   const linkedContact = contacts.find((c) => c.id === form.contactId) || null;
@@ -345,7 +332,7 @@ export default function Orcamentos() {
         </div>
         <button
           onClick={openNew}
-          className="ml-auto rounded-xl border border-white/20 px-4 py-2 text-sm transition-colors hover:border-white/50"
+          className="ml-auto rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-brand-mag/20 transition hover:opacity-90 active:scale-95"
         >
           + Novo orçamento
         </button>
@@ -702,19 +689,19 @@ export default function Orcamentos() {
                   />
                 </div>
               </div>
-              <div className="mt-3 flex items-center justify-between rounded-xl border border-emerald-300/25 bg-emerald-400/[0.07] px-4 py-3">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-emerald-200/70">
+              <div className="mt-3 flex items-center justify-between rounded-xl border border-brand-mag/30 bg-brand-mag/[0.06] px-4 py-3">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-brand-mag">
                   Total{discountAmount > 0 ? ` (−${brl(discountAmount)})` : ""}
                 </span>
-                <strong className="font-display text-2xl font-light text-emerald-100">{brl(formTotal)}</strong>
+                <strong className="font-display text-2xl font-light text-white">{brl(formTotal)}</strong>
               </div>
 
               <div className="mt-3">
                 <span className={labelCls}>Condição de pagamento preferida</span>
                 <div className="grid gap-2 sm:grid-cols-3">
-                  {PAYMENT_OPTIONS.map((p) => {
+                  {PAYMENT_CONDITIONS.map((p) => {
                     const active = form.paymentCondition === p.id;
-                    const v = payValues(formTotal);
+                    const v = calcPaymentOptions(formTotal);
                     const value =
                       p.id === "cash" ? brl(v.cash) : p.id === "installments" ? `2× ${brl(v.entry)}` : brl(formTotal);
                     return (
@@ -828,7 +815,7 @@ export default function Orcamentos() {
               <button
                 onClick={() => void save()}
                 disabled={saving}
-                className="rounded-xl border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-medium hover:bg-white/20 disabled:opacity-50"
+                className="rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-mag/20 transition hover:opacity-90 active:scale-[0.99] disabled:opacity-50"
               >
                 {saving ? "Salvando…" : editing ? `Salvar · ${brl(formTotal)}` : `Criar orçamento · ${brl(formTotal)}`}
               </button>

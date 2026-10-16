@@ -3,7 +3,7 @@
 // traduzem LmsError → HTTP.
 import { randomBytes } from "crypto";
 import { and, asc, eq } from "drizzle-orm";
-import { db } from "./db";
+import { db, isConflict } from "./db";
 import { slugify } from "./lms-client";
 import {
   certificates,
@@ -60,15 +60,8 @@ function appUrl() {
   return (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
 }
 
-/** Erro 23505 (unique violation) — o Drizzle embrulha em DrizzleQueryError.cause. */
-export function isConflict(e: unknown) {
-  let cur: unknown = e;
-  for (let i = 0; i < 4 && cur && typeof cur === "object"; i++) {
-    if ((cur as { code?: string }).code === "23505") return true;
-    cur = (cur as { cause?: unknown }).cause;
-  }
-  return false;
-}
+// `isConflict` mora em `db.ts` (genérico); reexportado p/ as rotas do LMS.
+export { isConflict };
 
 /* ---------- leitura ---------- */
 

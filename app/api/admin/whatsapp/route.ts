@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { readBody, waAdminActionSchema } from "@/lib/kbos/validators";
 import { withRateLimit } from "@/lib/kbos/rate-limit";
+import { serverError } from "@/lib/kbos/http";
 import {
   ensureInstance,
   evoFallbackActive,
@@ -124,7 +125,7 @@ export async function GET(req: Request) {
       checkedAt: new Date().toISOString(),
     });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 
@@ -143,6 +144,6 @@ export async function POST(req: Request) {
     if (!r.ok) return NextResponse.json({ error: r.detail || "Falha." }, { status: 502 });
     return NextResponse.json({ ok: true, action: parsed.data.action });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

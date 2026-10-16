@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { sessionUser } from "@/lib/kbos/rbac";
 import { checkId, progressCompleteSchema, readBody } from "@/lib/kbos/validators";
 import { completeLesson, getProgressSummary, LmsError, lmsStatus } from "@/lib/kbos/lms";
+import { serverError } from "@/lib/kbos/http";
 
 // GET ?enrollmentId= — resumo de progresso + aulas (trava de drip/conteúdo).
 export async function GET(req: Request) {
@@ -16,7 +17,7 @@ export async function GET(req: Request) {
     return NextResponse.json(summary);
   } catch (e) {
     if (e instanceof LmsError) return NextResponse.json({ error: e.message }, { status: lmsStatus(e.code) });
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 
@@ -34,6 +35,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, ...summary });
   } catch (e) {
     if (e instanceof LmsError) return NextResponse.json({ error: e.message }, { status: lmsStatus(e.code) });
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

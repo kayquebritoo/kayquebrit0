@@ -6,6 +6,7 @@ import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { checkId, enrollmentCreateSchema, readBody } from "@/lib/kbos/validators";
 import { buildIdempotencyKey, enqueueJob } from "@/lib/kbos/jobs";
 import { isConflict } from "@/lib/kbos/lms";
+import { serverError } from "@/lib/kbos/http";
 
 const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as const;
 const isStaff = (role?: string) => !!role && (STAFF as readonly string[]).includes(role);
@@ -41,7 +42,7 @@ export async function GET(req: Request) {
     );
     return NextResponse.json({ items: withAlunos });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 
@@ -103,6 +104,6 @@ export async function POST(req: Request) {
       throw e;
     }
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

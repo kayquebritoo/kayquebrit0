@@ -5,6 +5,7 @@ import { budgets, contacts } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { budgetCreateSchema, readBody } from "@/lib/kbos/validators";
 import { createBudget } from "@/lib/kbos/budgets";
+import { serverError } from "@/lib/kbos/http";
 
 // Orçamentos — admin-only. Totais recalculados no servidor (`budgets.ts`).
 export async function GET() {
@@ -45,7 +46,7 @@ export async function GET() {
       .limit(300);
     return NextResponse.json({ items: rows });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 
@@ -83,6 +84,6 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ ok: true, item: row }, { status: 201 });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

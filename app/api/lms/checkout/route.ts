@@ -7,6 +7,7 @@ import { checkId, checkoutSchema, readBody } from "@/lib/kbos/validators";
 import { withRateLimit } from "@/lib/kbos/rate-limit";
 import { createCheckoutEnrollment, LmsError, lmsStatus } from "@/lib/kbos/lms";
 import { createMpPreference } from "@/lib/kbos/mercadopago";
+import { serverError } from "@/lib/kbos/http";
 
 // POST {courseId} — checkout: matrícula pendente + transação + preferência MP.
 // Preço sempre do banco; external_reference = `lms:<enrollmentId>` ativa
@@ -57,6 +58,6 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

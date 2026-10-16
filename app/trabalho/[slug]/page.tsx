@@ -37,7 +37,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
   const next = PROJECTS[(idx + 1) % PROJECTS.length];
 
   return (
-    <main className="bg-[#0B0B1E] text-[#F4F1EC]">
+    <main className="bg-[#11101E] text-[#EDE6EC]">
       <SingleAnim />
 
       {/* HERO */}
@@ -86,7 +86,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
               { k: "Área", v: project.category },
               { k: "Entrega", v: project.videoLabel },
             ].map((m) => (
-              <div key={m.k} className="bg-[#0B0B1E] px-5 py-4 md:px-6 md:py-5">
+              <div key={m.k} className="bg-[#11101E] px-5 py-4 md:px-6 md:py-5">
                 <p className="text-[10px] uppercase tracking-[0.28em] text-white/35">{m.k}</p>
                 <p className="mt-1.5 break-words text-[14px] font-medium leading-snug text-white md:truncate md:text-[15px]" title={m.v}>
                   {m.v}
@@ -208,14 +208,14 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
             className="pointer-events-none absolute inset-0"
             style={{
               background:
-                "radial-gradient(60% 80% at 50% 100%, rgba(157,184,232,0.18), transparent 70%)",
+                "radial-gradient(60% 80% at 50% 100%, rgba(232,14,253,0.18), transparent 70%)",
             }}
           />
           <p className="relative text-[11px] uppercase tracking-[0.32em] text-white/40">
             Próximo passo
           </p>
           <h3 className="font-display relative mx-auto mt-4 max-w-2xl text-balance text-3xl font-light leading-tight md:text-5xl">
-            Vamos criar algo <em className="italic text-[#9DB8E8]">incrível</em> juntos?
+            Vamos criar algo <em className="italic text-[#E80EFD]">incrível</em> juntos?
           </h3>
           <Link
             href="/briefing"

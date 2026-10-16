@@ -93,12 +93,12 @@ export default function KanbanBoard() {
         <input value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} required placeholder="Novo projeto..." className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 md:col-span-2" />
         <select value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none">
           {["fotografia", "video", "sites", "apps", "lojas", "design"].map((c) => (
-            <option key={c} value={c} className="bg-[#12122a]">{c}</option>
+            <option key={c} value={c} className="bg-[#1a1828]">{c}</option>
           ))}
         </select>
         <input value={form.clienteEmail} onChange={(e) => setForm({ ...form, clienteEmail: e.target.value })} placeholder="E-mail do cliente" type="email" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50" />
         <input value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} placeholder="Valor R$" inputMode="decimal" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50" />
-        <button type="submit" className="rounded-xl bg-white py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-black">Criar</button>
+        <button type="submit" className="rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-white">Criar</button>
       </form>
 
       <div className="flex gap-3 overflow-x-auto pb-4">

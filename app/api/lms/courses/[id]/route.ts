@@ -5,6 +5,7 @@ import { courses, enrollments } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { checkId, coursePatchSchema, readBody } from "@/lib/kbos/validators";
 import { getCourseLessons, isConflict } from "@/lib/kbos/lms";
+import { serverError } from "@/lib/kbos/http";
 
 const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as const;
 
@@ -47,7 +48,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       })),
     });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 
@@ -70,6 +71,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       throw e;
     }
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

@@ -5,6 +5,7 @@ import { transactions } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { financeCreateSchema, readBody } from "@/lib/kbos/validators";
 import { cashFlowByMonth, summarize, toDbInsert, toFinanceEntry } from "@/lib/kbos/finance";
+import { serverError } from "@/lib/kbos/http";
 
 // Central Financeira — contrato EN sobre `kbos_transactions` (ver finance.ts).
 // Admin-only (mesma regra do ERP `/api/transactions`).
@@ -27,7 +28,7 @@ export async function GET(req: Request) {
       cashFlow: cashFlowByMonth(items),
     });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 
@@ -41,6 +42,6 @@ export async function POST(req: Request) {
     const rows = await db().insert(transactions).values(toDbInsert(parsed.data)).returning();
     return NextResponse.json({ ok: true, item: toFinanceEntry(rows[0]) }, { status: 201 });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

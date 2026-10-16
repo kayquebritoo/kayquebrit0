@@ -22,3 +22,13 @@ export function db() {
 }
 
 export type Db = ReturnType<typeof db>;
+
+/** Erro 23505 (unique violation) — o Drizzle embrulha em DrizzleQueryError.cause. */
+export function isConflict(e: unknown) {
+  let cur: unknown = e;
+  for (let i = 0; i < 4 && cur && typeof cur === "object"; i++) {
+    if ((cur as { code?: string }).code === "23505") return true;
+    cur = (cur as { cause?: unknown }).cause;
+  }
+  return false;
+}

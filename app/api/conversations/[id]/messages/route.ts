@@ -5,6 +5,7 @@ import { conversations, messages } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { checkId, inboxSendSchema, readBody } from "@/lib/kbos/validators";
 import { sendAgentMessage } from "@/lib/kbos/inbox";
+import { serverError } from "@/lib/kbos/http";
 
 const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as const;
 const PAGE_MAX = 300;
@@ -35,7 +36,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       .limit(limit);
     return NextResponse.json({ items: rows.reverse() });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
 
@@ -82,6 +83,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: e instanceof Error ? e.message : "Falha no envio." }, { status: 502 });
     }
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }

@@ -83,6 +83,7 @@ export default function CampaignsBoard() {
   }, [logFilter]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch assíncrono: o setState só ocorre após o await.
     load();
   }, [load]);
 
@@ -91,6 +92,7 @@ export default function CampaignsBoard() {
   // Progresso em tempo real enquanto há disparo ativo.
   useEffect(() => {
     if (!selectedId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch assíncrono: o setState só ocorre após o await.
     loadLogs(selectedId);
     const t = setInterval(() => {
       if (document.visibilityState !== "visible") return;
@@ -202,7 +204,7 @@ export default function CampaignsBoard() {
         <p className="text-[11px] uppercase tracking-[0.25em] text-white/45">
           {items.length} campanha{items.length === 1 ? "" : "s"} · disparos com intervalo anti-banimento
         </p>
-        <button onClick={openCreate} className="ml-auto rounded-xl bg-white px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-black transition hover:opacity-90 active:scale-95">
+        <button onClick={openCreate} className="ml-auto rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:opacity-90 active:scale-95">
           + Nova campanha
         </button>
       </div>
@@ -311,7 +313,7 @@ export default function CampaignsBoard() {
                     <button
                       onClick={dispatch}
                       disabled={dispatching}
-                      className="flex-1 rounded-xl bg-white py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-black transition hover:opacity-90 active:scale-[0.99] disabled:opacity-50"
+                      className="flex-1 rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:opacity-90 active:scale-[0.99] disabled:opacity-50"
                     >
                       {dispatching ? "Enfileirando..." : dispatchAt ? "Agendar disparo" : "Disparar agora"}
                     </button>
@@ -361,7 +363,7 @@ export default function CampaignsBoard() {
       {/* Modal criar/editar */}
       {modal && (
         <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-6" onClick={() => setModal(null)}>
-          <form onSubmit={save} onClick={(e) => e.stopPropagation()} className="max-h-[92vh] w-full max-w-xl animate-[kbosUp_0.25s_ease] overflow-y-auto rounded-t-3xl border border-white/10 bg-[#12122a] p-6 sm:rounded-3xl">
+          <form onSubmit={save} onClick={(e) => e.stopPropagation()} className="max-h-[92vh] w-full max-w-xl animate-[kbosUp_0.25s_ease] overflow-y-auto rounded-t-3xl border border-white/10 bg-[#1a1828] p-6 sm:rounded-3xl">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-xl">{"item" in modal ? "Editar campanha" : "Nova campanha"}</h2>
               <button type="button" onClick={() => setModal(null)} aria-label="Fechar" className="rounded-lg px-2 text-2xl leading-none text-white/60 hover:text-white">×</button>
@@ -373,7 +375,7 @@ export default function CampaignsBoard() {
                   Público (CRM)
                   <select value={form.targetStatus} onChange={(e) => setForm({ ...form, targetStatus: e.target.value })} className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm normal-case tracking-normal outline-none">
                     {CAMPAIGN_TARGETS.map((t) => (
-                      <option key={t.id} value={t.id} className="bg-[#12122a]">{t.label}</option>
+                      <option key={t.id} value={t.id} className="bg-[#1a1828]">{t.label}</option>
                     ))}
                   </select>
                 </label>
@@ -397,7 +399,7 @@ export default function CampaignsBoard() {
                 <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed">{preview || "—"}</p>
               </div>
             </div>
-            <button type="submit" disabled={saving} className="mt-4 w-full rounded-xl bg-white py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-black transition hover:opacity-90 active:scale-[0.99] disabled:opacity-50">
+            <button type="submit" disabled={saving} className="mt-4 w-full rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:opacity-90 active:scale-[0.99] disabled:opacity-50">
               {saving ? "Salvando..." : "item" in modal ? "Salvar alterações" : "Criar campanha"}
             </button>
           </form>

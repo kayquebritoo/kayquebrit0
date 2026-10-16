@@ -48,6 +48,7 @@ export default function DealsKanban() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch assíncrono: o setState só ocorre após o await.
     load();
   }, [load]);
 
@@ -147,9 +148,9 @@ export default function DealsKanban() {
           onChange={(e) => setForm({ ...form, contactId: e.target.value })}
           className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none md:col-span-4"
         >
-          <option value="" className="bg-[#12122a]">Sem contato vinculado</option>
+          <option value="" className="bg-[#1a1828]">Sem contato vinculado</option>
           {contacts.map((c) => (
-            <option key={c.id} value={c.id} className="bg-[#12122a]">
+            <option key={c.id} value={c.id} className="bg-[#1a1828]">
               {c.name}{c.company ? ` · ${c.company}` : ""}
             </option>
           ))}
@@ -161,7 +162,7 @@ export default function DealsKanban() {
           inputMode="decimal"
           className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 md:col-span-2"
         />
-        <button type="submit" className="rounded-xl bg-white py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-black transition hover:opacity-90 active:scale-95 md:col-span-1">
+        <button type="submit" className="rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:opacity-90 active:scale-95 md:col-span-1">
           +
         </button>
       </form>

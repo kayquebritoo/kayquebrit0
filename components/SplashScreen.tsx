@@ -98,7 +98,7 @@ export default function SplashScreen() {
   return (
     <div
       aria-hidden
-      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center gap-5 bg-[#0B0B1E] transition-opacity duration-300 ${
+      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center gap-5 bg-[#11101E] transition-opacity duration-300 ${
         leaving ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
       style={{
@@ -109,7 +109,7 @@ export default function SplashScreen() {
       {/* aurora sutil da marca */}
       <div
         aria-hidden
-        className="splash-aurora pointer-events-none absolute left-1/2 top-1/2 h-[60vmin] w-[80vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#9DB8E8]/10 blur-[100px]"
+        className="splash-aurora pointer-events-none absolute left-1/2 top-1/2 h-[60vmin] w-[80vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#E80EFD]/10 blur-[100px]"
       />
       <div className="splash-logo relative">
         <Image

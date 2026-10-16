@@ -6,6 +6,7 @@ import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { buildIdempotencyKey, enqueueJob } from "@/lib/kbos/jobs";
 import { checkId, campaignDispatchSchema, readBody } from "@/lib/kbos/validators";
 import { estimateDurationMs, formatDuration, mailable, sendDelayMs, targetStatuses } from "@/lib/kbos/campaigns";
+import { serverError } from "@/lib/kbos/http";
 
 const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as const;
 
@@ -70,6 +71,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       estimate: formatDuration(estimateDurationMs(targets, base)),
     });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro" }, { status: 500 });
+    return serverError(e);
   }
 }
