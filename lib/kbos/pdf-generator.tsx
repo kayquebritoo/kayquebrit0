@@ -162,7 +162,7 @@ const s = StyleSheet.create({
   totLabel: { fontSize: 8, color: SOFT },
   totValue: { fontSize: 9, color: INK, width: 110, textAlign: "right", fontFamily: DISPLAY, fontWeight: 700 },
   grandLabel: { fontSize: 7.5, letterSpacing: 2, color: FAINT, fontFamily: DISPLAY, fontWeight: 700 },
-  grandValue: { fontSize: 19, color: INK, fontFamily: DISPLAY, fontWeight: 300 },
+  grandValue: { fontSize: 19, lineHeight: 1.15, color: INK, fontFamily: DISPLAY, fontWeight: 300 },
   perMonth: { fontSize: 9, color: SOFT, marginLeft: -10 },
   // Pagamento: 3 cards em vidro; a condição escolhida ganha borda PurpleMag.
   payRow: { flexDirection: "row", gap: 8 },
@@ -549,7 +549,7 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
             {recurring ? <Text style={s.perMonth}>/mês</Text> : null}
           </View>
           {recurring && period ? (
-            <View style={[s.totRow, { marginTop: 4 }]}>
+            <View style={[s.totRow, { marginTop: 8 }]}>
               <Text style={s.totLabel}>Vigência do contrato: {period}</Text>
             </View>
           ) : null}
