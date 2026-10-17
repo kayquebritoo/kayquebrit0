@@ -242,22 +242,40 @@ export async function ensureInstance(req?: Request): Promise<{ created: boolean;
   }
 }
 
-/** Aponta o webhook da instância p/ o inbound do KBOS. Best-effort (nunca lança). */
+// Upsert = mensagens; UPDATE/SEND_MESSAGE_UPDATE = recibos de leitura.
+const WEBHOOK_EVENTS = ["MESSAGES_UPSERT", "MESSAGES_UPDATE", "SEND_MESSAGE_UPDATE"];
+
+/**
+ * Aponta o webhook da instância p/ o inbound do KBOS. Best-effort (nunca lança).
+ *
+ * A Evolution v2 (a do compose é a v2.3.x) exige o corpo ANINHADO em
+ * `{ webhook: { enabled, url, byEvents, base64, events } }` e responde 400
+ * ao formato plano da v1 — era por isso que o webhook nunca registrava e o
+ * inbox ficava vazio. Tenta a v2 e, se recusada, o formato v1 (builds antigas).
+ */
 export async function setInstanceWebhook(req?: Request): Promise<boolean> {
   try {
     const url = buildWebhookUrl(req);
     if (!url) return false;
-    const r = await evoFetch(`/webhook/set/${encodeURIComponent(waInstance())}`, {
+    const path = `/webhook/set/${encodeURIComponent(waInstance())}`;
+    const v2 = await evoFetch(path, {
       method: "POST",
       body: JSON.stringify({
+        webhook: { enabled: true, url, byEvents: false, base64: false, events: WEBHOOK_EVENTS },
+      }),
+    });
+    if (v2.ok) return true;
+    const v1 = await evoFetch(path, {
+      method: "POST",
+      body: JSON.stringify({
+        enabled: true,
         url,
         webhook_by_events: false,
         webhook_base64: false,
-        // Upsert = mensagens; UPDATE/SEND_MESSAGE_UPDATE = recibos de leitura.
-        events: ["MESSAGES_UPSERT", "MESSAGES_UPDATE", "SEND_MESSAGE_UPDATE"],
+        events: WEBHOOK_EVENTS,
       }),
     });
-    return r.ok;
+    return v1.ok;
   } catch {
     return false;
   }
@@ -268,7 +286,9 @@ export async function getWebhookStatus(req?: Request): Promise<{ ok: boolean; ur
   try {
     const r = await evoFetch(`/webhook/find/${encodeURIComponent(waInstance())}`);
     if (!r.ok) return { ok: false, url: null };
-    const j = r.json as Record<string, unknown>;
+    // v2 pode devolver a config direto ou envelopada em `{ webhook: {...} }`.
+    const raw = r.json as Record<string, unknown>;
+    const j = (raw.webhook && typeof raw.webhook === "object" ? raw.webhook : raw) as Record<string, unknown>;
     const enabled = j.enabled !== false;
     const url = typeof j.url === "string" && j.url ? j.url : null;
     const ours = buildWebhookUrl(req);

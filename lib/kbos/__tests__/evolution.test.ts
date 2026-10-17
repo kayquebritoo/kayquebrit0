@@ -168,7 +168,26 @@ describe("setInstanceWebhook", () => {
       return { status: 404, body: {} };
     });
     expect(await setInstanceWebhook()).toBe(true);
-    expect((posted as Record<string, string>).url).toContain("?token=segredo-123");
+    const wh = (posted as { webhook: Record<string, unknown> }).webhook;
+    expect(wh.url).toContain("?token=segredo-123");
+  });
+
+  it("usa o corpo aninhado da v2 e cai para o formato v1 se recusado", async () => {
+    for (const [k, v] of Object.entries(BASE_ENV)) vi.stubEnv(k, v);
+    vi.stubEnv("EVOLUTION_WEBHOOK_TOKEN", "");
+    const bodies: Record<string, unknown>[] = [];
+    mockEvo((url, init) => {
+      if (!url.includes("/webhook/set/")) return { status: 404, body: {} };
+      const b = JSON.parse((init?.body as string) ?? "{}");
+      bodies.push(b);
+      // Simula build v1: recusa o formato aninhado.
+      return { status: b.webhook ? 400 : 200, body: {} };
+    });
+    expect(await setInstanceWebhook()).toBe(true);
+    expect(bodies[0]).toMatchObject({
+      webhook: { enabled: true, byEvents: false, base64: false, events: ["MESSAGES_UPSERT", "MESSAGES_UPDATE", "SEND_MESSAGE_UPDATE"] },
+    });
+    expect(bodies[1]).toMatchObject({ enabled: true, url: "https://kbos.kayquebrito.com.br/api/webhooks/evolution" });
   });
 });
 
@@ -195,6 +214,8 @@ describe("getWebhookStatus", () => {
     expect(await getWebhookStatus()).toMatchObject({ ok: true, url: ours });
     mockEvo(() => ({ status: 200, body: { enabled: true, url: "https://outra/x" } }));
     expect((await getWebhookStatus()).ok).toBe(false);
+    mockEvo(() => ({ status: 200, body: { webhook: { enabled: true, url: ours } } }));
+    expect(await getWebhookStatus()).toMatchObject({ ok: true, url: ours });
     mockEvo(() => ({ status: 404, body: {} }));
     expect(await getWebhookStatus()).toMatchObject({ ok: false, url: null });
   });
