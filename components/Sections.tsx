@@ -690,49 +690,52 @@ export function ContactSlide() {
   }, []);
   return (
     <section className="relative flex h-full flex-col justify-center overflow-hidden bg-[#11101E]">
-      {/* aurora de fundo do contato */}
-      <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-[60vmin] w-[80vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#E80EFD]/10 blur-[120px]" />
+      {/* véu de fundo: BluePurple sutil; o rosa só aparece no fim do degradê */}
+      <div aria-hidden className="pointer-events-none absolute -right-[20vmin] top-1/2 h-[70vmin] w-[90vmin] -translate-y-1/2 rounded-full bg-gradient-to-br from-[#4F12C7]/25 via-[#350C85]/15 to-[#E80EFD]/5 blur-[120px]" />
       <div className="ref-inner relative">
-        <h2
-          className="fp-anim font-display font-light text-white"
-          style={{ fontSize: "clamp(30px, 8.5vw, 44px)", letterSpacing: "-0.02em", lineHeight: 1.08 }}
-        >
-          <span className="md:hidden">{t("contact.title")}</span>
-          <span className="hidden md:block" style={{ fontSize: "clamp(48px, 4.6vw, 88px)", lineHeight: 1.05 }}>{t("contact.title")}</span>
-        </h2>
-
-        <div className="mt-5 flex flex-col gap-5 md:mt-[5vh] md:flex-row md:items-center md:justify-between md:gap-10">
-          <p className="fp-anim max-w-[600px] font-light text-white/70" style={{ fontSize: "clamp(14px, 3.8vw, 17px)", lineHeight: 1.65 }}>
-            <span className="md:hidden">{t("contact.text")}</span>
-            <span className="hidden md:block" style={{ fontSize: 23 }}>{t("contact.text")}</span>
-          </p>
-          {/* foto circular — visível no mobile e no desktop */}
-          <div className="fp-anim relative mx-auto h-28 w-28 shrink-0 overflow-hidden rounded-full border border-white/20 md:mx-0 md:h-[280px] md:w-[280px]">
-            <Image
-              src="/assets/deco/ok2.webp"
-              alt="Kayque Brito"
-              fill
-              loading="lazy"
-              className="fp-layer object-cover"
-              sizes="(max-width:768px) 112px, 280px"
-            />
+        {/* mobile: assinatura compacta (foto + nome + hora local) */}
+        <div className="fp-anim mb-6 flex items-center gap-3 md:hidden">
+          <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border border-white/20">
+            <Image src="/assets/deco/ok2.webp" alt="Kayque Brito" fill loading="lazy" className="object-cover" sizes="56px" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[15px] font-medium text-white">Kayque Brito</p>
+            <p className="text-[13px] font-light text-white/55">Belém — <LocalTime /></p>
           </div>
         </div>
 
-        <div className="fp-anim my-6 h-px w-full bg-white/15 md:my-[3vh]" aria-hidden />
-
-        <div className="fp-anim flex flex-col gap-5 md:flex-row md:flex-wrap md:items-center md:gap-12">
-          <div ref={pulse}>
-          <Link
-            ref={magContact as unknown as React.RefObject<HTMLAnchorElement>}
-            href="/briefing"
-            className="relative flex h-[60px] w-full items-center justify-center overflow-hidden rounded-full border border-white/80 px-10 text-center text-[18px] font-light text-[#E80EFD] transition hover:bg-white hover:text-[#11101E] md:h-[76px] md:min-w-[320px]"
-          >
-            <span aria-hidden className="pointer-events-none absolute inset-y-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/40 to-transparent" style={{ animation: "ctaSweep 3.2s ease-in-out infinite" }} />
-            <span className="relative md:text-[22px]">{t("contact.cta")}</span>
-          </Link>
+        <div className="md:flex md:items-center md:justify-between md:gap-12">
+          <div className="max-w-[640px]">
+            <h2
+              className="fp-anim font-display font-light text-white"
+              style={{ fontSize: "clamp(32px, 9vw, 44px)", letterSpacing: "-0.02em", lineHeight: 1.06 }}
+            >
+              <span className="md:hidden">{t("contact.title")}</span>
+              <span className="hidden md:block" style={{ fontSize: "clamp(48px, 4.6vw, 88px)", lineHeight: 1.05 }}>{t("contact.title")}</span>
+            </h2>
+            <p className="fp-anim mt-4 font-light text-white/70 md:mt-[4vh]" style={{ fontSize: "clamp(15px, 4vw, 17px)", lineHeight: 1.6 }}>
+              <span className="md:hidden">{t("contact.text")}</span>
+              <span className="hidden md:block" style={{ fontSize: 22 }}>{t("contact.text")}</span>
+            </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3 text-[#E80EFD] md:gap-4">
+          {/* desktop: retrato grande */}
+          <div className="fp-anim relative hidden h-[280px] w-[280px] shrink-0 overflow-hidden rounded-full border border-white/15 md:block">
+            <Image src="/assets/deco/ok2.webp" alt="Kayque Brito" fill loading="lazy" className="fp-layer object-cover" sizes="280px" />
+          </div>
+        </div>
+
+        <div className="fp-anim mt-7 flex flex-col gap-4 md:mt-[5vh] md:flex-row md:items-center md:gap-10">
+          <div ref={pulse}>
+            <Link
+              ref={magContact as unknown as React.RefObject<HTMLAnchorElement>}
+              href="/briefing"
+              className="relative flex h-[58px] w-full items-center justify-center overflow-hidden rounded-full border border-white/80 bg-[#11101E]/40 px-10 text-center text-[17px] font-normal text-white backdrop-blur-md transition hover:bg-white hover:text-[#11101E] md:h-[72px] md:min-w-[320px]"
+            >
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent" style={{ animation: "ctaSweep 3.2s ease-in-out infinite" }} />
+              <span className="relative md:text-[21px]">{t("contact.cta")}</span>
+            </Link>
+          </div>
+          <div className="grid grid-cols-6 gap-2 text-white/75 md:flex md:gap-3">
             {SOCIALS.map((s) => (
               <a
                 key={s.name}
@@ -741,7 +744,7 @@ export function ContactSlide() {
                 rel="noopener"
                 aria-label={s.name}
                 title={s.name}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 transition hover:border-white/60 hover:text-white"
+                className="flex aspect-square items-center justify-center rounded-full border border-white/15 transition hover:border-white/60 hover:text-white md:h-12 md:w-12"
               >
                 <SocialIcon icon={s.icon} size={18} />
               </a>
@@ -749,19 +752,12 @@ export function ContactSlide() {
           </div>
         </div>
 
-        <div className="fp-anim mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[15px] font-light text-[#E80EFD] md:mt-[6vh] md:justify-between">
-          <span className="text-white/80">© Kayque Brito</span>
-          <span>Belém — <LocalTime /></span>
-          <span className="flex items-center gap-4">
-            <span>2026</span>
-            <Link
-              href="/entrar"
-              aria-label="Entrar — área do cliente"
-              className="rounded-full border border-white/20 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70 transition hover:border-white/60 hover:bg-white hover:text-black"
-            >
-              Entrar
-            </Link>
-          </span>
+        <div className="fp-anim mt-8 flex items-center justify-between gap-4 border-t border-white/10 pt-5 text-[13px] font-light text-white/50 md:mt-[6vh] md:text-[15px]">
+          <span>© Kayque Brito · 2026</span>
+          <span className="hidden md:inline">Belém — <LocalTime /></span>
+          <Link href="/entrar" className="text-white/75 underline decoration-white/25 underline-offset-4 transition hover:text-white hover:decoration-white">
+            Área do cliente
+          </Link>
         </div>
       </div>
       <p className="hidden">{ABOUT.name} {CONTACT.title}</p>
