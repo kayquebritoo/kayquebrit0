@@ -17,20 +17,16 @@ export function SlideProgress() {
   return (
     <div
       aria-hidden
-      className="fixed right-5 top-[max(4.5rem,calc(env(safe-area-inset-top)+3.25rem))] z-40 flex items-center gap-2 rounded-full bg-black/30 px-3 py-1.5 backdrop-blur-md md:hidden"
+      className="slide-rail pointer-events-none fixed right-2 top-1/2 z-40 flex -translate-y-1/2 flex-col items-center gap-1.5 md:hidden"
     >
-      <span className="text-[11px] font-medium tabular-nums tracking-[0.2em] text-white/80">
-        {String(index + 1).padStart(2, "0")}
-      </span>
-      <span className="relative block h-px w-8 overflow-hidden bg-white/25">
+      {Array.from({ length: TOTAL }, (_, i) => (
         <span
-          className="absolute inset-0 origin-left bg-white/85 transition-transform duration-500 ease-out"
-          style={{ transform: `scaleX(${(index + 1) / TOTAL})` }}
+          key={i}
+          className={`slide-rail-dot block w-[2px] rounded-full transition-all duration-500 ease-out ${
+            i === index ? "is-active h-4" : "h-1.5"
+          }`}
         />
-      </span>
-      <span className="text-[11px] tabular-nums tracking-[0.2em] text-white/40">
-        {String(TOTAL).padStart(2, "0")}
-      </span>
+      ))}
     </div>
   );
 }

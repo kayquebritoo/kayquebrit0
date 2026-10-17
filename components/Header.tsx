@@ -91,24 +91,6 @@ export default function Header() {
     </button>
   );
 
-  const loginBtn = (compact?: boolean) => (
-    <Link
-      href="/entrar"
-      onClick={() => setOpen(false)}
-      aria-label="Entrar — área do cliente"
-      className={`flex items-center gap-2 rounded-full border border-white/25 bg-black/30 font-semibold uppercase text-white/85 backdrop-blur-md transition hover:border-white/60 hover:bg-white hover:text-black ${
-        compact ? "px-4 py-2 text-[10px] tracking-[0.2em]" : "px-5 py-2.5 text-[11px] tracking-[0.22em]"
-      }`}
-    >
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-        <path d="m10 17 5-5-5-5" />
-        <path d="M15 12H3" />
-      </svg>
-      Entrar
-    </Link>
-  );
-
   const burgerBtn = (compact?: boolean) => (
     <button
       ref={magBurger}
@@ -151,7 +133,6 @@ export default function Header() {
           <div className="flex items-start justify-between px-5 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-8 sm:pt-[max(1.75rem,env(safe-area-inset-top))] md:px-[80px] md:pt-[42px]">
             {logoBtn()}
             <div className="flex items-center gap-2.5 sm:gap-3">
-              {loginBtn()}
               {burgerBtn()}
             </div>
           </div>
@@ -162,7 +143,6 @@ export default function Header() {
           <div className="header-glass mx-auto flex max-w-6xl items-center justify-between rounded-2xl border border-white/10 bg-[#11101E]/70 py-2 pl-4 pr-2.5 shadow-2xl shadow-black/30 backdrop-blur-xl">
             {logoBtn(true)}
             <div className="flex items-center gap-2">
-              {loginBtn(true)}
               {burgerBtn(true)}
             </div>
           </div>

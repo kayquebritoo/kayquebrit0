@@ -86,6 +86,8 @@ function brandLogo(): string | null {
 
 // Paleta oficial. O BluePurple (#4F12C7) tem contraste baixo sobre o fundo:
 // usado só em gradientes/preenchimentos, nunca como cor de texto.
+// PurpleMag (rosa) com parcimônia: aparece só no filete em degradê do
+// cabeçalho. Textos e destaques usam a tinta clara e o BluePurple.
 const BG = "#11101e";
 const INK = "#ede6ec";
 const SOFT = "#bdb7bc";
@@ -113,8 +115,8 @@ const s = StyleSheet.create({
   docLabel: { fontSize: 7, letterSpacing: 2.6, color: FAINT, fontFamily: DISPLAY, fontWeight: 700 },
   docCode: { fontSize: 18, lineHeight: 1.1, color: INK, marginTop: 5, fontFamily: DISPLAY, fontWeight: 700 },
   docMeta: { fontSize: 8, color: SOFT, marginTop: 3 },
-  statusPill: { marginTop: 5, borderWidth: 1, borderColor: MAG, borderRadius: 999, paddingVertical: 2, paddingHorizontal: 9 },
-  statusText: { fontSize: 6.5, color: MAG, letterSpacing: 2, fontFamily: DISPLAY, fontWeight: 700 },
+  statusPill: { marginTop: 5, borderWidth: 1, borderColor: HAIR, borderRadius: 999, paddingVertical: 2, paddingHorizontal: 9 },
+  statusText: { fontSize: 6.5, color: SOFT, letterSpacing: 2, fontFamily: DISPLAY, fontWeight: 700 },
   gradRuleWrap: { marginTop: 10, marginBottom: 2 },
   // Cards (glassmorphism: véu claro + borda fina + radius).
   grid: { flexDirection: "row", gap: 8, marginTop: 10 },
@@ -127,7 +129,7 @@ const s = StyleSheet.create({
   // Datas legadas: badges compactos em pílula.
   dateRow: { flexDirection: "row", flexWrap: "wrap", gap: 5 },
   dateBadge: { borderWidth: 1, borderColor: HAIR, borderRadius: 999, paddingVertical: 2, paddingHorizontal: 10, backgroundColor: CARD },
-  dateText: { fontSize: 8, color: MAG, fontFamily: DISPLAY, fontWeight: 700 },
+  dateText: { fontSize: 8, color: SOFT, fontFamily: DISPLAY, fontWeight: 700 },
   // Tabela emoldurada em vidro: cabeçalho discreto + filetes finos.
   tableWrap: { borderWidth: 1, borderColor: HAIR, borderRadius: 8, overflow: "hidden", backgroundColor: CARD },
   tableHead: {
@@ -149,7 +151,7 @@ const s = StyleSheet.create({
   colTotal: { width: "20%", textAlign: "right", fontFamily: DISPLAY, fontWeight: 700 },
   itemName: { fontFamily: DISPLAY, fontWeight: 700, color: INK },
   desc: { fontSize: 7.5, color: SOFT, marginTop: 1 },
-  itemDate: { fontSize: 7.5, color: MAG, fontFamily: DISPLAY, fontWeight: 700 },
+  itemDate: { fontSize: 7.5, color: SOFT, fontFamily: DISPLAY, fontWeight: 700 },
   // Escopo padrão por evento.
   scopeBox: { marginTop: 6, backgroundColor: CARD, borderWidth: 1, borderColor: HAIR, borderRadius: 8, paddingVertical: 7, paddingHorizontal: 11 },
   scopeLabel: { fontSize: 6.5, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 2, color: FAINT },
@@ -159,18 +161,19 @@ const s = StyleSheet.create({
   totRow: { flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 14, marginTop: 1 },
   totLabel: { fontSize: 8, color: SOFT },
   totValue: { fontSize: 9, color: INK, width: 110, textAlign: "right", fontFamily: DISPLAY, fontWeight: 700 },
-  grandLabel: { fontSize: 7.5, letterSpacing: 2, color: MAG, fontFamily: DISPLAY, fontWeight: 700 },
+  grandLabel: { fontSize: 7.5, letterSpacing: 2, color: FAINT, fontFamily: DISPLAY, fontWeight: 700 },
   grandValue: { fontSize: 19, color: INK, fontFamily: DISPLAY, fontWeight: 300 },
+  perMonth: { fontSize: 9, color: SOFT },
   // Pagamento: 3 cards em vidro; a condição escolhida ganha borda PurpleMag.
   payRow: { flexDirection: "row", gap: 8 },
   payCard: { flex: 1, borderWidth: 1, borderColor: HAIR, borderRadius: 8, backgroundColor: CARD, paddingVertical: 8, paddingHorizontal: 10 },
-  payCardHot: { flex: 1, borderWidth: 1, borderColor: MAG, borderRadius: 8, backgroundColor: "rgba(232,14,253,0.07)", paddingVertical: 8, paddingHorizontal: 10 },
+  payCardHot: { flex: 1, borderWidth: 1, borderColor: "rgba(237,230,236,0.3)", borderRadius: 8, backgroundColor: "rgba(237,230,236,0.07)", paddingVertical: 8, paddingHorizontal: 10 },
   payTitle: { fontSize: 6.5, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 1.2, color: SOFT },
-  payTitleHot: { fontSize: 6.5, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 1.2, color: MAG },
+  payTitleHot: { fontSize: 6.5, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 1.2, color: INK },
   payValue: { fontSize: 11, color: INK, marginTop: 3, fontFamily: DISPLAY, fontWeight: 700 },
   payHint: { fontSize: 7.5, color: SOFT, marginTop: 1 },
   // Pix em destaque (linha única).
-  pixBox: { marginTop: 6, flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: CARD, borderWidth: 1, borderColor: HAIR, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: MAG, paddingVertical: 7, paddingHorizontal: 11 },
+  pixBox: { marginTop: 6, flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: CARD, borderWidth: 1, borderColor: HAIR, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: BLUE, paddingVertical: 7, paddingHorizontal: 11 },
   pixLabel: { fontSize: 6.5, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 2, color: FAINT },
   pixValue: { fontSize: 9, fontFamily: DISPLAY, fontWeight: 700, color: INK, flex: 1 },
   // Trio Prazo / Revisões / Validade.
@@ -181,7 +184,7 @@ const s = StyleSheet.create({
   // Assinaturas: Contratado com rubrica; Contratante com espaço livre p/ assinar.
   sign: { marginTop: 18, flexDirection: "row", justifyContent: "space-between" },
   signCol: { width: "44%", flexDirection: "column", alignItems: "center" },
-  signScript: { fontSize: 18, color: MAG, fontFamily: "Helvetica-BoldOblique", marginBottom: 2, height: 24 },
+  signScript: { fontSize: 18, color: INK, fontFamily: "Helvetica-BoldOblique", marginBottom: 2, height: 24 },
   signBlank: { height: 24, marginBottom: 2 },
   signBox: { width: "100%", borderTopWidth: 1, borderTopColor: SOFT, paddingTop: 4, fontSize: 8, color: SOFT, textAlign: "center", fontFamily: DISPLAY, fontWeight: 700 },
   signSub: { fontSize: 7, color: FAINT, textAlign: "center", marginTop: 2 },
@@ -192,7 +195,7 @@ const s = StyleSheet.create({
   clauseCol: { flex: 1, backgroundColor: CARD, borderWidth: 1, borderColor: HAIR, borderRadius: 8, paddingVertical: 4, paddingHorizontal: 11 },
   clause: { paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "rgba(237,230,236,0.06)" },
   clauseLast: { paddingVertical: 6 },
-  clauseTitle: { fontSize: 7, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 1.4, color: MAG, marginBottom: 2 },
+  clauseTitle: { fontSize: 7, fontFamily: DISPLAY, fontWeight: 700, letterSpacing: 1.4, color: INK, marginBottom: 2 },
   clauseText: { fontSize: 7.8, color: SOFT, textAlign: "justify", lineHeight: 1.4 },
 });
 
@@ -329,7 +332,7 @@ export function buildContractClauses(data: BudgetPdfData, total: number): Clause
     },
     {
       title: "5 · VALOR E PAGAMENTO",
-      body: `Valor total contratado: ${formatBRL(total)}. ${payment} Atraso superior a 7 dias suspende execução e entregas até a regularização, sem prorrogação de prazos.`,
+      body: `${recurring ? `Valor mensal: ${formatBRL(total)}, devido em cada mês da vigência${period ? ` (${period})` : ""}.` : `Valor total contratado: ${formatBRL(total)}.`} ${payment} Atraso superior a 7 dias suspende execução e entregas até a regularização, sem prorrogação de prazos.`,
     },
     {
       title: "6 · PROPRIEDADE INTELECTUAL E USO DE IMAGEM",
@@ -396,8 +399,8 @@ function DocHeader({ id, logo, label, code, date, status }: { id: string; logo: 
           <Defs>
             <LinearGradient id={id} x1="0" y1="0" x2="1" y2="0">
               <Stop offset="0%" stopColor={BLUE} />
-              <Stop offset="60%" stopColor={MAG} />
-              <Stop offset="100%" stopColor={MAG} stopOpacity={0.12} />
+              <Stop offset="70%" stopColor={MAG} stopOpacity={0.4} />
+              <Stop offset="100%" stopColor={MAG} stopOpacity={0.04} />
             </LinearGradient>
           </Defs>
           <Rect x={0} y={0} width={CONTENT_W} height={2} rx={1} fill={`url(#${id})`} />
@@ -465,7 +468,11 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
             <Text style={s.cardText}>{data.title}</Text>
             <Text style={s.cardLine}>
               {plural(items.length, "item", "itens")}
-              {data.paymentCondition ? ` · ${PAY_LABEL[data.paymentCondition] ?? data.paymentCondition}` : ""}
+              {recurring
+                ? " · Plano mensal pré-pago"
+                : data.paymentCondition
+                  ? ` · ${PAY_LABEL[data.paymentCondition] ?? data.paymentCondition}`
+                  : ""}
             </Text>
           </View>
         </View>
@@ -535,14 +542,33 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
             </View>
           ) : null}
           <View style={[s.totRow, { marginTop: 3 }]}>
-            <Text style={s.grandLabel}>TOTAL</Text>
-            <Text style={s.grandValue}>{formatBRL(total)}</Text>
+            <Text style={s.grandLabel}>{recurring ? "MENSALIDADE" : "TOTAL"}</Text>
+            <Text style={s.grandValue}>{formatBRL(total)}{recurring ? <Text style={s.perMonth}> /mês</Text> : null}</Text>
           </View>
+          {recurring && period ? (
+            <View style={s.totRow}>
+              <Text style={s.totLabel}>Vigência do contrato: {period}</Text>
+            </View>
+          ) : null}
         </View>
 
         {/* ── Pagamento ────────────────────────────────── */}
         <Text style={s.sectionTitle}>CONDIÇÕES DE PAGAMENTO</Text>
         <View wrap={false}>
+          {recurring ? (
+          <View style={s.payRow}>
+            <View style={s.payCardHot}>
+              <Text style={s.payTitleHot}>PLANO MENSAL PRÉ-PAGO</Text>
+              <Text style={s.payValue}>{formatBRL(total)} /mês</Text>
+              <Text style={s.payHint}>Pix até o dia 5 de cada mês · 1ª mensalidade na assinatura</Text>
+            </View>
+            <View style={s.payCard}>
+              <Text style={s.payTitle}>CANCELAMENTO</Text>
+              <Text style={s.payValue}>Sem multa</Text>
+              <Text style={s.payHint}>Aviso de 30 dias · o mês pago é entregue integralmente</Text>
+            </View>
+          </View>
+          ) : (
           <View style={s.payRow}>
             <View style={isPay("cash") ? s.payCardHot : s.payCard}>
               <Text style={isPay("cash") ? s.payTitleHot : s.payTitle}>À VISTA · 10% OFF</Text>
@@ -560,6 +586,7 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
               <Text style={s.payHint}>Crédito ou débito · valor integral</Text>
             </View>
           </View>
+          )}
           <View style={s.pixBox}>
             <Text style={s.pixLabel}>CHAVE PIX</Text>
             <Text style={s.pixValue}>{pix}</Text>

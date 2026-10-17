@@ -975,3 +975,31 @@ html.is-standalone .fp-slide-0,
 html.is-standalone .glass-menu {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+
+/* ============================================================
+   Ajustes out/2026 (PWA, progresso discreto, CTA no modo claro)
+   ============================================================ */
+/* Títulos de seção (SOBRE, SERVIÇOS…) descem junto com o header
+   quando há notch/status bar (app instalado). No browser: +0px. */
+@media (max-width: 767px) {
+  .ref-eyebrow.absolute { top: calc(70px + env(safe-area-inset-top, 0px)) !important; }
+}
+@media (max-width: 767px) and (display-mode: standalone) {
+  .ref-eyebrow.absolute { top: calc(78px + env(safe-area-inset-top, 0px)) !important; }
+}
+@media (max-width: 767px) {
+  html.is-standalone .ref-eyebrow.absolute { top: calc(78px + env(safe-area-inset-top, 0px)) !important; }
+}
+/* Progresso dos slides: trilho fino na borda direita, sem números */
+.slide-rail-dot { background: rgba(237, 230, 236, 0.22); }
+.slide-rail-dot.is-active { background: rgba(237, 230, 236, 0.85); }
+html.light .slide-rail-dot { background: rgba(23, 23, 46, 0.18); }
+html.light .slide-rail-dot.is-active { background: rgba(23, 23, 46, 0.75); }
+/* CTA mobile da hero sobre a foto: no claro vira botão sólido (tinta/papel) */
+html.light .hero-cta-m {
+  background-color: var(--lb-ink) !important;
+  color: var(--lb-bg) !important;
+  border-color: transparent !important;
+  box-shadow: 0 18px 44px -18px rgba(23, 23, 46, 0.5) !important;
+}

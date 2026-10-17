@@ -94,5 +94,7 @@ describe("contrato (página 2)", () => {
     expect(text).toMatch(/aviso prévio de 30 dias, sem multa rescisória/);
     expect(text).not.toMatch(/multa de 20%/);
     expect(text).not.toMatch(/cartão/);
+    expect(text).toMatch(/Valor mensal: R\$\s5\.000,00/);
+    expect(text).not.toMatch(/Valor total contratado/);
   });
 });

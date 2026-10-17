@@ -244,7 +244,7 @@ export default function HeroSlide() {
           <Link
             ref={magCtaM as unknown as React.RefObject<HTMLAnchorElement>}
             href="/briefing"
-            className="m-hero-in relative mt-3 flex h-[52px] w-full shrink-0 items-center justify-center overflow-hidden rounded-full border-[1.5px] border-white/90 text-[15px] uppercase text-white transition active:bg-white active:text-[#11101E]"
+            className="hero-cta-m m-hero-in relative mt-3 flex h-[52px] w-full shrink-0 items-center justify-center overflow-hidden rounded-full border-[1.5px] border-white/90 bg-[#11101E]/55 text-[15px] uppercase text-white backdrop-blur-xl transition active:bg-white active:text-[#11101E]"
             style={{ letterSpacing: "0.12em" }}
           >
             <span aria-hidden className="hero-cta-shine pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
