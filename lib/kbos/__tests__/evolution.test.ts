@@ -150,8 +150,9 @@ describe("ensureInstance", () => {
 });
 
 describe("setInstanceWebhook", () => {
-  it("false sem APP_URL (best-effort)", async () => {
+  it("false sem APP_URL com Evolution externa (best-effort)", async () => {
     for (const [k, v] of Object.entries(BASE_ENV)) vi.stubEnv(k, v);
+    vi.stubEnv("EVOLUTION_API_URL", "https://evo.exemplo.com");
     vi.stubEnv("APP_URL", "");
     expect(await setInstanceWebhook()).toBe(false);
   });
@@ -187,21 +188,33 @@ describe("setInstanceWebhook", () => {
     expect(bodies[0]).toMatchObject({
       webhook: { enabled: true, byEvents: false, base64: false, events: ["MESSAGES_UPSERT", "MESSAGES_UPDATE", "SEND_MESSAGE_UPDATE"] },
     });
-    expect(bodies[1]).toMatchObject({ enabled: true, url: "https://kbos.kayquebrito.com.br/api/webhooks/evolution" });
+    expect(bodies[1]).toMatchObject({ enabled: true, url: "http://web:3000/api/webhooks/evolution/" });
   });
 });
 
 describe("buildWebhookUrl", () => {
-  it("null sem APP_URL; sem token por padrão; com token quando ≥8 chars", () => {
+  it("Evolution externa: null sem APP_URL; pública com barra final; token quando ≥8 chars", () => {
+    vi.stubEnv("EVOLUTION_API_URL", "https://evo.exemplo.com");
+    vi.stubEnv("EVOLUTION_WEBHOOK_BASE", "");
     vi.stubEnv("APP_URL", "");
     expect(buildWebhookUrl()).toBeNull();
     vi.stubEnv("APP_URL", "https://kbos.kayquebrito.com.br/");
     vi.stubEnv("EVOLUTION_WEBHOOK_TOKEN", "");
-    expect(buildWebhookUrl()).toBe("https://kbos.kayquebrito.com.br/api/webhooks/evolution");
+    expect(buildWebhookUrl()).toBe("https://kbos.kayquebrito.com.br/api/webhooks/evolution/");
     vi.stubEnv("EVOLUTION_WEBHOOK_TOKEN", "segredo-123");
     expect(buildWebhookUrl()).toBe(
-      "https://kbos.kayquebrito.com.br/api/webhooks/evolution?token=segredo-123"
+      "https://kbos.kayquebrito.com.br/api/webhooks/evolution/?token=segredo-123"
     );
+  });
+
+  it("Evolution na mesma rede Docker: chama o app pela rede interna", () => {
+    vi.stubEnv("EVOLUTION_API_URL", "http://evolution:8080");
+    vi.stubEnv("EVOLUTION_WEBHOOK_BASE", "");
+    vi.stubEnv("EVOLUTION_WEBHOOK_TOKEN", "");
+    vi.stubEnv("APP_URL", "https://kbos.kayquebrito.com.br");
+    expect(buildWebhookUrl()).toBe("http://web:3000/api/webhooks/evolution/");
+    vi.stubEnv("EVOLUTION_WEBHOOK_BASE", "http://kbos-web:3000/");
+    expect(buildWebhookUrl()).toBe("http://kbos-web:3000/api/webhooks/evolution/");
   });
 });
 
@@ -209,7 +222,7 @@ describe("getWebhookStatus", () => {
   it("ok quando a URL confere; false em mismatch ou 404", async () => {
     for (const [k, v] of Object.entries(BASE_ENV)) vi.stubEnv(k, v);
     vi.stubEnv("EVOLUTION_WEBHOOK_TOKEN", "");
-    const ours = "https://kbos.kayquebrito.com.br/api/webhooks/evolution";
+    const ours = "http://web:3000/api/webhooks/evolution/";
     mockEvo(() => ({ status: 200, body: { enabled: true, url: ours } }));
     expect(await getWebhookStatus()).toMatchObject({ ok: true, url: ours });
     mockEvo(() => ({ status: 200, body: { enabled: true, url: "https://outra/x" } }));

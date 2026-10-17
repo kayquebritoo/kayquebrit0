@@ -88,15 +88,35 @@ export function resolveAppUrl(req?: Request): string | null {
 }
 
 /**
- * URL pública do webhook inbound (`/api/webhooks/evolution`).
+ * Base que a EVOLUTION usa para chamar o KBOS de volta.
+ * Com a Evolution na mesma rede Docker (`EVOLUTION_API_URL` = `http://evolution:8080`,
+ * padrão do compose), usa a rede interna `http://web:3000`: o domínio público
+ * pode não "voltar" para dentro da própria VPS (hairpin NAT), e aí nenhuma
+ * mensagem chegava ao inbox. `EVOLUTION_WEBHOOK_BASE` força outra base.
+ */
+export function webhookBase(req?: Request): string | null {
+  const forced = (process.env.EVOLUTION_WEBHOOK_BASE || "").trim().replace(/\/$/, "");
+  if (forced) return forced;
+  try {
+    if (new URL(evoConfig().url).hostname === "evolution") return "http://web:3000";
+  } catch {
+    /* URL inválida: cai na base pública */
+  }
+  return resolveAppUrl(req);
+}
+
+/**
+ * URL do webhook inbound (`/api/webhooks/evolution`).
  * Inclui `?token=` quando `EVOLUTION_WEBHOOK_TOKEN` está configurado —
  * sem ele, o receiver responderia 401 e nada chegaria ao inbox.
  */
 export function buildWebhookUrl(req?: Request): string | null {
-  const appUrl = resolveAppUrl(req);
+  const appUrl = webhookBase(req);
   if (!appUrl) return null;
   const secret = (process.env.EVOLUTION_WEBHOOK_TOKEN || "").trim();
-  const base = `${appUrl}/api/webhooks/evolution`;
+  // Barra final: o app usa `trailingSlash: true`; sem ela o POST da Evolution
+  // levava um 308 antes da rota e o evento se perdia.
+  const base = `${appUrl}/api/webhooks/evolution/`;
   return secret.length >= 8 ? `${base}?token=${encodeURIComponent(secret)}` : base;
 }
 
