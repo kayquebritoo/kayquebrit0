@@ -1,12 +1,12 @@
 import { KbosShell } from "@/components/kbos/Shell";
-import AdminDash from "@/components/kbos/AdminDash";
+import Today from "@/components/kbos/Today";
 
-export const metadata = { title: "Admin — KBOS" };
+export const metadata = { title: "Hoje — KBOS" };
 
 export default function AdminPage() {
   return (
-    <KbosShell title="Painel KBOS" admin>
-      <AdminDash />
+    <KbosShell title="Hoje" admin>
+      <Today />
     </KbosShell>
   );
 }
