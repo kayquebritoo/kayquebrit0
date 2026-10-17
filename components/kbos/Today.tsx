@@ -313,7 +313,7 @@ export default function Today() {
         </p>
       )}
 
-      <div className="kb-scroll-x -mx-4 -mt-1 px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+      <div className="kb-scroll-x -mx-4 -mt-1 scroll-px-4 px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
         <Link href="/admin/financeiro" className="kb-chip">Nova despesa</Link>
         <Link href="/admin/financeiro" className="kb-chip">Nova entrada</Link>
         <Link href="/admin/orcamentos" className="kb-chip">Novo orçamento</Link>
@@ -340,7 +340,7 @@ export default function Today() {
             ))}
           </div>
         ) : (
-          <div className="kb-scroll-x -mx-5 px-5 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
+          <div className="kb-scroll-x -mx-5 scroll-px-5 px-5 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
             {cols.map((c) => {
               const items = demands.filter((d) => d.urgency === c.key);
               return (
