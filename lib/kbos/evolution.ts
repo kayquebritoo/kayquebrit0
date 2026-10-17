@@ -302,7 +302,10 @@ export async function getWebhookStatus(req?: Request): Promise<{ ok: boolean; ur
 
 export async function restartInstance(): Promise<{ ok: boolean; detail?: string }> {
   try {
-    const r = await evoFetch(`/instance/restart/${encodeURIComponent(waInstance())}`, { method: "PUT" });
+    // v2 usa POST; builds v1 usavam PUT (404 no método errado).
+    const path = `/instance/restart/${encodeURIComponent(waInstance())}`;
+    let r = await evoFetch(path, { method: "POST" });
+    if (r.status === 404 || r.status === 405) r = await evoFetch(path, { method: "PUT" });
     return r.ok ? { ok: true } : { ok: false, detail: `Evolution respondeu ${r.status}.` };
   } catch (e) {
     return { ok: false, detail: e instanceof Error ? e.message : "Falha de rede." };
