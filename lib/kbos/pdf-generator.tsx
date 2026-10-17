@@ -299,7 +299,7 @@ export function buildContractClauses(data: BudgetPdfData, total: number): Clause
       : "conforme o cronograma da página 1");
 
   const payment = recurring
-    ? `Pagamento mensal via Pix (${pix}) ou cartão, com vencimento até o dia 10 de cada mês de vigência.`
+    ? `Plano pré-pago: cada mensalidade é paga antecipadamente via Pix (${pix}) até o dia 5 do mês de referência, e a primeira na assinatura deste instrumento. Planos mensais não admitem parcelamento, entrada + saldo nem desconto à vista.`
     : data.paymentCondition === "cash"
       ? `Pagamento à vista via Pix (${pix}) na assinatura deste instrumento, com 10% de desconto: ${formatBRL(pay.cash)}.`
       : data.paymentCondition === "installments"
@@ -338,7 +338,7 @@ export function buildContractClauses(data: BudgetPdfData, total: number): Clause
     {
       title: "7 · RESCISÃO E FORO",
       body: recurring
-        ? "Qualquer parte pode rescindir com aviso prévio de 30 dias, quitando-se os serviços executados e a mensalidade em curso. Na rescisão imotivada pelo CONTRATANTE antes do fim da vigência, incide multa de 20% sobre as mensalidades remanescentes. Fica eleito o foro da comarca de Belém/PA."
+        ? "Qualquer parte pode rescindir com aviso prévio de 30 dias, sem multa rescisória: o mês já pago é entregue integralmente e nenhuma mensalidade é devida após o fim do aviso. Fica eleito o foro da comarca de Belém/PA."
         : "Qualquer parte pode rescindir mediante aviso por escrito, quitando-se as etapas já executadas. Na rescisão imotivada pelo CONTRATANTE após o início da execução, os valores das etapas concluídas não são reembolsáveis e incide multa de 20% sobre o saldo remanescente. Fica eleito o foro da comarca de Belém/PA.",
     },
   ];

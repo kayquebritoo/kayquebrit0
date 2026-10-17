@@ -84,11 +84,15 @@ describe("contrato (página 2)", () => {
     expect(text).toMatch(/R\$\s4\.500,00/); // à vista com 10%
   });
 
-  it("recorrente: cobrança mensal e rescisão com aviso de 30 dias", () => {
+  it("recorrente: pré-pago até o dia 5, sem 50/50 e sem multa rescisória", () => {
     const text = buildContractClauses({ ...base, title: "Acompanhamento recorrente" }, 5000)
       .map((c) => c.body)
       .join(" ");
-    expect(text).toMatch(/dia 10 de cada mês/);
-    expect(text).toMatch(/aviso prévio de 30 dias/);
+    expect(text).toMatch(/pré-pago/);
+    expect(text).toMatch(/até o dia 5/);
+    expect(text).toMatch(/não admitem parcelamento/);
+    expect(text).toMatch(/aviso prévio de 30 dias, sem multa rescisória/);
+    expect(text).not.toMatch(/multa de 20%/);
+    expect(text).not.toMatch(/cartão/);
   });
 });
