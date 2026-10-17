@@ -163,7 +163,7 @@ const s = StyleSheet.create({
   totValue: { fontSize: 9, color: INK, width: 110, textAlign: "right", fontFamily: DISPLAY, fontWeight: 700 },
   grandLabel: { fontSize: 7.5, letterSpacing: 2, color: FAINT, fontFamily: DISPLAY, fontWeight: 700 },
   grandValue: { fontSize: 19, color: INK, fontFamily: DISPLAY, fontWeight: 300 },
-  perMonth: { fontSize: 9, color: SOFT },
+  perMonth: { fontSize: 9, color: SOFT, marginLeft: -10 },
   // Pagamento: 3 cards em vidro; a condição escolhida ganha borda PurpleMag.
   payRow: { flexDirection: "row", gap: 8 },
   payCard: { flex: 1, borderWidth: 1, borderColor: HAIR, borderRadius: 8, backgroundColor: CARD, paddingVertical: 8, paddingHorizontal: 10 },
@@ -514,7 +514,7 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
         ) : null}
 
         {/* ── Datas (fallback legado: sem data por item) ── */}
-        {eventDates.length && itemsWithDate === 0 ? (
+        {eventDates.length && itemsWithDate === 0 && !recurring ? (
           <View wrap={false}>
             <Text style={s.sectionTitle}>DATAS DE EXECUÇÃO</Text>
             <View style={s.dateRow}>
@@ -529,10 +529,12 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
 
         {/* ── Totalizador ──────────────────────────────── */}
         <View style={s.totals} wrap={false}>
+          {discountAmount > 0 ? (
           <View style={s.totRow}>
             <Text style={s.totLabel}>Subtotal</Text>
             <Text style={s.totValue}>{formatBRL(subtotal)}</Text>
           </View>
+          ) : null}
           {discountAmount > 0 ? (
             <View style={s.totRow}>
               <Text style={s.totLabel}>
@@ -543,10 +545,11 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
           ) : null}
           <View style={[s.totRow, { marginTop: 3 }]}>
             <Text style={s.grandLabel}>{recurring ? "MENSALIDADE" : "TOTAL"}</Text>
-            <Text style={s.grandValue}>{formatBRL(total)}{recurring ? <Text style={s.perMonth}> /mês</Text> : null}</Text>
+            <Text style={s.grandValue}>{formatBRL(total)}</Text>
+            {recurring ? <Text style={s.perMonth}>/mês</Text> : null}
           </View>
           {recurring && period ? (
-            <View style={s.totRow}>
+            <View style={[s.totRow, { marginTop: 4 }]}>
               <Text style={s.totLabel}>Vigência do contrato: {period}</Text>
             </View>
           ) : null}
