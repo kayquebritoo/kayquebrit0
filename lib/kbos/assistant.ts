@@ -54,6 +54,20 @@ async function fetchTimeout(url: string, init: RequestInit, ms = 30_000): Promis
 
 export type Transcript = { text: string | null; stub: boolean; error?: string };
 
+/**
+ * Nome de arquivo com a extensão certa p/ o Whisper, que detecta o formato
+ * pela extensão: iPhone grava `audio/mp4`, Chrome/Android `audio/webm`,
+ * WhatsApp manda `audio/ogg`. Mandar tudo como `.ogg` quebrava o mic do app.
+ */
+export function audioFilename(mime: string): string {
+  const m = (mime || "").toLowerCase().split(";")[0].trim();
+  if (m.includes("webm")) return "audio.webm";
+  if (m.includes("mp4") || m.includes("m4a") || m.includes("aac")) return "audio.m4a";
+  if (m.includes("mpeg") || m.includes("mp3")) return "audio.mp3";
+  if (m.includes("wav")) return "audio.wav";
+  return "audio.ogg";
+}
+
 export async function transcribeAudio(
   input: { audioUrl?: string; audioBase64?: string; audioMime?: string }
 ): Promise<Transcript> {
@@ -84,7 +98,7 @@ export async function transcribeAudio(
     const form = new FormData();
     form.append("model", "whisper-1");
     form.append("language", "pt");
-    form.append("file", new Blob([bytes], { type: mime }), "audio.ogg");
+    form.append("file", new Blob([bytes], { type: mime.split(";")[0] }), audioFilename(mime));
     const res = await fetchTimeout("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}` },

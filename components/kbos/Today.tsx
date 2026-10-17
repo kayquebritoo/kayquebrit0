@@ -100,7 +100,15 @@ function DemandCard({ d, todayKey }: { d: Demand; todayKey: string }) {
   );
 }
 
-type SR = { lang: string; interimResults: boolean; start: () => void; stop: () => void; onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null };
+/** Blob → base64 (sem o prefixo data:). */
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(String(fr.result).split(",")[1] || "");
+    fr.onerror = () => reject(fr.error);
+    fr.readAsDataURL(blob);
+  });
+}
 
 export default function Today() {
   const [data, setData] = useState<TodayData | null>(null);
@@ -109,11 +117,12 @@ export default function Today() {
   const [cmd, setCmd] = useState("");
   const [busy, setBusy] = useState(false);
   const [reply, setReply] = useState<string | null>(null);
-  const [listening, setListening] = useState(false);
+  const [recording, setRecording] = useState(false);
   const [clock, setClock] = useState(() => Date.now());
   const seen = useRef<Set<string>>(new Set());
   const [fresh, setFresh] = useState<Set<string>>(new Set());
-  const recRef = useRef<SR | null>(null);
+  const mediaRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -176,30 +185,76 @@ export default function Today() {
     [busy, load]
   );
 
-  const toggleMic = () => {
-    if (listening) {
-      recRef.current?.stop();
+  // Voz: grava de verdade (MediaRecorder) e manda o áudio ao servidor, que
+  // transcreve. Funciona no iPhone (inclusive com o app instalado) e no
+  // Android — o ditado do navegador (Web Speech) falhava calado no celular.
+  const sendAudio = useCallback(
+    async (blob: Blob) => {
+      setBusy(true);
+      setReply(null);
+      try {
+        const audioBase64 = await blobToBase64(blob);
+        const r = await fetch("/api/ai/assistant", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ audioBase64, audioMime: blob.type || "audio/webm" }),
+        });
+        const j = await r.json();
+        if (!r.ok) setReply(j.error || "Não consegui processar o áudio.");
+        else if (j.transcriptStub) setReply("Áudio recebido, mas a transcrição está desligada: falta a OPENAI_API_KEY na VPS.");
+        else {
+          if (j.transcript) setCmd(j.transcript);
+          setReply(j.reply || "Feito.");
+          load();
+        }
+      } catch {
+        setReply("Sem conexão com o servidor. Tente de novo.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [load]
+  );
+
+  const toggleMic = async () => {
+    if (recording) {
+      mediaRef.current?.stop();
       return;
     }
-    const W = window as unknown as { SpeechRecognition?: new () => SR; webkitSpeechRecognition?: new () => SR };
-    const Ctor = W.SpeechRecognition || W.webkitSpeechRecognition;
-    if (!Ctor) {
-      setReply("Este navegador não tem ditado por voz. Digite o comando ou use o áudio no WhatsApp.");
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      setReply("Este navegador não grava áudio. Digite o comando ou mande um áudio no WhatsApp.");
       return;
     }
-    const rec = new Ctor();
-    rec.lang = "pt-BR";
-    rec.interimResults = false;
-    rec.onresult = (e) => {
-      const said = e.results[0]?.[0]?.transcript ?? "";
-      setCmd(said);
-      send(said);
-    };
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
-    recRef.current = rec;
-    setListening(true);
-    rec.start();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm"].find((m) => MediaRecorder.isTypeSupported?.(m)) || "";
+      const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      chunksRef.current = [];
+      rec.ondataavailable = (e) => {
+        if (e.data.size) chunksRef.current.push(e.data);
+      };
+      rec.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        setRecording(false);
+        const blob = new Blob(chunksRef.current, { type: rec.mimeType || mime || "audio/webm" });
+        if (blob.size > 1500) sendAudio(blob);
+        else setReply("Áudio muito curto. Toque, fale e toque de novo para enviar.");
+      };
+      mediaRef.current = rec;
+      rec.start();
+      setRecording(true);
+      setReply("Gravando… toque no microfone de novo para enviar.");
+      setTimeout(() => {
+        if (rec.state === "recording") rec.stop();
+      }, 60_000);
+    } catch (e) {
+      const name = e instanceof DOMException ? e.name : "";
+      setReply(
+        name === "NotAllowedError"
+          ? "O microfone está bloqueado. Libere o acesso ao microfone para o KBOS nas configurações do navegador."
+          : "Não consegui acessar o microfone."
+      );
+    }
   };
 
   const demands = useMemo(() => {
@@ -297,8 +352,8 @@ export default function Today() {
         <button
           type="button"
           onClick={toggleMic}
-          data-on={listening}
-          aria-label={listening ? "Parar de ouvir" : "Falar com o assistente"}
+          data-on={recording}
+          aria-label={recording ? "Parar e enviar o áudio" : "Gravar um comando de voz"}
           className="kb-mic"
         >
           <svg aria-hidden width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">

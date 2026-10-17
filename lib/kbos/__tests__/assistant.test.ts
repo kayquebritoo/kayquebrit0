@@ -52,3 +52,13 @@ describe("transcribeAudio", () => {
     expect(r.text).toBeNull();
   });
 });
+
+describe("audioFilename", () => {
+  it("escolhe a extensão pelo mime (iPhone, Chrome, WhatsApp)", async () => {
+    const { audioFilename } = await import("../assistant");
+    expect(audioFilename("audio/mp4")).toBe("audio.m4a");
+    expect(audioFilename("audio/webm;codecs=opus")).toBe("audio.webm");
+    expect(audioFilename("audio/ogg; codecs=opus")).toBe("audio.ogg");
+    expect(audioFilename("")).toBe("audio.ogg");
+  });
+});
