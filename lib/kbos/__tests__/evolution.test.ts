@@ -186,7 +186,7 @@ describe("setInstanceWebhook", () => {
     });
     expect(await setInstanceWebhook()).toBe(true);
     expect(bodies[0]).toMatchObject({
-      webhook: { enabled: true, byEvents: false, base64: false, events: ["MESSAGES_UPSERT", "MESSAGES_UPDATE", "SEND_MESSAGE_UPDATE"] },
+      webhook: { enabled: true, byEvents: false, base64: false, events: ["MESSAGES_UPSERT", "MESSAGES_UPDATE", "SEND_MESSAGE_UPDATE", "CONNECTION_UPDATE"] },
     });
     expect(bodies[1]).toMatchObject({ enabled: true, url: "http://web:3000/api/webhooks/evolution/" });
   });

@@ -24,6 +24,33 @@ export default function Fullpage({
   const indexRef = useRef(0);
   const dotWrap = useRef<HTMLElement>(null);
 
+  // iPhone com o app instalado (standalone + status bar translúcida): o iOS
+  // calcula 100svh/innerHeight SEM a barra de status, e sobrava uma faixa
+  // vazia embaixo. Ali a altura real é a da tela; fora disso, segue 100svh.
+  useEffect(() => {
+    const nav = navigator as Navigator & { standalone?: boolean };
+    const root = document.documentElement;
+    const apply = () => {
+      if (nav.standalone !== true) {
+        root.style.removeProperty("--app-h");
+        return;
+      }
+      const landscape = window.matchMedia("(orientation: landscape)").matches;
+      const screenH = landscape
+        ? Math.min(window.screen.width, window.screen.height)
+        : Math.max(window.screen.width, window.screen.height);
+      root.style.setProperty("--app-h", `${Math.max(window.innerHeight, screenH)}px`);
+    };
+    apply();
+    window.addEventListener("resize", apply);
+    window.addEventListener("orientationchange", apply);
+    return () => {
+      window.removeEventListener("resize", apply);
+      window.removeEventListener("orientationchange", apply);
+      root.style.removeProperty("--app-h");
+    };
+  }, []);
+
   const slideH = useCallback(() => {
     const first = track.current?.children[0] as HTMLElement | undefined;
     return first?.clientHeight || window.innerHeight;
@@ -256,13 +283,13 @@ export default function Fullpage({
   }, [goTo]);
 
   return (
-    <div className="relative h-[100svh] w-full overflow-hidden bg-[#11101E] [touch-action:pan-x]">
+    <div className="relative h-[var(--app-h,100svh)] w-full overflow-hidden bg-[#11101E] [touch-action:pan-x]">
       <div ref={track} className="will-change-transform">
         {children.map((c, i) => (
           <div
             key={slides[i].id}
             id={slides[i].id}
-            className={`fp-slide-${i} h-[100svh] w-full shrink-0 overflow-hidden`}
+            className={`fp-slide-${i} h-[var(--app-h,100svh)] w-full shrink-0 overflow-hidden`}
           >
             {c}
           </div>

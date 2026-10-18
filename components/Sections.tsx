@@ -685,16 +685,17 @@ export function ContactSlide() {
   const { t } = useLang();
   useEffect(() => {
     if (!pulse.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const tm = gsap.to(pulse.current, { scale: 1.06, duration: 1.8, ease: "sine.inOut", yoyo: true, repeat: -1 });
+    const tm = gsap.to(pulse.current, { scale: 1.025, duration: 1.8, ease: "sine.inOut", yoyo: true, repeat: -1 });
     return () => { tm.kill(); };
   }, []);
   return (
     <section className="relative flex h-full flex-col justify-center overflow-hidden bg-[#11101E]">
       {/* véu de fundo: BluePurple sutil; o rosa só aparece no fim do degradê */}
       <div aria-hidden className="pointer-events-none absolute -right-[20vmin] top-1/2 h-[70vmin] w-[90vmin] -translate-y-1/2 rounded-full bg-gradient-to-br from-[#4F12C7]/25 via-[#350C85]/15 to-[#E80EFD]/5 blur-[120px]" />
-      <div className="ref-inner relative">
+      <div className="ref-inner relative flex h-full flex-col justify-between pb-[calc(1.75rem+env(safe-area-inset-bottom))] pt-[calc(6.5rem+env(safe-area-inset-top))] md:h-auto md:justify-center md:pb-0 md:pt-0">
+        <div>
         {/* mobile: assinatura compacta (foto + nome + hora local) */}
-        <div className="fp-anim mb-6 flex items-center gap-3 md:hidden">
+        <div className="fp-anim mb-8 flex items-center gap-3 md:hidden">
           <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border border-white/20">
             <Image src="/assets/deco/ok2.webp" alt="Kayque Brito" fill loading="lazy" className="object-cover" sizes="56px" />
           </div>
@@ -713,7 +714,7 @@ export function ContactSlide() {
               <span className="md:hidden">{t("contact.title")}</span>
               <span className="hidden md:block" style={{ fontSize: "clamp(48px, 4.6vw, 88px)", lineHeight: 1.05 }}>{t("contact.title")}</span>
             </h2>
-            <p className="fp-anim mt-4 font-light text-white/70 md:mt-[4vh]" style={{ fontSize: "clamp(15px, 4vw, 17px)", lineHeight: 1.6 }}>
+            <p className="fp-anim mt-5 font-light text-white/70 md:mt-[4vh]" style={{ fontSize: "clamp(16px, 4.2vw, 18px)", lineHeight: 1.65 }}>
               <span className="md:hidden">{t("contact.text")}</span>
               <span className="hidden md:block" style={{ fontSize: 22 }}>{t("contact.text")}</span>
             </p>
@@ -723,8 +724,11 @@ export function ContactSlide() {
             <Image src="/assets/deco/ok2.webp" alt="Kayque Brito" fill loading="lazy" className="fp-layer object-cover" sizes="280px" />
           </div>
         </div>
+        </div>
 
-        <div className="fp-anim mt-7 flex flex-col gap-4 md:mt-[5vh] md:flex-row md:items-center md:gap-10">
+        <div>
+
+        <div className="fp-anim flex flex-col gap-4 md:mt-[5vh] md:flex-row md:items-center md:gap-10">
           <div ref={pulse}>
             <Link
               ref={magContact as unknown as React.RefObject<HTMLAnchorElement>}
@@ -758,6 +762,7 @@ export function ContactSlide() {
           <Link href="/entrar" className="text-white/75 underline decoration-white/25 underline-offset-4 transition hover:text-white hover:decoration-white">
             Área do cliente
           </Link>
+        </div>
         </div>
       </div>
       <p className="hidden">{ABOUT.name} {CONTACT.title}</p>

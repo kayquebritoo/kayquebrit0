@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # KBOS — Ecossistema de Gestão Comercial e Automação (Kayque Brito)
 
 - **Profissional**: Kayque Brito (Desenvolvedor de Software, Designer e Produtor Audiovisual).
-- **VPS**: `109.106.251.173:65002` · código em `/opt/kbos` · prod em `https://kbos.kayquebrito.com.br`
+- **VPS**: `179.236.67.19` · código em `/opt/kbos` · prod em `https://kbos.kayquebrito.com.br`
 - **Fluxo de Deploy**: commit + `git push origin main` → GitHub Actions (`.github/workflows/deploy-vps.yml`) publica sozinho. Nada de SSH manual.
 - **Se precisar comandar a VPS à mão** (a partir da RAIZ do repo, nunca de `infra/`):
   `docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml --profile evolution up -d --build`

@@ -141,6 +141,15 @@ export function KbosShell({
     };
   }, [admin, router]);
 
+  // Vindo da home (navegação client-side), a trava de rolagem do fullpage
+  // (`fullpage-locked`: html/body com overflow hidden) podia ficar presa e o
+  // KBOS não rolava no desktop. Garante a rolagem normal ao entrar no painel.
+  useEffect(() => {
+    document.documentElement.classList.remove("fullpage-locked");
+    document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
+  }, []);
+
   useEffect(() => {
     document.body.style.overflow = sheet ? "hidden" : "";
     return () => {

@@ -262,8 +262,9 @@ export async function ensureInstance(req?: Request): Promise<{ created: boolean;
   }
 }
 
-// Upsert = mensagens; UPDATE/SEND_MESSAGE_UPDATE = recibos de leitura.
-const WEBHOOK_EVENTS = ["MESSAGES_UPSERT", "MESSAGES_UPDATE", "SEND_MESSAGE_UPDATE"];
+// Upsert = mensagens; UPDATE/SEND_MESSAGE_UPDATE = recibos de leitura;
+// CONNECTION_UPDATE só alimenta o diário (prova que a Evolution alcança o app).
+const WEBHOOK_EVENTS = ["MESSAGES_UPSERT", "MESSAGES_UPDATE", "SEND_MESSAGE_UPDATE", "CONNECTION_UPDATE"];
 
 /**
  * Aponta o webhook da instância p/ o inbound do KBOS. Best-effort (nunca lança).

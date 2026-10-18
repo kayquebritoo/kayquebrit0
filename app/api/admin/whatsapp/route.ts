@@ -17,6 +17,7 @@ import {
   waUsingDefaultKey,
   warnEvoFallbackOnce,
 } from "@/lib/kbos/evolution";
+import { readHookLog } from "@/lib/kbos/webhook-log";
 
 // GET ?qr=1 — status da instância; com qr=1 inclui QR fresco (expira em ~60s)
 // + auto-cria a instância quando ausente e repara/verifica o webhook.
@@ -31,6 +32,11 @@ export async function GET(req: Request) {
   warnEvoFallbackOnce();
   try {
     const params = new URL(req.url).searchParams;
+    // Diário do webhook (?log=1): últimas chamadas da Evolution ao KBOS.
+    if (params.get("log") === "1") {
+      const log = await readHookLog();
+      return NextResponse.json({ ok: true, instance: waInstance(), log, redis: log !== null });
+    }
     // Reparo dedicado da escuta (?repair=1): re-registra o webhook e devolve
     // o status — usado quando a sessão JÁ está ativa (open), caso em que o
     // polling normal para e o repair do ?qr=1 não roda mais.

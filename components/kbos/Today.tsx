@@ -100,6 +100,26 @@ function DemandCard({ d, todayKey }: { d: Demand; todayKey: string }) {
   );
 }
 
+type SR = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  start: () => void;
+  stop: () => void;
+  onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onend: (() => void) | null;
+  onerror: ((e: { error?: string }) => void) | null;
+};
+
+/** Ditado nativo do navegador (Chrome desktop/Android, Safari fora do app). */
+function speechCtor(): (new () => SR) | null {
+  const W = window as unknown as { SpeechRecognition?: new () => SR; webkitSpeechRecognition?: new () => SR };
+  const nav = navigator as Navigator & { standalone?: boolean };
+  // No iPhone com o app instalado o ditado falha: lá vai direto p/ gravação.
+  if (nav.standalone === true) return null;
+  return W.SpeechRecognition || W.webkitSpeechRecognition || null;
+}
+
 /** Blob → base64 (sem o prefixo data:). */
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -122,6 +142,7 @@ export default function Today() {
   const seen = useRef<Set<string>>(new Set());
   const [fresh, setFresh] = useState<Set<string>>(new Set());
   const mediaRef = useRef<MediaRecorder | null>(null);
+  const speechRef = useRef<SR | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
   const load = useCallback(async () => {
@@ -218,9 +239,55 @@ export default function Today() {
 
   const toggleMic = async () => {
     if (recording) {
+      speechRef.current?.stop();
       mediaRef.current?.stop();
       return;
     }
+    // 1º: ditado nativo (não depende de chave no servidor).
+    const Speech = speechCtor();
+    if (Speech) {
+      const rec = new Speech();
+      rec.lang = "pt-BR";
+      rec.interimResults = false;
+      rec.continuous = false;
+      let fallback = false;
+      rec.onresult = (e) => {
+        const said = (e.results[0]?.[0]?.transcript ?? "").trim();
+        if (said) {
+          setCmd(said);
+          send(said);
+        }
+      };
+      rec.onerror = (e) => {
+        if (e.error === "not-allowed") {
+          setReply("O microfone está bloqueado. Libere o acesso ao microfone para o KBOS nas configurações do navegador.");
+        } else if (e.error === "no-speech") {
+          setReply("Não ouvi nada. Toque no microfone e fale perto do celular.");
+        } else {
+          fallback = true; // serviço indisponível: tenta gravar o áudio
+        }
+      };
+      rec.onend = () => {
+        speechRef.current = null;
+        setRecording(false);
+        if (fallback) void recordAudio();
+      };
+      speechRef.current = rec;
+      setRecording(true);
+      setReply("Ouvindo… fale o comando.");
+      try {
+        rec.start();
+        return;
+      } catch {
+        speechRef.current = null;
+        setRecording(false);
+      }
+    }
+    await recordAudio();
+  };
+
+  // 2º: grava o áudio e o servidor transcreve (precisa de OPENAI_API_KEY).
+  const recordAudio = async () => {
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
       setReply("Este navegador não grava áudio. Digite o comando ou mande um áudio no WhatsApp.");
       return;

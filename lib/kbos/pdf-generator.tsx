@@ -11,7 +11,7 @@
 // Identidade (LDP Design): fundo Blackweb `#11101E`, tinta Off White
 // `#EDE6EC`, apoio GrayKay `#BDB7BC`, acento PurpleMag `#E80EFD` e gradiente
 // BluePurple `#4F12C7` → PurpleMag. Display Cottorway Pro + Helvetica no corpo.
-import { Document, Page, Text, View, StyleSheet, Image as PdfImage, Font, Svg, Defs, LinearGradient, Stop, Rect, renderToBuffer } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, Image as PdfImage, Font, Svg, Defs, LinearGradient, RadialGradient, Stop, Rect, Path, renderToBuffer } from "@react-pdf/renderer";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { BudgetItem } from "./schema";
@@ -377,6 +377,34 @@ function splitBalanced(clauses: Clause[]): [Clause[], Clause[]] {
   return [clauses.slice(0, cut), clauses.slice(cut)];
 }
 
+// Ondas (waveforms) da home do site, bem discretas no topo da folha.
+const WAVES = [64, 92, 120, 148, 176, 204].map(
+  (y, i) => `M0 ${y} C 120 ${y - 18}, 210 ${y + 22}, ${300 + i * 8} ${y + 2} S 500 ${y - 20}, 595 ${y + 8}`
+);
+
+/** Fundo da folha: o véu em degradê da hero (BluePurple, rosa só no fim) + waveforms. */
+function PageBackdrop({ id }: { id: string }) {
+  return (
+    <Svg fixed style={{ position: "absolute", top: 0, left: 0, width: 595, height: 842 }} viewBox="0 0 595 842">
+      <Defs>
+        <RadialGradient id={`${id}-veil`} cx="0.18" cy="0" r="0.75">
+          <Stop offset="0%" stopColor={BLUE} stopOpacity={0.3} />
+          <Stop offset="100%" stopColor={BLUE} stopOpacity={0} />
+        </RadialGradient>
+        <RadialGradient id={`${id}-mag`} cx="1" cy="0.02" r="0.5">
+          <Stop offset="0%" stopColor={MAG} stopOpacity={0.06} />
+          <Stop offset="100%" stopColor={MAG} stopOpacity={0} />
+        </RadialGradient>
+      </Defs>
+      <Rect x={0} y={0} width={595} height={842} fill={`url(#${id}-veil)`} />
+      <Rect x={0} y={0} width={595} height={842} fill={`url(#${id}-mag)`} />
+      {WAVES.map((d, i) => (
+        <Path key={i} d={d} fill="none" stroke={INK} strokeOpacity={0.05 - i * 0.006} strokeWidth={0.6} />
+      ))}
+    </Svg>
+  );
+}
+
 /** Cabeçalho comum às duas páginas: logo íntegra + bloco do documento + filete em gradiente. */
 function DocHeader({ id, logo, label, code, date, status }: { id: string; logo: string | null; label: string; code: string; date: string; status?: string }) {
   return (
@@ -445,6 +473,7 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
   return (
     <Document title={`Orçamento ${data.code} — Kayque Brito`}>
       <Page size="A4" style={s.page}>
+        <PageBackdrop id="kb-bg-1" />
         <DocHeader
           id="kb-rule-1"
           logo={logo}
@@ -624,6 +653,7 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
 
       {/* ═══ Página 2 — Termos e Contrato Formal ═══ */}
       <Page size="A4" style={s.page}>
+        <PageBackdrop id="kb-bg-2" />
         <DocHeader id="kb-rule-2" logo={logo} label="INSTRUMENTO PARTICULAR DE PRESTAÇÃO DE SERVIÇOS" code={data.code} date={docDate} />
 
         <View style={s.grid}>

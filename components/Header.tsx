@@ -156,21 +156,14 @@ export default function Header() {
           open ? "visible opacity-100" : "invisible opacity-0"
         }`}
       >
-        <div className="flex flex-1 flex-col items-center justify-center px-6 pb-10 pt-[calc(6rem+env(safe-area-inset-top))] text-center">
-          <p
-            className={`relative text-[10px] uppercase text-white/50 transition-all duration-500 sm:text-[11px] ${
-              open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
-            }`}
-            style={{ letterSpacing: "0.35em", transitionDelay: open ? "60ms" : "0ms" }}
-          >
-            Belém — <LocalTime />
-          </p>
-          <nav className="relative mt-6 flex flex-col items-center gap-0.5 sm:mt-5 md:gap-1">
+        <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col justify-between gap-10 px-6 pb-[max(1.75rem,env(safe-area-inset-bottom))] pt-[calc(7rem+env(safe-area-inset-top))] sm:px-10 md:flex-row md:items-end md:gap-16 md:px-[80px] md:pb-14 md:pt-36">
+          {/* navegação: alinhada à esquerda, com respiro */}
+          <nav aria-label={t("menu.open")} className="flex flex-col items-start gap-1 md:gap-1.5">
             <MenuItem
               num="01"
               label={t("menu.home")}
               open={open}
-              delay={100}
+              delay={80}
               onClick={() => {
                 setOpen(false);
                 goToSlide(0);
@@ -182,7 +175,7 @@ export default function Header() {
                 num={String(i + 2).padStart(2, "0")}
                 label={n.label}
                 open={open}
-                delay={140 + i * 55}
+                delay={120 + i * 50}
                 onClick={() => {
                   setOpen(false);
                   setTimeout(() => goToSlide(n.index), 120);
@@ -193,7 +186,7 @@ export default function Header() {
               href="/trabalho"
               onClick={() => setOpen(false)}
               tabIndex={open ? 0 : -1}
-              className={`menu-big group relative mt-1 px-4 py-1.5 text-[#E80EFD] transition-all duration-500 hover:text-white ${
+              className={`menu-big group relative py-1 text-left text-[#EDE6EC]/90 transition-[opacity,transform,color] duration-500 hover:text-white sm:py-1.5 ${
                 open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
               }`}
               style={{ transitionDelay: open ? "420ms" : "0ms" }}
@@ -201,114 +194,91 @@ export default function Header() {
               <span className="menu-num">07</span>
               <span className="relative">
                 {t("menu.allWorks")}
-                <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-current transition-all duration-500 group-hover:w-full" />
+                <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-current transition-[width] duration-500 group-hover:w-full" />
               </span>
             </Link>
+          </nav>
+
+          {/* utilidades ancoradas embaixo (no desktop, à direita) */}
+          <div
+            className={`flex w-full flex-col gap-5 transition-[opacity,transform] duration-500 md:w-auto md:max-w-[360px] md:items-end ${
+              open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
+            }`}
+            style={{ transitionDelay: open ? "460ms" : "0ms" }}
+          >
+            <p className="text-[13px] font-light text-white/50">
+              Belém — <LocalTime />
+            </p>
             <Link
               href="/entrar"
               onClick={() => setOpen(false)}
               tabIndex={open ? 0 : -1}
-              className={`mt-4 inline-flex items-center gap-2.5 rounded-full border border-white/25 px-7 py-3 text-[12px] font-semibold uppercase tracking-[0.25em] text-white/85 transition-all duration-500 hover:border-white hover:bg-white hover:text-black ${
-                open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
-              }`}
-              style={{ transitionDelay: open ? "460ms" : "0ms" }}
+              className="flex h-14 w-full items-center justify-center rounded-full border border-white/25 px-7 text-[15px] text-white/90 transition-[background-color,color,border-color] hover:border-white hover:bg-white hover:text-black md:w-[320px]"
             >
-              Entrar — Área do cliente
+              Área do cliente
             </Link>
-          </nav>
-
-          {/* sociais como ícones (inclui WhatsApp) */}
-          <div
-            className={`mt-8 flex flex-wrap items-center justify-center gap-2.5 transition-all duration-500 ${
-              open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
-            }`}
-            style={{ transitionDelay: open ? "470ms" : "0ms" }}
-          >
-            {SOCIALS.map((s) => (
-              <a
-                key={s.name}
-                href={s.href}
-                target="_blank"
-                rel="noopener"
-                tabIndex={open ? 0 : -1}
-                aria-label={s.name}
-                title={s.name}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-white/70 backdrop-blur transition hover:border-white/60 hover:text-white"
-              >
-                <SocialIcon icon={s.icon} size={18} />
-              </a>
-            ))}
-          </div>
-
-          {/* tema + idioma */}
-          <div
-            className={`mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-3 transition-all duration-500 ${
-              open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
-            }`}
-            style={{ transitionDelay: open ? "520ms" : "0ms" }}
-          >
-            <button
-              type="button"
-              onClick={toggle}
-              tabIndex={open ? 0 : -1}
-              aria-label={theme === "dark" ? t("menu.themeLight") : t("menu.themeDark")}
-              title={theme === "dark" ? t("menu.themeLight") : t("menu.themeDark")}
-              className="flex h-11 items-center gap-2.5 rounded-full border border-white/20 px-5 text-[11px] uppercase tracking-[0.22em] text-white/70 backdrop-blur transition hover:border-white/60 hover:text-white"
-            >
-              <span aria-hidden className="inline-flex">
-                {theme === "dark" ? (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="4" />
-                    <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
-                  </svg>
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
-                  </svg>
-                )}
-              </span>
-              {theme === "dark" ? "Light" : "Dark"}
-            </button>
-            <div
-              role="group"
-              aria-label={t("menu.language")}
-              className="flex items-center gap-1 rounded-full border border-white/20 p-1 backdrop-blur"
-            >
-              {LANGS.map((l) => (
-                <button
-                  key={l.id}
-                  type="button"
-                  onClick={() => setLang(l.id)}
+            <div className="grid w-full grid-cols-6 gap-2 md:flex md:w-auto md:gap-2.5">
+              {SOCIALS.map((s) => (
+                <a
+                  key={s.name}
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener"
                   tabIndex={open ? 0 : -1}
-                  aria-label={l.name}
-                  aria-pressed={lang === l.id}
-                  title={l.name}
-                  className={`flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[11px] font-semibold tracking-[0.14em] transition ${
-                    lang === l.id
-                      ? "bg-white text-black"
-                      : "text-white/60 hover:text-white"
-                  }`}
+                  aria-label={s.name}
+                  title={s.name}
+                  className="flex aspect-square items-center justify-center rounded-full border border-white/15 text-white/70 transition-[color,border-color] hover:border-white/60 hover:text-white md:h-11 md:w-11"
                 >
-                  <span aria-hidden>{l.flag}</span>
-                  {l.label}
-                </button>
+                  <SocialIcon icon={s.icon} size={18} />
+                </a>
               ))}
             </div>
-          </div>
-        </div>
-
-        {/* marquee inferior do menu */}
-        <div
-          className={`relative overflow-hidden border-t border-white/10 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 transition-opacity duration-500 sm:pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pt-5 ${
-            open ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          <div className="animate-marquee flex w-max whitespace-nowrap text-[11px] uppercase text-white/45 sm:text-[12px]" style={{ letterSpacing: "0.3em" }}>
-            {[0, 1].map((n) => (
-              <span key={n} className="shrink-0 pr-8" aria-hidden={n === 1}>
-                {t("menu.marquee")}&nbsp;
-              </span>
-            ))}
+            <div className="flex w-full items-center justify-between gap-3 md:justify-end">
+              <button
+                type="button"
+                onClick={toggle}
+                tabIndex={open ? 0 : -1}
+                aria-label={theme === "dark" ? t("menu.themeLight") : t("menu.themeDark")}
+                title={theme === "dark" ? t("menu.themeLight") : t("menu.themeDark")}
+                className="flex h-11 items-center gap-2 rounded-full border border-white/15 px-4 text-[13px] text-white/70 transition-[color,border-color] hover:border-white/60 hover:text-white"
+              >
+                <span aria-hidden className="inline-flex">
+                  {theme === "dark" ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="4" />
+                      <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
+                    </svg>
+                  )}
+                </span>
+                {theme === "dark" ? "Claro" : "Escuro"}
+              </button>
+              <div
+                role="group"
+                aria-label={t("menu.language")}
+                className="flex items-center gap-1 rounded-full border border-white/15 p-1"
+              >
+                {LANGS.map((l) => (
+                  <button
+                    key={l.id}
+                    type="button"
+                    onClick={() => setLang(l.id)}
+                    tabIndex={open ? 0 : -1}
+                    aria-label={l.name}
+                    aria-pressed={lang === l.id}
+                    title={l.name}
+                    className={`flex h-9 items-center rounded-full px-3.5 text-[12px] font-semibold tracking-[0.08em] transition-[background-color,color] ${
+                      lang === l.id ? "bg-white text-black" : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -322,7 +292,7 @@ function MenuItem({ label, num, open, delay, onClick }: { label: string; num: st
       onClick={onClick}
       type="button"
       tabIndex={open ? 0 : -1}
-      className={`menu-big group relative touch-manipulation px-4 py-1 text-[#EDE6EC]/90 transition-all duration-500 hover:text-white sm:py-1.5 ${
+      className={`menu-big group relative touch-manipulation py-1 text-left text-[#EDE6EC]/90 transition-[opacity,transform,color] duration-500 hover:text-white sm:py-1.5 ${
         open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
       }`}
       style={{ transitionDelay: open ? `${delay}ms` : "0ms" }}
@@ -330,7 +300,7 @@ function MenuItem({ label, num, open, delay, onClick }: { label: string; num: st
       <span className="menu-num">{num}</span>
       <span className="relative">
         {label}
-        <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-white/70 transition-all duration-500 group-hover:w-full" />
+        <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-white/70 transition-[width] duration-500 group-hover:w-full" />
       </span>
     </button>
   );

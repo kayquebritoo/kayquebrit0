@@ -5,6 +5,7 @@ import { messages } from "@/lib/kbos/schema";
 import { withRateLimit } from "@/lib/kbos/rate-limit";
 import { serverError } from "@/lib/kbos/http";
 import { isEvolutionWebhookAuthorized } from "@/lib/kbos/evolution";
+import { logHook, maskChat } from "@/lib/kbos/webhook-log";
 import {
   extractInbound,
   ingestInbound,
@@ -56,12 +57,19 @@ async function handleReceipt(data: unknown): Promise<boolean> {
 
 export async function POST(req: Request) {
   const limited = await withRateLimit(req, "webhooks:evolution");
-  if (limited) return limited;
-  if (!isEvolutionWebhookAuthorized(req)) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+  if (limited) {
+    await logHook({ event: "?", result: "rate-limit (429)" });
+    return limited;
+  }
+  if (!isEvolutionWebhookAuthorized(req)) {
+    await logHook({ event: "?", result: "não autorizado (401): token do webhook não confere" });
+    return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+  }
   let body: unknown;
   try {
     body = await req.json();
   } catch {
+    await logHook({ event: "?", result: "corpo JSON inválido (400)" });
     return NextResponse.json({ error: "Corpo JSON inválido." }, { status: 400 });
   }
   if (!body || typeof body !== "object") return NextResponse.json({ ok: true, ignored: true });
@@ -72,22 +80,42 @@ export async function POST(req: Request) {
   // Recibos de entrega/leitura das mensagens enviadas pelo inbox.
   if (norm === "sendmessageupdate" || norm === "messagesupdate") {
     const ok = await handleReceipt(root.data ?? root);
+    await logHook({ event: String(event), result: ok ? "recibo aplicado" : "recibo sem mensagem correspondente" });
     return NextResponse.json({ ok: true, receipts: ok });
   }
-  if (!isMessagesUpsert(event)) return NextResponse.json({ ok: true, ignored: true });
+  if (!isMessagesUpsert(event)) {
+    await logHook({ event: String(event ?? "sem evento"), result: "ignorado (não é mensagem nova)" });
+    return NextResponse.json({ ok: true, ignored: true });
+  }
 
   const raw = root.data ?? root;
   // Algumas versões envelopam em array (`data: [...]`); processa o primeiro.
   const data = Array.isArray(raw) ? raw[0] : raw;
   const inb = extractInbound(data);
-  if (!inb) return NextResponse.json({ ok: true, ignored: true });
+  if (!inb) {
+    const d = (data ?? {}) as { key?: { remoteJid?: string }; messageType?: string };
+    await logHook({
+      event: String(event),
+      result: "ignorado (formato não reconhecido)",
+      detail: `${maskChat(d.key?.remoteJid) ?? "sem remoteJid"} · tipo ${d.messageType ?? "?"}`,
+    });
+    return NextResponse.json({ ok: true, ignored: true });
+  }
 
   // Canal: hoje só WhatsApp chega pela Evolution; o campo existe para o
   // futuro multirrede sem mudar o contrato do webhook.
   const channel = "whatsapp";
   try {
     const r = await ingestInbound(channel, inb);
-    if (r.ignored) return NextResponse.json({ ok: true, ignored: true });
+    if (r.ignored) {
+      await logHook({ event: String(event), result: "ignorado na ingestão", detail: maskChat(inb.chatId) });
+      return NextResponse.json({ ok: true, ignored: true });
+    }
+    await logHook({
+      event: String(event),
+      result: r.deduped ? "duplicada (já existia)" : inb.fromMe ? "enviada por você → inbox" : "recebida → inbox",
+      detail: `${maskChat(inb.chatId)} · ${inb.messageType}`,
+    });
     return NextResponse.json({
       ok: true,
       deduped: r.deduped,
@@ -96,6 +124,7 @@ export async function POST(req: Request) {
     });
   } catch (e) {
     // 500 = a Evolution retenta depois; a ingestão idempotente evita duplicatas.
+    await logHook({ event: String(event), result: "erro ao gravar (500)", detail: e instanceof Error ? e.message.slice(0, 160) : undefined });
     return serverError(e);
   }
 }
