@@ -54,6 +54,7 @@ const GROUPS: NavGroup[] = [
     label: "Produção",
     icon: ico("M4 6h16M4 12h10M4 18h7M17 15l2 2 3-4"),
     links: [
+      { href: "/admin/tarefas", label: "Tarefas e prazos", adminOnly: true },
       { href: "/admin/projetos", label: "Projetos e entregas" },
       { href: "/admin/agenda", label: "Agenda", adminOnly: true },
       { href: "/admin/cursos", label: "Cursos", adminOnly: true },

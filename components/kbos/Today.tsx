@@ -22,6 +22,7 @@ const KIND_LABEL: Record<DemandKind, string> = {
   pagamento: "Pagamento",
   entrega: "Entrega",
   proposta: "Proposta",
+  tarefa: "Tarefa",
 };
 const MONEY: DemandKind[] = ["cobranca", "pagamento"];
 
@@ -462,8 +463,9 @@ export default function Today() {
       )}
 
       <div className="kb-scroll-x -mx-4 -mt-1 scroll-px-4 px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-        <Link href="/admin/financeiro" className="kb-chip">Nova despesa</Link>
-        <Link href="/admin/financeiro" className="kb-chip">Nova entrada</Link>
+        <Link href="/admin/tarefas?nova=1" className="kb-chip">Nova tarefa</Link>
+        <Link href="/admin/financeiro?novo=despesa" className="kb-chip">Nova despesa</Link>
+        <Link href="/admin/financeiro?novo=entrada" className="kb-chip">Nova entrada</Link>
         <Link href="/admin/orcamentos" className="kb-chip">Novo orçamento</Link>
         <Link href="/admin/agenda" className="kb-chip">Agenda</Link>
         <Link href="/admin/inbox" className="kb-chip">Inbox</Link>

@@ -132,6 +132,16 @@ export default function Financeiro() {
       .catch(() => {});
   }, []);
 
+  // Atalho do Hoje: /admin/financeiro?novo=despesa|entrada abre a folha direto.
+  useEffect(() => {
+    const novo = new URLSearchParams(window.location.search).get("novo");
+    if (novo === "despesa" || novo === "entrada") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- abre a folha uma vez, vindo do atalho.
+      setForm(blank("empresa", novo === "entrada" ? "income" : "expense"));
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
+
   const shown = useMemo(() => {
     if (view === "income") return items.filter((e) => e.type === "income");
     if (view === "expense") return items.filter((e) => e.type === "expense");

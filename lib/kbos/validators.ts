@@ -138,16 +138,28 @@ export const fileReviewSchema = z.object({
 });
 
 /* ---------- tasks ---------- */
+const taskExtra = {
+  dueAt: dateField.nullable().optional(),
+  description: z.string().trim().max(4000).nullable().optional(),
+  assignee: z.string().trim().max(80).nullable().optional(),
+  priority: z.enum(["normal", "alta"]).optional(),
+  contactId: uuidField.nullable().optional(),
+};
 export const taskCreateSchema = z.object({
-  projectId: uuidField,
+  // 0011: tarefa avulsa (sem projeto) é válida.
+  projectId: uuidField.nullable().optional(),
   titulo: shortText(160),
   responsavelRole: z.enum(ROLES).optional(),
   estimativaMin: z.coerce.number().int().positive().max(1_000_000).optional(),
+  status: z.enum(["todo", "doing", "done"]).optional(),
+  ...taskExtra,
 });
 export const taskPatchSchema = nonEmpty(
   z.object({
     status: z.enum(["todo", "doing", "done"]).optional(),
     titulo: shortText(160).optional(),
+    projectId: uuidField.nullable().optional(),
+    ...taskExtra,
   })
 );
 

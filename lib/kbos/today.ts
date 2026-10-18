@@ -5,7 +5,7 @@
 
 export type Urgency = "late" | "soon" | "upcoming";
 
-export type DemandKind = "cobranca" | "pagamento" | "entrega" | "proposta";
+export type DemandKind = "cobranca" | "pagamento" | "entrega" | "proposta" | "tarefa";
 
 export type Demand = {
   id: string;
@@ -82,6 +82,15 @@ export type BudgetRow = {
   clientCompany: string | null;
 };
 
+export type TaskRow = {
+  id: string;
+  titulo: string;
+  status: string;
+  dueAt: Date | string | null;
+  assignee: string | null;
+  projectTitle: string | null;
+};
+
 const OPEN_PROJECT = new Set(["novo", "briefing", "producao", "revisao"]);
 const OPEN_BUDGET = new Set(["draft", "sent"]);
 
@@ -89,7 +98,7 @@ const URGENCY_ORDER: Record<Urgency, number> = { late: 0, soon: 1, upcoming: 2 }
 
 /** Junta cobranças, pagamentos, entregas e propostas num quadro só, por prazo. */
 export function buildDemands(
-  input: { transactions: TrxRow[]; projects: ProjectRow[]; budgets: BudgetRow[] },
+  input: { transactions: TrxRow[]; projects: ProjectRow[]; budgets: BudgetRow[]; tasks?: TaskRow[] },
   todayKey: string,
   tz: string
 ): Demand[] {
@@ -142,6 +151,23 @@ export function buildDemands(
       amount: Number(b.totalAmount) || 0,
       dueKey: k,
       href: "/admin/orcamentos",
+      ...c,
+    });
+  }
+
+  for (const t of input.tasks ?? []) {
+    if (t.status === "done" || !t.dueAt) continue;
+    const k = dayKey(t.dueAt, tz);
+    const c = classifyDue(k, todayKey);
+    if (!c) continue;
+    out.push({
+      id: `tsk-${t.id}`,
+      kind: "tarefa",
+      title: t.titulo,
+      detail: [t.projectTitle, t.assignee].filter(Boolean).join(" · ") || null,
+      amount: null,
+      dueKey: k,
+      href: "/admin/tarefas",
       ...c,
     });
   }

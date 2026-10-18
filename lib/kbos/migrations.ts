@@ -37,6 +37,19 @@ export const SCHEMA_STEPS: { id: string; sql: string }[] = [
   { id: "transactions.notes", sql: `ALTER TABLE kbos_transactions ADD COLUMN IF NOT EXISTS notes text` },
   // ── 0010 · orçamento: documento do cliente no contrato
   { id: "budgets.client_document", sql: `ALTER TABLE kbos_budgets ADD COLUMN IF NOT EXISTS client_document text` },
+  // ── 0011 · tarefas de verdade: prazo, responsável, avulsas ou no projeto
+  { id: "tasks.project_optional", sql: `ALTER TABLE kbos_tasks ALTER COLUMN project_id DROP NOT NULL` },
+  { id: "tasks.due_at", sql: `ALTER TABLE kbos_tasks ADD COLUMN IF NOT EXISTS due_at timestamptz` },
+  { id: "tasks.description", sql: `ALTER TABLE kbos_tasks ADD COLUMN IF NOT EXISTS description text` },
+  { id: "tasks.assignee", sql: `ALTER TABLE kbos_tasks ADD COLUMN IF NOT EXISTS assignee text` },
+  { id: "tasks.priority", sql: `ALTER TABLE kbos_tasks ADD COLUMN IF NOT EXISTS priority text NOT NULL DEFAULT 'normal'` },
+  { id: "tasks.contact_id", sql: `ALTER TABLE kbos_tasks ADD COLUMN IF NOT EXISTS contact_id uuid REFERENCES kbos_contacts(id) ON DELETE SET NULL` },
+  { id: "tasks.done_at", sql: `ALTER TABLE kbos_tasks ADD COLUMN IF NOT EXISTS done_at timestamptz` },
+  { id: "tasks.updated_at", sql: `ALTER TABLE kbos_tasks ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now()` },
+  { id: "tasks.due_idx", sql: `CREATE INDEX IF NOT EXISTS kbos_tasks_due_idx ON kbos_tasks (due_at)` },
+  // ── 0011 · projeto ligado ao contato do CRM e ao orçamento que o originou
+  { id: "projects.contact_id", sql: `ALTER TABLE kbos_projects ADD COLUMN IF NOT EXISTS contact_id uuid REFERENCES kbos_contacts(id) ON DELETE SET NULL` },
+  { id: "projects.budget_id", sql: `ALTER TABLE kbos_projects ADD COLUMN IF NOT EXISTS budget_id uuid REFERENCES kbos_budgets(id) ON DELETE SET NULL` },
   // ── 0010 · grupos que já entraram: marca como grupo e solta do contato errado
   {
     id: "conversations.mark_groups",

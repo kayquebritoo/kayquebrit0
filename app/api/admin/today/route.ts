@@ -9,6 +9,7 @@ import {
   events,
   messages,
   projects,
+  tasks,
   transactions,
 } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
@@ -34,7 +35,7 @@ export async function GET() {
     const since = new Date(now.getTime() - 120 * 86_400_000);
     const d = db();
 
-    const [trx, prj, bud, evs, unread, msgs, recentBud, recentTrx, recentBrief] = await Promise.all([
+    const [trx, prj, bud, evs, unread, msgs, recentBud, recentTrx, recentBrief, tsk] = await Promise.all([
       d
         .select({
           id: transactions.id,
@@ -120,9 +121,23 @@ export async function GET() {
         .from(briefings)
         .orderBy(desc(briefings.createdAt))
         .limit(3),
+      // Tarefas abertas com prazo (0011) entram no quadro de demandas.
+      d
+        .select({
+          id: tasks.id,
+          titulo: tasks.titulo,
+          status: tasks.status,
+          dueAt: tasks.dueAt,
+          assignee: tasks.assignee,
+          projectTitle: projects.titulo,
+        })
+        .from(tasks)
+        .leftJoin(projects, eq(tasks.projectId, projects.id))
+        .where(and(isNotNull(tasks.dueAt), sql`${tasks.status} <> 'done'`))
+        .limit(500),
     ]);
 
-    const demands = buildDemands({ transactions: trx as TrxRow[], projects: prj, budgets: bud }, todayKey, tz);
+    const demands = buildDemands({ transactions: trx as TrxRow[], projects: prj, budgets: bud, tasks: tsk }, todayKey, tz);
     const cash = monthCash(trx as TrxRow[], todayKey, tz);
 
     const agenda = evs

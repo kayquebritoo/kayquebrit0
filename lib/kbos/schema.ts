@@ -119,6 +119,9 @@ export const projects = pgTable("kbos_projects", {
   thumbUrl: text("thumb_url"),
   videoUrl: text("video_url"),
   courseId: uuid("course_id").references(() => courses.id, { onDelete: "set null" }),
+  // 0011: cliente no CRM e orçamento de origem.
+  contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
+  budgetId: uuid("budget_id").references(() => budgets.id, { onDelete: "set null" }),
   createdAt: ts("created_at"),
   updatedAt: ts("updated_at"),
 });
@@ -141,14 +144,24 @@ export const taskStatus = pgEnum("kbos_task_status", ["todo", "doing", "done"]);
 
 export const tasks = pgTable("kbos_tasks", {
   id: uuid("id").primaryKey().defaultRandom(),
-  projectId: uuid("project_id")
-    .notNull()
-    .references(() => projects.id, { onDelete: "cascade" }),
+  // 0011: tarefa pode ser avulsa (sem projeto).
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }),
   titulo: text("titulo").notNull(),
   responsavelRole: text("responsavel_role"),
   status: taskStatus("status").notNull().default("todo"),
   estimativaMin: integer("estimativa_min"),
+  // 0011: prazo, descrição, quem faz (nome livre), prioridade, cliente.
+  dueAt: timestamp("due_at", { withTimezone: true }),
+  description: text("description"),
+  assignee: text("assignee"),
+  priority: text("priority").notNull().default("normal"),
+  contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
+  doneAt: timestamp("done_at", { withTimezone: true }),
   createdAt: ts("created_at"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
 });
 
 export const timeEntries = pgTable("kbos_time_entries", {

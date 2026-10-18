@@ -99,3 +99,24 @@ describe("greeting", () => {
     expect(greeting(new Date("2026-10-17T23:00:00Z"), TZ)).toBe("Boa noite");
   });
 });
+
+describe("tarefas no quadro", () => {
+  it("tarefa atrasada entra; feita e sem prazo não", () => {
+    const list = buildDemands(
+      {
+        transactions: [],
+        projects: [],
+        budgets: [],
+        tasks: [
+          { id: "t1", titulo: "Roteiro", status: "todo", dueAt: "2026-10-15T12:00:00Z", assignee: "Kayque", projectTitle: "Social" },
+          { id: "t2", titulo: "Feita", status: "done", dueAt: "2026-10-15T12:00:00Z", assignee: null, projectTitle: null },
+          { id: "t3", titulo: "Sem prazo", status: "todo", dueAt: null, assignee: null, projectTitle: null },
+        ],
+      },
+      TODAY,
+      TZ
+    );
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ kind: "tarefa", urgency: "late", daysLate: 2, detail: "Social · Kayque" });
+  });
+});
