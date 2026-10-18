@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { FRONT_LABEL, frontOf } from "@/lib/kbos/fronts";
 import { PIPELINE } from "@/lib/kbos/constants";
 import ProjectPanel from "./ProjectPanel";
 
@@ -157,7 +158,7 @@ export default function KanbanBoard() {
                   className="block w-full cursor-grab rounded-xl border border-white/10 bg-white/[0.04] p-3 text-left transition hover:border-white/30 active:cursor-grabbing"
                 >
                   <p className="text-sm font-medium leading-snug">{p.titulo}</p>
-                  <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-white/40">{p.categoria}</p>
+                  <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-white/40">{frontOf(p.categoria) ? `${FRONT_LABEL[frontOf(p.categoria)!]} · ${p.categoria}` : p.categoria}</p>
                 </button>
               ))}
             </div>

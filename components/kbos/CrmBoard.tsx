@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CONTACT_STATUS } from "@/lib/kbos/constants";
+import Client360 from "./Client360";
 import { cleanDocument, isValidCNPJ, maskDocumentInput } from "@/lib/kbos/document";
 
 type Contact = {
@@ -89,6 +90,7 @@ export default function CrmBoard() {
   const [form, setForm] = useState<Form>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+  const [fichaId, setFichaId] = useState<string | null>(null);
   const [lookup, setLookup] = useState<"idle" | "busy" | "ok" | string>("idle");
 
   const load = useCallback(async () => {
@@ -239,7 +241,7 @@ export default function CrmBoard() {
         {shown.map((c) => {
           const gaps = missing(c);
           return (
-            <button key={c.id} type="button" onClick={() => openEdit(c)} className="kb-row w-full text-left first:border-t-0">
+            <button key={c.id} type="button" onClick={() => setFichaId(c.id)} className="kb-row w-full text-left first:border-t-0">
               <span className="flex min-w-0 flex-1 items-center gap-3">
                 <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--kb-accent-soft)] text-sm font-semibold uppercase">
                   {c.name.replace(/[^\p{L}\p{N}]/gu, "").slice(0, 1) || "?"}
@@ -268,6 +270,18 @@ export default function CrmBoard() {
         })}
         {shown.length === 0 && <p className="kb-muted py-10 text-center text-sm">Ninguém aqui ainda.</p>}
       </section>
+
+      {fichaId && (
+        <Client360
+          id={fichaId}
+          onClose={() => setFichaId(null)}
+          onEdit={() => {
+            const c = items.find((i) => i.id === fichaId);
+            setFichaId(null);
+            if (c) openEdit(c);
+          }}
+        />
+      )}
 
       {editing && (
         <div className="kb-modal-back" onClick={() => setEditing(null)}>
