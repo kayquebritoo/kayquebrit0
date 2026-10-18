@@ -208,14 +208,14 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
             className="pointer-events-none absolute inset-0"
             style={{
               background:
-                "radial-gradient(60% 80% at 50% 100%, rgba(232,14,253,0.18), transparent 70%)",
+                "radial-gradient(60% 80% at 50% 100%, rgba(79,18,199,0.34), transparent 70%)",
             }}
           />
           <p className="relative text-[11px] uppercase tracking-[0.32em] text-white/40">
             Próximo passo
           </p>
           <h3 className="font-display relative mx-auto mt-4 max-w-2xl text-balance text-3xl font-light leading-tight md:text-5xl">
-            Vamos criar algo <em className="italic text-[#E80EFD]">incrível</em> juntos?
+            Vamos criar algo <em className="kb-em">incrível</em> juntos?
           </h3>
           <Link
             href="/briefing"

@@ -73,7 +73,7 @@ export function PanelWaves({ subtle = false }: { subtle?: boolean }) {
           if (x === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
-        const alpha = (subtle ? 0.04 : 0.08) + p * (subtle ? 0.09 : 0.18);
+        const alpha = (subtle ? 0.09 : 0.08) + p * (subtle ? 0.2 : 0.18);
         ctx.strokeStyle = isLight
           ? `rgba(23,23,46,${(alpha * 0.85).toFixed(3)})`
           : `rgba(255,255,255,${alpha.toFixed(3)})`;
@@ -93,7 +93,7 @@ export function PanelWaves({ subtle = false }: { subtle?: boolean }) {
       ctx.strokeStyle = isLight
         ? "rgba(23,23,46,0.22)"
         : subtle
-          ? "rgba(255,255,255,0.18)"
+          ? "rgba(255,255,255,0.34)"
           : "rgba(255,255,255,0.35)";
       ctx.lineWidth = 1.2;
       ctx.stroke();
@@ -189,11 +189,19 @@ export default function HeroSlide() {
       {/* ============ MOBILE: camadas distribuídas na página toda ============ */}
       <div className="hero-standalone-safe relative flex h-full flex-col px-5 pb-3 pt-[86px] md:hidden">
         {/* fundo animado livre em tela cheia */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 opacity-45">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(90% 55% at 15% 8%, rgba(79,18,199,0.55), rgba(53,12,133,0.2) 50%, transparent 75%), radial-gradient(80% 50% at 100% 78%, rgba(79,18,199,0.4), rgba(232,14,253,0.07) 70%, transparent)",
+          }}
+        />
+        <div aria-hidden className="pointer-events-none absolute inset-0 opacity-90">
           <PanelWaves subtle />
         </div>
-        {/* véu de leitura: protege topo (título) e base (vidro + CTA) */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#11101E]/75 via-transparent to-[#11101E]/85" />
+        {/* véu de leitura: protege só o topo (título) e a base (vidro + CTA) */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#11101E]/45 via-transparent to-[#11101E]/70" />
 
         {/* Kayque fixado no canto inferior direito — por trás do vidro e do botão */}
         <div className="hero-person-float absolute bottom-0 right-[-12%] top-[10%] z-[5] w-[112%]">
@@ -210,12 +218,12 @@ export default function HeroSlide() {
 
         {/* topo: respiro do menu + tipografia com sombra sobre a foto */}
         <div className="relative z-10">
-          <p className="m-hero-in text-[13px] font-light leading-snug text-[#EDE6EC]" style={{ textShadow: "0 2px 18px rgba(0,0,0,0.6)" }}>
+          <p className="m-hero-in text-[14px] font-light leading-relaxed text-[#EDE6EC]" style={{ textShadow: "0 2px 18px rgba(0,0,0,0.6)" }}>
             {t("hero.roleA")}
             <br />
             {t("hero.roleB")}
           </p>
-          <h1 className="mt-3">
+          <h1 className="mt-7">
             <span
               className="m-hero-in font-display block font-light text-white"
               style={{ fontSize: "clamp(30px, 8.5vw, 40px)", lineHeight: 1.02, letterSpacing: "-0.02em", textShadow: "0 4px 28px rgba(0,0,0,0.65)" }}
@@ -236,9 +244,10 @@ export default function HeroSlide() {
 
         {/* base: vidro com frase centralizada + CTA */}
         <div className="relative z-10">
-          <div className="fp-anim rounded-2xl border border-white/20 bg-[#11101E]/45 px-4 py-3 backdrop-blur-xl" style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.35)" }}>
-            <p className="text-center text-[15px] font-light leading-snug text-[#EDE6EC]">
-              {t("hero.taglineA")} <em className="font-medium not-italic text-[#EDE6EC]">{t("hero.taglineB")}</em>
+          <div className="fp-anim rounded-2xl border border-white/20 bg-[#11101E]/45 px-5 py-4 backdrop-blur-xl" style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.35)" }}>
+            <p className="m-glass-text text-center text-[16px] font-light leading-[1.5] text-[#EDE6EC]">
+              <span className="block">{t("hero.taglineA")}</span>
+              <em className="block font-medium not-italic text-[#EDE6EC]">{t("hero.taglineB")}</em>
             </p>
           </div>
           <Link
@@ -260,7 +269,7 @@ export default function HeroSlide() {
       </div>
       <div aria-hidden className="pointer-events-none absolute inset-0 hidden bg-gradient-to-t from-[#11101E]/60 via-transparent to-[#11101E]/45 md:block" />
       {/* auroras flutuantes */}
-      <div aria-hidden className="hero-aurora-a absolute left-[2%] top-[22%] hidden h-[420px] w-[420px] rounded-full bg-[#E80EFD]/15 blur-[110px] md:block" />
+      <div aria-hidden className="hero-aurora-a absolute left-[2%] top-[22%] hidden h-[420px] w-[420px] rounded-full bg-[#4F12C7]/35 blur-[110px] md:block" />
       <div aria-hidden className="hero-aurora-b absolute bottom-[6%] right-[2%] hidden h-[380px] w-[380px] rounded-full bg-white/[0.07] blur-[110px] md:block" />
 
       {/* pessoa em recorte — desktop 44vw com flutuação */}

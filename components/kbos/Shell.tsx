@@ -19,6 +19,10 @@ export function DbNote() {
 
 type Me = { name: string; email: string; role: keyof typeof ROLE_LABELS };
 
+// Cada tela monta o próprio Shell; guardar o usuário em memória evita o "Verificando acesso…"
+// piscando a cada navegação (a sessão é revalidada em segundo plano).
+let cachedUser: Me | null = null;
+
 type NavLink = { href: string; label: string; adminOnly?: boolean; exact?: boolean };
 type NavGroup = { id: string; label: string; icon: ReactNode; links: NavLink[] };
 
@@ -114,7 +118,7 @@ export function KbosShell({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<Me | null>(null);
+  const [user, setUser] = useState<Me | null>(cachedUser);
   const [sheet, setSheet] = useState<string | null>(null);
   // Fecha o painel de grupo ao navegar (ajuste de estado durante o render).
   const [navPath, setNavPath] = useState(pathname);
@@ -134,8 +138,10 @@ export function KbosShell({
           router.replace("/portal");
           return;
         }
+        cachedUser = d.user;
         if (alive) setUser(d.user);
       } catch {
+        cachedUser = null;
         router.replace("/entrar");
       }
     })();
@@ -162,13 +168,16 @@ export function KbosShell({
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
+    cachedUser = null;
     router.replace("/entrar");
   }
 
   if (!user) {
     return (
       <main className="kbos flex min-h-screen items-center justify-center">
-        <p className="kb-muted animate-pulse text-sm">Verificando acesso…</p>
+        <span className="kb-bars" role="status" aria-label="Carregando">
+          <i /><i /><i /><i /><i />
+        </span>
       </main>
     );
   }
@@ -237,7 +246,7 @@ export function KbosShell({
             </div>
           </div>
         </header>
-        <main className="kb-rise mx-auto max-w-6xl px-4 pb-[calc(96px+env(safe-area-inset-bottom))] pt-2 md:px-8 lg:pb-16">
+        <main className="kb-page mx-auto max-w-6xl px-4 pb-[calc(96px+env(safe-area-inset-bottom))] pt-2 md:px-8 lg:pb-16">
           {children}
         </main>
       </div>

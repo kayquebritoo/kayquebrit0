@@ -109,7 +109,7 @@ export default function SplashScreen() {
       {/* aurora sutil da marca */}
       <div
         aria-hidden
-        className="splash-aurora pointer-events-none absolute left-1/2 top-1/2 h-[60vmin] w-[80vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#E80EFD]/10 blur-[100px]"
+        className="splash-aurora pointer-events-none absolute left-1/2 top-1/2 h-[60vmin] w-[80vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#4F12C7]/30 blur-[100px]"
       />
       <div className="splash-logo relative">
         <Image

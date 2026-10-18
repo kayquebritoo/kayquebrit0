@@ -217,7 +217,7 @@ export default function Header() {
             >
               Área do cliente
             </Link>
-            <div className="grid w-full grid-cols-6 gap-2 md:flex md:w-auto md:gap-2.5">
+            <div className="soc-row">
               {SOCIALS.map((s) => (
                 <a
                   key={s.name}
@@ -227,9 +227,9 @@ export default function Header() {
                   tabIndex={open ? 0 : -1}
                   aria-label={s.name}
                   title={s.name}
-                  className="flex aspect-square items-center justify-center rounded-full border border-white/15 text-white/70 transition-[color,border-color] hover:border-white/60 hover:text-white md:h-11 md:w-11"
+                  className="soc-btn"
                 >
-                  <SocialIcon icon={s.icon} size={18} />
+                  <SocialIcon icon={s.icon} size={16} />
                 </a>
               ))}
             </div>

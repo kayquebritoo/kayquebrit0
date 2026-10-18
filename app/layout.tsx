@@ -6,6 +6,7 @@ import SplashScreen from "@/components/SplashScreen";
 import { SlideProgress } from "@/components/MobileChrome";
 import { Providers } from "@/components/Providers";
 import { Grain } from "@/components/fx";
+import NativeFeel from "@/components/NativeFeel";
 
 // Manrope auto-hospedada (latin) — build determinístico, sem depender
 // de fonts.googleapis.com no momento do build.
@@ -103,6 +104,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <Providers>
           {/* Splash do PWA: cobre a primeira pintura (SSR) e sai em fade. */}
+          <NativeFeel />
           <SplashScreen />
           <Header />
           {children}

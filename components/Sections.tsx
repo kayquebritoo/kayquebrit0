@@ -615,7 +615,7 @@ export function TestimonialsSlide() {
                         href={s.href}
                         aria-label={`${s.name} — ${testi.companyName}`}
                         title={`${s.name} — ${testi.companyName}`}
-                        className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-[#E80EFD] transition hover:text-white"
+                        className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-[#B79BFF] transition hover:text-white"
                       >
                         <SocialIcon icon={s.icon} size={15} />
                         <span className="hidden md:inline">{t("testimonials.case")}</span>
@@ -628,7 +628,7 @@ export function TestimonialsSlide() {
                         rel="noopener"
                         aria-label={`${s.name} — ${testi.companyName}`}
                         title={`${s.name} — ${testi.companyName}`}
-                        className="text-[#E80EFD] transition hover:text-white"
+                        className="text-[#B79BFF] transition hover:text-white"
                       >
                         <SocialIcon icon={s.icon} size={16} />
                       </a>
@@ -684,7 +684,7 @@ export function ContactSlide() {
   return (
     <section className="relative flex h-full flex-col justify-center overflow-hidden bg-[#11101E]">
       {/* véu de fundo: BluePurple sutil; o rosa só aparece no fim do degradê */}
-      <div aria-hidden className="pointer-events-none absolute -right-[20vmin] top-1/2 h-[70vmin] w-[90vmin] -translate-y-1/2 rounded-full bg-gradient-to-br from-[#4F12C7]/25 via-[#350C85]/15 to-[#E80EFD]/5 blur-[120px]" />
+      <div aria-hidden className="pointer-events-none absolute -right-[20vmin] top-1/2 h-[70vmin] w-[90vmin] -translate-y-1/2 rounded-full bg-gradient-to-br from-[#4F12C7]/40 via-[#350C85]/25 to-[#E80EFD]/6 blur-[110px]" />
       <div className="ref-inner relative flex h-full flex-col justify-between pb-[calc(1.75rem+env(safe-area-inset-bottom))] pt-[calc(6.5rem+env(safe-area-inset-top))] md:h-auto md:justify-center md:pb-0 md:pt-0">
         <div>
         {/* mobile: assinatura compacta (foto + nome + hora local) */}
@@ -701,13 +701,13 @@ export function ContactSlide() {
         <div className="md:flex md:items-center md:justify-between md:gap-12">
           <div className="max-w-[640px]">
             <h2
-              className="fp-anim font-display font-light text-white"
+              className="fp-anim font-display text-balance font-light text-white"
               style={{ fontSize: "clamp(32px, 9vw, 44px)", letterSpacing: "-0.02em", lineHeight: 1.06 }}
             >
               <span className="md:hidden">{t("contact.title")}</span>
               <span className="hidden md:block" style={{ fontSize: "clamp(48px, 4.6vw, 88px)", lineHeight: 1.05 }}>{t("contact.title")}</span>
             </h2>
-            <p className="fp-anim mt-5 font-light text-white/70 md:mt-[4vh]" style={{ fontSize: "clamp(16px, 4.2vw, 18px)", lineHeight: 1.65 }}>
+            <p className="fp-anim mt-5 text-pretty font-light text-white/70 md:mt-[4vh]" style={{ fontSize: "clamp(16px, 4.2vw, 18px)", lineHeight: 1.65 }}>
               <span className="md:hidden">{t("contact.text")}</span>
               <span className="hidden md:block" style={{ fontSize: 22 }}>{t("contact.text")}</span>
             </p>
@@ -732,7 +732,7 @@ export function ContactSlide() {
               <span className="relative md:text-[21px]">{t("contact.cta")}</span>
             </Link>
           </div>
-          <div className="grid grid-cols-6 gap-2 text-white/75 md:flex md:gap-3">
+          <div className="soc-row">
             {SOCIALS.map((s) => (
               <a
                 key={s.name}
@@ -741,9 +741,9 @@ export function ContactSlide() {
                 rel="noopener"
                 aria-label={s.name}
                 title={s.name}
-                className="flex aspect-square items-center justify-center rounded-full border border-white/15 transition hover:border-white/60 hover:text-white md:h-12 md:w-12"
+                className="soc-btn"
               >
-                <SocialIcon icon={s.icon} size={18} />
+                <SocialIcon icon={s.icon} size={16} />
               </a>
             ))}
           </div>

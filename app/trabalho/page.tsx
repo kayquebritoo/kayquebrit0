@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import gsap from "gsap";
 import { PROJECTS } from "@/lib/data";
+import PageBackdrop from "@/components/PageBackdrop";
 
 const FILTERS = [
   { id: "all", label: "Todos" },
@@ -56,7 +57,8 @@ export default function WorksPage() {
   }, [filter]);
 
   return (
-    <main className="min-h-screen bg-[#11101E] text-[#EDE6EC]">
+    <main className="relative isolate min-h-screen overflow-hidden bg-[#11101E] text-[#EDE6EC]">
+      <PageBackdrop />
       {/* cursor ver projeto */}
       <div ref={cursor} className="cursor-view" aria-hidden>
         <small>↗</small>
@@ -64,7 +66,7 @@ export default function WorksPage() {
       </div>
 
       {/* HERO editorial */}
-      <div className="single-hero-glow px-5 pb-8 pt-24 sm:px-8 sm:pt-28 md:px-14 md:pt-36">
+      <div className="single-hero-glow relative z-10 px-5 pb-8 pt-24 sm:px-8 sm:pt-28 md:px-14 md:pt-36">
         <div className="mx-auto max-w-[1280px]">
           <div className="flex items-center justify-between">
             <Link
@@ -86,7 +88,7 @@ export default function WorksPage() {
           >
             Todos os
             <br />
-            <em className="font-light italic text-[#E80EFD]">trabalhos</em>
+            <em className="kb-em font-light">trabalhos</em>
           </h1>
           <p className="mt-5 max-w-xl text-[15px] font-light leading-relaxed text-white/60">
             Uma seleção de projetos em audiovisual, desenvolvimento e branding —
@@ -170,7 +172,7 @@ export default function WorksPage() {
             Tem um projeto em mente?
           </p>
           <h3 className="font-display mx-auto mt-4 max-w-2xl text-balance text-3xl font-light leading-tight md:text-5xl">
-            Vamos criar algo <em className="italic text-[#E80EFD]">incrível</em> juntos?
+            Vamos criar algo <em className="kb-em">incrível</em> juntos?
           </h3>
           <Link
             href="/briefing"

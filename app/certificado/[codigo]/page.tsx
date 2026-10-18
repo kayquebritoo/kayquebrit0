@@ -52,7 +52,7 @@ export default async function CertificadoPage({ params }: { params: Promise<{ co
           <p className="mt-5 text-sm font-light text-white/55">Este certificado é autêntico e foi emitido para</p>
           <p className="font-display mt-1 text-2xl">{data.aluno}</p>
           <p className="mt-1 text-sm font-light text-white/55">pela conclusão do curso</p>
-          <p className="font-display mt-1 text-xl text-[#E80EFD]">{data.curso}</p>
+          <p className="font-display mt-1 text-xl text-[#B79BFF]">{data.curso}</p>
           <div className="mx-auto mt-6 grid max-w-sm grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 text-left">
             <div className="bg-[#11101E] px-4 py-3">
               <p className="text-[10px] uppercase tracking-[0.25em] text-white/40">Código</p>

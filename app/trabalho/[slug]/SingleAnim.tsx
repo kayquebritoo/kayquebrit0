@@ -39,7 +39,7 @@ export default function SingleAnim() {
       aria-hidden
       className="fixed inset-x-0 top-0 z-[70] h-[2px] origin-left bg-white/80"
     >
-      <div className="single-progress h-full w-full origin-left scale-x-0 bg-gradient-to-r from-[#E80EFD] to-white" />
+      <div className="single-progress h-full w-full origin-left scale-x-0 bg-gradient-to-r from-[#4F12C7] to-white" />
     </div>
   );
 }

@@ -4,9 +4,10 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { BRIEFING_CATEGORIES, type BriefingField } from "@/lib/kbos/briefing-forms";
 import { goToSlide } from "@/components/Header";
+import PageBackdrop from "@/components/PageBackdrop";
 function Field({ f, value, onChange }: { f: BriefingField; value: string; onChange: (v: string) => void }) {
   const cls =
-    "mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-4 py-3 text-[15px] outline-none placeholder:text-white/25 focus:border-white/50";
+    "mt-2 w-full rounded-xl border border-white/15 bg-black/30 px-4 py-3 text-base outline-none placeholder:text-white/25 focus:border-white/50";
   return (
     <div>
       <label className="block text-[12px] uppercase tracking-[0.2em] text-white/50">
@@ -78,8 +79,9 @@ export default function BriefingForm() {
   }
 
   return (
-    <main className="min-h-screen bg-[#11101E] px-5 pb-20 pt-24 text-[#EDE6EC] md:pt-28">
-      <form onSubmit={submit} className="mx-auto max-w-2xl">
+    <main className="relative isolate min-h-screen overflow-hidden bg-[#11101E] px-5 pb-20 pt-24 text-[#EDE6EC] md:pt-28">
+      <PageBackdrop />
+      <form onSubmit={submit} className="relative z-10 mx-auto max-w-2xl">
         <Link href={backHref} className="text-[11px] uppercase tracking-[0.3em] text-white/45 hover:text-white">
           ← Sobre {cat.label}
         </Link>

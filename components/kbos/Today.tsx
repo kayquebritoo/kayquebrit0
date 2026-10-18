@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Demand, DemandKind, MonthCash } from "@/lib/kbos/today";
+import { AnimatedLine, Bars, CountUp, Ring } from "./Charts";
 
 type FeedItem = { id: string; at: string; kind: "mensagem" | "orcamento" | "financeiro" | "briefing"; text: string; href: string };
 type TodayData = {
@@ -47,33 +48,20 @@ function ago(iso: string, now: number): string {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
-/* Linha do saldo acumulado do mês (curva suave, sem eixos). */
-function CashLine({ series }: { series: number[] }) {
-  const pts = series.length > 1 ? series : [0, ...series, ...(series.length ? [] : [0])];
-  const min = Math.min(0, ...pts);
-  const max = Math.max(0, ...pts);
-  const span = max - min || 1;
-  const W = 640;
-  const H = 120;
-  const xy = pts.map((v, i) => [(i / Math.max(1, pts.length - 1)) * W, H - 8 - ((v - min) / span) * (H - 24)]);
-  const d = xy.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
-  return (
-    <svg role="img" aria-label="Saldo acumulado ao longo do mês" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-[120px] w-full">
-      <defs>
-        <linearGradient id="kbCashArea" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgba(79,18,199,0.4)" />
-          <stop offset="100%" stopColor="rgba(79,18,199,0)" />
-        </linearGradient>
-        <linearGradient id="kbCashLine" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#4F12C7" />
-          <stop offset="80%" stopColor="#8A3BF0" />
-          <stop offset="100%" stopColor="rgba(232,14,253,0.55)" />
-        </linearGradient>
-      </defs>
-      <path d={`${d} L${W} ${H} L0 ${H} Z`} fill="url(#kbCashArea)" />
-      <path d={d} fill="none" stroke="url(#kbCashLine)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-    </svg>
-  );
+/** Demandas dos próximos 7 dias (atrasadas somam no dia de hoje, em vermelho). */
+function weekBars(demands: Demand[], todayKey: string) {
+  const base = Date.UTC(+todayKey.slice(0, 4), +todayKey.slice(5, 7) - 1, +todayKey.slice(8, 10));
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(base + i * 86_400_000);
+    const key = day.toISOString().slice(0, 10);
+    const late = i === 0 ? demands.filter((d) => d.urgency === "late").length : 0;
+    const value = demands.filter((d) => d.urgency !== "late" && d.dueKey === key).length + late;
+    return {
+      label: i === 0 ? "hoje" : day.toLocaleDateString("pt-BR", { weekday: "short", timeZone: "UTC" }).replace(".", ""),
+      value,
+      hot: late > 0,
+    };
+  });
 }
 
 function DemandCard({ d, todayKey }: { d: Demand; todayKey: string }) {
@@ -378,7 +366,7 @@ export default function Today() {
   ];
 
   return (
-    <div className="relative flex flex-col gap-5">
+    <div className="kb-stagger relative flex flex-col gap-5">
       {/* waveforms da marca, ondulando devagar */}
       <svg aria-hidden className="kb-wave pointer-events-none absolute -top-24 left-0 -z-10 h-[300px] w-[calc(100%+40px)]" viewBox="0 0 1440 300" preserveAspectRatio="none" fill="none">
         {[60, 100, 140, 180, 220].map((y, i) => (
@@ -471,6 +459,27 @@ export default function Today() {
         <Link href="/admin/inbox" className="kb-chip">Inbox</Link>
       </div>
 
+      {/* ── Painel: números que sobem ── */}
+      <section aria-label="Resumo" className="kb-stat-grid">
+        {[
+          { label: "Atrasadas", value: data?.counts.late ?? 0, tone: "late" as const, href: "#demandas" },
+          { label: "Vencem em 48h", value: data?.counts.soon ?? 0, tone: "soon" as const, href: "#demandas" },
+          { label: "Propostas abertas", value: data?.counts.proposals ?? 0, tone: "" as const, href: "/admin/orcamentos" },
+          { label: "Mensagens novas", value: data?.counts.unread ?? 0, tone: "" as const, href: "/admin/inbox" },
+        ].map((k) => (
+          <Link key={k.label} href={k.href} className="kb-stat">
+            {data ? (
+              <b className={k.tone === "late" && k.value > 0 ? "text-[var(--kb-late)]" : k.tone === "soon" && k.value > 0 ? "text-[var(--kb-soon)]" : ""}>
+                <CountUp value={k.value} />
+              </b>
+            ) : (
+              <span className="kb-skel h-[27px] w-12" />
+            )}
+            <small>{k.label}</small>
+          </Link>
+        ))}
+      </section>
+
       {/* ── Demandas por prazo ── */}
       <section id="demandas" aria-labelledby="kb-dem" className="kb-glass flex scroll-mt-24 flex-col gap-4 p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -486,7 +495,7 @@ export default function Today() {
         {!data ? (
           <div className="grid gap-3 sm:grid-cols-3">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="kb-card h-28 animate-pulse" />
+              <div key={i} className="kb-skel h-28" />
             ))}
           </div>
         ) : (
@@ -515,6 +524,16 @@ export default function Today() {
         )}
       </section>
 
+      {data && (
+        <section aria-labelledby="kb-semana" className="kb-glass flex flex-col gap-4 p-5 sm:p-6">
+          <div className="flex items-center justify-between gap-3">
+            <h2 id="kb-semana" className="text-base font-semibold">Carga da semana</h2>
+            <span className="kb-faint text-xs">{data.demands.length} demanda{data.demands.length === 1 ? "" : "s"} no radar</span>
+          </div>
+          <Bars items={weekBars(data.demands, data.todayKey)} />
+        </section>
+      )}
+
       <div className="grid gap-5 lg:grid-cols-[7fr_5fr]">
         {/* ── Caixa do mês ── */}
         <section aria-labelledby="kb-caixa" className="kb-glass flex flex-col gap-4 p-5 sm:p-6">
@@ -540,7 +559,14 @@ export default function Today() {
               </div>
             </div>
           </div>
-          {data && <CashLine series={data.cash.series} />}
+          {data && (
+            <div className="flex flex-col items-center gap-5 sm:flex-row">
+              <Ring a={data.cash.income} b={data.cash.expense} labelA="Entrou" labelB="Saiu" />
+              <div className="w-full min-w-0 flex-1">
+                <AnimatedLine series={data.cash.series} />
+              </div>
+            </div>
+          )}
           <p className="kb-faint text-xs">Separação pessoal × empresa chega na próxima etapa do financeiro.</p>
         </section>
 
@@ -553,7 +579,7 @@ export default function Today() {
               <span className="kb-faint ml-auto text-xs">atualiza sozinho</span>
             </div>
             {!data ? (
-              <div className="kb-card h-16 animate-pulse" />
+              <div className="kb-skel h-16" />
             ) : data.feed.length === 0 ? (
               <p className="kb-muted text-sm">Quando chegar mensagem, pagamento ou briefing, aparece aqui na hora.</p>
             ) : (

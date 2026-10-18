@@ -26,7 +26,7 @@ export default function CategoryAnim() {
         { xPercent: -160 },
         { xPercent: 260, duration: 2.6, ease: "power2.inOut", repeat: -1, repeatDelay: 1.4 }
       );
-    }, el);
+    }, el.parentElement ?? el);
     return () => ctx.revert();
   }, []);
   return <div ref={root} aria-hidden className="pointer-events-none absolute inset-0" />;
