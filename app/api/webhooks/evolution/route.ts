@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import { isAgentMessage, ownerPhone, runAgentTurn } from "@/lib/kbos/agent";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/kbos/db";
 import { messages } from "@/lib/kbos/schema";
@@ -110,6 +111,12 @@ export async function POST(req: Request) {
     if (r.ignored) {
       await logHook({ event: String(event), result: "ignorado na ingestão", detail: maskChat(inb.chatId) });
       return NextResponse.json({ ok: true, ignored: true });
+    }
+    // Mensagem do dono para o agente: responde depois de devolver 200 à
+    // Evolution. Só com o webhook protegido por token (ninguém forja o dono).
+    const tokenOn = (process.env.EVOLUTION_WEBHOOK_TOKEN || "").trim().length >= 8;
+    if (!r.deduped && isAgentMessage(inb, ownerPhone(), tokenOn)) {
+      after(() => runAgentTurn(inb));
     }
     await logHook({
       event: String(event),

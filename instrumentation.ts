@@ -6,6 +6,11 @@ export async function register() {
     const { ensureSchema } = await import("./lib/kbos/migrations");
     // Teto de 20s: banco lento não pode segurar o boot para sempre.
     await Promise.race([ensureSchema(), new Promise((r) => setTimeout(r, 20_000))]);
+    // Reaplica o webhook da Evolution (com o token atual) quando o servidor
+    // sobe: trocar o token no .env não deixa as mensagens caindo em 401.
+    setTimeout(() => {
+      import("./lib/kbos/evolution").then((m) => m.setInstanceWebhook()).catch(() => {});
+    }, 20_000);
   } catch (e) {
     console.error("[kbos] ensureSchema no boot falhou:", e);
   }

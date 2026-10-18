@@ -55,6 +55,7 @@ while true; do
   echo " 3) Trocar a senha da Evolution (gera uma forte sozinho)"
   echo " 4) Meu número de WhatsApp (dono do assistente)"
   echo " 5) Ver o que está configurado (sem mostrar chaves)"
+  echo " 6) Ligar o assistente no WhatsApp (protege o webhook com senha)"
   echo " 0) Sair"
   read -r -p "Escolha: " opt
   case "$opt" in
@@ -102,11 +103,20 @@ while true; do
       for k in AI_BASE_URL AI_MODEL STT_BASE_URL STT_MODEL TTS_BASE_URL ASSISTANT_OWNER_PHONE; do
         printf ' %-22s %s\n' "$k" "$(getvar "$k" | sed 's/^$/—/')"
       done
-      for k in AI_API_KEY OPENAI_API_KEY EVOLUTION_API_KEY; do
+      for k in AI_API_KEY OPENAI_API_KEY EVOLUTION_API_KEY EVOLUTION_WEBHOOK_TOKEN; do
         v=$(getvar "$k")
-        if [ -z "$v" ]; then s="não configurada"; elif [ "$v" = "kbos-dev-key" ]; then s="PADRÃO (troque: opção 3)"; else s="configurada (…${v: -4})"; fi
+        v=${v//\"/}
+        if [ ${#v} -lt 4 ]; then s="não configurada"; elif [ "$v" = "kbos-dev-key" ]; then s="PADRÃO (troque: opção 3)"; else s="configurada (…${v: -4})"; fi
         printf ' %-22s %s\n' "$k" "$s"
       done
+      ;;
+    6)
+      if [ -z "$(getvar EVOLUTION_WEBHOOK_TOKEN)" ]; then
+        setvar EVOLUTION_WEBHOOK_TOKEN "$(openssl rand -hex 24)"
+      fi
+      echo "Webhook protegido. O KBOS reaplica a senha na Evolution sozinho ao reiniciar (~20 s)."
+      apply
+      echo "Agora mande uma mensagem para você mesmo no WhatsApp (conversa 'Você'), ex.: 'o que tenho hoje?'"
       ;;
     0) exit 0 ;;
     *) echo "Opção inválida." ;;
