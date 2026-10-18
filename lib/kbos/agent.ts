@@ -54,9 +54,13 @@ export function parseTrigger(text: string, trigger = process.env.ASSISTANT_TRIGG
   const pattern = words.map((w) => (/^(kayque|kaique|caique)$/.test(w) ? nameVariants : w)).join("[\\s,.!:;-]+");
   const m = new RegExp(`^\\s*${pattern}\\b[\\s,.!:;-]*`, "i").exec(fold(text));
   if (!m) return null;
-  // O fold não muda o comprimento do texto (só tira acentos combinantes,
-  // que o NFD separa); por isso corta pelo comprimento no texto original.
-  return text.normalize("NFD").slice(m[0].length).normalize("NFC").trim();
+  // O fold tira os acentos (marcas combinantes do NFD): anda no texto
+  // original contando só as letras-base até o fim do gatilho.
+  const nfd = text.normalize("NFD");
+  let i = 0;
+  for (let n = 0; i < nfd.length && n < m[0].length; i++) if (!/[\u0300-\u036f]/.test(nfd[i])) n++;
+  while (i < nfd.length && /[\u0300-\u036f]/.test(nfd[i])) i++;
+  return nfd.slice(i).normalize("NFC").trim();
 }
 
 export const isYes = (t: string) => /^\s*(sim|s|ss|confirmo|confirma|pode|ok|okay|isso|manda|beleza|bora|👍|✅)\b/i.test(t);
