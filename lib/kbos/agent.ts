@@ -40,6 +40,25 @@ export function samePhone(a: string | null | undefined, b: string | null | undef
   return x.length >= 10 && x === norm(b);
 }
 
+/**
+ * Gatilho para chamar o assistente: "Fala Kayque, …" (configurável em
+ * ASSISTANT_TRIGGER). Tolera o que o ditado/Whisper erra no nome
+ * (Kaique, Caique, Kayk…), vírgula, acento e caixa. Devolve o comando sem o
+ * gatilho ("" se só chamou), ou null se a mensagem não começa com ele.
+ */
+export function parseTrigger(text: string, trigger = process.env.ASSISTANT_TRIGGER || "fala kayque"): string | null {
+  const fold = (v: string) => v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const nameVariants = "(?:kayque|kaique|kaiqui|caique|kaike|kayke|kayk|kaik|kaiky|cayque|kaique)";
+  const words = fold(trigger).replace(/[^a-z0-9 ]/g, " ").trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return text.trim();
+  const pattern = words.map((w) => (/^(kayque|kaique|caique)$/.test(w) ? nameVariants : w)).join("[\\s,.!:;-]+");
+  const m = new RegExp(`^\\s*${pattern}\\b[\\s,.!:;-]*`, "i").exec(fold(text));
+  if (!m) return null;
+  // O fold não muda o comprimento do texto (só tira acentos combinantes,
+  // que o NFD separa); por isso corta pelo comprimento no texto original.
+  return text.normalize("NFD").slice(m[0].length).normalize("NFC").trim();
+}
+
 export const isYes = (t: string) => /^\s*(sim|s|ss|confirmo|confirma|pode|ok|okay|isso|manda|beleza|bora|👍|✅)\b/i.test(t);
 export const isNo = (t: string) => /^\s*(n[aã]o|nao|n|cancela|cancelar|para|deixa)\b/i.test(t);
 
@@ -292,7 +311,15 @@ export async function executeAction(p: Pick<PendingAction, "tool" | "args">): Pr
 
 type ChatMsg = { role: "system" | "user" | "assistant" | "tool"; content: string | null; tool_calls?: unknown; tool_call_id?: string };
 
-const K = (o: string) => ({ hist: `kbos:agent:${o}:hist`, pend: `kbos:agent:${o}:pending`, sent: `kbos:agent:sent`, lock: `kbos:agent:lock:` });
+const K = (o: string) => ({
+  hist: `kbos:agent:${o}:hist`,
+  pend: `kbos:agent:${o}:pending`,
+  active: `kbos:agent:${o}:active`,
+  sent: `kbos:agent:sent`,
+  lock: `kbos:agent:lock:`,
+});
+/** Depois do "Fala Kayque", a conversa segue sem repetir o gatilho por 5 min. */
+const SESSION_S = 300;
 
 async function sendToOwner(owner: string, text: string): Promise<void> {
   const { url, key, instance } = evoConfig();
@@ -366,7 +393,10 @@ function systemPrompt(): string {
   return [
     "Você é o assistente pessoal do Kayque Brito dentro do KBOS, o sistema do estúdio dele (design, vídeo, foto e software em Belém/PA).",
     `Hoje é ${hoje} (data ${todayKey()}, fuso de Belém).`,
-    "Fale como ele: português do Brasil, direto, caloroso, sem formalidade e sem cara de robô. Respostas curtas, prontas para WhatsApp (pode usar *negrito*).",
+    "Você fala COM o Kayque e COMO o Kayque: a resposta pode virar áudio na voz dele, então soe como ele falando em voz alta.",
+    "Jeito dele: paraense de Belém/Castanhal, direto e próximo, primeira pessoa, frases curtas, empolgado de verdade, confiante, humano ('show', 'tranquilo', 'bora', 'kk' cabem). Trata cliente como parceiro.",
+    "Nunca soe como robô: nada de 'espero que esteja bem', 'fico à disposição', 'soluções inovadoras', 'alavancar'; sem excesso de emoji ou exclamação; prefira números concretos e o nome do cliente.",
+    "Respostas curtas, prontas para WhatsApp (pode usar *negrito*). Se uma frase resolve, use uma frase.",
     "Use as ferramentas para agir no sistema. Para qualquer ação que grava algo, chame a ferramenta direto: o sistema pede a confirmação ao Kayque, você não precisa perguntar 'posso?'.",
     "Se faltar uma informação essencial, pergunte só ela, em uma frase. Não invente dados, valores, telefones nem datas.",
     "Antes de atualizar ou mandar mensagem a um cliente, ache o id com buscar_clientes; se vier mais de um, pergunte qual.",
@@ -395,7 +425,6 @@ export async function runAgentTurn(inb: InboundMessage): Promise<void> {
     console.error("[KBOS agente] Redis fora do ar");
     return;
   }
-  await logHook({ event: "agente", result: "pensando…", detail: inb.messageType });
   const r = getRedis();
   const keys = K(owner);
   if (inb.externalId) {
@@ -417,8 +446,26 @@ export async function runAgentTurn(inb: InboundMessage): Promise<void> {
     }
     if (!text) return;
 
-    // 2) Resposta a um "Confirma?" pendente.
+    // 1b) Gatilho: só atende quem começa com "Fala Kayque" — ou quem está no
+    // meio de uma conversa (até 5 min depois) ou respondendo um "Confirma?".
+    // Assim a conversa "Você" continua servindo para anotações soltas.
     const pendRaw = await r.get(keys.pend);
+    const command = parseTrigger(text);
+    const inSession = !!(await r.get(keys.active));
+    if (command === null && !inSession && !pendRaw) {
+      await logHook({ event: "agente", result: "ignorado: sem “Fala Kayque”", detail: inb.messageType });
+      return;
+    }
+    if (command !== null) text = command;
+    await r.set(keys.active, "1", "EX", SESSION_S);
+    await logHook({ event: "agente", result: "pensando…", detail: inb.messageType });
+    if (!text) {
+      await sendToOwner(owner, "Fala! O que manda?");
+      if (spoke) await sendVoiceToOwner(owner, "Fala! O que manda?");
+      return;
+    }
+
+    // 2) Resposta a um "Confirma?" pendente.
     if (pendRaw) {
       const pend = JSON.parse(pendRaw) as PendingAction;
       if (isYes(text)) {

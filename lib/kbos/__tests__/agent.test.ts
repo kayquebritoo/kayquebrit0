@@ -45,3 +45,19 @@ describe("agente", () => {
     expect(describeAction({ tool: "criar_tarefa", args: { titulo: "Roteiro", prazo: "2026-10-20" } })).toContain("20/10");
   });
 });
+
+describe("gatilho Fala Kayque", () => {
+  it("aceita variações do ditado e devolve o comando", async () => {
+    const { parseTrigger } = await import("../agent");
+    expect(parseTrigger("Fala Kayque, o que tenho hoje?")).toBe("o que tenho hoje?");
+    expect(parseTrigger("fala, Kaique: lança despesa de 120")).toBe("lança despesa de 120");
+    expect(parseTrigger("Fala Caique lança uma tarefa")).toBe("lança uma tarefa");
+    expect(parseTrigger("Fala Kayque")).toBe("");
+    expect(parseTrigger("Falá Kayqué, ação rápida")).toBe("ação rápida");
+  });
+  it("ignora mensagens sem o gatilho", async () => {
+    const { parseTrigger } = await import("../agent");
+    expect(parseTrigger("o que tenho hoje?")).toBeNull();
+    expect(parseTrigger("lembrar de falar Kayque amanhã")).toBeNull();
+  });
+});
