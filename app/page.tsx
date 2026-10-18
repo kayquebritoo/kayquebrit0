@@ -17,9 +17,9 @@ const SLIDES = [
   { id: "topo", label: "Início" },
   { id: "sobre", label: "Sobre" },
   { id: "servicos", label: "Serviços" },
-  { id: "audiovisual", label: "Audiovisual" },
-  { id: "dev", label: "Dev" },
-  { id: "branding", label: "Branding" },
+  { id: "audiovisual", label: "Imagem" },
+  { id: "dev", label: "Código" },
+  { id: "branding", label: "Marca" },
   { id: "depoimentos", label: "Depoimentos" },
   { id: "contato", label: "Contato" },
 ];

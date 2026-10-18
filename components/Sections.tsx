@@ -269,29 +269,29 @@ export function ServicesSlide() {
       <div className="ref-inner flex flex-col gap-5 md:gap-[clamp(20px,3.4vh,38px)]">
         <button onClick={() => goToSlide(3)} onMouseEnter={() => setPreview("/assets/deco/ok2.webp")} onMouseLeave={() => setPreview(null)} className="fp-anim group flex items-center gap-4 text-left md:gap-10">
           <h3 className="font-display flex-1 font-light text-white" style={{ fontSize: "clamp(30px, 9vw, 52px)", letterSpacing: "-0.02em", lineHeight: 1 }}>
-            <span className="md:hidden">Audio<br />visual</span>
-            <span className="hidden md:block" style={{ fontSize: "clamp(58px, 6vw, 116px)", fontWeight: 300 }}>Audiovisual</span>
+            <span className="md:hidden">Imagem</span>
+            <span className="hidden md:block" style={{ fontSize: "clamp(58px, 6vw, 116px)", fontWeight: 300 }}>Imagem</span>
           </h3>
           <div className="w-[42%] transition group-hover:opacity-90 md:w-[38%]">
-            <ServiceThumb src="/assets/deco/ok2.webp" alt="Audiovisual" />
+            <ServiceThumb src="/assets/deco/ok2.webp" alt="Imagem" />
           </div>
         </button>
 
         <button onClick={() => goToSlide(4)} onMouseEnter={() => setPreview("/assets/deco/21Ativo-1.webp")} onMouseLeave={() => setPreview(null)} className="fp-anim group flex items-center gap-4 text-left md:gap-10">
           <div className="w-[42%] transition group-hover:opacity-90 md:w-[54%]">
-            <ServiceThumb src="/assets/deco/21Ativo-1.webp" alt="Dev" />
+            <ServiceThumb src="/assets/deco/21Ativo-1.webp" alt="Código" />
           </div>
           <h3 className="font-display flex-1 text-right font-light text-white" style={{ fontSize: "clamp(30px, 9vw, 52px)", letterSpacing: "-0.02em", lineHeight: 1 }}>
-            <span className="md:hidden">DEV</span>
-            <span className="hidden md:block" style={{ fontSize: "clamp(58px, 6vw, 116px)", fontWeight: 300 }}>DEV</span>
+            <span className="md:hidden">Código</span>
+            <span className="hidden md:block" style={{ fontSize: "clamp(58px, 6vw, 116px)", fontWeight: 300 }}>Código</span>
           </h3>
         </button>
 
         <div className="fp-anim flex items-center gap-4 md:gap-10">
           <button onClick={() => goToSlide(5)} onMouseEnter={() => setPreview("/assets/deco/ok4.webp")} onMouseLeave={() => setPreview(null)} className="group flex flex-1 items-center gap-3 text-left md:gap-10">
             <h3 className="font-display flex-1 font-light text-white" style={{ fontSize: "clamp(30px, 9vw, 52px)", letterSpacing: "-0.02em", lineHeight: 1 }}>
-              <span className="md:hidden">Brand<br />ing</span>
-              <span className="hidden md:block" style={{ fontSize: "clamp(58px, 6vw, 116px)", fontWeight: 300 }}>Branding</span>
+              <span className="md:hidden">Marca</span>
+              <span className="hidden md:block" style={{ fontSize: "clamp(58px, 6vw, 116px)", fontWeight: 300 }}>Marca</span>
             </h3>
             <span className="text-white transition duration-300 group-hover:translate-x-1 group-hover:translate-y-1">
               <ArrowDiag size={30} />
@@ -299,7 +299,7 @@ export function ServicesSlide() {
           </button>
           <button onClick={() => goToSlide(5)} onMouseEnter={() => setPreview("/assets/deco/ok4.webp")} onMouseLeave={() => setPreview(null)} className="group w-[32%] text-left">
             <div className="transition group-hover:opacity-90">
-              <ServiceThumb src="/assets/deco/ok4.webp" alt="Branding" />
+              <ServiceThumb src="/assets/deco/ok4.webp" alt="Marca" />
             </div>
           </button>
         </div>

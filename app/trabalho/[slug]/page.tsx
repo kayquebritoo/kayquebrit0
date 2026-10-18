@@ -20,9 +20,9 @@ export function generateMetadata({ params }: { params: Promise<{ slug: string }>
 }
 
 const SERVICE_LABEL: Record<string, string> = {
-  audiovisual: "Audiovisual",
-  dev: "Desenvolvimento",
-  branding: "Branding",
+  audiovisual: "Imagem",
+  dev: "Código",
+  branding: "Marca",
 };
 
 export default async function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {

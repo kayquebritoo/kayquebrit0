@@ -698,3 +698,19 @@ export const authChallenges = pgTable("kbos_auth_challenges", {
  attempts: integer("attempts").notNull().default(0), consumed: boolean("consumed").notNull().default(false),
  expiresAt: timestamp("expires_at",{withTimezone:true}).notNull(), createdAt: ts("created_at"),
 });
+
+/** Catálogo de serviços editável (0016). Só guarda o que o Kayque sobrescreve;
+ * campo nulo = usa o padrão de `briefing-forms.ts`. Fonte única do site e do KBOS. */
+export const services = pgTable("kbos_services", {
+  slug: text("slug").primaryKey(),
+  label: text("label"),
+  tagline: text("tagline"),
+  description: text("description"),
+  priceFrom: numeric("price_from"),
+  term: text("term"),
+  includes: jsonb("includes").$type<string[]>(),
+  pitch: jsonb("pitch").$type<string[]>(),
+  process: jsonb("process").$type<{ title: string; desc: string }[]>(),
+  active: boolean("active").notNull().default(true),
+  updatedAt: ts("updated_at"),
+});

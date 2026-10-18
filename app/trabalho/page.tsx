@@ -8,9 +8,9 @@ import PageBackdrop from "@/components/PageBackdrop";
 
 const FILTERS = [
   { id: "all", label: "Todos" },
-  { id: "audiovisual", label: "Audiovisual" },
-  { id: "dev", label: "Dev" },
-  { id: "branding", label: "Branding" },
+  { id: "audiovisual", label: "Imagem" },
+  { id: "dev", label: "Código" },
+  { id: "branding", label: "Marca" },
 ];
 
 function useViewCursor() {

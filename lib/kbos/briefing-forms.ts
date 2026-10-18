@@ -16,6 +16,12 @@ export type BriefingCategory = {
   label: string;
   desc: string;
   baseValue: string;
+  /** Valor mínimo em reais (fonte do baseValue; editável no admin). */
+  priceFrom: number;
+  /** Prazo típico, em texto livre (vazio = não mostra; editável no admin). */
+  term: string;
+  /** Frente do estúdio: agrupa os serviços no site e no admin. */
+  front: "imagem" | "marca" | "codigo";
   /** copy rica da página de categoria */
   tagline: string;
   pitch: string[];
@@ -46,12 +52,15 @@ export const BRIEFING_CATEGORIES: BriefingCategory[] = [
     label: "Fotografia",
     desc: "Ensaios, eventos, produto e corporativo.",
     baseValue: "a partir de R$ 800",
+    priceFrom: 800,
+    term: "",
+    front: "imagem",
     tagline: "Luz, direção e verdade em cada clique.",
     pitch: [
       "Fotografo marcas e pessoas com direção leve e olhar cinematográfico — do ensaio individual ao evento corporativo cheio.",
       "Você recebe curadoria + tratamento fino cor a cor, galeria online pronta para postar e arquivos em alta para impressão.",
     ],
-    bullets: ["Direção de poses leve", "Tratamento premium", "Galeria online + alta resolução", "Prévia em 48h"],
+    bullets: ["Direção de poses leve", "Tratamento premium", "Galeria online + alta resolução", "Prazo combinado por escrito"],
     process: [
       { title: "Conversa", desc: "Entendo objetivo, local, luz e referências." },
       { title: "Direção", desc: "Roteiro de poses e cronograma no dia." },
@@ -76,6 +85,9 @@ export const BRIEFING_CATEGORIES: BriefingCategory[] = [
     label: "Vídeo",
     desc: "Institucional, cobertura de eventos e reels.",
     baseValue: "a partir de R$ 1.500",
+    priceFrom: 1500,
+    term: "",
+    front: "imagem",
     tagline: "Cinema que vende — do roteiro ao corte final.",
     pitch: [
       "Do institucional ao aftermovie: roteiro, direção, captação com drone e gimbal, áudio direto e color cinematográfico.",
@@ -108,15 +120,18 @@ export const BRIEFING_CATEGORIES: BriefingCategory[] = [
     label: "Sites",
     desc: "Institucionais, landing pages e portfólios.",
     baseValue: "a partir de R$ 2.500",
+    priceFrom: 2500,
+    term: "",
+    front: "codigo",
     tagline: "Sites rápidos que viram orçamento no WhatsApp.",
     pitch: [
-      "Sites institucionais e landing pages em Next.js com nota 90+ no Lighthouse e design que leva o visitante até o clique no WhatsApp.",
+      "Sites institucionais e landing pages em Next.js feitos para carregar rápido e com design que leva o visitante até o clique no WhatsApp.",
       "Copy estratégica, SEO técnico, animações leves e integração com WhatsApp, checkout e CRM.",
     ],
     bullets: ["Next.js ultrarrápido", "Copy + SEO inclusos", "Animações premium", "Integração WhatsApp"],
     process: [
       { title: "Mapa", desc: "Sitemap, copy e referências visuais." },
-      { title: "Build", desc: "Design + código com previews semanais." },
+      { title: "Build", desc: "Design + código com prévias para você aprovar." },
       { title: "Go-live", desc: "Deploy, domínio, analytics e treino." },
     ],
     cover: "/assets/portfolio/PLUGBRA-CAPA-1.webp",
@@ -140,6 +155,9 @@ export const BRIEFING_CATEGORIES: BriefingCategory[] = [
     label: "Apps & Sistemas",
     desc: "Aplicativos e sistemas web sob medida.",
     baseValue: "a partir de R$ 8.000",
+    priceFrom: 8000,
+    term: "",
+    front: "codigo",
     tagline: "Sistema sob medida, sem gambiarra.",
     pitch: [
       "Aplicativos e painéis web que resolvem operação real: login, pagamentos, agenda, mapas e integrações.",
@@ -148,7 +166,7 @@ export const BRIEFING_CATEGORIES: BriefingCategory[] = [
     bullets: ["Escopo fechado", "Painel admin simples", "API + integrações", "Suporte pós-go"],
     process: [
       { title: "Descoberta", desc: "Fluxos, regras e protótipo navegável." },
-      { title: "Sprints", desc: "Entregas semanais testáveis." },
+      { title: "Sprints", desc: "Entregas por etapa, testadas com você." },
       { title: "Escala", desc: "Deploy, monitoramento e evolução." },
     ],
     cover: "/assets/portfolio/passo-capa.webp",
@@ -171,6 +189,9 @@ export const BRIEFING_CATEGORIES: BriefingCategory[] = [
     label: "Lojas Virtuais",
     desc: "E-commerce completo para vender online.",
     baseValue: "a partir de R$ 4.000",
+    priceFrom: 4000,
+    term: "",
+    front: "codigo",
     tagline: "Loja pronta para vender, do Pix ao frete.",
     pitch: [
       "E-commerce completo: catálogo, checkout Pix + cartão, frete, cupons e painel para você gerenciar tudo sozinho.",
@@ -202,6 +223,9 @@ export const BRIEFING_CATEGORIES: BriefingCategory[] = [
     label: "Design & Branding",
     desc: "Identidade visual, logo e peças.",
     baseValue: "a partir de R$ 1.200",
+    priceFrom: 1200,
+    term: "",
+    front: "marca",
     tagline: "Marca com conceito — não só um logo bonito.",
     pitch: [
       "Identidades com pesquisa, conceito e sistema completo: logo, paleta, tipografia, embalagem e aplicações reais.",

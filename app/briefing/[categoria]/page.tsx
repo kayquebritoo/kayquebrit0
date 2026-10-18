@@ -1,18 +1,22 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BRIEFING_CATEGORIES, getCategory } from "@/lib/kbos/briefing-forms";
+import { BRIEFING_CATEGORIES } from "@/lib/kbos/briefing-forms";
+import { getService, listServices } from "@/lib/kbos/services";
 import { PROJECTS } from "@/lib/data";
 import CategoryAnim from "./CategoryAnim";
 import PageBackdrop from "@/components/PageBackdrop";
+
+// Valores, prazo e "o que está incluso" vêm do catálogo editável (admin > Serviços e valores).
+export const revalidate = 60;
 
 export async function generateStaticParams() {
   return BRIEFING_CATEGORIES.map((c) => ({ categoria: c.id }));
 }
 
 export function generateMetadata({ params }: { params: Promise<{ categoria: string }> }) {
-  return params.then(({ categoria }) => {
-    const c = getCategory(categoria);
+  return params.then(async ({ categoria }) => {
+    const c = await getService(categoria);
     return {
       title: c ? `${c.label} — Orçamento` : "Categoria — Kayque Brito",
       description: c?.tagline ?? "",
@@ -22,11 +26,11 @@ export function generateMetadata({ params }: { params: Promise<{ categoria: stri
 
 export default async function CategoriaDetail({ params }: { params: Promise<{ categoria: string }> }) {
   const { categoria } = await params;
-  const cat = getCategory(categoria);
-  if (!cat) notFound();
+  const cat = await getService(categoria);
+  if (!cat || !cat.active) notFound();
 
   const related = PROJECTS.filter((p) => cat.portfolioService.includes(p.service));
-  const others = BRIEFING_CATEGORIES.filter((c) => c.id !== cat.id).slice(0, 3);
+  const others = (await listServices()).filter((c) => c.id !== cat.id).slice(0, 3);
 
   return (
     <main className="relative isolate min-h-screen overflow-hidden bg-[#11101E] text-[#EDE6EC]">
@@ -39,7 +43,7 @@ export default async function CategoriaDetail({ params }: { params: Promise<{ ca
             ← Categorias
           </Link>
           <span className="cat-float rounded-full border border-white/15 bg-white/[0.04] px-4 py-1.5 text-[10px] uppercase tracking-[0.28em] text-white/70 backdrop-blur">
-            {cat.baseValue}
+            {cat.baseValue}{cat.term ? ` · ${cat.term}` : ""}
           </span>
         </div>
 

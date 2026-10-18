@@ -35,7 +35,7 @@ function Field({ f, value, onChange }: { f: BriefingField; value: string; onChan
   );
 }
 
-export default function BriefingForm() {
+export default function BriefingForm({ service }: { service?: { label: string; baseValue: string; term: string } }) {
   const { categoria } = useParams<{ categoria: string }>();
   const router = useRouter();
   const cat = BRIEFING_CATEGORIES.find((c) => c.id === categoria);
@@ -56,6 +56,9 @@ export default function BriefingForm() {
   }
 
   const backHref = `/briefing/${categoria}`;
+  const label = service?.label ?? cat.label;
+  const baseValue = service?.baseValue ?? cat.baseValue;
+  const term = service?.term ?? cat.term;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -83,9 +86,9 @@ export default function BriefingForm() {
       <PageBackdrop />
       <form onSubmit={submit} className="relative z-10 mx-auto max-w-2xl">
         <Link href={backHref} className="text-[11px] uppercase tracking-[0.3em] text-white/45 hover:text-white">
-          ← Sobre {cat.label}
+          ← Sobre {label}
         </Link>
-        <p className="mt-8 text-[11px] uppercase tracking-[0.32em] text-white/45">Briefing · {cat.label} · {cat.baseValue}</p>
+        <p className="mt-8 text-[11px] uppercase tracking-[0.32em] text-white/45">Briefing · {label} · {baseValue}{term ? ` · ${term}` : ""}</p>
         <h1 className="font-display mt-3 text-4xl font-light md:text-5xl">Conte os detalhes</h1>
         <div className="mt-8 flex flex-col gap-5">
           {cat.fields.map((f) => (

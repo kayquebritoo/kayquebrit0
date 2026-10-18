@@ -112,6 +112,8 @@ export default function Orcamentos() {
   const [qa, setQa] = useState({ name: "", company: "", phone: "", email: "" });
   const [qaSaving, setQaSaving] = useState(false);
   const [qaError, setQaError] = useState("");
+  // Catálogo editável (admin > Serviços e valores): sugere serviço, valor e o que está incluso.
+  const [catalog, setCatalog] = useState<{ label: string; priceFrom: number; includes: string[] }[]>([]);
   const respBlur = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
@@ -134,6 +136,17 @@ export default function Orcamentos() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/services/", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((j) => alive && setCatalog(Array.isArray(j.items) ? j.items : []))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const shown = useMemo(() => items.filter((b) => filter === "all" || b.status === filter), [items, filter]);
   const summary = useMemo(() => {
     const open = items.filter((b) => b.status === "draft" || b.status === "sent");
@@ -144,9 +157,10 @@ export default function Orcamentos() {
   // Sugestões: serviços já usados em orçamentos + empresas do CRM.
   const serviceHints = useMemo(() => {
     const seen = new Set<string>();
+    for (const c of catalog) seen.add(c.label);
     for (const b of items) for (const it of b.items || []) if (it.service.trim()) seen.add(it.service.trim());
     return [...seen].slice(0, 60);
-  }, [items]);
+  }, [items, catalog]);
   const companyHints = useMemo(() => {
     const seen = new Set<string>();
     for (const c of contacts) if (c.company?.trim()) seen.add(c.company.trim());
@@ -620,7 +634,18 @@ export default function Orcamentos() {
                         list="orc-service-hints"
                         placeholder={`Serviço ${i + 1} — ex.: Cobertura fotográfica`}
                         value={it.service}
-                        onChange={(e) => setItem(i, { service: e.target.value })}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          const hit = catalog.find((c) => c.label.toLowerCase() === v.trim().toLowerCase());
+                          // Serviço do catálogo e item ainda sem valor: já traz o valor e o que está incluso.
+                          if (hit && !num(it.unitPrice)) {
+                            setItem(i, {
+                              service: hit.label,
+                              unitPrice: hit.priceFrom,
+                              description: it.description || hit.includes.join(" · "),
+                            });
+                          } else setItem(i, { service: v });
+                        }}
                       />
                       <button
                         onClick={() => setForm((f) => ({ ...f, items: f.items.filter((_, j) => j !== i) }))}

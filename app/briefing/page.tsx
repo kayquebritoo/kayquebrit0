@@ -1,10 +1,14 @@
 import Link from "next/link";
-import { BRIEFING_CATEGORIES } from "@/lib/kbos/briefing-forms";
+import { listServices } from "@/lib/kbos/services";
 import PageBackdrop from "@/components/PageBackdrop";
 
 export const metadata = { title: "Briefing — KBOS" };
 
-export default function BriefingHome() {
+// Valores e textos vêm do catálogo editável (admin > Serviços e valores).
+export const revalidate = 60;
+
+export default async function BriefingHome() {
+  const cats = await listServices();
   return (
     <main className="relative isolate min-h-screen overflow-hidden bg-[#11101E] px-5 pb-20 pt-24 text-[#EDE6EC] md:pt-28">
       <PageBackdrop />
@@ -21,7 +25,7 @@ export default function BriefingHome() {
           se fizer sentido, você preenche o briefing em 2 minutos.
         </p>
         <div className="mt-10 grid gap-4 sm:grid-cols-2">
-          {BRIEFING_CATEGORIES.map((c, i) => (
+          {cats.map((c, i) => (
             <Link
               key={c.id}
               href={`/briefing/${c.id}`}
@@ -34,7 +38,7 @@ export default function BriefingHome() {
               <p className="mt-1 text-sm font-light italic text-[#B79BFF]">{c.tagline}</p>
               <p className="mt-1 text-sm font-light text-white/55">{c.desc}</p>
               <p className="mt-4 flex items-center justify-between text-[12px] uppercase tracking-[0.2em] text-[#B79BFF]">
-                <span>{c.baseValue}</span>
+                <span>{c.baseValue}{c.term ? ` · ${c.term}` : ""}</span>
                 <span aria-hidden className="rounded-full border border-white/15 px-3 py-1 text-white/60 transition group-hover:border-white/50 group-hover:text-white">Ver detalhes →</span>
               </p>
             </Link>
