@@ -52,18 +52,26 @@
 html,
 body {
   max-width: 100%;
-  overflow-x: hidden;
   background: #11101e;
   color: #ede6ec;
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
-  /* App-like: sem elástico/pull-to-refresh do navegador móvel… */
-  overscroll-behavior-y: none;
-  /* …e sem zoom por toque duplo (pan/rolagem seguem normais). */
+  /* …sem zoom por toque duplo (pan/rolagem seguem normais). */
   touch-action: manipulation;
   /* Barras de rolagem discretas e finas (quando necessárias). */
   scrollbar-width: thin;
   scrollbar-color: rgba(128, 128, 140, 0.45) transparent;
+}
+/* Rolagem: o overflow-x fica SÓ no body (propaga para a janela) e o overscroll
+   SÓ no html. Com os dois em html e body, o body virava um segundo contêiner de
+   rolagem com overscroll-behavior none e a roda/trackpad parava de rolar a página
+   (o teclado ainda rolava). */
+html {
+  /* App-like: sem elástico/pull-to-refresh do navegador móvel. */
+  overscroll-behavior-y: none;
+}
+body {
+  overflow-x: hidden;
 }
 ::-webkit-scrollbar {
   width: 10px;

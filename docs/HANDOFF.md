@@ -117,6 +117,8 @@ Voz-e-Tom, Marca, Servicos, KBOS - Visao, logs em `20-Projetos/KBOS/log/`).
 
 ## Diário (mais recente em cima)
 
+- 2026-10-18 · Claude · Roda/trackpad não rolava nenhuma página (teclado rolava): `overflow-x:hidden` + `overscroll-behavior-y:none` em html E body faziam o body virar contêiner de rolagem que bloqueava o encadeamento. Agora `overflow-x:hidden` só no body e overscroll só no html (testado ao vivo injetando o CSS). Não repetir os dois no mesmo seletor.
+
 - 2026-10-18 · Claude · Redes sociais do menu sumiam no modo claro: `.soc-btn` agora tem cor/borda escuras em `html.light` (hover roxo #4F12C7).
 
 - 2026-10-18 · Claude · Menu do site no gosto do Kayque (vidro + movimento): base opaca com gradiente animado (`.glass-menu::after`, 22s, respeita reduzir movimento), painel de vidro (`.menu-panel`) nas utilidades, itens deslizam no hover. Gosto registrado: glassmorphism, maximalismo, degradês em movimento, microinterações, mobile first, app nativo. Falta: aplicar o mesmo padrão nas outras telas do site/portal.
