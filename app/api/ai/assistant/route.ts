@@ -20,7 +20,20 @@ export async function GET() {
   const user = await sessionUser();
   const denied = deny(user, ...STAFF);
   if (denied) return denied;
-  return NextResponse.json({ transcription: sttConfig().enabled, llm: llmConfig().enabled, voice: ttsConfig().enabled });
+  const llm = llmConfig();
+  const owner = (process.env.ASSISTANT_OWNER_PHONE || "").replace(/\D/g, "");
+  return NextResponse.json({
+    transcription: sttConfig().enabled,
+    llm: llm.enabled,
+    voice: ttsConfig().enabled,
+    // Diagnóstico do agente no WhatsApp (sem expor segredos).
+    agent: {
+      model: llm.model,
+      keyEnding: llm.key ? `…${llm.key.slice(-4)}` : null,
+      owner: owner ? `…${owner.slice(-4)}` : null,
+      webhookProtected: (process.env.EVOLUTION_WEBHOOK_TOKEN || "").trim().length >= 8,
+    },
+  });
 }
 
 export async function POST(req: Request) {

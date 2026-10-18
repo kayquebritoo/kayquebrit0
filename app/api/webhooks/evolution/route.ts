@@ -115,8 +115,12 @@ export async function POST(req: Request) {
     // Mensagem do dono para o agente: responde depois de devolver 200 à
     // Evolution. Só com o webhook protegido por token (ninguém forja o dono).
     const tokenOn = (process.env.EVOLUTION_WEBHOOK_TOKEN || "").trim().length >= 8;
-    if (!r.deduped && isAgentMessage(inb, ownerPhone(), tokenOn)) {
+    const owner = ownerPhone();
+    if (!r.deduped && isAgentMessage(inb, owner, tokenOn)) {
       after(() => runAgentTurn(inb));
+      await logHook({ event: "agente", result: "comando do dono → assistente", detail: inb.messageType });
+    } else if (!r.deduped && owner && !inb.isGroup && isAgentMessage(inb, owner, true)) {
+      await logHook({ event: "agente", result: "ignorado: webhook sem senha (rode a opção 6 do menu)" });
     }
     await logHook({
       event: String(event),

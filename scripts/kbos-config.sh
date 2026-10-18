@@ -43,7 +43,7 @@ profiles=(--profile evolution)
 apply() {
   echo
   echo "Aplicando… (leva até 1 minuto)"
-  "${COMPOSE[@]}" "${profiles[@]}" up -d >/dev/null
+  GIT_SHA=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo local) "${COMPOSE[@]}" "${profiles[@]}" up -d >/dev/null
   echo "Pronto. Confira em https://kbos.kayquebrito.com.br/admin/"
 }
 
@@ -72,7 +72,14 @@ while true; do
         setvar AI_BASE_URL "https://api.openai.com/v1"
       fi
       key=$(ask_secret "Cole a chave (não aparece na tela) e dê Enter: ")
-      [ -n "$key" ] && setvar AI_API_KEY "$key"
+      key=$(printf '%s' "$key" | tr -d '[:space:]"')
+      if [ ${#key} -ge 20 ]; then
+        setvar AI_API_KEY "$key"
+        echo "Chave recebida (termina em …${key: -4})."
+      else
+        echo "Não recebi a chave (veio vazia ou curta). Tente de novo: copie a chave e cole com Cmd+V."
+        continue
+      fi
       read -r -p "Modelo [$(getvar AI_MODEL | sed 's/^$/gpt-4o-mini/')]: " model
       [ -n "$model" ] && setvar AI_MODEL "$model"
       apply
