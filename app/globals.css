@@ -1331,6 +1331,9 @@ html.light .page-aurora { opacity: 0.45; }
 }
 .soc-btn:hover { color: #fff; border-color: rgba(237, 230, 236, 0.5); }
 .soc-btn:active { transform: scale(.92); }
+/* modo claro: ícone e borda em tinta escura (antes herdavam o tom claro e sumiam no papel) */
+html.light .soc-btn { color: rgba(23, 23, 46, 0.82); border-color: rgba(23, 23, 46, 0.22); background: rgba(255, 255, 255, 0.55); }
+html.light .soc-btn:hover { color: #4F12C7; border-color: rgba(79, 18, 199, 0.55); background: #fff; }
 @media (min-width: 768px) { .soc-row { justify-content: flex-start; width: auto; gap: 10px; } .soc-btn { width: 40px; height: 40px; } }
 
 /* Texto do vidro do hero mobile: duas linhas limpas. */

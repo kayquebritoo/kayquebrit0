@@ -117,6 +117,8 @@ Voz-e-Tom, Marca, Servicos, KBOS - Visao, logs em `20-Projetos/KBOS/log/`).
 
 ## Diário (mais recente em cima)
 
+- 2026-10-18 · Claude · Redes sociais do menu sumiam no modo claro: `.soc-btn` agora tem cor/borda escuras em `html.light` (hover roxo #4F12C7).
+
 - 2026-10-18 · Claude · Menu do site no gosto do Kayque (vidro + movimento): base opaca com gradiente animado (`.glass-menu::after`, 22s, respeita reduzir movimento), painel de vidro (`.menu-panel`) nas utilidades, itens deslizam no hover. Gosto registrado: glassmorphism, maximalismo, degradês em movimento, microinterações, mobile first, app nativo. Falta: aplicar o mesmo padrão nas outras telas do site/portal.
 
 - 2026-10-18 · Claude · Menu do site: fundo do menu fullscreen agora OPACO (antes 80-90% de transparência deixava hero, títulos gigantes e CTA aparecendo por trás), z-58 abaixo do header, separador nas utilidades. Falta: revisar visualmente mobile/desktop depois do deploy e redesenhar a composição se ainda incomodar.
