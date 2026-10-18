@@ -62,3 +62,31 @@ describe("audioFilename", () => {
     expect(audioFilename("")).toBe("audio.ogg");
   });
 });
+
+describe("provedores trocáveis", () => {
+  const P = ["AI_BASE_URL", "AI_API_KEY", "STT_BASE_URL", "TTS_BASE_URL", "TTS_MODEL", "AI_TTS_MODEL"] as const;
+  const keep: Record<string, string | undefined> = {};
+  for (const k of P) keep[k] = process.env[k];
+  afterEach(() => {
+    for (const k of P) {
+      if (keep[k] === undefined) delete process.env[k];
+      else process.env[k] = keep[k];
+    }
+  });
+  it("sem nada: desligado; com chave da OpenAI: ligado", async () => {
+    const { llmConfig } = await import("../assistant");
+    for (const k of P) delete process.env[k];
+    delete process.env.OPENAI_API_KEY;
+    expect(llmConfig().enabled).toBe(false);
+    process.env.OPENAI_API_KEY = "sk-test";
+    expect(llmConfig()).toMatchObject({ enabled: true, url: "https://api.openai.com/v1", key: "sk-test" });
+  });
+  it("servidor próprio (Ollama/Whisper local) liga sem chave e não vaza a chave da OpenAI", async () => {
+    const { llmConfig, sttConfig } = await import("../assistant");
+    process.env.OPENAI_API_KEY = "sk-test";
+    process.env.AI_BASE_URL = "http://ollama:11434/v1/";
+    process.env.STT_BASE_URL = "http://whisper:8000/v1";
+    expect(llmConfig()).toMatchObject({ enabled: true, url: "http://ollama:11434/v1", key: null });
+    expect(sttConfig()).toMatchObject({ enabled: true, key: null, model: "whisper-1" });
+  });
+});

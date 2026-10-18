@@ -33,8 +33,33 @@ export function openaiKey(): string | null {
   return k ? k : null;
 }
 
+/**
+ * Provedores trocáveis por configuração (qualquer servidor no padrão OpenAI):
+ * cérebro (LLM), ouvido (transcrição) e voz (TTS) podem morar em lugares
+ * diferentes — ex.: LLM numa API barata, Whisper local na VPS, voz clonada
+ * num servidor próprio. Sem URL própria, cai na OpenAI com OPENAI_API_KEY.
+ *   AI_BASE_URL / AI_API_KEY / AI_MODEL
+ *   STT_BASE_URL / STT_API_KEY / STT_MODEL
+ *   TTS_BASE_URL / TTS_API_KEY / TTS_MODEL / TTS_VOICE
+ */
+export type ProviderConfig = { url: string; key: string | null; model: string; enabled: boolean };
+const OPENAI_URL = "https://api.openai.com/v1";
+function provider(prefix: "AI" | "STT" | "TTS", defModel: string): ProviderConfig {
+  const env = (n: string) => (process.env[`${prefix}_${n}`] || "").trim();
+  const url = (env("BASE_URL") || OPENAI_URL).replace(/\/$/, "");
+  const own = url !== OPENAI_URL;
+  const key = env("API_KEY") || (own ? "" : openaiKey() || "");
+  const legacyModel = prefix === "TTS" ? (process.env.AI_TTS_MODEL || "").trim() : "";
+  // Servidor próprio (Ollama, Whisper local) não precisa de chave para estar ligado.
+  return { url, key: key || null, model: env("MODEL") || legacyModel || defModel, enabled: own || !!key };
+}
+export const llmConfig = () => provider("AI", "gpt-4o-mini");
+export const sttConfig = () => provider("STT", "whisper-1");
+export const ttsConfig = () => provider("TTS", "tts-1");
+const authHeader = (c: ProviderConfig): Record<string, string> => (c.key ? { Authorization: `Bearer ${c.key}` } : {});
+
 export function aiModel(): string {
-  return (process.env.AI_MODEL || "gpt-4o-mini").trim() || "gpt-4o-mini";
+  return llmConfig().model;
 }
 
 /**
@@ -90,18 +115,18 @@ export async function transcribeAudio(
   } catch (e) {
     return { text: null, stub: true, error: e instanceof Error ? e.message : "Falha no áudio." };
   }
-  const key = openaiKey();
-  if (!key || !bytes) {
-    return { text: null, stub: true, error: key ? "Áudio vazio." : "Sem OPENAI_API_KEY (modo base)." };
+  const stt = sttConfig();
+  if (!stt.enabled || !bytes) {
+    return { text: null, stub: true, error: stt.enabled ? "Áudio vazio." : "Sem transcrição configurada (modo base)." };
   }
   try {
     const form = new FormData();
-    form.append("model", "whisper-1");
+    form.append("model", stt.model);
     form.append("language", "pt");
     form.append("file", new Blob([bytes], { type: mime.split(";")[0] }), audioFilename(mime));
-    const res = await fetchTimeout("https://api.openai.com/v1/audio/transcriptions", {
+    const res = await fetchTimeout(`${stt.url}/audio/transcriptions`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}` },
+      headers: authHeader(stt),
       body: form,
     }, 60_000);
     if (!res.ok) return { text: null, stub: true, error: `Whisper: HTTP ${res.status}.` };
@@ -118,18 +143,18 @@ export async function transcribeAudio(
 export type Reply = { text: string; stub: boolean };
 
 export async function chatReply(system: string, userText: string): Promise<Reply> {
-  const key = openaiKey();
-  if (!key) {
+  const llm = llmConfig();
+  if (!llm.enabled) {
     return {
-      text: `🤖 (modo base) Recebi: "${userText.slice(0, 200)}". Configure OPENAI_API_KEY na VPS para respostas reais do assistente.`,
+      text: `🤖 (modo base) Recebi: "${userText.slice(0, 200)}". Configure o cérebro do assistente (AI_BASE_URL ou OPENAI_API_KEY) na VPS para respostas reais.`,
       stub: true,
     };
   }
-  const res = await fetchTimeout("https://api.openai.com/v1/chat/completions", {
+  const res = await fetchTimeout(`${llm.url}/chat/completions`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    headers: { ...authHeader(llm), "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: aiModel(),
+      model: llm.model,
       messages: [
         { role: "system", content: system },
         { role: "user", content: userText },
@@ -149,15 +174,15 @@ export async function chatReply(system: string, userText: string): Promise<Reply
 
 /** Gera áudio da resposta (data-URI mp3) ou null (sem chave / falha = não fatal). */
 export async function synthesizeSpeech(text: string, voice?: string): Promise<string | null> {
-  const key = openaiKey();
-  if (!key) return null;
+  const tts = ttsConfig();
+  if (!tts.enabled) return null;
   try {
-    const res = await fetchTimeout("https://api.openai.com/v1/audio/speech", {
+    const res = await fetchTimeout(`${tts.url}/audio/speech`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: { ...authHeader(tts), "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: (process.env.AI_TTS_MODEL || "tts-1").trim() || "tts-1",
-        voice: (voice || process.env.AI_TTS_VOICE || "alloy").trim() || "alloy",
+        model: tts.model,
+        voice: (voice || process.env.TTS_VOICE || process.env.AI_TTS_VOICE || "alloy").trim() || "alloy",
         input: text.slice(0, 4000),
         response_format: "mp3",
       }),
@@ -285,9 +310,9 @@ export async function handleAssistantTurn(input: AssistantTurnInput): Promise<As
     });
     transcript = t.text;
     transcriptStub = t.stub;
-    if (!transcript && !openaiKey()) {
+    if (!transcript && !sttConfig().enabled) {
       throw coded(
-        "A transcrição de áudio ainda não está ligada (falta a OPENAI_API_KEY na VPS). Use o microfone do teclado para ditar.",
+        "A transcrição de áudio ainda não está ligada na VPS. Use o microfone do teclado para ditar.",
         "TRANSCRIBE_UNAVAILABLE"
       );
     }

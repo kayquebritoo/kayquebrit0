@@ -3,7 +3,7 @@ import { db } from "@/lib/kbos/db";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { withRateLimit } from "@/lib/kbos/rate-limit";
 import { assistantTurnSchema, readBody } from "@/lib/kbos/validators";
-import { handleAssistantTurn, openaiKey } from "@/lib/kbos/assistant";
+import { handleAssistantTurn, llmConfig, sttConfig, ttsConfig } from "@/lib/kbos/assistant";
 import { serverError } from "@/lib/kbos/http";
 
 const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as const;
@@ -20,7 +20,7 @@ export async function GET() {
   const user = await sessionUser();
   const denied = deny(user, ...STAFF);
   if (denied) return denied;
-  return NextResponse.json({ transcription: !!openaiKey(), llm: !!openaiKey() });
+  return NextResponse.json({ transcription: sttConfig().enabled, llm: llmConfig().enabled, voice: ttsConfig().enabled });
 }
 
 export async function POST(req: Request) {
