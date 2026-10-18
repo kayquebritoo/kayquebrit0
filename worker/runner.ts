@@ -41,7 +41,7 @@ export async function processJob(
       case "billing.reconcile":
         return await handleBillingReconcile();
       case "billing.reminders":
-        return await handleBillingReminders();
+        return await handleBillingReminders({ enforceWindow: true });
       case "briefing.followup":
         return await handleBriefingFollowup();
       case "briefing.morning":

@@ -1,10 +1,14 @@
 import { sql } from "drizzle-orm";
 import { db } from "./db";
-import { handleBillingLadder } from "./billing-ladder";
+import { handleBillingLadder, inSendWindow } from "./billing-ladder";
+import { handleRelationship } from "./relationship";
 
 /** Outbox no Postgres: a mesma cobrança/data/antecedência só entra uma vez.
  * O sweeper entrega ao Redis, inclusive após indisponibilidade da fila. */
-export async function handleBillingReminders() {
+export async function handleBillingReminders(opts: { enforceWindow?: boolean; now?: Date } = {}) {
+  const now = opts.now ?? new Date();
+  // Cliente não recebe aviso de madrugada nem domingo (no worker; os testes rodam sem janela).
+  if (opts.enforceWindow && !inSendWindow(now)) return { queued: 0 };
   const result = await db().execute(sql`
     INSERT INTO kbos_jobs (tipo, payload, idempotency_key)
     SELECT 'notify.whatsapp', jsonb_build_object(
@@ -30,6 +34,8 @@ export async function handleBillingReminders() {
         (now() AT TIME ZONE 'America/Belem')::date + 2)
     ON CONFLICT (idempotency_key) DO NOTHING RETURNING id`);
   // Depois do vencimento: escada gentil → firme → último aviso (mesmo job, mesmo outbox).
-  const ladder = await handleBillingLadder();
-  return { queued: result.rows.length + ladder.queued };
+  const ladder = await handleBillingLadder(now);
+  // Relacionamento (follow-up de orçamento, pedido de depoimento) usa o mesmo relógio de 5 em 5 min.
+  const rel = await handleRelationship(now);
+  return { queued: result.rows.length + ladder.queued + rel.queued };
 }

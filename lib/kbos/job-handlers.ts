@@ -4,7 +4,7 @@
 import { and, eq, gte, lte, lt, sql } from "drizzle-orm";
 import { UnrecoverableError } from "bullmq";
 import { db } from "./db";
-import { briefings, campaignLogs, campaigns, contacts, courses, enrollments, events, jobs, notifications, projects, transactions, users } from "./schema";
+import { briefings, budgets, campaignLogs, campaigns, contacts, courses, enrollments, events, jobs, notifications, projects, transactions, users } from "./schema";
 import { buildIdempotencyKey, enqueueJob, jobAttempts } from "./jobs";
 import { welcomeMessage } from "./lms";
 import { queueWhatsApp, sendEvolutionText, type WhatsappPayload } from "./whatsapp";
@@ -30,6 +30,14 @@ export async function handleNotifyWhatsapp(p: WhatsappPayload) {
     // Uma cobrança quitada, cancelada/excluída ou reagendada não deve receber
     // um lembrete antigo que ficou esperando na fila.
     if (!bill || !["pendente", "vencido"].includes(bill.status) || !bill.vencimento || localDay(bill.vencimento) !== p.billingDueDate || p.billingReminderDay !== localDay()) return { skipped: true };
+  }
+  if (p.guardBudgetId) {
+    const [b] = await d.select({ status: budgets.status }).from(budgets).where(eq(budgets.id, p.guardBudgetId)).limit(1);
+    if (!b || b.status !== "sent") return { skipped: true };
+  }
+  if (p.guardProjectId) {
+    const [pr] = await d.select({ status: projects.status }).from(projects).where(eq(projects.id, p.guardProjectId)).limit(1);
+    if (!pr || pr.status !== "entregue") return { skipped: true };
   }
   try {
     await sendEvolutionText(p.destino, p.mensagem);

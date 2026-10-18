@@ -14,6 +14,9 @@ export type WhatsappPayload = {
   billingTransactionId?: string;
   billingDueDate?: string;
   billingReminderDay?: string;
+  /** Só envia se o orçamento ainda estiver `sent` / o projeto ainda `entregue` (a fila pode ter esperado). */
+  guardBudgetId?: string;
+  guardProjectId?: string;
   destino: string;
   mensagem: string;
   evento?: string;
