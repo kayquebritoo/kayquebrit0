@@ -6,6 +6,7 @@ import { messages } from "@/lib/kbos/schema";
 import { withRateLimit } from "@/lib/kbos/rate-limit";
 import { serverError } from "@/lib/kbos/http";
 import { isEvolutionWebhookAuthorized } from "@/lib/kbos/evolution";
+import { handleOptOut } from "@/lib/kbos/optout";
 import { logHook, maskChat } from "@/lib/kbos/webhook-log";
 import {
   extractInbound,
@@ -116,6 +117,7 @@ export async function POST(req: Request) {
     // Evolution. Só com o webhook protegido por token (ninguém forja o dono).
     const tokenOn = (process.env.EVOLUTION_WEBHOOK_TOKEN || "").trim().length >= 8;
     const owner = ownerPhone();
+    if (!r.deduped && !inb.fromMe && !inb.isGroup) after(() => handleOptOut(inb).catch(() => undefined));
     if (!r.deduped && isAgentMessage(inb, owner, tokenOn)) {
       after(() => runAgentTurn(inb));
       await logHook({ event: "agente", result: "comando do dono → assistente", detail: inb.messageType });

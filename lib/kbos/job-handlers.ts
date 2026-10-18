@@ -13,6 +13,7 @@ import { onlyDigits } from "./inbox";
 import { dueReminders, reminderMessage } from "./agenda";
 import { ADMIN_EMAIL } from "./admin-access";
 import { localDay } from "./sale-plan";
+import { dailyCap, dayOffsetFor, withOptOutFooter } from "./optout";
 
 export const FOLLOWUP_AFTER_H = Number(process.env.BRIEFING_FOLLOWUP_HOURS || 48);
 
@@ -208,7 +209,7 @@ export async function handleCampaignDispatch(p: CampaignDispatchPayload) {
     const targets = await d.select().from(contacts).limit(5000);
     const wanted = targetStatuses(camp.targetStatus || "all");
     const mailableTargets = targets.filter(
-      (c) => wanted.includes(c.status as "lead") && mailable(c.phone)
+      (c) => wanted.includes(c.status as "lead") && mailable(c.phone) && !c.marketingOptOutAt
     );
     if (mailableTargets.length === 0) {
       await d.update(campaigns).set({ status: "failed", totalRecipients: 0 }).where(eq(campaigns.id, camp.id));
@@ -236,15 +237,22 @@ export async function handleCampaignDispatch(p: CampaignDispatchPayload) {
   }
 
   const base = sendDelayMs();
+  // Teto diário (anti-banimento): o que passa do limite de hoje cai nos dias seguintes.
+  const cap = dailyCap();
+  const [{ n: sentToday }] = (await d.execute(sql`
+    SELECT count(*)::int AS n FROM kbos_campaign_logs
+    WHERE status = 'sent' AND (sent_at AT TIME ZONE 'America/Belem')::date = (now() AT TIME ZONE 'America/Belem')::date`)).rows as { n: number }[];
   let enqueued = 0;
   for (let i = 0; i < pending.length; i++) {
     const log = pending[i];
+    const dayOffset = dayOffsetFor(i, cap, Number(sentToday));
+    const inDay = dayOffset === 0 ? i : (i - Math.max(0, cap - Number(sentToday))) % cap;
     const r = await enqueueJob(
       "campaign.send",
       { campaignId: camp.id, logId: log.id },
       {
         key: buildIdempotencyKey("campaign.send", { campaign: camp.id, log: log.id }),
-        delayMs: staggeredDelayMs(i, base),
+        delayMs: dayOffset * 86_400_000 + staggeredDelayMs(inDay, base),
       }
     );
     if (r.queued) enqueued++;
@@ -283,12 +291,16 @@ export async function handleCampaignSend(
     return { skipped: true, reason: "sem telefone" };
   }
 
-  const text = renderTemplate(camp.messageTemplate, {
+  if (contact.marketingOptOutAt) {
+    await failLog(log.id, camp.id, "Contato pediu para sair das campanhas.");
+    return { skipped: true, reason: "opt-out" };
+  }
+  const text = withOptOutFooter(renderTemplate(camp.messageTemplate, {
     name: contact.name,
     company: contact.company,
     email: contact.email,
     phone: contact.phone,
-  });
+  }));
   try {
     await sendEvolutionText(digits, text);
   } catch (e) {

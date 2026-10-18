@@ -401,6 +401,8 @@ export const contacts = pgTable("kbos_contacts", {
   website: text("website"),
   instagram: text("instagram"),
   source: text("source"),
+  // 0018: respondeu SAIR → não recebe campanhas (avisos de projeto/cobrança seguem).
+  marketingOptOutAt: timestamp("marketing_opt_out_at", { withTimezone: true }),
   createdAt: ts("created_at"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()

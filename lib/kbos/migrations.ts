@@ -8,6 +8,7 @@ import { sql } from "drizzle-orm";
 import { db } from "./db";
 
 export const SCHEMA_STEPS: { id: string; sql: string }[] = [
+  { id: "contacts.optout.0", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS marketing_opt_out_at timestamptz` },
   { id: "sales.uploads.0", sql: `ALTER TABLE kbos_budgets ADD COLUMN IF NOT EXISTS upload_bytes integer NOT NULL DEFAULT 0` },
   { id: "sales.uploads.1", sql: `CREATE TABLE IF NOT EXISTS kbos_budget_uploads (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
