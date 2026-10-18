@@ -158,7 +158,7 @@ while true; do
       unset google_secret
       apply
       echo "Configuração salva. Abra o login e teste Continuar com Google."
-      echo "Use o e-mail que já está cadastrado no KBOS."
+      echo "Se o Google usa outro e-mail, conecte-o em Mais > Meu acesso antes de sair da conta."
       ;;
     0) exit 0 ;;
     *) echo "Opção inválida." ;;
