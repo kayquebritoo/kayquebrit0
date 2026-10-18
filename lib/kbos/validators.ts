@@ -87,6 +87,7 @@ export const projectCreateSchema = z.object({
   categoria: shortText(80),
   clienteId: uuidField.optional(),
   clienteEmail: z.email().max(160).optional(),
+  contactId: uuidField.optional(),
   briefingId: uuidField.optional(),
   valor: moneyField.optional(),
   prazo: dateField.optional(),
@@ -108,6 +109,8 @@ export const projectPatchSchema = nonEmpty(
   z.object({
     status: z.enum(PROJECT_STATUS).optional(),
     titulo: shortText(160).optional(),
+    categoria: shortText(80).optional(),
+    contactId: uuidField.nullable().optional(),
     valor: moneyField.nullable().optional(),
     prazo: dateField.nullable().optional(),
     slug: z

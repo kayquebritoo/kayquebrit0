@@ -62,6 +62,8 @@ export type TrxRow = {
   vencimento: Date | string | null;
   status: "pendente" | "pago" | "vencido";
   createdAt: Date | string;
+  /** carteira: "empresa" | "pessoal" (ausente = empresa) */
+  scope?: string | null;
 };
 
 export type ProjectRow = {
@@ -112,7 +114,7 @@ export function buildDemands(
     out.push({
       id: `trx-${t.id}`,
       kind: t.tipo === "entrada" ? "cobranca" : "pagamento",
-      title: t.descricao,
+      title: t.scope === "pessoal" ? `${t.descricao} (pessoal)` : t.descricao,
       detail: t.categoria,
       amount: Number(t.valor) || 0,
       dueKey: k,

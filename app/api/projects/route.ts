@@ -32,11 +32,13 @@ export async function POST(req: Request) {
     if ("error" in parsed) return parsed.error;
     const body = parsed.data;
     let clienteId: string | null = body.clienteId ?? null;
+    let warning: string | null = null;
     if (!clienteId && body.clienteEmail) {
       const cli = (
         await db().select().from(users).where(eq(users.email, body.clienteEmail.toLowerCase())).limit(1)
       )[0];
       clienteId = cli?.id ?? null;
+      if (!cli) warning = "Projeto criado, mas ainda não existe conta de portal com esse e-mail: o cliente só o verá depois de entrar pela primeira vez.";
     }
     const rows = await db()
       .insert(projects)
@@ -45,6 +47,7 @@ export async function POST(req: Request) {
         categoria: body.categoria,
         clienteId,
         briefingId: body.briefingId ?? null,
+        contactId: body.contactId ?? null,
         valor: body.valor ?? null,
         prazo: body.prazo ? new Date(body.prazo) : null,
         // Fase 1 — vitrine (slug único; 409 amigável em conflito).
@@ -56,7 +59,7 @@ export async function POST(req: Request) {
         courseId: body.courseId ?? null,
       })
       .returning();
-    return NextResponse.json({ ok: true, item: rows[0] }, { status: 201 });
+    return NextResponse.json({ ok: true, item: rows[0], warning }, { status: 201 });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erro";
     if (/slug|unique|duplicate/i.test(msg)) {

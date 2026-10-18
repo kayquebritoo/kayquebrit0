@@ -24,7 +24,7 @@ type FeedItem = { id: string; at: string; kind: "mensagem" | "orcamento" | "fina
 // GET /api/admin/today — tudo que a tela "Hoje" mostra, já agregado no
 // servidor: alertas de prazo (tarefas + dinheiro), caixa do mês, agenda do
 // dia e o feed "ao vivo". Admin-only.
-export async function GET() {
+export async function GET(req: Request) {
   const user = await sessionUser();
   const denied = deny(user, "admin");
   if (denied) return denied;
@@ -34,6 +34,10 @@ export async function GET() {
     const todayKey = dayKey(now, tz);
     const since = new Date(now.getTime() - 120 * 86_400_000);
     const d = db();
+    // Carteira: o caixa do mês não mistura empresa com pessoal. Os alertas de
+    // prazo seguem mostrando as duas, para nenhuma conta pessoal passar batida.
+    const sp = new URL(req.url).searchParams.get("scope");
+    const scope = sp === "pessoal" || sp === "all" ? sp : "empresa";
 
     const [trx, prj, bud, evs, unread, msgs, recentBud, recentTrx, recentBrief, tsk] = await Promise.all([
       d
@@ -46,6 +50,7 @@ export async function GET() {
           vencimento: transactions.vencimento,
           status: transactions.status,
           createdAt: transactions.createdAt,
+          scope: transactions.scope,
         })
         .from(transactions)
         .where(gte(sql`coalesce(${transactions.vencimento}, ${transactions.createdAt})`, since))
@@ -138,7 +143,7 @@ export async function GET() {
     ]);
 
     const demands = buildDemands({ transactions: trx as TrxRow[], projects: prj, budgets: bud, tasks: tsk }, todayKey, tz);
-    const cash = monthCash(trx as TrxRow[], todayKey, tz);
+    const cash = monthCash((trx as TrxRow[]).filter((t) => scope === "all" || (t.scope ?? "empresa") === scope), todayKey, tz);
 
     const agenda = evs
       .filter((e) => dayKey(e.startTime, tz) === todayKey)

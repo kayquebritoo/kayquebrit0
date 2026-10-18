@@ -70,6 +70,13 @@ describe("projectCreateSchema / projectPatchSchema", () => {
     expect(projectPatchSchema.safeParse({ status: "producao" }).success).toBe(true);
     expect(projectPatchSchema.safeParse({ status: "invalido" }).success).toBe(false);
   });
+  it("vincula ao contato do CRM e deixa trocar categoria/contato na edição", () => {
+    const id = "123e4567-e89b-42d3-a456-426614174000";
+    expect(projectCreateSchema.safeParse({ titulo: "T", categoria: "C", contactId: id }).success).toBe(true);
+    expect(projectCreateSchema.safeParse({ titulo: "T", categoria: "C", contactId: "x" }).success).toBe(false);
+    expect(projectPatchSchema.safeParse({ categoria: "design", contactId: id }).success).toBe(true);
+    expect(projectPatchSchema.safeParse({ contactId: null }).success).toBe(true);
+  });
 });
 
 describe("moneyField", () => {

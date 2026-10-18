@@ -73,6 +73,24 @@ describe("buildDemands", () => {
   });
 });
 
+describe("carteira pessoal nos alertas", () => {
+  it("marca a conta pessoal no título, sem esconder do quadro", () => {
+    const list = buildDemands(
+      {
+        transactions: [
+          trx({ id: "p", tipo: "saida", descricao: "Aluguel", vencimento: "2026-10-18T15:00:00Z", scope: "pessoal" }),
+          trx({ id: "e", tipo: "saida", descricao: "Hospedagem", vencimento: "2026-10-18T15:00:00Z", scope: "empresa" }),
+        ],
+        projects: [],
+        budgets: [],
+      },
+      "2026-10-18",
+      "America/Belem"
+    );
+    expect(list.map((d) => d.title).sort()).toEqual(["Aluguel (pessoal)", "Hospedagem"]);
+  });
+});
+
 describe("monthCash", () => {
   it("soma só o que foi pago no mês e acumula o saldo por dia", () => {
     const c = monthCash(

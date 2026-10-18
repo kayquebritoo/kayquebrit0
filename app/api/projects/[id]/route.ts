@@ -46,6 +46,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (before && before.status !== body.status) statusChanged = body.status;
     }
     if (body.titulo !== undefined) patch.titulo = body.titulo;
+    if (body.categoria !== undefined) patch.categoria = body.categoria;
+    if (body.contactId !== undefined) patch.contactId = body.contactId || null;
     if (body.valor !== undefined) patch.valor = body.valor;
     if (body.prazo !== undefined) patch.prazo = body.prazo ? new Date(body.prazo) : null;
     // Fase 1 — vitrine / associação com curso.
@@ -62,6 +64,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
     return NextResponse.json({ ok: true });
   } catch (e) {
+    if (/slug|unique|duplicate/i.test(e instanceof Error ? e.message : "")) {
+      return NextResponse.json({ error: "Slug já em uso." }, { status: 409 });
+    }
     return serverError(e);
   }
 }

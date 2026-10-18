@@ -16,7 +16,9 @@ export default function KanbanBoard() {
   const [items, setItems] = useState<Project[]>([]);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<Project | null>(null);
-  const [form, setForm] = useState({ titulo: "", categoria: "video", clienteEmail: "", valor: "", prazo: "" });
+  const [form, setForm] = useState({ titulo: "", categoria: "video", clienteEmail: "", contactId: "", valor: "", prazo: "" });
+  const [contacts, setContacts] = useState<{ id: string; name: string; company: string | null }[]>([]);
+  const [notice, setNotice] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -46,6 +48,17 @@ export default function KanbanBoard() {
     };
   }, []);
 
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/contacts")
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((j) => alive && setContacts(Array.isArray(j.items) ? j.items : []))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   async function move(id: string, status: string) {
     setItems((s) => s.map((p) => (p.id === id ? { ...p, status } : p)));
     try {
@@ -66,11 +79,19 @@ export default function KanbanBoard() {
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, valor: form.valor || undefined, prazo: form.prazo || undefined }),
+        body: JSON.stringify({
+          ...form,
+          clienteEmail: form.clienteEmail || undefined,
+          contactId: form.contactId || undefined,
+          valor: form.valor || undefined,
+          prazo: form.prazo || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Falha.");
-      setForm({ titulo: "", categoria: "video", clienteEmail: "", valor: "", prazo: "" });
+      setForm({ titulo: "", categoria: "video", clienteEmail: "", contactId: "", valor: "", prazo: "" });
+      setError("");
+      setNotice(data.warning || "");
       load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro.");
@@ -98,8 +119,19 @@ export default function KanbanBoard() {
         </select>
         <input value={form.clienteEmail} onChange={(e) => setForm({ ...form, clienteEmail: e.target.value })} placeholder="E-mail do cliente" type="email" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50" />
         <input value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} placeholder="Valor R$" inputMode="decimal" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50" />
-        <button type="submit" className="rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-white">Criar</button>
+        <select value={form.contactId} onChange={(e) => setForm({ ...form, contactId: e.target.value })} aria-label="Cliente do CRM" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none md:col-span-2">
+          <option value="" className="bg-[#1a1828]">Cliente do CRM (opcional)</option>
+          {contacts.map((c) => (
+            <option key={c.id} value={c.id} className="bg-[#1a1828]">{c.company ? `${c.name} · ${c.company}` : c.name}</option>
+          ))}
+        </select>
+        <label className="flex items-center gap-2 rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm text-white/60 md:col-span-2">
+          Prazo
+          <input type="date" value={form.prazo} onChange={(e) => setForm({ ...form, prazo: e.target.value })} className="min-w-0 flex-1 bg-transparent outline-none" />
+        </label>
+        <button type="submit" className="rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-white md:col-span-2">Criar</button>
       </form>
+      {notice && <p role="status" className="mb-4 rounded-xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">{notice}</p>}
 
       <div className="flex gap-3 overflow-x-auto pb-4">
         {PIPELINE.map((col) => (

@@ -120,6 +120,7 @@ export default function Today() {
   const [data, setData] = useState<TodayData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"tudo" | "tarefas" | "dinheiro">("tudo");
+  const [scope, setScope] = useState<"empresa" | "pessoal" | "all">("empresa");
   const [cmd, setCmd] = useState("");
   const [busy, setBusy] = useState(false);
   const [reply, setReply] = useState<string | null>(null);
@@ -140,7 +141,7 @@ export default function Today() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/admin/today", { cache: "no-store" });
+      const r = await fetch(`/api/admin/today?scope=${scope}`, { cache: "no-store" });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "Falha ao carregar.");
       const d = j as TodayData;
@@ -155,7 +156,7 @@ export default function Today() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao carregar.");
     }
-  }, []);
+  }, [scope]);
 
   useEffect(() => {
     const first = setTimeout(load, 0);
@@ -543,6 +544,11 @@ export default function Today() {
             </h2>
             <Link href="/admin/financeiro" className="kb-chip">Abrir</Link>
           </div>
+          <div className="kb-seg" role="group" aria-label="Carteira">
+            <button type="button" aria-pressed={scope === "empresa"} onClick={() => setScope("empresa")}>Empresa</button>
+            <button type="button" aria-pressed={scope === "pessoal"} onClick={() => setScope("pessoal")}>Pessoal</button>
+            <button type="button" aria-pressed={scope === "all"} onClick={() => setScope("all")}>Tudo</button>
+          </div>
           <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
             <div>
               <p className="kb-muted text-[13px]">Saldo pago no mês</p>
@@ -567,7 +573,6 @@ export default function Today() {
               </div>
             </div>
           )}
-          <p className="kb-faint text-xs">Separação pessoal × empresa chega na próxima etapa do financeiro.</p>
         </section>
 
         {/* ── Ao vivo + agenda ── */}

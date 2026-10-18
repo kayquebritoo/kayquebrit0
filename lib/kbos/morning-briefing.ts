@@ -68,6 +68,8 @@ export type MorningCharge = {
   valor: string;
   status: string;
   vencimento: Date | null;
+  /** carteira: "empresa" | "pessoal" */
+  scope?: string;
 };
 
 export type MorningBriefingData = {
@@ -127,17 +129,22 @@ export function formatMorningBriefing(data: MorningBriefingData): string {
   if (data.pendingCharges.length === 0) {
     lines.push("— Nada a cobrar. Caixa em dia.");
   } else {
-    const total = data.pendingCharges.reduce((a, t) => a + Number(t.valor || 0), 0);
+    const sum = (xs: MorningCharge[]) => xs.reduce((a, t) => a + Number(t.valor || 0), 0);
+    const personal = data.pendingCharges.filter((t) => t.scope === "pessoal");
     for (const t of data.pendingCharges.slice(0, 15)) {
       const tag = t.status === "vencido" ? "🔴 vencido" : "🟡 pendente";
-      const sign = t.tipo === "saida" ? " (a pagar)" : "";
+      const sign = (t.tipo === "saida" ? " (a pagar)" : "") + (t.scope === "pessoal" ? " (pessoal)" : "");
       const due = t.vencimento
         ? ` — vence ${t.vencimento.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}`
         : "";
       lines.push(`• ${t.descricao} — ${brl(t.valor)} [${tag}]${sign}${due}`);
     }
     if (data.pendingCharges.length > 15) lines.push(`• …e mais ${data.pendingCharges.length - 15}.`);
-    lines.push(`Total pendente: *${brl(total)}*`);
+    lines.push(
+      personal.length
+        ? `Total pendente — empresa: *${brl(sum(data.pendingCharges.filter((t) => t.scope !== "pessoal")))}* · pessoal: *${brl(sum(personal))}*`
+        : `Total pendente: *${brl(sum(data.pendingCharges))}*`
+    );
   }
   lines.push("", "Bom dia e boas vendas! 🚀");
   return lines.join("\n");
@@ -180,6 +187,7 @@ export async function gatherMorningBriefing(now: Date = new Date()): Promise<Mor
         valor: transactions.valor,
         status: transactions.status,
         vencimento: transactions.vencimento,
+        scope: transactions.scope,
       })
       .from(transactions)
       .where(inArray(transactions.status, ["pendente", "vencido"]))
@@ -210,6 +218,7 @@ export async function gatherMorningBriefing(now: Date = new Date()): Promise<Mor
       valor: r.valor,
       status: r.status,
       vencimento: r.vencimento,
+      scope: r.scope,
     })),
   };
 }
