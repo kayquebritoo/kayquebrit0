@@ -26,7 +26,8 @@ describe("dayOffsetFor (teto diário)", () => {
     expect(dayOffsetFor(160, 80, 0)).toBe(2);
   });
   it("desconta o que já saiu hoje", () => {
-    expect(dayOffsetFor(19, 80, 60)).toBe(1);
+    expect(dayOffsetFor(19, 80, 60)).toBe(0);
+    expect(dayOffsetFor(20, 80, 60)).toBe(1);
     expect(dayOffsetFor(0, 80, 80)).toBe(1);
     expect(dayOffsetFor(19, 80, 40)).toBe(0);
   });
