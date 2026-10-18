@@ -72,7 +72,10 @@ const GROUPS: NavGroup[] = [
     id: "dinheiro",
     label: "Dinheiro",
     icon: ico("M3 7h18v10H3zM7 12h.01M17 12h.01M12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"),
-    links: [{ href: "/admin/financeiro", label: "Fluxo de caixa", adminOnly: true }],
+    links: [
+      { href: "/admin/financeiro", label: "Fluxo de caixa", adminOnly: true },
+      { href: "/admin/relatorios", label: "Relatórios e MEI", adminOnly: true },
+    ],
   },
   {
     id: "ajustes",
