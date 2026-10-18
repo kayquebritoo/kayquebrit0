@@ -11,9 +11,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 <!-- BEGIN:kbos-deploy -->
 # KBOS — Ecossistema de Gestão Comercial e Automação (Kayque Brito)
 
+> **Comece por `docs/HANDOFF.md`**: estado atual, como publicar, pegadinhas e próximos passos.
+
 - **Profissional**: Kayque Brito (Desenvolvedor de Software, Designer e Produtor Audiovisual).
 - **VPS**: `179.236.67.19` · código em `/opt/kbos` · prod em `https://kbos.kayquebrito.com.br`
-- **Fluxo de Deploy**: commit + `git push origin main` → GitHub Actions (`.github/workflows/deploy-vps.yml`) publica sozinho. Nada de SSH manual.
+- **Fluxo de Deploy**: branch → CI verde → merge em `main` → o cron da VPS (`deploy.sh --auto`) publica sozinho. Forçar na VPS: `./deploy.sh` (não `git pull`).
 - **Se precisar comandar a VPS à mão** (a partir da RAIZ do repo, nunca de `infra/`):
   `docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml --profile evolution up -d --build`
 - **Regras Técnicas**: NUNCA commitar segredos (`.env*` está no `.gitignore`); schema via `npx drizzle-kit push` contra o Neon; migrações SQL vivem em `drizzle/000N_*.sql` + entrada em `drizzle/meta/_journal.json`.
