@@ -1166,6 +1166,9 @@ html:has(.kbos) body {
   overscroll-behavior: auto;
 }
 
+/* O body não deve capturar o sticky sem ser o elemento que rola. */
+html:has(.client-plan) body { overflow: visible; }
+
 /* Espaço de marca e planejamento: conteúdo e interação começam no celular. */
 .client-plan { --cp-line: rgba(237,230,236,.12); overflow-x: clip; background: #11101e; color: #ede6ec; line-height: 1.65; }
 .cp-top { display:flex; align-items:center; justify-content:space-between; gap:12px; max-width:1180px; margin:auto; padding:20px 18px; border-bottom:1px solid var(--cp-line); }

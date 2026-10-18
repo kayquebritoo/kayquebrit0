@@ -1,6 +1,6 @@
-import { KbosShell } from "@/components/kbos/Shell";
 import StaticPlanPreview from "@/components/kbos/planning/StaticPlanPreview";
 import { companyProfileSchema,seedPlan } from "@/lib/kbos/planning-model";
+export const viewport = { width: 'device-width', initialScale: 1, maximumScale: 5, userScalable: true };
 export const metadata={title:'Demonstração de planejamento — KBOS'};
 export default function Page(){
  const profile=companyProfileSchema.parse({companyName:'Estúdio Aurora · exemplo',contactName:'Cliente demonstrativo',tagline:'Ideias com propósito. Presença com identidade.',segment:'Estúdio criativo fictício',concept:'Uma marca que traduz complexidade em escolhas visuais simples, humanas e consistentes.',audience:'Pequenos negócios que valorizam clareza, cuidado e uma presença digital coerente.',tone:'Próximo, confiante e claro. Explicar sem jargão; convidar sem pressionar.',objective:'Organizar a presença digital e tornar a proposta de valor fácil de reconhecer.',colors:[{name:'Floresta',hex:'#254E42'},{name:'Lima suave',hex:'#C6D9A0'},{name:'Papel',hex:'#EEE9DF'},{name:'Grafite',hex:'#242424'}]});
@@ -12,5 +12,5 @@ export default function Page(){
  doc.goals=[{title:'Comunicar a proposta de valor com clareza',metric:'Compreensão da mensagem',target:'Validar a mensagem principal com o cliente',dueDate:'2026-11-15'},{title:'Construir consistência editorial',metric:'Conteúdos aprovados',target:'Definir e validar os primeiros temas',dueDate:'2026-11-20'}];
  doc.editorial=[{date:'2026-11-05',title:'O que faz uma marca ser reconhecida?',channel:'Instagram',format:'Carrossel',goal:'Explicar o valor da consistência visual.',cta:'Qual detalhe faz você reconhecer uma marca?'},{date:'2026-11-12',title:'Por trás de uma escolha criativa',channel:'Instagram',format:'Vídeo curto',goal:'Mostrar o processo e aproximar o público.',cta:'Conheça as decisões que constroem uma identidade.'},{date:'2026-11-19',title:'Sua marca fala com quem?',channel:'Instagram',format:'Publicação educativa',goal:'Abrir conversa sobre público e posicionamento.',cta:'Salve estas perguntas para revisar sua comunicação.'}];
  doc.guidelines='Priorizar contraste, legibilidade e áreas de respiro. Usar a paleta com intenção; evitar deformar a logo e aplicar efeitos que prejudiquem sua leitura. Este conteúdo é apenas um exemplo de apresentação.';
- return <KbosShell title="Demonstração do espaço da marca" subtitle="Conteúdo fictício para visualizar a experiência do cliente" admin><StaticPlanPreview data={{title:doc.title,profile,document:doc,version:1,status:'review',feedback:[],approvedAt:null,startDate:'2026-11-01',endDate:'2027-04-01'}}/></KbosShell>;
+ return <StaticPlanPreview data={{title:doc.title,profile,document:doc,version:1,status:'review',feedback:[],approvedAt:null,startDate:'2026-11-01',endDate:'2027-04-01'}}/>;
 }
