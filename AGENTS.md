@@ -21,6 +21,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 5. **Ao terminar:** acrescente uma linha no "Diário" de `docs/HANDOFF.md` (data · agente · o que mudou · o que falta).
 6. Áreas sensíveis — mexa só com cuidado e testes: `lib/kbos/agent.ts`, `lib/kbos/inbox.ts`, `app/api/webhooks/evolution`, `lib/kbos/migrations.ts`, `infra/docker-compose.yml`, `deploy.sh`.
 
+## Segundo cérebro compartilhado (preferência do Kayque)
+- Registre decisões e evolução ao concluir trabalho no KBOS. No Mac, crie uma nova nota datada em `Documents/Obsidian Vault/20-Projetos/KBOS/log/`, preservando notas e edições existentes. Se o vault não estiver disponível, registre no Diário do HANDOFF e informe a pendência; nunca declare sincronizado sem verificar.
+- Diferencie implementação, publicação e validação real. Inclua fonte/data, preferências confirmadas e pendências. Nunca copie senhas, chaves, tokens ou dados bancários para as notas.
+- A exportação operacional roda no worker e grava apenas em `/vault/40-KBOS-Automatico`, volume permanente. Notas humanas, tom de voz e marca não são substituídos pelo exportador. Detalhes em `docs/SEGUNDO-CEREBRO.md`.
+- Sync e conectores de IA são etapas distintas: não prometer que conversas de Claude, GPT ou Gemini são salvas automaticamente sem um conector configurado e gravação confirmada.
+
 - **Profissional**: Kayque Brito (Desenvolvedor de Software, Designer e Produtor Audiovisual).
 - **VPS**: `179.236.67.19` · código em `/opt/kbos` · prod em `https://kbos.kayquebrito.com.br`
 - **Fluxo de Deploy**: branch → CI verde → merge em `main` → o cron da VPS (`deploy.sh --auto`) publica sozinho. Forçar na VPS: `./deploy.sh` (não `git pull`).

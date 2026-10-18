@@ -1246,6 +1246,8 @@ html:has(.auth-page),html:has(.auth-page) body { height:auto; overflow:auto; }
 @media(min-width:850px) { .auth-page {padding:32px 48px;}.auth-layout {grid-template-columns:1fr 1fr;min-height:calc(100svh - 210px);margin:32px auto;gap:64px;}.auth-story {display:block;}.auth-card {padding:40px 34px;}.auth-top>span {font-size:10px;} }
 
 /* Movimento: entradas breves, feedback ao toque e ambiente discreto. */
+@keyframes kb-aura { 50% {opacity:.55;transform:translateY(14px)} }
+.auth-page::before {animation:kb-aura 12s ease-in-out infinite;}
 @keyframes kb-arrive { from {opacity:0;transform:translateY(14px)} to {opacity:1;transform:translateY(0)} }
 @keyframes kb-orbit { from {transform:rotate(-30deg) scaleY(.6)} to {transform:rotate(330deg) scaleY(.6)} }
 @keyframes kb-breathe { 50% {opacity:.45;transform:scale(.85)} }
