@@ -236,6 +236,19 @@ export async function setUserPasswordById(userId: string, newPassword: string) {
 export async function findLoginUser(raw: string) {
  const value=raw.trim().toLowerCase();
  const identifier=value === "kayque" ? ADMIN_EMAIL : value;
- const [user]=await db().select().from(users).where(sql`lower(${users.email}) = ${identifier} OR lower(${users.username}) = ${identifier}`).limit(1);
- return user;
+ const phone=normalizeLoginPhone(raw);
+ const matches=await db().select().from(users).where(phone
+  ? sql`(CASE WHEN length(regexp_replace(${users.phone}, '[^0-9]', '', 'g')) IN (10,11) THEN '55'||regexp_replace(${users.phone}, '[^0-9]', '', 'g') ELSE regexp_replace(${users.phone}, '[^0-9]', '', 'g') END) = ${phone}`
+  : sql`lower(${users.email}) = ${identifier} OR lower(${users.username}) = ${identifier}`).limit(2);
+ // Não escolher um titular arbitrário se o legado tiver telefones repetidos.
+ return matches.length===1 ? matches[0] : undefined;
+}
+
+/** Brasil sem DDI ou telefone internacional explicitamente informado com +. */
+export function normalizeLoginPhone(raw:string):string|null {
+ const value=raw.trim();
+ if(!/^[+\d\s().-]+$/.test(value))return null;
+ let digits=value.replace(/\D/g,'');
+ if(!value.startsWith('+')&&(digits.length===10||digits.length===11))digits='55'+digits;
+ return /^[1-9]\d{11,14}$/.test(digits)?digits:null;
 }

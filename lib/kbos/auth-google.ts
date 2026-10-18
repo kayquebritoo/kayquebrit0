@@ -43,12 +43,18 @@ export async function finishGoogle(url:URL,raw:string,authenticatedUserId?:strin
   // Google só é autoridade do endereço para Gmail e Workspace. Não vincular
   // contas de terceiros apenas porque Google confirmou esse e-mail no passado.
   const authoritative=claims.email.endsWith('@gmail.com') || claims.hd===claims.email.split('@')[1];
-  if(!authoritative)throw new PublicError('Entre com sua senha ou código. Este e-mail precisa de vinculação assistida.');
   const [existing]=await db().select().from(users).where(eq(users.email,claims.email.toLowerCase())).limit(1);
-  if(!existing || existing.googleSubject)throw new PublicError('Use a conta Google do e-mail já cadastrado no KBOS.');
+  if(!existing){
+   const [created]=await db().insert(users).values({email:claims.email.toLowerCase(),name:typeof claims.name==='string'?claims.name.slice(0,100):claims.email.split('@')[0],googleSubject:claims.sub,role:'cliente'}).onConflictDoNothing().returning();
+   if(!created)throw new PublicError('Sua conta mudou. Tente entrar novamente.');
+   user=created;
+  }else{
+  if(!authoritative)throw new PublicError('Entre com sua senha ou código. Este e-mail precisa de vinculação assistida.');
+  if(existing.googleSubject)throw new PublicError('Use a conta Google do e-mail já cadastrado no KBOS.');
   const [linked]=await db().update(users).set({googleSubject:claims.sub}).where(and(eq(users.id,existing.id),isNull(users.googleSubject))).returning();
   if(!linked)throw new PublicError('Tente entrar novamente.');
   user=linked;
+  }
  }
  const [session]=await db().insert(sessions).values({userId:user.id,expiresAt:new Date(Date.now()+30*86400_000)}).returning();
  return {sessionId:session.id,dest:safeAuthNext(flow.next||'')||(user.role==='admin'?'/admin':'/portal')};

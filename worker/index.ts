@@ -6,6 +6,7 @@
 // briefing.followup (crons horários). O sweeper resgata jobs que ficaram
 // `pendente` no Postgres enquanto o Redis estava fora. Heartbeat em
 // `kbos:worker:heartbeat` alimenta o /api/health.
+import { exportBrainNotes,loadBrainNotes } from "../lib/kbos/brain-export";
 import { Queue, QueueEvents, Worker } from "bullmq";
 import { db } from "../lib/kbos/db";
 import {
@@ -59,6 +60,16 @@ async function main() {
   await sweep(queue);
   const sweepTimer = setInterval(() => void sweep(queue), SWEEP_MS);
 
+  let exporting=false;
+  const syncBrain=async()=>{
+    if(!process.env.KBOS_VAULT_PATH||exporting)return;
+    exporting=true;
+    try{const report=await exportBrainNotes(process.env.KBOS_VAULT_PATH,await loadBrainNotes());if(report.written||report.conflicted)log('segundo cérebro',report);}
+    catch(e){log('segundo cérebro indisponível:',e instanceof Error?e.message:'falha');}
+    finally{exporting=false;}
+  };
+  void syncBrain();
+  const brainTimer=setInterval(()=>void syncBrain(),300_000);
   const hb = getRedis();
   const beat = () => {
     hb.set(HEARTBEAT_KEY, String(Date.now()), "EX", HEARTBEAT_TTL_S).catch(() => {
@@ -72,6 +83,7 @@ async function main() {
     log(`encerrando (${sig})…`);
     clearInterval(sweepTimer);
     clearInterval(hbTimer);
+    clearInterval(brainTimer);
     await worker.close();
     await events.close();
     await queue.close();

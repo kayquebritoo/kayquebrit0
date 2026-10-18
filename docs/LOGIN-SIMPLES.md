@@ -36,3 +36,14 @@ Usa uma conta KBOS já cadastrada. Associação automática por endereço soment
 ## Validação
 
 PGlite descartável: usuário/e-mail, senha incorreta, hash do código, expiração, limite de tentativas, reenvio por conta/canal, entrega falha, destino não cadastrado, concorrência e uso único. Envio real não deve ser testado para terceiros; o titular solicita e digita o próprio código.
+
+
+## Cadastro, telefone e movimento — evolução de 18/out
+
+- Cadastro público por nome + WhatsApp com DDD ou e-mail. Conta nasce somente após código válido; senha/usuário são escolhidos já autenticado. É possível continuar sem senha e usar o WhatsApp nos próximos acessos.
+- Um código por destino a cada 60 segundos, cinco tentativas, cinco minutos, uso único e criação de conta/sessão em uma única operação SQL. Sem Redis, envio e confirmação de código ficam temporariamente indisponíveis, para preservar o limite contra abuso.
+- Telefone normalizado para acesso; legado com números duplicados exige correção assistida, sem escolher um titular arbitrário. Cadastro nunca altera nome, telefone, senha ou papel de uma conta existente.
+- Google pode criar clientes novos após verificar a identidade. Vinculação automática de e-mail existente continua restrita a Gmail/Workspace; outros casos exigem sessão prévia e vínculo em Meu acesso. Nunca promove novo usuário a administrador.
+- Sessão salva por 30 dias. Novo aparelho, saída explícita ou sessão expirada pedem comprovação novamente.
+- Migração 0016 permite desafios pendentes sem criar usuário antes da prova de posse.
+- Login com transições entre etapas; portal com esqueleto de carregamento, indicadores, entradas escalonadas, feedback ao toque e formulário de ajustes na própria página. Preferência de movimento reduzido respeitada.

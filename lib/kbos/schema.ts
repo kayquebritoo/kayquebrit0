@@ -693,7 +693,9 @@ export const clientPlans = pgTable("kbos_client_plans", {
 
 export const authChallenges = pgTable("kbos_auth_challenges", {
  id: uuid("id").primaryKey().defaultRandom(),
- userId: uuid("user_id").notNull().references(() => users.id, {onDelete:"cascade"}),
+ userId: uuid("user_id").references(() => users.id, {onDelete:"cascade"}),
+ registration: jsonb("registration").$type<{name:string;email:string;phone:string|null}>(),
+ destination: text("destination"),
  codeHash: text("code_hash").notNull(), channel: text("channel").notNull(),
  attempts: integer("attempts").notNull().default(0), consumed: boolean("consumed").notNull().default(false),
  expiresAt: timestamp("expires_at",{withTimezone:true}).notNull(), createdAt: ts("created_at"),

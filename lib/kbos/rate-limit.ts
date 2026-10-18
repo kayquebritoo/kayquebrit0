@@ -77,7 +77,7 @@ function limitedResponse(limit: number, state: RateState) {
  * padrão `deny()` do rbac). Falha ABERTO sem Redis: o funil público e o
  * login não podem cair junto com o cache — o evento vai para o log.
  */
-export async function withRateLimit(req: Request, scope: keyof typeof POLICIES) {
+export async function withRateLimit(req: Request, scope: keyof typeof POLICIES, failClosed = false) {
   const { limit, windowMs } = POLICIES[scope];
   const key = `rl:${scope}:${clientIp(req)}`;
   try {
@@ -88,6 +88,7 @@ export async function withRateLimit(req: Request, scope: keyof typeof POLICIES) 
     if (!state.allowed) return limitedResponse(limit, state);
     return null;
   } catch (e) {
+    if(failClosed)return NextResponse.json({error:"Confirmação temporariamente indisponível. Tente novamente em instantes."},{status:503});
     console.warn(`[KBOS ratelimit] Redis fora (fail-open ${scope}):`, e instanceof Error ? e.message : e);
     return null;
   }

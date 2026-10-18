@@ -6,7 +6,7 @@ export async function GET() {
   const user = await sessionUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   return NextResponse.json({
-    user: { id: user.id, email: user.email, name: user.name, role: user.role, username: user.username, googleConnected: !!user.googleSubject },
+    user: { id: user.id, email: user.email, name: user.name, phone:user.phone, role: user.role, username: user.username, googleConnected: !!user.googleSubject },
   });
 }
 

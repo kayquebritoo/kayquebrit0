@@ -13,7 +13,7 @@ vi.mock('openid-client',()=>({discovery:vi.fn().mockResolvedValue({}),enableNonR
 import { finishGoogle,safeAuthNext } from '../auth-google';
 import { sendEvolutionText } from '../whatsapp';
 import { sendEmail } from '../email';
-import { requestAccessCode,verifyAccessCode } from '../auth-code';
+import { requestAccessCode,requestRegistrationCode,verifyAccessCode } from '../auth-code';
 import { loginWithPassword,findLoginUser } from '../auth';
 import { hashPassword } from '../password';
 const pg=new PGlite(),d=drizzle(pg,{schema});
@@ -23,7 +23,31 @@ beforeEach(async()=>{vi.clearAllMocks();await pg.exec('TRUNCATE kbos_users CASCA
 afterAll(()=>pg.close());
 function deliveredCode(){return String(vi.mocked(sendEvolutionText).mock.calls[0][1]).match(/\b\d{6}\b/)![0];}
 describe('acesso simples sem magic link',()=>{
- it('resolve usuário explícito e e-mail sem aceitar prefixos ambíguos',async()=>{expect((await findLoginUser('MEU.ESTUDIO')).id).toBe(id);expect(await findLoginUser('cliente')).toBeUndefined();expect((await loginWithPassword('meu.estudio','senha-segura')).ok).toBe(true);expect((await loginWithPassword('meu.estudio','errada')).ok).toBe(false);});
+ it('cadastra WhatsApp somente após código e permite entrar pelo número',async()=>{
+  const result=await requestRegistrationCode('Pessoa Nova','(91) 98888-7777','whatsapp');
+  expect(await d.select().from(schema.users)).toHaveLength(1);
+  const verified=await verifyAccessCode(result.challengeId,deliveredCode());
+  const created=await findLoginUser('+55 91 98888-7777');
+  expect(created?.id).toBe(verified.userId);expect(created?.role).toBe('cliente');expect(created?.passwordHash).toBeNull();
+  await expect(verifyAccessCode(result.challengeId,deliveredCode())).rejects.toThrow();
+ });
+ it('cadastro não troca dados de titular existente nem duplica telefone',async()=>{
+  const result=await requestRegistrationCode('Nome Malicioso','+55 91 99999-9999','whatsapp');
+  const verified=await verifyAccessCode(result.challengeId,deliveredCode());
+  expect(verified.userId).toBe(id);expect(await d.select().from(schema.users)).toHaveLength(1);expect((await findLoginUser('meu.estudio'))?.name).toBe('Cliente');
+ });
+ it('limita cadastro por destino e não cria conta com código errado',async()=>{
+  const result=await requestRegistrationCode('Nova Pessoa','91988887777','whatsapp');
+  await requestRegistrationCode('Outro nome','+55 91 98888-7777','whatsapp');expect(sendEvolutionText).toHaveBeenCalledTimes(1);
+  const code=deliveredCode();await expect(verifyAccessCode(result.challengeId,code==='000000'?'111111':'000000')).rejects.toThrow();
+  expect(await d.select().from(schema.users)).toHaveLength(1);
+ });
+ it('nunca escolhe um titular entre números legados duplicados',async()=>{
+  await d.insert(schema.users).values({name:'Duplicado',email:'duplicado@example.com',phone:'+55 (91) 99999-9999'});
+  expect(await findLoginUser('91999999999')).toBeUndefined();await requestRegistrationCode('Teste','91999999999','whatsapp');expect(sendEvolutionText).not.toHaveBeenCalled();
+ });
+
+ it('resolve usuário explícito e e-mail sem aceitar prefixos ambíguos',async()=>{expect((await findLoginUser('MEU.ESTUDIO'))?.id).toBe(id);expect(await findLoginUser('cliente')).toBeUndefined();expect((await loginWithPassword('meu.estudio','senha-segura')).ok).toBe(true);expect((await loginWithPassword('meu.estudio','errada')).ok).toBe(false);});
  it('grava só hash, usa código uma vez e mantém a permissão original',async()=>{const result=await requestAccessCode('meu.estudio','whatsapp');const code=deliveredCode();const [challenge]=await d.select().from(schema.authChallenges);expect(challenge.codeHash).not.toContain(code);const session=await verifyAccessCode(result.challengeId,code);expect(session.userId).toBe(id);expect((await d.select().from(schema.users))[0].role).toBe('cliente');await expect(verifyAccessCode(result.challengeId,code)).rejects.toThrow();expect((await d.select().from(schema.sessions)).length).toBe(1);});
  it('bloqueia a sexta tentativa mesmo com o código certo',async()=>{const result=await requestAccessCode('cliente@example.com','whatsapp'),code=deliveredCode(),wrong=code==='000000'?'111111':'000000';for(let i=0;i<5;i++)await expect(verifyAccessCode(result.challengeId,wrong)).rejects.toThrow();await expect(verifyAccessCode(result.challengeId,code)).rejects.toThrow();expect((await d.select().from(schema.sessions)).length).toBe(0);});
  it('não envia códigos para destinos escolhidos pelo visitante nem cria contas',async()=>{const unknown=await requestAccessCode('fora@example.com','whatsapp');expect(unknown.challengeId).toMatch(/^[a-f0-9-]{36}$/);expect(sendEvolutionText).not.toHaveBeenCalled();await d.update(schema.users).set({phone:null}).where(eq(schema.users.id,id));const unavailable=await requestAccessCode('meu.estudio','whatsapp');expect(unavailable.message).toBe(unknown.message);expect(sendEvolutionText).not.toHaveBeenCalled();expect((await d.select().from(schema.users)).length).toBe(1);});
@@ -39,7 +63,7 @@ describe('vinculação Google',()=>{
  beforeEach(()=>{vi.stubEnv('GOOGLE_CLIENT_ID','test-client');vi.stubEnv('GOOGLE_CLIENT_SECRET','test-secret');oidcMock.grant.mockResolvedValue({claims:()=>oidcMock.claims});});
  it('não vincula e-mail de terceiro só por estar verificado no Google',async()=>{oidcMock.claims={sub:'google-1',email:'cliente@example.com',email_verified:true};await expect(finishGoogle(callback,flow())).rejects.toThrow('vinculação');expect(await d.select().from(schema.sessions)).toHaveLength(0);});
  it('vincula Workspace correspondente e conserva o papel da conta existente',async()=>{oidcMock.claims={sub:'google-1',email:'cliente@example.com',email_verified:true,hd:'example.com'};const result=await finishGoogle(callback,flow());expect(result.dest).toBe('/portal');const [user]=await d.select().from(schema.users);expect(user.googleSubject).toBe('google-1');expect(user.role).toBe('cliente');expect(oidcMock.grant).toHaveBeenCalledWith(expect.anything(),callback,{pkceCodeVerifier:'verifier',expectedState:'state',expectedNonce:'nonce',idTokenExpected:true});});
- it('não cria conta nem sessão para um e-mail desconhecido ou não verificado',async()=>{oidcMock.claims={sub:'google-1',email:'novo@gmail.com',email_verified:true};await expect(finishGoogle(callback,flow())).rejects.toThrow('cadastrado');oidcMock.claims={sub:'google-1',email:'cliente@example.com',email_verified:false,hd:'example.com'};await expect(finishGoogle(callback,flow())).rejects.toThrow('confirmar');expect(await d.select().from(schema.users)).toHaveLength(1);expect(await d.select().from(schema.sessions)).toHaveLength(0);});
+ it('cria cliente pelo Google verificado e recusa e-mail não verificado',async()=>{oidcMock.claims={sub:'google-1',email:'novo@gmail.com',email_verified:true};expect((await finishGoogle(callback,flow())).dest).toBe('/portal');oidcMock.claims={sub:'google-1',email:'cliente@example.com',email_verified:false,hd:'example.com'};await expect(finishGoogle(callback,flow())).rejects.toThrow('confirmar');expect(await d.select().from(schema.users)).toHaveLength(2);expect(await d.select().from(schema.sessions)).toHaveLength(1);});
  it('não permite dois subjects assumirem a mesma conta',async()=>{await d.update(schema.users).set({googleSubject:'original'}).where(eq(schema.users.id,id));oidcMock.claims={sub:'outro',email:'cliente@example.com',email_verified:true,hd:'example.com'};await expect(finishGoogle(callback,flow())).rejects.toThrow('cadastrado');expect(await d.select().from(schema.sessions)).toHaveLength(0);});
  it('conecta um Google pessoal diferente somente à própria sessão autenticada',async()=>{oidcMock.claims={sub:'google-pessoal',email:'pessoal@gmail.com',email_verified:true};const link=JSON.stringify({...JSON.parse(flow()),linkUserId:id});const result=await finishGoogle(callback,link,id);expect(result.dest).toBe('/portal');const [user]=await d.select().from(schema.users);expect(user.googleSubject).toBe('google-pessoal');expect(user.email).toBe('cliente@example.com');expect(user.role).toBe('cliente');});
  it('não conecta Google usando um id sem a sessão correspondente',async()=>{oidcMock.claims={sub:'google-pessoal',email:'pessoal@gmail.com',email_verified:true};const link=JSON.stringify({...JSON.parse(flow()),linkUserId:id});await expect(finishGoogle(callback,link)).rejects.toThrow('Entre na sua conta');await expect(finishGoogle(callback,link,'00000000-0000-0000-0000-000000000001')).rejects.toThrow('Entre na sua conta');expect((await d.select().from(schema.users))[0].googleSubject).toBeNull();});

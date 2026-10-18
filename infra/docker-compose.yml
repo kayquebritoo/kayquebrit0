@@ -129,6 +129,8 @@ services:
         EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-kbos-dev-key}
         EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-kbos-primary}
     command: ["npx", "tsx", "worker/index.ts"]
+    volumes:
+      - brain-vault:/vault
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgres://postgres:kbos@db:5432/kbos}
       REDIS_URL: redis://redis:6379
@@ -136,6 +138,7 @@ services:
       EVOLUTION_API_URL: ${EVOLUTION_API_URL:-http://evolution:8080}
       EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-kbos-dev-key}
       EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-kbos-primary}
+      KBOS_VAULT_PATH: /vault
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-5}
       WORKER_SWEEP_MS: ${WORKER_SWEEP_MS:-30000}
       WORKER_CRON_MS: ${WORKER_CRON_MS:-3600000}
@@ -153,6 +156,24 @@ services:
         condition: service_healthy
       db:
         condition: service_healthy
+    restart: unless-stopped
+
+  # Opcional: só ativar após login e escolha do vault remoto pelo titular.
+  brain-sync:
+    profiles: ["brain-sync"]
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.obsidian
+    volumes:
+      - brain-vault:/vault
+      - brain-sync-config:/root/.config
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    cpus: "0.25"
+    mem_limit: 256m
     restart: unless-stopped
 
   # --- Evolution API (motor WhatsApp) — profile `evolution` ---
@@ -214,6 +235,8 @@ services:
     restart: unless-stopped
 
 volumes:
+  brain-sync-config:
+  brain-vault:
   whisper-models:
   redis-data:
   pg-data:

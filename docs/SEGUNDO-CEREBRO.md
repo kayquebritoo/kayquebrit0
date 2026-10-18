@@ -1,6 +1,34 @@
 # Segundo cérebro — fluxo recomendado para Kayque
 
-Pesquisa e diagnóstico em 18/10/2026. Recomendação de arquitetura; a sincronização automática e o Hermes ainda não foram instalados.
+Pesquisa e diagnóstico em 18/10/2026. Exportação operacional implementada no worker; sincronização com o vault pessoal e conexões das IAs ainda dependem da ativação descrita abaixo. Hermes não instalado.
+
+## Implantação atual
+
+A VPS foi medida pelo console Hostinger em 18/10, 13:41 UTC: 7.940 MiB totais, 5.573 MiB disponíveis; carga 0,06 / 0,06 / 0,18; disco de 96 GB com 29 GB disponíveis. É uma fotografia, não uma medição de pico. Worker ~86 MiB, web ~62 MiB, Evolution ~118 MiB, Whisper ~700 MiB. Há folga para Markdown e headless, mantendo limites.
+
+O worker agora reconcilia o estado do KBOS a cada cinco minutos em `/vault/40-KBOS-Automatico`, no volume persistente `kbos_brain-vault`. Exporta contatos, projetos e versões publicadas de planejamento. Não exporta documentos pessoais, endereço, senhas, tokens, conversas, rascunhos ou dados bancários. As fichas são separadas das notas humanas. Gravações atômicas, histórico local e propostas na pasta Conflitos preservam edições. Registros removidos recebem aviso de remoção; o histórico privado permanece no servidor.
+
+Esta primeira versão reconcilia o **estado atual**: não registra cada mudança intermediária entre duas varreduras. A outbox transacional descrita no estudo continua como evolução para eventos e linha do tempo completos. Histórico no mesmo volume não substitui backup externo.
+
+O serviço opcional `brain-sync` usa o pacote oficial `obsidian-headless@0.0.14`, Node 22, limite de 256 MiB / 0,25 CPU e nenhum acesso a banco, Docker, segredos do KBOS ou portas públicas. Ele compartilha somente o vault e tem volume próprio para credenciais. Não é iniciado automaticamente.
+
+### Ativação com Obsidian Sync (titular)
+
+Antes de conectar: backup do vault existente no Mac; ativar Sync nele e criar o vault remoto com criptografia de ponta a ponta. Não criar outro vault vazio sobre o existente. Contratação e senha são preenchidas pelo titular.
+
+Na raiz `/opt/kbos`, sempre com o `.env` correto:
+
+```sh
+docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml --profile brain-sync build brain-sync
+docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml --profile brain-sync run --rm brain-sync login
+docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml --profile brain-sync run --rm brain-sync sync-list-remote
+docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml --profile brain-sync run --rm brain-sync sync-setup --vault "NOME DO VAULT EXISTENTE" --path /vault
+docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml --profile brain-sync run --rm brain-sync sync-config --path /vault --conflict-strategy conflict --configs ""
+docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml --profile brain-sync up -d brain-sync
+```
+
+Não passar senha por argumento, chat ou histórico. Preferir prompts interativos. Conferir uma nota de teste em cada direção antes de considerar concluído. Conectores autenticados para ChatGPT/Claude/Gemini são uma etapa separada: Sync não dá memória automática aos modelos. Nenhum MCP público foi exposto por esta implementação.
+
 
 ## Escolha recomendada
 
@@ -64,7 +92,7 @@ Não expor uma API de arquivos sem autenticação nem oferecer terminal irrestri
 
 ## VPS e Hermes
 
-O HANDOFF registra 2 vCPU / 8 GB e serviços KBOS, worker, Redis e Evolution. A tentativa de medição por SSH expirou; **não foi possível confirmar memória livre, swap ou picos reais**. A saúde da aplicação não informa folga de RAM.
+O HANDOFF registra 2 vCPU / 8 GB e serviços KBOS, worker, Redis e Evolution. A medição pelo console está registrada acima. A saúde da aplicação não informa folga de RAM, e ainda não medimos picos de build.
 
 Um exportador de Markdown aproveitando o worker existente adiciona menos componentes e pontos de falha que outro agente sempre ativo. Arquivos de texto são pequenos; o risco de consumo vem do runtime, navegadores, indexadores, tarefas simultâneas e modelos locais.
 

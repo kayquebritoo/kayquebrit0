@@ -80,6 +80,10 @@ Diagnóstico: `GET /api/ai/assistant` (bloco `agent`) e
 `GET /api/admin/whatsapp/?log=1` (diário do webhook).
 
 ## Acesso e segundo cérebro (18/out)
+- Cadastro público verificado por código (WhatsApp/e-mail), Google cria cliente novo,
+  acesso por telefone normalizado e sessão de 30 dias. Migração 0016.
+  Portal com indicadores, carregamento real e microinterações; ajuste de arquivos
+  feito dentro da tela. Movimento reduzido respeitado.
 - Login mobile no padrão: usuário/e-mail e senha; alias admin `kayque`; código
   pelo WhatsApp/e-mail cadastrado para login e recuperação. Migração 0015.
   Google implementado, condicionado às credenciais OAuth. Operação e pendências:
@@ -88,7 +92,11 @@ Diagnóstico: `GET /api/ai/assistant` (bloco `agent`) e
   `Voz-e-Tom.md`, preservando o layout autoral. `docs/REVISAO-MARCA-LDP.md`.
 - Segundo cérebro: estudo em `docs/SEGUNDO-CEREBRO.md`. Recomenda Sync +
   headless e exportador determinístico KBOS → notas. Não instalado/ativado;
-  falta escolher sincronização e medir VPS (SSH expirou nesta sessão).
+  falta escolher sincronização e medir VPS (SSH por IPv4 expira; hostname conecta por IPv6, identidade já conhecida, root recusa as chaves do Mac).
+  Console Hostinger acessível. Medição: ~5,5 GB disponíveis e 29 GB livres.
+  Exportador operacional implementado no worker (volume `brain-vault`, cinco minutos);
+  cliente oficial headless opcional no profile `brain-sync`. Sync pessoal/MCP ainda
+  não ativados. Instruções e limites em `docs/SEGUNDO-CEREBRO.md`.
 
 ## Próximas fases (ordem aprovada)
 2. Venda conectada implementada: link de aceite no painel de Orçamentos;

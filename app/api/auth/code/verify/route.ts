@@ -10,7 +10,7 @@ import { users } from "@/lib/kbos/schema";
 import { SESSION_COOKIE,sessionCookieOptions,SESSION_DAYS } from "@/lib/kbos/rbac";
 const body=z.object({challengeId:z.uuid(),code:z.string().regex(/^\d{6}$/)});
 export async function POST(req:Request){
- const limited=await withRateLimit(req,'auth:verify');if(limited)return limited;
+ const limited=await withRateLimit(req,'auth:verify',true);if(limited)return limited;
  try{const parsed=await readBody(req,body);if('error'in parsed)return parsed.error;
  const session=await verifyAccessCode(parsed.data.challengeId,parsed.data.code);
  const [user]=await db().select({role:users.role}).from(users).where(eq(users.id,session.userId)).limit(1);

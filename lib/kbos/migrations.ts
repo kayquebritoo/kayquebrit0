@@ -117,6 +117,11 @@ export const SCHEMA_STEPS: { id: string; sql: string }[] = [
  created_at timestamptz NOT NULL DEFAULT now()
 )` },
 
+  { id: "auth.signup.0", sql: `ALTER TABLE kbos_auth_challenges ALTER COLUMN user_id DROP NOT NULL` },
+  { id: "auth.signup.1", sql: `ALTER TABLE kbos_auth_challenges ADD COLUMN IF NOT EXISTS registration jsonb` },
+  { id: "auth.signup.2", sql: `ALTER TABLE kbos_auth_challenges ADD COLUMN IF NOT EXISTS destination text` },
+  { id: "auth.signup.3", sql: `CREATE UNIQUE INDEX IF NOT EXISTS kbos_auth_pending_destination ON kbos_auth_challenges(destination) WHERE consumed=false` },
+
 ];
 
 /**

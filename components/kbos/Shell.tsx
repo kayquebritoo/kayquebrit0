@@ -237,7 +237,7 @@ export function KbosShell({
             </div>
           </div>
         </header>
-        <main className="kb-rise mx-auto max-w-6xl px-4 pb-[calc(96px+env(safe-area-inset-bottom))] pt-2 md:px-8 lg:pb-16">
+        <main key={pathname} className="kb-rise kb-workspace mx-auto max-w-6xl px-4 pb-[calc(96px+env(safe-area-inset-bottom))] pt-2 md:px-8 lg:pb-16">
           {children}
         </main>
       </div>
