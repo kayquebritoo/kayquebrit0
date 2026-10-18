@@ -117,6 +117,8 @@ Voz-e-Tom, Marca, Servicos, KBOS - Visao, logs em `20-Projetos/KBOS/log/`).
 
 ## Diário (mais recente em cima)
 
+- 2026-10-18 · Claude · Fase 5 (parte 1): campanhas com descadastro (`lib/kbos/optout.ts`: SAIR/PARAR/STOP em mensagem inteira → `contacts.marketing_opt_out_at`, migração 0018 + SCHEMA_STEP), rodapé automático e teto diário `CAMPAIGN_DAILY_CAP` (padrão 80). Gancho de 1 linha no webhook da Evolution. Falta: follow-up de orçamento, pedido de depoimento/portfólio pós-entrega e renovação de plano mensal (aguardam textos aprovados); lembrete pré-vencimento sem janela 9h-19h.
+
 - 2026-10-18 · Claude · Escada de cobrança pós-vencimento (`lib/kbos/billing-ladder.ts`): 1 dia gentil, 5 firme, 12 último aviso, textos aprovados pelo Kayque. Roda dentro do job `billing.reminders` (mesmo outbox/guarda do `handleNotifyWhatsapp`), só vendas aceitas com telefone, seg-sáb 9h-19h Belém. Falta: lembrete antes do vencimento ainda dispara à meia-noite (sem janela) e o resumo da manhã é outro mecanismo; unificar.
 
 - 2026-10-18 · Claude · Fase 4: `/admin/relatorios` (resultado do mês por carteira/categoria/frente, lucro por projeto e R$/hora, previsão de caixa 30/60/90, teto do MEI R$ 81 mil). Lógica pura em `lib/kbos/reports.ts`, API `GET /api/admin/reports`. Data de referência = vencimento (não há data de pagamento no schema). Falta: ladder de cobrança pós-vencimento.
