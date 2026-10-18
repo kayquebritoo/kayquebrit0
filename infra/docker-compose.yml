@@ -161,6 +161,7 @@ services:
   # Opcional: só ativar após login e escolha do vault remoto pelo titular.
   brain-sync:
     profiles: ["brain-sync"]
+    networks: [brain-egress]
     build:
       context: ..
       dockerfile: infra/Dockerfile.obsidian
@@ -241,3 +242,7 @@ volumes:
   redis-data:
   pg-data:
   evo-data:
+
+networks:
+  brain-egress:
+    driver: bridge
