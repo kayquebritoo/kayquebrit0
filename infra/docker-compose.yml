@@ -169,6 +169,9 @@ services:
       CACHE_REDIS_PREFIX_KEY: evolution
       CACHE_REDIS_SAVE_INSTANCES: "false"
       CACHE_LOCAL_ENABLED: "false"
+      # Sem DEBUG: nesse nível a Evolution grava o payload inteiro (com a apikey) no log.
+      LOG_LEVEL: ERROR,WARN,INFO
+      LOG_BAILEYS: error
     depends_on:
       - redis
       - evo-db
