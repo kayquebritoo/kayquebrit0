@@ -87,6 +87,11 @@ Diagnóstico: `GET /api/ai/assistant` (bloco `agent`) e
    no boot. Anexos enviados do dispositivo e links externos (migração 0013);
    duração mensal calcula o término automaticamente (01/11 + 5 meses = 01/04).
    Testes com PostgreSQL descartável (PGlite, só desenvolvimento).
+   Extensão: dados da empresa, logo e paleta editáveis no aceite; assinatura
+   cria planejamento em preparação. Editor de marca/estratégia, publicação
+   versionada e aprovação/pedido de ajustes em página mobile-first. Migração
+   0014 automática. Uso: `docs/MARCA-E-PLANEJAMENTO.md`. Demonstração em
+   `/admin/planejamentos/preview/`. Estratégia é revisada no editor antes de publicar.
 3. Ficha do cliente (painel lateral, linha do tempo, próxima ação,
    etiquetas) + busca global ⌘K.
 4. Agente: voz própria via VoiceStudio no Mac (API compatível OpenAI em

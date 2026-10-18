@@ -99,6 +99,13 @@
       "when": 1792700000000,
       "tag": "0013_arquivos_proposta",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792800000000,
+      "tag": "0014_planejamento_marca",
+      "breakpoints": true
     }
   ]
 }

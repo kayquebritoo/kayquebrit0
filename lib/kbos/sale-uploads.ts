@@ -6,6 +6,7 @@ import { readSale } from "./sales";
 
 import { MAX_UPLOAD_BYTES } from "./sale-file-types";
 const MIMES: Record<string, string> = {
+  svg: "image/svg+xml", ai: "application/postscript", eps: "application/postscript",
   pdf: "application/pdf", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   ppt: "application/vnd.ms-powerpoint", pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   xls: "application/vnd.ms-excel", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -22,7 +23,9 @@ export function validateUpload(name: string, bytes: Buffer) {
   if (!bytes.length || bytes.length > MAX_UPLOAD_BYTES) throw new PublicError("Cada arquivo deve ter conteúdo e no máximo 10 MB.", 413);
   const hex = bytes.subarray(0, 8).toString("hex");
   const prefix = bytes.subarray(0, 12).toString("ascii");
-  const valid = ext === "pdf" ? prefix.startsWith("%PDF-")
+  const valid = ext === "svg" ? /<svg[\s>]/i.test(bytes.toString("utf8").slice(0, 8192))
+    : ["ai", "eps"].includes(ext) ? (prefix.startsWith("%!PS") || prefix.startsWith("%PDF-"))
+    : ext === "pdf" ? prefix.startsWith("%PDF-")
     : ["doc", "ppt", "xls"].includes(ext) ? hex === "d0cf11e0a1b11ae1"
     : ["docx", "pptx", "xlsx", "odt", "odp", "ods"].includes(ext) ? prefix.startsWith("PK\x03\x04")
     : ["jpg", "jpeg"].includes(ext) ? hex.startsWith("ffd8ff")
@@ -35,16 +38,16 @@ export function validateUpload(name: string, bytes: Buffer) {
   return { name: clean, mime, size: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") };
 }
 
-export async function uploadSaleFile(budgetId: string, name: string, bytes: Buffer) {
+export async function uploadSaleFile(budgetId: string, name: string, bytes: Buffer, options: { source?: "admin" | "client"; allowAccepted?: boolean } = {}) {
   const meta = validateUpload(name, bytes);
   // Bloqueia o orçamento para serializar uploads e limitar a 50 MB por proposta.
   const result = await db().execute(sql`
     WITH b AS (UPDATE kbos_budgets SET upload_bytes = upload_bytes + ${meta.size}
-      WHERE id = ${budgetId}::uuid AND status IN ('draft','sent') AND upload_bytes + ${meta.size} <= 52428800
-        AND NOT EXISTS (SELECT 1 FROM kbos_budget_sales s WHERE s.budget_id = ${budgetId}::uuid AND s.accepted_at IS NOT NULL)
+      WHERE id = ${budgetId}::uuid AND (status IN ('draft','sent') OR ${!!options.allowAccepted}) AND upload_bytes + ${meta.size} <= 52428800
+        AND (${!!options.allowAccepted} OR NOT EXISTS (SELECT 1 FROM kbos_budget_sales s WHERE s.budget_id = ${budgetId}::uuid AND s.accepted_at IS NOT NULL))
       RETURNING id)
-    INSERT INTO kbos_budget_uploads (budget_id, name, mime, size, sha256, content)
-    SELECT b.id, ${meta.name}, ${meta.mime}, ${meta.size}, ${meta.sha256}, decode(${bytes.toString("base64")}, 'base64')
+    INSERT INTO kbos_budget_uploads (budget_id, name, mime, size, sha256, content, source)
+    SELECT b.id, ${meta.name}, ${meta.mime}, ${meta.size}, ${meta.sha256}, decode(${bytes.toString("base64")}, 'base64'), ${options.source || "admin"}
     FROM b
     RETURNING id`);
   if (!result.rows.length) throw new PublicError("O orçamento não está disponível para anexos ou atingiu o limite de 50 MB.", 409);

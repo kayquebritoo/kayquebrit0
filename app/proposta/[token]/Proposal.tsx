@@ -2,9 +2,11 @@
 import { useEffect, useState } from "react";
 import type { SaleSnapshot } from "@/lib/kbos/sales";
 import type { SalePlan } from "@/lib/kbos/sale-plan";
+import CompanyProfileFields from "@/components/kbos/planning/CompanyProfileFields";
+import type { CompanyProfile } from "@/lib/kbos/planning-model";
 import { formatBRL } from "@/lib/kbos/budget-calc";
 
-type ProposalData = { snapshot: SaleSnapshot; plan: SalePlan; acceptedAt: string | null; expiresAt: string };
+type ProposalData = { snapshot: SaleSnapshot; plan: SalePlan; acceptedAt: string | null; expiresAt: string; companyProfile: CompanyProfile; planningUrl: string | null };
 const date = (s: string) => s.slice(0, 10).split("-").reverse().join("/");
 export default function Proposal({ token }: { token: string }) {
   const [data, setData] = useState<ProposalData | null>(null);
@@ -13,6 +15,7 @@ export default function Proposal({ token }: { token: string }) {
   const [contract, setContract] = useState(false);
   const [manual, setManual] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   useEffect(() => {
     let active = true;
     fetch(`/api/proposals/${token}/`, { cache: "no-store" }).then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.error); if (active) setData(j); }).catch((e) => { if (active) setError(e.message || "Não foi possível carregar a proposta."); });
@@ -21,9 +24,9 @@ export default function Proposal({ token }: { token: string }) {
   async function accept(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setError("");
     try {
-      const r = await fetch(`/api/proposals/${token}/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signerName: name, contractAccepted: contract, manualAccepted: manual }) });
+      const r = await fetch(`/api/proposals/${token}/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signerName: name, contractAccepted: contract, manualAccepted: manual, companyProfile: data?.companyProfile }) });
       const j = await r.json(); if (!r.ok) throw new Error(j.error);
-      setData((v) => v ? { ...v, acceptedAt: j.acceptedAt } : v);
+      setData((v) => v ? { ...v, acceptedAt: j.acceptedAt, planningUrl: j.planningUrl } : v);
     } catch (e) { setError(e instanceof Error ? e.message : "Não foi possível registrar o aceite."); }
     finally { setBusy(false); }
   }
@@ -42,7 +45,7 @@ export default function Proposal({ token }: { token: string }) {
         {s.bankInfo && <p className="whitespace-pre-line">{s.bankInfo}</p>}
       </section>
       <section className="kb-glass my-6 space-y-5 p-5"><h2 className="text-xl font-semibold">Instrumento Particular de Prestação de Serviços</h2>
-        <p>Contratado: Kayque Jonathan Brito, Belém/PA. Contratante: {s.clientName}. O escopo e o cronograma acima integram este instrumento.</p>
+        <p>Contratado: Kayque Jonathan Brito, Belém/PA. Contratante: {data.companyProfile.legalName || data.companyProfile.companyName || s.clientName}{data.companyProfile.document ? ` · ${data.companyProfile.document}` : ""}. O escopo e o cronograma acima integram este instrumento.</p>
         {s.clauses.map((c) => <div key={c.title}><h3 className="mb-2 font-semibold">{c.title}</h3><p>{c.body}</p></div>)}
         {s.terms && <div><h3 className="font-semibold">Observações da proposta</h3><p className="whitespace-pre-line">{s.terms}</p></div>}
       </section>
@@ -50,13 +53,17 @@ export default function Proposal({ token }: { token: string }) {
         {data.plan.manualUrl && <a className="kb-btn-ghost min-h-12" href={data.plan.manualUrl} target="_blank" rel="noreferrer">Ler Manual de Identidade</a>}
         {data.plan.attachments?.map((a, i) => <div key={i}><a className="kb-btn-ghost min-h-12 max-w-full break-all" href={a.kind === "file" ? `/api/proposals/${token}/files/${a.fileId}/` : a.url} target="_blank" rel="noreferrer">{a.kind === "file" ? "Baixar" : "Abrir"} {a.name}</a><p className="mt-1 text-sm kb-muted">{a.role === "manual" ? "Manual de Identidade" : "Referência"}</p></div>)}
       </section>
+      {data.planningUrl && <a href={data.planningUrl} className="kb-btn my-4 w-full">Abrir minha marca e planejamento →</a>}
+      {!data.acceptedAt && <section className="kb-glass my-6 p-5"><p className="cp-eyebrow">ANTES DE ASSINAR</p><h2 className="mb-3 text-xl font-semibold">Sua empresa, sua marca</h2><p className="mb-6 text-sm kb-muted">Confira os dados e envie a identidade atual da empresa. Essas informações serão confirmadas com sua assinatura e vão iniciar seu planejamento estratégico.</p>
+        <CompanyProfileFields value={data.companyProfile} onChange={(companyProfile)=>setData(v=>v?{...v,companyProfile}:v)} uploadUrl={`/api/proposals/${token}/brand-files/`} assetUrl={(id,preview)=>`/api/proposals/${token}/brand-files/${id}/${preview?'?preview=1':''}`} onBusy={setUploading} />
+      </section>}
       {!data.acceptedAt && <form onSubmit={accept} className="kb-glass my-6 space-y-4 p-5">
         <h2 className="text-xl font-semibold">Assinatura eletrônica simples</h2>
         <p>Ao confirmar, você aceita esta proposta e autoriza a abertura do projeto e das cobranças descritas acima.</p>
         <label className="kb-field">Nome completo de quem aceita<input className="kb-control min-h-12 text-base" autoComplete="name" required minLength={3} maxLength={160} value={name} onChange={(e) => setName(e.target.value)} /></label>
         <label className="flex min-h-12 items-center gap-3"><input type="checkbox" required checked={contract} onChange={(e) => setContract(e.target.checked)} />Li e aceito o orçamento e todas as cláusulas do contrato.</label>
-        <label className="flex min-h-12 items-center gap-3"><input type="checkbox" required checked={manual} onChange={(e) => setManual(e.target.checked)} />Li e aceito o Manual de Identidade vinculado nesta proposta.</label>
-        <button className="kb-btn min-h-12 w-full" disabled={busy || !contract || !manual}>{busy ? "Registrando…" : "Aceitar e assinar proposta"}</button>
+        <label className="flex min-h-12 items-center gap-3"><input type="checkbox" required checked={manual} onChange={(e) => setManual(e.target.checked)} />Revisei os dados da minha empresa e aceito o Manual de Identidade e os materiais da marca apresentados nesta proposta.</label>
+        <button className="kb-btn min-h-12 w-full" disabled={busy || uploading || !contract || !manual || !data.companyProfile.companyName.trim()}>{busy ? "Registrando…" : "Aceitar e assinar proposta"}</button>
         <p className="text-sm">Link válido até {new Date(data.expiresAt).toLocaleString("pt-BR", { timeZone: "America/Belem" })}.</p>
       </form>}
     </>}

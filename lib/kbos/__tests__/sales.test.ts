@@ -16,6 +16,8 @@ import { acceptSale, issueSaleLink, readSale, tokenHash } from "../sales";
 import { handleBillingReminders } from "../billing-reminders";
 import { handleNotifyWhatsapp } from "../job-handlers";
 import { sendEvolutionText } from "../whatsapp";
+import { companyProfileSchema } from "../planning-model";
+import { adminClientPlan, publicClientPlan, saveClientPlan, publishClientPlan, reviewClientPlan, shareClientPlan, planningFile, downloadResponse } from "../planning";
 
 const pg = new PGlite();
 const d = drizzle(pg, { schema });
@@ -77,6 +79,7 @@ describe("aceite atômico", () => {
       await expect(acceptSale(token, "Cliente")).rejects.toThrow();
       expect(await count("kbos_projects")).toBe(0);
       expect(await count("kbos_tasks")).toBe(0);
+      expect(await count("kbos_client_plans")).toBe(0);
       expect((await readSale(token)).acceptedAt).toBeNull();
       expect((await d.select().from(schema.budgets))[0].status).toBe("sent");
     } finally { await pg.exec("ALTER TABLE kbos_transactions DROP CONSTRAINT fail_sale"); }
@@ -105,6 +108,75 @@ describe("aceite atômico", () => {
     const bills = await d.select().from(schema.transactions);
     expect(bills).toHaveLength(3);
     expect(bills.every((b) => Number(b.valor) === 100.01)).toBe(true);
+  });
+});
+describe("marca e planejamento após assinatura", () => {
+  async function acceptedBrand() {
+    const file = await uploadSaleFile(budgetId,"logo.png",Buffer.from("89504e470d0a1a0a00","hex"),{source:"client"});
+    const profile = companyProfileSchema.parse({companyName:"Marca do cliente",contactName:"Pessoa responsável",email:"cliente@example.com",concept:"Conceito informado pelo cliente",audience:"Público informado",tone:"Próximo e claro",objective:"Objetivo informado",colors:[{name:"Azul",hex:"#254C88"}],logoId:file.id,assets:[{fileId:file.id,name:file.name,category:"logo"}]});
+    const {token}=await issueSaleLink(budgetId,plan);
+    const accepted=await acceptSale(token,"Pessoa responsável",profile);
+    const [row]=await d.select().from(schema.clientPlans);
+    return {token,profile,file,row,accepted};
+  }
+  it("preserva a marca assinada, cria uma página em preparação e atualiza o CRM sem alterar preço",async()=>{
+    const {token,profile,row,accepted}=await acceptedBrand();
+    expect(accepted.planningUrl).toBe(`/planejamento/${token}/`);
+    expect(row.signedProfile.companyName).toBe(profile.companyName);
+    expect(row.draft.concept).toBe(profile.concept);
+    expect(row.draft.positioning).toBe("");
+    expect((await publicClientPlan(token)).document).toBeNull();
+    const [contact]=await d.select().from(schema.contacts);
+    expect(contact.company).toBe(profile.companyName);
+    expect(contact.email).toBe(profile.email);
+    expect(Number((await d.select().from(schema.budgets))[0].totalAmount)).toBe(100.01);
+    await acceptSale(token,"Outro nome",{companyName:"Não pode reescrever"});
+    expect(await count("kbos_client_plans")).toBe(1);
+    expect((await d.select().from(schema.clientPlans))[0].signedProfile.companyName).toBe(profile.companyName);
+  });
+  it("não publica marca incompleta nem aceita revisões antigas do editor",async()=>{
+    const {row,token}=await acceptedBrand();
+    await expect(publishClientPlan(row.id,1)).rejects.toThrow("Complete antes de publicar");
+    const doc=structuredClone(row.draft);doc.positioning="Versão da equipe";doc.typography={heading:"Manrope",body:"Manrope",usage:"Títulos claros"};
+    const saved=await saveClientPlan(row.id,1,doc);
+    await expect(saveClientPlan(row.id,1,{...doc,positioning:"Alteração perdida"})).rejects.toThrow("outra janela");
+    expect((await publicClientPlan(token)).document).toBeNull();
+    await publishClientPlan(row.id,saved.draftRevision);
+    expect((await publicClientPlan(token)).document?.positioning).toBe("Versão da equipe");
+    doc.positioning="Rascunho privado";await saveClientPlan(row.id,saved.draftRevision,doc);
+    expect((await publicClientPlan(token)).document?.positioning).toBe("Versão da equipe");
+  });
+  it("aprovação vale para a versão publicada, é idempotente e reabre em uma nova publicação",async()=>{
+    const {row,token}=await acceptedBrand();
+    const doc={...row.draft,positioning:"Posicionamento",typography:{heading:"Manrope",body:"Manrope",usage:""}};
+    let saved=await saveClientPlan(row.id,1,doc);await publishClientPlan(row.id,saved.draftRevision);
+    await expect(reviewClientPlan(token,{action:"approve",version:1,name:"Cliente"})).rejects.toThrow("confirmação");
+    await reviewClientPlan(token,{action:"approve",version:1,name:"Cliente",confirmed:true});
+    await reviewClientPlan(token,{action:"approve",version:1,name:"Cliente",confirmed:true});
+    expect((await publicClientPlan(token)).feedback).toHaveLength(1);
+    saved=await saveClientPlan(row.id,saved.draftRevision,{...doc,tone:"Novo tom"});await publishClientPlan(row.id,saved.draftRevision);
+    const published=await publicClientPlan(token);expect(published.version).toBe(2);expect(published.approvedAt).toBeNull();expect(published.status).toBe("review");
+    await expect(reviewClientPlan(token,{action:"approve",version:1,name:"Cliente",confirmed:true})).rejects.toThrow("nova versão");
+    await reviewClientPlan(token,{action:"feedback",version:2,name:"Cliente",section:"marca",message:"Gostaria de uma paleta mais clara."});
+    const reviewed=await publicClientPlan(token);expect(reviewed.status).toBe("changes");expect(reviewed.feedback).toHaveLength(2);
+  });
+  it("não expõe arquivos de rascunho e permite compartilhar e revogar o link de planejamento",async()=>{
+    const {row,token,file}=await acceptedBrand();
+    expect((await planningFile(token,file.id)).name).toBe("logo.png");
+    const unpublished=await uploadSaleFile(budgetId,"rascunho.txt",Buffer.from("Privado da equipe"),{allowAccepted:true});
+    await expect(planningFile(token,unpublished.id)).rejects.toThrow("Arquivo não encontrado");
+    const first=(await shareClientPlan(row.id)).split('/')[2];expect((await publicClientPlan(first)).profile.companyName).toBe("Marca do cliente");
+    const second=(await shareClientPlan(row.id)).split('/')[2];await expect(publicClientPlan(first)).rejects.toThrow("Link não encontrado");
+    expect((await publicClientPlan(second)).status).toBe("draft");
+    expect((await adminClientPlan(row.id)).plan.signedProfile.companyName).toBe("Marca do cliente");
+    const vector=downloadResponse({name:"marca.svg",mime:"image/svg+xml",bytes:Buffer.from('<svg></svg>')},true);
+    expect(vector.headers.get('content-disposition')).toContain('attachment');expect(vector.headers.get('content-security-policy')).toContain('sandbox');
+  });
+  it("um arquivo da equipe não pode ser forjado como material enviado pelo contratante",async()=>{
+    const file=await uploadSaleFile(budgetId,"manual.pdf",Buffer.from("%PDF-1.4\n"));
+    const {token}=await issueSaleLink(budgetId,plan);
+    await expect(acceptSale(token,"Cliente",{companyName:"Cliente",assets:[{fileId:file.id,name:"Logo",category:"logo"}],logoId:file.id})).rejects.toThrow("materiais enviados");
+    expect(await count("kbos_client_plans")).toBe(0);
   });
 });
 describe("arquivos da proposta", () => {

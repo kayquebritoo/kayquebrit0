@@ -53,6 +53,7 @@ export function proxy(req: NextRequest) {
     pathname.startsWith("/portal") ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/api/projects") ||
+    pathname.startsWith("/api/plans") ||
     pathname.startsWith("/api/tasks") ||
     pathname.startsWith("/api/time") ||
     pathname.startsWith("/api/transactions") ||

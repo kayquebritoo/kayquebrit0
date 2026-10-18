@@ -1,5 +1,6 @@
 // Regras da venda conectada, compartilhadas entre painel e servidor.
 import { z } from "zod";
+import { companyProfileSchema } from "./planning-model";
 import { calcPaymentOptions } from "./budget-calc";
 
 export const SERVICE_TEMPLATES = {
@@ -54,6 +55,7 @@ export const saleAcceptanceSchema = z.object({
   signerName: z.string().trim().min(3).max(160),
   contractAccepted: z.literal(true),
   manualAccepted: z.literal(true),
+  companyProfile: companyProfileSchema.optional(),
 });
 export type Installment = { label: string; amount: number; dueDate: string; onAcceptance?: boolean };
 export const installmentsTotal = (items: Installment[]) => items.reduce((sum, item) => sum + Math.round(item.amount * 100), 0) / 100;

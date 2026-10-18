@@ -3,6 +3,9 @@ import { and, eq, sql } from "drizzle-orm";
 import { db } from "./db";
 import { budgets, budgetSales, contacts, deals } from "./schema";
 import { PublicError } from "./http";
+import { documentKind } from "./document";
+import { canonicalAssets, canonicalProfile } from "./brand-assets";
+import { companyProfileSchema, seedPlan } from "./planning-model";
 import { buildContractClauses, isRecurringBudget, type Clause, type BudgetPdfData } from "./pdf-generator";
 import { formatBRL } from "./budget-calc";
 import { installmentsTotal, localDay, paymentSchedule, plannedTasks, salePlanSchema, type Installment } from "./sale-plan";
@@ -104,10 +107,13 @@ export async function readSale(token: string) {
   return row;
 }
 
-export async function acceptSale(token: string, signerName: string) {
+export async function acceptSale(token: string, signerName: string, companyInput?: unknown) {
   const sale = await readSale(token);
-  if (sale.acceptedAt) return { acceptedAt: sale.acceptedAt, alreadyAccepted: true };
+  if (sale.acceptedAt) return { acceptedAt: sale.acceptedAt, alreadyAccepted: true, planningUrl: `/planejamento/${token}/` };
+  const profile = await canonicalProfile(sale.budgetId, companyInput || companyProfileSchema.parse({ companyName: sale.snapshot.clientName, contactName: signerName }), true);
+  const document = seedPlan(profile, sale.snapshot.title, sale.snapshot.items, sale.plan.startDate, sale.plan.deliveryDate);
   const plan = sale.plan;
+  document.assets = [...profile.assets, ...await canonicalAssets(sale.budgetId, (plan.attachments || []).filter(a => a.kind === "file").map(a => ({ fileId: a.fileId!, name: a.name, category: a.role === "manual" ? "manual" as const : "reference" as const })))];
   const installments = sale.snapshot.installments.map((i) => ({ ...i, dueDate: i.onAcceptance ? localDay() : i.dueDate }));
   const tasks = plannedTasks(plan);
   const dates = [...new Set([...sale.snapshot.eventDates, plan.deliveryDate])];
@@ -118,7 +124,7 @@ export async function acceptSale(token: string, signerName: string) {
       SELECT b.* FROM kbos_budgets b WHERE b.id = ${sale.budgetId}::uuid FOR UPDATE
     ), claimed AS (
       UPDATE kbos_budget_sales s SET accepted_at = now(), signer_name = ${signerName},
-        contract_accepted = true, manual_accepted = true, project_id = gen_random_uuid()
+        contract_accepted = true, manual_accepted = true, project_id = gen_random_uuid(), company_profile = ${JSON.stringify(profile)}::jsonb
       FROM budget_lock b WHERE s.id = ${sale.id}::uuid AND s.accepted_at IS NULL
         AND s.expires_at >= now() AND b.updated_at = s.budget_version AND b.status = 'sent'
       RETURNING s.*
@@ -127,6 +133,10 @@ export async function acceptSale(token: string, signerName: string) {
       SELECT claimed.project_id, b.title, ${plan.service}, b.contact_id, b.id, 'briefing',
         ${installmentsTotal(installments)}, ${plan.deliveryDate + "T12:00:00Z"}::timestamptz
       FROM budget_lock b, claimed RETURNING *
+    ), planning AS (
+      INSERT INTO kbos_client_plans (sale_id, project_id, signed_profile, draft)
+      SELECT claimed.id, project.id, ${JSON.stringify(profile)}::jsonb, ${JSON.stringify(document)}::jsonb
+      FROM claimed, project
     ), task_rows AS (
       INSERT INTO kbos_tasks (project_id, contact_id, titulo, due_at)
       SELECT p.id, p.contact_id, t.title, (t."dueDate" || 'T12:00:00Z')::timestamptz
@@ -145,7 +155,15 @@ export async function acceptSale(token: string, signerName: string) {
       UPDATE kbos_deals SET stage = 'won', updated_at = now()
       WHERE id = ${plan.dealId || null}::uuid AND EXISTS (SELECT 1 FROM claimed)
     ), client AS (
-      UPDATE kbos_contacts SET status = 'client', updated_at = now()
+      UPDATE kbos_contacts SET status = 'client', updated_at = now(),
+        name = coalesce(nullif(${profile.contactName}, ''), name), company = coalesce(nullif(${profile.companyName}, ''), company),
+        kind = coalesce(${documentKind(profile.document)}, kind),
+        legal_name = coalesce(nullif(${profile.legalName}, ''), legal_name), document = coalesce(nullif(${profile.document}, ''), document),
+        email = coalesce(nullif(${profile.email}, ''), email), phone = coalesce(nullif(${profile.phone}, ''), phone),
+        website = coalesce(nullif(${profile.website}, ''), website), instagram = coalesce(nullif(${profile.instagram}, ''), instagram),
+        address = coalesce(nullif(${profile.address}, ''), address),
+        city = coalesce(nullif(${profile.city}, ''), city), state = coalesce(nullif(${profile.state}, ''), state),
+        zip_code = coalesce(nullif(${profile.zip}, ''), zip_code)
       WHERE id IN (SELECT contact_id FROM project)
     ), approve AS (
       UPDATE kbos_budgets SET status = 'approved', updated_at = now()
@@ -154,8 +172,8 @@ export async function acceptSale(token: string, signerName: string) {
     SELECT accepted_at FROM claimed`);
   if (!result.rows.length) {
     const current = await readSale(token);
-    if (current.acceptedAt) return { acceptedAt: current.acceptedAt, alreadyAccepted: true };
+    if (current.acceptedAt) return { acceptedAt: current.acceptedAt, alreadyAccepted: true, planningUrl: `/planejamento/${token}/` };
     throw new PublicError("A proposta mudou. Peça um novo link ao estúdio.", 409);
   }
-  return { acceptedAt: result.rows[0].accepted_at, alreadyAccepted: false };
+  return { acceptedAt: result.rows[0].accepted_at, alreadyAccepted: false, planningUrl: `/planejamento/${token}/` };
 }

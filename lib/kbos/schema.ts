@@ -641,6 +641,7 @@ export const budgets = pgTable("kbos_budgets", {
 
 // Uma proposta publicada por orçamento; a reemissão revoga o link anterior.
 export const budgetSales = pgTable("kbos_budget_sales", {
+  companyProfile: jsonb("company_profile").$type<import("./planning-model").CompanyProfile>(),
   id: uuid("id").primaryKey().defaultRandom(),
   budgetId: uuid("budget_id").notNull().unique().references(() => budgets.id, { onDelete: "restrict" }),
   tokenHash: text("token_hash").notNull().unique(),
@@ -659,6 +660,7 @@ export const budgetSales = pgTable("kbos_budget_sales", {
 // Binários preservados no banco, fora dos arquivos temporários do contêiner.
 const binary = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });
 export const budgetUploads = pgTable("kbos_budget_uploads", {
+  source: text("source").notNull().default("admin"),
   id: uuid("id").primaryKey().defaultRandom(),
   budgetId: uuid("budget_id").notNull().references(() => budgets.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
@@ -667,4 +669,20 @@ export const budgetUploads = pgTable("kbos_budget_uploads", {
   sha256: text("sha256").notNull(),
   content: binary("content").notNull(),
   createdAt: ts("created_at"),
+});
+
+export const clientPlans = pgTable("kbos_client_plans", {
+ shareTokenHash: text("share_token_hash").unique(),
+ id: uuid("id").primaryKey().defaultRandom(),
+ saleId: uuid("sale_id").notNull().unique().references(() => budgetSales.id, { onDelete: "restrict" }),
+ projectId: uuid("project_id").notNull().unique().references(() => projects.id, { onDelete: "cascade" }),
+ signedProfile: jsonb("signed_profile").notNull().$type<import("./planning-model").CompanyProfile>(),
+ draft: jsonb("draft").notNull().$type<import("./planning-model").PlanDocument>(),
+ draftRevision: integer("draft_revision").notNull().default(1),
+ published: jsonb("published").$type<import("./planning-model").PlanDocument>(),
+ version: integer("version").notNull().default(0),
+ status: text("status").notNull().default("draft"),
+ feedback: jsonb("feedback").notNull().$type<import("./planning-model").PlanReview[]>().default([]),
+ approvedAt: timestamp("approved_at", { withTimezone: true }),
+ createdAt: ts("created_at"), updatedAt: ts("updated_at"),
 });

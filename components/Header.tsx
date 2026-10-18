@@ -36,7 +36,7 @@ export default function Header() {
   // o header do site sumiria por cima do topbar delas, então nem renderiza.
   // Mesmo padrão do SlideProgress (só home).
   const isApp =
-    pathname.startsWith("/admin") || pathname.startsWith("/portal") || pathname.startsWith("/entrar") || pathname.startsWith("/proposta");
+    pathname.startsWith("/admin") || pathname.startsWith("/portal") || pathname.startsWith("/entrar") || pathname.startsWith("/proposta") || pathname.startsWith("/planejamento");
   const isHome = pathname === "/";
 
   const MENU = [
