@@ -55,6 +55,7 @@ nos três (migrations.ts, schema.ts, SQL).
 - PDF de orçamento sempre em 2 páginas (`lib/kbos/pdf-generator.tsx`).
 
 ## Design (padrão para todas as telas)
+**Princípio nº 1 (pedido do Kayque): o KBOS tem que parecer app nativo, nunca "site".** Rápido, transições e microinterações em tudo, waveforms e animações futuristas discretas, sem barra de navegador (testar sempre instalado na tela inicial a partir de kbos.kayquebrito.com.br).
 Fundo `#11101E`, vidro, acento BluePurple `#4F12C7`; rosa `#E80EFD` só no
 fim de degradê / um destaque por tela. Mobile-first, toque 48 px, inputs
 16 px. Use as classes `kb-*` de `app/globals.css` (kb-glass, kb-row, kb-seg,
