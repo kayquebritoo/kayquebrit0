@@ -13,6 +13,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 > **Comece por `docs/HANDOFF.md`**: estado atual, como publicar, pegadinhas e próximos passos.
 
+## Convivência Claude × Codex (os dois trabalham neste repo)
+1. **Antes de começar:** `git fetch origin && git checkout main && git reset --hard origin/main` (nunca trabalhe numa cópia velha).
+2. **Uma tarefa = uma branch:** `claude/<assunto>` ou `codex/<assunto>`. Nada de commit direto em `main`.
+3. **Publicar:** CI verde na branch → `git fetch` → rebase em `origin/main` → merge fast-forward. Se `main` andou e há conflito, resolva preservando o trabalho do outro agente.
+4. **Não reescreva** o que o outro agente fez sem motivo; se precisar mudar, explique no commit.
+5. **Ao terminar:** acrescente uma linha no "Diário" de `docs/HANDOFF.md` (data · agente · o que mudou · o que falta).
+6. Áreas sensíveis — mexa só com cuidado e testes: `lib/kbos/agent.ts`, `lib/kbos/inbox.ts`, `app/api/webhooks/evolution`, `lib/kbos/migrations.ts`, `infra/docker-compose.yml`, `deploy.sh`.
+
 - **Profissional**: Kayque Brito (Desenvolvedor de Software, Designer e Produtor Audiovisual).
 - **VPS**: `179.236.67.19` · código em `/opt/kbos` · prod em `https://kbos.kayquebrito.com.br`
 - **Fluxo de Deploy**: branch → CI verde → merge em `main` → o cron da VPS (`deploy.sh --auto`) publica sozinho. Forçar na VPS: `./deploy.sh` (não `git pull`).

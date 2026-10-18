@@ -113,3 +113,6 @@ Diagnóstico: `GET /api/ai/assistant` (bloco `agent`) e
 ## Contexto pessoal
 Segundo cérebro no Obsidian: `Documents/Obsidian Vault` (CONTEXTO-IA,
 Voz-e-Tom, Marca, Servicos, KBOS - Visao, logs em `20-Projetos/KBOS/log/`).
+
+## Diário (mais recente em cima)
+- 2026-10-18 · Claude · agente responde em áudio quando você fala por áudio (voz da OpenAI; voz própria via `TTS_BASE_URL` = VoiceStudio); regras de convivência no AGENTS.md.
