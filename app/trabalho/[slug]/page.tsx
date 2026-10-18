@@ -215,7 +215,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
             Próximo passo
           </p>
           <h3 className="font-display relative mx-auto mt-4 max-w-2xl text-balance text-3xl font-light leading-tight md:text-5xl">
-            Vamos criar algo <em className="kb-em">incrível</em> juntos?
+            Qual vai ser o próximo <em className="kb-em">case</em>?
           </h3>
           <Link
             href="/briefing"

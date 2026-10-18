@@ -10,11 +10,11 @@ export const NAV = [
 ];
 
 export const HERO = {
-  kicker: "Escalando marcas através de design e tecnologia",
+  kicker: "Imagem, marca e código",
   smallA: "Tecnólogo",
   smallB: "Criativo",
-  roleA: "Produtor Audiovisual &",
-  roleB: "Desenvolvedor Full Stack",
+  roleA: "Produtor audiovisual, designer",
+  roleB: "e desenvolvedor full stack",
   img: "/assets/hero/kayque.png",
 };
 
@@ -25,7 +25,7 @@ export const ABOUT = {
   leadA: "Tecnólogo Criativo",
   leadB: "tecnologia",
   leadC: "impacto visual",
-  text: "Formado em Análise e Desenvolvimento de Sistemas, integro programação, design criativo e audiovisual para entregar soluções completas e escaláveis no ambiente digital.",
+  text: "Formado em Análise e Desenvolvimento de Sistemas. Há mais de oito anos eu junto imagem, marca e código para transformar ideia em vídeos, identidades, sites e sistemas.",
   name: "Kayque Jonathan Brito",
   photos: [
     { src: "/assets/deco/ok1.webp", alt: "Bastidor — captação audiovisual" },
@@ -40,7 +40,7 @@ export const SERVICES = [
     id: "audiovisual",
     label: "Audiovisual",
     title: "Audiovisual",
-    desc: "Direção, captação e edição cinematográfica para marcas que precisam de presença.",
+    desc: "Vídeo e foto com direção de cinema: institucional, eventos e reels, do roteiro à entrega.",
     img: "/assets/deco/ok2.webp",
     tag: "Filmando / Fotografando",
   },
@@ -48,7 +48,7 @@ export const SERVICES = [
     id: "dev",
     label: "Dev",
     title: "Dev",
-    desc: "Sites, landing pages e sistemas web performáticos em Next.js.",
+    desc: "Sites, lojas e sistemas sob medida: rápidos, fáceis de atualizar e feitos para virar cliente.",
     img: "/assets/deco/21Ativo-1.webp",
     tag: "Programando",
   },
@@ -56,7 +56,7 @@ export const SERVICES = [
     id: "branding",
     label: "Branding",
     title: "Branding",
-    desc: "Identidades com conceito, agregando valor a cada detalhe.",
+    desc: "Identidade com conceito: pesquisa, logo, sistema visual e manual. Marca que sustenta o preço.",
     img: "/assets/deco/ok4.webp",
     tag: "Criando marcas",
   },
@@ -284,9 +284,9 @@ export const PARTNERS = [
 ];
 
 export const CONTACT = {
-  title: "Vamos criar algo incrível juntos?",
-  text: "Estou basicamente em todos os lugares. Fique à vontade para escolher o meio de comunicação que for melhor para você.",
-  cta: "Contratar serviço",
+  title: "Bora tirar sua ideia do papel?",
+  text: "Me conte o que você quer construir e o prazo que tem em mente. Eu ajudo a definir o caminho e cuido da criação com você.",
+  cta: "Bora começar",
   ctaHref: "/briefing",
 };
 

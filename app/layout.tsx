@@ -22,12 +22,12 @@ const manrope = localFont({
 
 const SITE_URL = "https://kayquebrito.com.br";
 const SITE_DESC =
-  "Kayque Jonathan Brito — Tecnólogo Criativo, Produtor Audiovisual & Desenvolvedor Full Stack. Escalando marcas através de design e tecnologia.";
+  "Criador paraense: vídeo, foto, marca, sites e sistemas. Imagem, marca e código feitos por quem fala direto com você.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Kayque Brito — Desenvolvedor Digital",
+    default: "Kayque Brito — Tecnólogo Criativo",
     template: "%s — Kayque Brito",
   },
   description: SITE_DESC,
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     apple: "/apple-icon.png",
   },
   openGraph: {
-    title: "Kayque Brito — Desenvolvedor Digital",
+    title: "Kayque Brito — Tecnólogo Criativo",
     description: SITE_DESC,
     url: "/",
     siteName: "Kayque Brito",
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Kayque Brito — Desenvolvedor Digital",
+    title: "Kayque Brito — Tecnólogo Criativo",
     description: SITE_DESC,
     images: ["/assets/portfolio/manafest-capa.webp"],
   },

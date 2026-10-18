@@ -79,7 +79,7 @@ export const BRIEFING_CATEGORIES: BriefingCategory[] = [
     tagline: "Cinema que vende — do roteiro ao corte final.",
     pitch: [
       "Do institucional ao aftermovie: roteiro, direção, captação com drone e gimbal, áudio direto e color cinematográfico.",
-      "Entrego versões horizontal + vertical, legendadas e otimizadas para anúncios — prontas para escalar sua marca.",
+      "Entrego versões horizontal + vertical, legendadas e prontas para rodar nas redes e nos anúncios.",
     ],
     bullets: ["Roteiro + direção", "Drone e gimbal 4K", "Color cinematográfico", "Versões YT + reels"],
     process: [
@@ -110,8 +110,8 @@ export const BRIEFING_CATEGORIES: BriefingCategory[] = [
     baseValue: "a partir de R$ 2.500",
     tagline: "Sites rápidos que viram orçamento no WhatsApp.",
     pitch: [
-      "Sites institucionais e landing pages em Next.js com performance 90+ e design que guia o visitante até o CTA.",
-      "Copy estratégica, SEO técnico, animações GSAP leves e integração com WhatsApp, checkout e CRM.",
+      "Sites institucionais e landing pages em Next.js com nota 90+ no Lighthouse e design que leva o visitante até o clique no WhatsApp.",
+      "Copy estratégica, SEO técnico, animações leves e integração com WhatsApp, checkout e CRM.",
     ],
     bullets: ["Next.js ultrarrápido", "Copy + SEO inclusos", "Animações premium", "Integração WhatsApp"],
     process: [
@@ -143,7 +143,7 @@ export const BRIEFING_CATEGORIES: BriefingCategory[] = [
     tagline: "Sistema sob medida, sem gambiarra.",
     pitch: [
       "Aplicativos e painéis web que resolvem operação real: login, pagamentos, agenda, mapas e integrações.",
-      "Arquitetura escalável, painel admin simples para sua equipe e suporte pós-entrega.",
+      "Feito para crescer com o seu negócio, painel admin simples para sua equipe e suporte pós-entrega.",
     ],
     bullets: ["Escopo fechado", "Painel admin simples", "API + integrações", "Suporte pós-go"],
     process: [
@@ -171,10 +171,10 @@ export const BRIEFING_CATEGORIES: BriefingCategory[] = [
     label: "Lojas Virtuais",
     desc: "E-commerce completo para vender online.",
     baseValue: "a partir de R$ 4.000",
-    tagline: "Sua vitrine vendendo no automático.",
+    tagline: "Loja pronta para vender, do Pix ao frete.",
     pitch: [
       "E-commerce completo: catálogo, checkout Pix + cartão, frete, cupons e painel para você gerenciar tudo sozinho.",
-      "Foco em conversão mobile — onde 80% das suas vendas acontecem.",
+      "Foco em quem compra pelo celular.",
     ],
     bullets: ["Checkout Pix + cartão", "Frete e cupons", "Painel simples", "Pixel + analytics"],
     process: [
