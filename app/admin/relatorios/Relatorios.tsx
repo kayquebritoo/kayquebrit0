@@ -48,15 +48,15 @@ export default function Relatorios() {
       {error && <div className="kb-tag late w-full justify-start rounded-2xl! px-4! py-3! text-sm">{error}</div>}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="kb-seg" role="group" aria-label="Carteira">
+        <div className="kb-seg w-full sm:w-auto sm:min-w-[280px]" role="group" aria-label="Carteira">
           {SCOPES.map((s) => (
             <button key={s.id} type="button" aria-pressed={scope === s.id} onClick={() => setScope(s.id)}>{s.label}</button>
           ))}
         </div>
         {month && (
-          <div className="flex items-center gap-1">
+          <div className="flex w-full items-center justify-between gap-1 sm:w-auto sm:justify-start">
             <button type="button" className="kb-muted h-11 w-11 text-xl" aria-label="Mês anterior" onClick={() => setMonth(shift(month, -1))}>‹</button>
-            <span className="kb-ink min-w-36 text-center text-sm capitalize">{monthName(month)}</span>
+            <span className="kb-ink min-w-36 text-center text-sm">{monthName(month).replace(/^./, (c) => c.toUpperCase()).replace(" De ", " de ")}</span>
             <button type="button" className="kb-muted h-11 w-11 text-xl" aria-label="Próximo mês" onClick={() => setMonth(shift(month, 1))}>›</button>
           </div>
         )}

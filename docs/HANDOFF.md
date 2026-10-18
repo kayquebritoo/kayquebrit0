@@ -116,6 +116,7 @@ Segundo cérebro no Obsidian: `Documents/Obsidian Vault` (CONTEXTO-IA,
 Voz-e-Tom, Marca, Servicos, KBOS - Visao, logs em `20-Projetos/KBOS/log/`).
 
 ## Diário (mais recente em cima)
+- 2026-10-18 · Claude · /admin/relatorios no celular: abas Empresa/Pessoal/Tudo em largura total, mês com "de" minúsculo, números dos cartões menores em telas ≤420px (não encostam na borda). Falta: Agenda e desktop.
 - 2026-10-18 · Claude · /admin/orcamentos no celular: lista vira cartões (código, cliente, total, status, ações de 44px) e os 3 totais ficam compactos em linha; tabela só em md+. Falta: revisar Relatórios, Agenda e desktop.
 
 - 2026-10-18 · Claude · CRM: aviso de contatos repetidos (mesmo telefone, ignora +55/máscara/9 extra) com botão 'Juntar' (`POST /api/admin/contacts/merge`, `lib/kbos/contact-merge.ts`: uma instrução SQL atômica move projetos/tarefas/lançamentos/negócios/conversas/orçamentos/cases/envios, completa campos vazios e ARQUIVA o duplicado, sem apagar). Workflow `Deploy VPS` deixa de falhar quando faltam os segredos (avisa e segue; o cron publica).
