@@ -116,6 +116,7 @@ Segundo cérebro no Obsidian: `Documents/Obsidian Vault` (CONTEXTO-IA,
 Voz-e-Tom, Marca, Servicos, KBOS - Visao, logs em `20-Projetos/KBOS/log/`).
 
 ## Diário (mais recente em cima)
+- 2026-10-18 · Claude · acabamento app nativo: hero mobile (degradê roxo, ondas visíveis, respiro), ícones sociais 38px (`.soc-row/.soc-btn`), menu com vidro roxo, rosa removido das páginas públicas (`.kb-em`, `PageBackdrop`), KBOS com `kb-page`/`kb-stagger` (entrada escalonada), Shell sem piscar (usuário em cache), toque com escala, Hoje com `Charts.tsx` (CountUp, Ring, AnimatedLine, Bars), anti-zoom (`NativeFeel`, inputs 16px). Falta: migrar telas antigas (`text-white/…`) ao padrão kb-*, conferir visualmente no iPhone instalado.
 - 2026-10-18 · Claude · voz clonada 24 h via Fish Audio (TTS_PROVIDER=fish, menu opção 8; cai na voz OpenAI se falhar). Manifesto PWA por domínio (kbos.* abre /entrar → painel). Instalar o app SEMPRE a partir de kbos.kayquebrito.com.br: abrir o outro domínio dentro do app mostra a barra do Safari.
 - 2026-10-18 · Claude · agente só atende com “Fala Kayque” (sessão de 5 min; ASSISTANT_TRIGGER) e fala no tom do Kayque. Falta: voz clonada (VoiceStudio no Mac via Tailscale → TTS_BASE_URL/TTS_API_KEY/TTS_VOICE).
 - 2026-10-18 · Claude · agente responde em áudio quando você fala por áudio (voz da OpenAI; voz própria via `TTS_BASE_URL` = VoiceStudio); regras de convivência no AGENTS.md.
