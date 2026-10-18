@@ -118,7 +118,9 @@ while true; do
       done
       ;;
     6)
-      if [ -z "$(getvar EVOLUTION_WEBHOOK_TOKEN)" ]; then
+      cur=$(getvar EVOLUTION_WEBHOOK_TOKEN); cur=${cur//\"/}
+      # Vazio ou "" (linha antiga do .env.example) conta como sem senha.
+      if [ ${#cur} -lt 8 ]; then
         setvar EVOLUTION_WEBHOOK_TOKEN "$(openssl rand -hex 24)"
       fi
       echo "Webhook protegido. O KBOS reaplica a senha na Evolution sozinho ao reiniciar (~20 s)."
