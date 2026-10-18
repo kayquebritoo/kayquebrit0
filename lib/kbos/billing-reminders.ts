@@ -10,7 +10,9 @@ export async function handleBillingReminders() {
       'billingTransactionId', t.id,
       'billingDueDate', (t.vencimento AT TIME ZONE 'America/Belem')::date::text,
       'billingReminderDay', (now() AT TIME ZONE 'America/Belem')::date::text,
-      'destino', c.phone,
+      'destino', CASE WHEN length(regexp_replace(c.phone, '[^0-9]', '', 'g')) IN (10,11)
+        THEN '55' || regexp_replace(c.phone, '[^0-9]', '', 'g')
+        ELSE regexp_replace(c.phone, '[^0-9]', '', 'g') END,
       'mensagem', '*KBOS — lembrete de pagamento*' || E'\nOlá ' || c.name ||
         '! A cobrança ' || t.descricao || ' de R$ ' || replace(t.valor::text, '.', ',') ||
         CASE WHEN (t.vencimento AT TIME ZONE 'America/Belem')::date = (now() AT TIME ZONE 'America/Belem')::date

@@ -111,9 +111,11 @@ describe("lembretes de cobrança", () => {
   it("enfileira apenas no dia e 2 dias antes; não repete e não envia se já pago", async () => {
     const { token } = await issueSaleLink(budgetId, plan);
     await acceptSale(token, "Cliente");
+    await d.update(schema.contacts).set({ phone: "(91) 99999-9999" });
     expect((await handleBillingReminders()).queued).toBe(1);
     expect((await handleBillingReminders()).queued).toBe(0);
     const [job] = await d.select().from(schema.jobs);
+    expect(job.payload.destino).toBe("5591999999999");
     await d.update(schema.transactions).set({ status: "pago" });
     const result = await handleNotifyWhatsapp(job.payload as unknown as Parameters<typeof handleNotifyWhatsapp>[0]);
     expect(result).toEqual({ skipped: true });
