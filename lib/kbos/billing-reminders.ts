@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { db } from "./db";
+import { handleBillingLadder } from "./billing-ladder";
 
 /** Outbox no Postgres: a mesma cobrança/data/antecedência só entra uma vez.
  * O sweeper entrega ao Redis, inclusive após indisponibilidade da fila. */
@@ -28,5 +29,7 @@ export async function handleBillingReminders() {
         (now() AT TIME ZONE 'America/Belem')::date,
         (now() AT TIME ZONE 'America/Belem')::date + 2)
     ON CONFLICT (idempotency_key) DO NOTHING RETURNING id`);
-  return { queued: result.rows.length };
+  // Depois do vencimento: escada gentil → firme → último aviso (mesmo job, mesmo outbox).
+  const ladder = await handleBillingLadder();
+  return { queued: result.rows.length + ladder.queued };
 }
