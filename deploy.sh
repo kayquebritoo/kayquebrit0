@@ -67,9 +67,14 @@ else
   TARGET="$(git rev-parse origin/main)"
 fi
 
-if [ "$MODE" = "--auto" ] && [ "$HEAD" = "$TARGET" ]; then
+# Compara com o que está NO AR (último deploy ok), não com o HEAD: um
+# `git pull` manual na VPS deixava HEAD = origin/main e o cron achava que
+# não havia novidade, mesmo com a imagem antiga rodando.
+DEPLOYED="$(redis_get "$STATE_KEY" | grep -o '"sha":"[0-9a-f]*' | cut -d'"' -f4)"
+CURRENT="${DEPLOYED:-$HEAD}"
+if [ "$MODE" = "--auto" ] && [ "$CURRENT" = "$TARGET" ]; then
   [ "$WANT" = "$TARGET" ] && redis_del "$WANT_KEY"
-  LOG "já publicado em $HEAD; nada a fazer."
+  LOG "já publicado em $CURRENT; nada a fazer."
   exit 0
 fi
 
