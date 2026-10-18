@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import EntrarForm from "@/components/kbos/EntrarForm";
 import { sessionUser } from "@/lib/kbos/rbac";
 
-export const metadata = { title: "Entrar — KBOS" };
+export const metadata = { title: "Seu espaço — KBOS · Kayque Brito", robots: { index: false, follow: false } };
+export const viewport = { width: "device-width", initialScale: 1, maximumScale: 5, userScalable: true };
 
 // Sessão válida (cookie) ou bypass aberto da VPS → vai direto ao painel,
 // sem exibir o login desnecessariamente. `next` é saneado (só path interno).

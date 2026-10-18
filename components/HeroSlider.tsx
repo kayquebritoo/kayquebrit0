@@ -237,8 +237,8 @@ export default function HeroSlide() {
         {/* base: vidro com frase centralizada + CTA */}
         <div className="relative z-10">
           <div className="fp-anim rounded-2xl border border-white/20 bg-[#11101E]/45 px-4 py-3 backdrop-blur-xl" style={{ boxShadow: "0 12px 32px rgba(0,0,0,0.35)" }}>
-            <p className="text-center text-[12.5px] font-light leading-snug text-white">
-              {t("hero.taglineA")} <em className="italic text-[#E80EFD]">{t("hero.taglineB")}</em>
+            <p className="text-center text-[15px] font-light leading-snug text-[#EDE6EC]">
+              {t("hero.taglineA")} <em className="font-medium not-italic text-[#EDE6EC]">{t("hero.taglineB")}</em>
             </p>
           </div>
           <Link
@@ -358,7 +358,7 @@ export default function HeroSlide() {
           className="fp-anim font-light text-[#EDE6EC]"
           style={{ fontSize: "clamp(17px, 1.25vw, 23px)", lineHeight: 1.5 }}
         >
-          {t("hero.taglineA")} <em className="italic text-[#E80EFD]">{t("hero.taglineB")}</em>
+          {t("hero.taglineA")} <em className="font-medium not-italic text-[#EDE6EC]">{t("hero.taglineB")}</em>
         </p>
       </div>
 

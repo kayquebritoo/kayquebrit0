@@ -17,13 +17,7 @@ export async function POST(req: Request) {
     const { email, password } = parsed.data;
     const r = await loginWithPassword(email, password);
     if (!r.ok) {
-      if (r.code === "NO_PASSWORD") {
-        return NextResponse.json(
-          { error: "Conta sem senha — use o link mágico abaixo para definir sua senha.", code: "NO_PASSWORD" },
-          { status: 404 }
-        );
-      }
-      return NextResponse.json({ error: "E-mail ou senha inválidos." }, { status: 401 });
+      return NextResponse.json({ error: "Usuário ou senha inválidos." }, { status: 401 });
     }
     const dest = r.user.role === "admin" ? "/admin" : "/portal";
     const res = NextResponse.json({ ok: true, dest, adminBypass: r.adminBypass });

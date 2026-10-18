@@ -101,6 +101,21 @@ export const SCHEMA_STEPS: { id: string; sql: string }[] = [
  updated_at timestamptz NOT NULL DEFAULT now()
 )` },
 
+  { id: "auth.simple.0", sql: `ALTER TABLE kbos_users ADD COLUMN IF NOT EXISTS username text` },
+  { id: "auth.simple.1", sql: `ALTER TABLE kbos_users ADD COLUMN IF NOT EXISTS auth_code_requested_at timestamptz` },
+  { id: "auth.simple.2", sql: `CREATE UNIQUE INDEX IF NOT EXISTS kbos_users_username_unique ON kbos_users(lower(username))` },
+  { id: "auth.simple.3", sql: `ALTER TABLE kbos_users ADD COLUMN IF NOT EXISTS google_subject text` },
+  { id: "auth.simple.4", sql: `CREATE UNIQUE INDEX IF NOT EXISTS kbos_users_google_subject_unique ON kbos_users(google_subject)` },
+  { id: "auth.simple.5", sql: `CREATE TABLE IF NOT EXISTS kbos_auth_challenges (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ user_id uuid NOT NULL REFERENCES kbos_users(id) ON DELETE CASCADE,
+ code_hash text NOT NULL,
+ channel text NOT NULL,
+ attempts integer NOT NULL DEFAULT 0,
+ consumed boolean NOT NULL DEFAULT false,
+ expires_at timestamptz NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT now()
+)` },
 
 ];
 

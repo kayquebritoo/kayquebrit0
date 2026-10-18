@@ -125,21 +125,14 @@ export function AboutSlide() {
       <div className="ref-inner">
         {/* mobile: texto compacto para caber em 100svh */}
         <p className="fp-anim text-[16px] font-light leading-[1.6] text-[#EDE6EC] md:hidden">
-          <strong className="font-semibold">Tecnólogo Criativo</strong> especializado em
-          converter <em className="italic">tecnologia em impacto visual.</em> Formado em
-          Análise e Desenvolvimento de Sistemas, integro programação, design criativo e
-          audiovisual para entregar soluções completas e escaláveis no ambiente digital.
+          {t("about.text")}
         </p>
         {/* desktop: medida do ref */}
         <p
           className="fp-anim hidden font-light text-[#EDE6EC] md:block"
           style={{ fontSize: "clamp(24px, 2.05vw, 39px)", lineHeight: 1.55, fontWeight: 300 }}
         >
-          <strong style={{ fontWeight: 600 }}>Tecnólogo Criativo</strong> especializado em
-          converter <em className="font-light italic">tecnologia em impacto visual.</em>{" "}
-          Formado em Análise e Desenvolvimento de Sistemas, integro programação,
-          design criativo e audiovisual para entregar soluções completas e
-          escaláveis no ambiente digital.
+          {t("about.text")}
         </p>
 
         {/* collage escalonada — desktop (grade em fluxo: as 4 sempre cabem no slide) */}

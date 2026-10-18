@@ -20,7 +20,7 @@ export type WhatsappPayload = {
 };
 
 /** Envio real à Evolution API — roda SÓ no worker (pode lançar erro p/ retry). */
-export async function sendEvolutionText(destino: string, mensagem: string) {
+export async function sendEvolutionText(destino: string, mensagem: string, options?: { signal?: AbortSignal }) {
   warnEvoFallbackOnce();
   // Zero-config: env vazia cai nos padrões internos (compose).
   const { url, key, instance } = evoConfig();
@@ -34,6 +34,7 @@ export async function sendEvolutionText(destino: string, mensagem: string) {
     method: "POST",
     headers: { apikey: key, "Content-Type": "application/json" },
     body: JSON.stringify({ number: destino, text: mensagem }),
+    signal: options?.signal,
   });
   if (!res.ok) throw new Error(`Evolution ${res.status}: ${await res.text()}`);
 }

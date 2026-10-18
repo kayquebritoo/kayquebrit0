@@ -67,6 +67,9 @@ async function adminBypassUser(): Promise<SessionUser> {
     name: "Administrador",
     role: "admin" as Role,
     phone: null,
+    username: null,
+    googleSubject: null,
+    authCodeRequestedAt: null,
     passwordHash: null,
     createdAt: new Date(0),
   };

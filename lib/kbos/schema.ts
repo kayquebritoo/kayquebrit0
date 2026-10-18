@@ -17,6 +17,7 @@
 //      antes de qualquer query (evita `invalid input syntax for type uuid`).
 //   3. Queries de sessão validam o formato uuid antes (`isUuidLike`) e
 //      retornam 401 em vez de 500 para valores inesperados.
+import { sql } from "drizzle-orm";
 import {
   boolean,
   customType,
@@ -44,6 +45,9 @@ export const roleEnum = pgEnum("kbos_role", [
 ]);
 
 export const users = pgTable("kbos_users", {
+  username: text("username"),
+  googleSubject: text("google_subject").unique(),
+  authCodeRequestedAt: timestamp("auth_code_requested_at", {withTimezone:true}),
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
@@ -54,7 +58,7 @@ export const users = pgTable("kbos_users", {
   // com o token do link mágico; admin usa o bypass como senha imediata.
   passwordHash: text("password_hash"),
   createdAt: ts("created_at"),
-});
+}, (table) => [uniqueIndex("kbos_users_username_unique").on(sql`lower(${table.username})`)]);
 
 export const sessions = pgTable("kbos_sessions", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -685,4 +689,12 @@ export const clientPlans = pgTable("kbos_client_plans", {
  feedback: jsonb("feedback").notNull().$type<import("./planning-model").PlanReview[]>().default([]),
  approvedAt: timestamp("approved_at", { withTimezone: true }),
  createdAt: ts("created_at"), updatedAt: ts("updated_at"),
+});
+
+export const authChallenges = pgTable("kbos_auth_challenges", {
+ id: uuid("id").primaryKey().defaultRandom(),
+ userId: uuid("user_id").notNull().references(() => users.id, {onDelete:"cascade"}),
+ codeHash: text("code_hash").notNull(), channel: text("channel").notNull(),
+ attempts: integer("attempts").notNull().default(0), consumed: boolean("consumed").notNull().default(false),
+ expiresAt: timestamp("expires_at",{withTimezone:true}).notNull(), createdAt: ts("created_at"),
 });

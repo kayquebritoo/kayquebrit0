@@ -53,7 +53,7 @@ export const authRequestSchema = z.object({
 
 /* ---------- auth e-mail + senha (fluxo principal do /entrar) ---------- */
 export const authLoginSchema = z.object({
-  email: emailField,
+  email: z.string().trim().min(1, "Informe seu usuário ou e-mail.").max(160),
   // Aceita o bypass do admin aqui também (acesso imediato na VPS):
   // se o e-mail for o do admin e a senha conferir com
   // `KBOS_ADMIN_BYPASS_TOKEN`/`KBOS_ADMIN_PASSWORD`, a sessão é criada

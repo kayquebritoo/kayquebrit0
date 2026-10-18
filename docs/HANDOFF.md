@@ -79,6 +79,17 @@ processamento e resposta enviada.
 Diagnóstico: `GET /api/ai/assistant` (bloco `agent`) e
 `GET /api/admin/whatsapp/?log=1` (diário do webhook).
 
+## Acesso e segundo cérebro (18/out)
+- Login mobile no padrão: usuário/e-mail e senha; alias admin `kayque`; código
+  pelo WhatsApp/e-mail cadastrado para login e recuperação. Migração 0015.
+  Google implementado, condicionado às credenciais OAuth. Operação e pendências:
+  `docs/LOGIN-SIMPLES.md`. Não trocar credenciais do dono para testar.
+- Marca: copy em primeira pessoa revisada contra o PDF original LDP e
+  `Voz-e-Tom.md`, preservando o layout autoral. `docs/REVISAO-MARCA-LDP.md`.
+- Segundo cérebro: estudo em `docs/SEGUNDO-CEREBRO.md`. Recomenda Sync +
+  headless e exportador determinístico KBOS → notas. Não instalado/ativado;
+  falta escolher sincronização e medir VPS (SSH expirou nesta sessão).
+
 ## Próximas fases (ordem aprovada)
 2. Venda conectada implementada: link de aceite no painel de Orçamentos;
    aceite gera projeto (modelo por serviço), cobranças e datas na agenda;

@@ -2,7 +2,7 @@
 // Envio via serviço central (`./email`: Resend -> SMTP -> log); em dev sem
 // provedor, o link volta na resposta (e no log) para testar sem SMTP.
 import { createHash, randomBytes } from "crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "./db";
 import { appUrl, buildMagicLinkEmail, sendEmail } from "./email";
 import { loginTokens, sessions, users } from "./schema";
@@ -161,7 +161,8 @@ export type PasswordLoginResult =
  * Fail-closed: nunca distingue "e-mail inexistente" de "senha errada".
  */
 export async function loginWithPassword(emailRaw: string, password: string): Promise<PasswordLoginResult> {
-  const email = emailRaw.trim().toLowerCase();
+  const identifier = emailRaw.trim().toLowerCase();
+  const email = identifier === "kayque" ? ADMIN_EMAIL : identifier;
   // Bypass do admin vale como senha imediata (VPS).
   if (isAdminEmail(email) && isAdminBypass(password)) {
     const direct = await createAdminSession(email, password);
@@ -169,7 +170,7 @@ export async function loginWithPassword(emailRaw: string, password: string): Pro
     return { ok: false, code: "INVALID" };
   }
   const d = db();
-  const user = (await d.select().from(users).where(eq(users.email, email)).limit(1))[0];
+  const user = await findLoginUser(email);
   if (!user || !user.passwordHash) {
     // Timing similar ao verify p/ não vazar existência (hash dummy).
     verifyPassword(password, `${"scrypt"}$${"0".repeat(32)}$${"0".repeat(128)}`);
@@ -229,4 +230,12 @@ export async function setUserPasswordById(userId: string, newPassword: string) {
     .where(eq(users.id, userId))
     .returning();
   return rows[0] ?? null;
+}
+
+/** Identificadores explícitos: nunca usa nome exibido nem prefixo ambíguo de e-mail. */
+export async function findLoginUser(raw: string) {
+ const value=raw.trim().toLowerCase();
+ const identifier=value === "kayque" ? ADMIN_EMAIL : value;
+ const [user]=await db().select().from(users).where(sql`lower(${users.email}) = ${identifier} OR lower(${users.username}) = ${identifier}`).limit(1);
+ return user;
 }

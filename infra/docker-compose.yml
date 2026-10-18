@@ -53,6 +53,8 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgres://postgres:kbos@db:5432/kbos}
       REDIS_URL: redis://redis:6379
       APP_URL: ${APP_URL:-http://localhost:3000}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_FROM: ${RESEND_FROM:-}
       EMAIL_FROM: ${EMAIL_FROM:-}

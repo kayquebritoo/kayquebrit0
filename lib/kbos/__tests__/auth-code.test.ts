@@ -1,0 +1,45 @@
+import { beforeAll,beforeEach,afterAll,describe,it,expect,vi } from 'vitest';
+import { PGlite } from '@electric-sql/pglite';
+import { drizzle } from 'drizzle-orm/pglite';
+import { readFileSync,readdirSync } from 'node:fs';
+import { eq } from 'drizzle-orm';
+import * as schema from '../schema';
+const holder=vi.hoisted(()=>({db:null as unknown}));
+vi.mock('../db',()=>({db:()=>holder.db}));
+vi.mock('../whatsapp',()=>({sendEvolutionText:vi.fn().mockResolvedValue(undefined)}));
+vi.mock('../email',()=>({sendEmail:vi.fn().mockResolvedValue({sent:true}),appUrl:()=>'',appUrlEnv:()=> 'https://kbos.example.com'}));
+const oidcMock=vi.hoisted(()=>({claims:{} as Record<string,unknown>,grant:vi.fn()}));
+vi.mock('openid-client',()=>({discovery:vi.fn().mockResolvedValue({}),enableNonRepudiationChecks:vi.fn(),authorizationCodeGrant:oidcMock.grant}));
+import { finishGoogle,safeAuthNext } from '../auth-google';
+import { sendEvolutionText } from '../whatsapp';
+import { sendEmail } from '../email';
+import { requestAccessCode,verifyAccessCode } from '../auth-code';
+import { loginWithPassword,findLoginUser } from '../auth';
+import { hashPassword } from '../password';
+const pg=new PGlite(),d=drizzle(pg,{schema});
+let id:string;
+beforeAll(async()=>{holder.db=d;for(const file of readdirSync('drizzle').filter(f=>/^\d.*\.sql$/.test(f)).sort())await pg.exec(readFileSync(`drizzle/${file}`,'utf8'));},30000);
+beforeEach(async()=>{vi.clearAllMocks();await pg.exec('TRUNCATE kbos_users CASCADE');const [u]=await d.insert(schema.users).values({name:'Cliente',email:'cliente@example.com',username:'meu.estudio',phone:'5591999999999',passwordHash:hashPassword('senha-segura')}).returning();id=u.id;});
+afterAll(()=>pg.close());
+function deliveredCode(){return String(vi.mocked(sendEvolutionText).mock.calls[0][1]).match(/\b\d{6}\b/)![0];}
+describe('acesso simples sem magic link',()=>{
+ it('resolve usuário explícito e e-mail sem aceitar prefixos ambíguos',async()=>{expect((await findLoginUser('MEU.ESTUDIO')).id).toBe(id);expect(await findLoginUser('cliente')).toBeUndefined();expect((await loginWithPassword('meu.estudio','senha-segura')).ok).toBe(true);expect((await loginWithPassword('meu.estudio','errada')).ok).toBe(false);});
+ it('grava só hash, usa código uma vez e mantém a permissão original',async()=>{const result=await requestAccessCode('meu.estudio','whatsapp');const code=deliveredCode();const [challenge]=await d.select().from(schema.authChallenges);expect(challenge.codeHash).not.toContain(code);const session=await verifyAccessCode(result.challengeId,code);expect(session.userId).toBe(id);expect((await d.select().from(schema.users))[0].role).toBe('cliente');await expect(verifyAccessCode(result.challengeId,code)).rejects.toThrow();expect((await d.select().from(schema.sessions)).length).toBe(1);});
+ it('bloqueia a sexta tentativa mesmo com o código certo',async()=>{const result=await requestAccessCode('cliente@example.com','whatsapp'),code=deliveredCode(),wrong=code==='000000'?'111111':'000000';for(let i=0;i<5;i++)await expect(verifyAccessCode(result.challengeId,wrong)).rejects.toThrow();await expect(verifyAccessCode(result.challengeId,code)).rejects.toThrow();expect((await d.select().from(schema.sessions)).length).toBe(0);});
+ it('não envia códigos para destinos escolhidos pelo visitante nem cria contas',async()=>{const unknown=await requestAccessCode('fora@example.com','whatsapp');expect(unknown.challengeId).toMatch(/^[a-f0-9-]{36}$/);expect(sendEvolutionText).not.toHaveBeenCalled();await d.update(schema.users).set({phone:null}).where(eq(schema.users.id,id));const unavailable=await requestAccessCode('meu.estudio','whatsapp');expect(unavailable.message).toBe(unknown.message);expect(sendEvolutionText).not.toHaveBeenCalled();expect((await d.select().from(schema.users)).length).toBe(1);});
+ it('limita reenvio por conta, inclusive trocando canal',async()=>{await requestAccessCode('meu.estudio','whatsapp');await requestAccessCode('cliente@example.com','email');expect(sendEvolutionText).toHaveBeenCalledTimes(1);expect(sendEmail).not.toHaveBeenCalled();});
+ it('invalida código expirado e falha de entrega',async()=>{const result=await requestAccessCode('meu.estudio','whatsapp'),code=deliveredCode();await d.update(schema.authChallenges).set({expiresAt:new Date(0)});await expect(verifyAccessCode(result.challengeId,code)).rejects.toThrow();await d.update(schema.users).set({authCodeRequestedAt:null});vi.mocked(sendEvolutionText).mockRejectedValueOnce(new Error('offline'));const failed=await requestAccessCode('meu.estudio','whatsapp');const [row]=await d.select().from(schema.authChallenges).where(eq(schema.authChallenges.id,failed.challengeId));expect(row.consumed).toBe(true);});
+ it('permite somente uma sessão em confirmações concorrentes',async()=>{const result=await requestAccessCode('meu.estudio','whatsapp'),code=deliveredCode();const attempts=await Promise.allSettled([verifyAccessCode(result.challengeId,code),verifyAccessCode(result.challengeId,code)]);expect(attempts.filter(r=>r.status==='fulfilled')).toHaveLength(1);expect(await d.select().from(schema.sessions)).toHaveLength(1);});
+ it('não permite nomes de usuário duplicados variando caixa',async()=>{await expect(d.insert(schema.users).values({name:'Outro',email:'outro@example.com',username:'MEU.ESTUDIO'})).rejects.toThrow();});
+});
+
+describe('vinculação Google',()=>{
+ const flow=()=>JSON.stringify({verifier:'verifier',state:'state',nonce:'nonce',expires:Date.now()+10000,next:'/portal'});
+ const callback=new URL('https://kbos.example.com/api/auth/google/callback/?code=fake&state=state');
+ beforeEach(()=>{vi.stubEnv('GOOGLE_CLIENT_ID','test-client');vi.stubEnv('GOOGLE_CLIENT_SECRET','test-secret');oidcMock.grant.mockResolvedValue({claims:()=>oidcMock.claims});});
+ it('não vincula e-mail de terceiro só por estar verificado no Google',async()=>{oidcMock.claims={sub:'google-1',email:'cliente@example.com',email_verified:true};await expect(finishGoogle(callback,flow())).rejects.toThrow('vinculação');expect(await d.select().from(schema.sessions)).toHaveLength(0);});
+ it('vincula Workspace correspondente e conserva o papel da conta existente',async()=>{oidcMock.claims={sub:'google-1',email:'cliente@example.com',email_verified:true,hd:'example.com'};const result=await finishGoogle(callback,flow());expect(result.dest).toBe('/portal');const [user]=await d.select().from(schema.users);expect(user.googleSubject).toBe('google-1');expect(user.role).toBe('cliente');expect(oidcMock.grant).toHaveBeenCalledWith(expect.anything(),callback,{pkceCodeVerifier:'verifier',expectedState:'state',expectedNonce:'nonce',idTokenExpected:true});});
+ it('não cria conta nem sessão para um e-mail desconhecido ou não verificado',async()=>{oidcMock.claims={sub:'google-1',email:'novo@gmail.com',email_verified:true};await expect(finishGoogle(callback,flow())).rejects.toThrow('cadastrado');oidcMock.claims={sub:'google-1',email:'cliente@example.com',email_verified:false,hd:'example.com'};await expect(finishGoogle(callback,flow())).rejects.toThrow('confirmar');expect(await d.select().from(schema.users)).toHaveLength(1);expect(await d.select().from(schema.sessions)).toHaveLength(0);});
+ it('não permite dois subjects assumirem a mesma conta',async()=>{await d.update(schema.users).set({googleSubject:'original'}).where(eq(schema.users.id,id));oidcMock.claims={sub:'outro',email:'cliente@example.com',email_verified:true,hd:'example.com'};await expect(finishGoogle(callback,flow())).rejects.toThrow('cadastrado');expect(await d.select().from(schema.sessions)).toHaveLength(0);});
+ it('rejeita fluxo expirado e redirecionamento externo',async()=>{await expect(finishGoogle(callback,JSON.stringify({verifier:'v',state:'s',nonce:'n',expires:0}))).rejects.toThrow('expirou');expect(safeAuthNext('//externo.test')).toBe('');expect(safeAuthNext('/\\externo.test')).toBe('');expect(safeAuthNext('/admin/')).toBe('/admin/');});
+});
