@@ -1,0 +1,4 @@
+sentence-transformers>=3.0
+pillow>=10.0
+pillow-heif>=0.16
+numpy>=1.26
