@@ -162,8 +162,13 @@ services:
       DATABASE_ENABLED: "true"
       DATABASE_PROVIDER: "postgresql"
       DATABASE_CONNECTION_URI: postgres://postgres:${EVO_DB_PASSWORD:-evolution}@evo-db:5432/evolution
-      REDIS_ENABLED: "true"
-      REDIS_URI: redis://redis:6379
+      # A v2 lê CACHE_REDIS_*; sem isso ela tenta um Redis vazio e fica em
+      # "redis disconnected" em loop (o que trava o recebimento de mensagens).
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379/6
+      CACHE_REDIS_PREFIX_KEY: evolution
+      CACHE_REDIS_SAVE_INSTANCES: "false"
+      CACHE_LOCAL_ENABLED: "false"
     depends_on:
       - redis
       - evo-db
