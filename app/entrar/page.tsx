@@ -13,8 +13,16 @@ export default async function EntrarPage({
 }: {
   searchParams: Promise<{ next?: string; preview?: string }>;
 }) {
-  const user = await sessionUser();
   const { next, preview } = await searchParams;
+  // O motor de WhatsApp e a sessão principal estão na VPS. O portfólio
+  // da Vercel encaminha o login para lá, evitando dois acessos diferentes.
+  if (process.env.VERCEL) {
+    const url = new URL("https://kbos.kayquebrito.com.br/entrar/");
+    if (next?.startsWith("/") && !next.startsWith("//") && !/[\\\r\n]/.test(next)) url.searchParams.set("next", next);
+    if (preview === "1") url.searchParams.set("preview", "1");
+    redirect(url.toString());
+  }
+  const user = await sessionUser();
   if (user && !(preview === "1" && user.role === "admin")) {
     redirect(
       next && next.startsWith("/") && !next.startsWith("//")
