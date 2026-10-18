@@ -178,7 +178,7 @@ export default function WorksPage() {
             href="/briefing"
             className="mt-8 inline-block rounded-full bg-white px-10 py-4 text-sm font-bold uppercase tracking-[0.18em] text-black transition hover:scale-[1.03] md:px-12"
           >
-            Contratar serviço
+            Conte seu projeto
           </Link>
         </div>
       </div>
