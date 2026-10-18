@@ -56,6 +56,7 @@ while true; do
   echo " 4) Meu número de WhatsApp (dono do assistente)"
   echo " 5) Ver o que está configurado (sem mostrar chaves)"
   echo " 6) Ligar o assistente no WhatsApp (protege o webhook com senha)"
+  echo " 7) Ativar login com Google"
   echo " 0) Sair"
   read -r -p "Escolha: " opt
   case "$opt" in
@@ -116,6 +117,11 @@ while true; do
         if [ ${#v} -lt 4 ]; then s="não configurada"; elif [ "$v" = "kbos-dev-key" ]; then s="PADRÃO (troque: opção 3)"; else s="configurada (…${v: -4})"; fi
         printf ' %-22s %s\n' "$k" "$s"
       done
+      for k in GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET; do
+        v=$(getvar "$k"); v=${v//\"/}
+        if [ -n "$v" ]; then s="configurado"; else s="não configurado"; fi
+        printf ' %-22s %s\n' "$k" "$s"
+      done
       ;;
     6)
       cur=$(getvar EVOLUTION_WEBHOOK_TOKEN); cur=${cur//\"/}
@@ -126,6 +132,33 @@ while true; do
       echo "Webhook protegido. O KBOS reaplica a senha na Evolution sozinho ao reiniciar (~20 s)."
       apply
       echo "Agora mande uma mensagem para você mesmo no WhatsApp (conversa 'Você'), ex.: 'o que tenho hoje?'"
+      ;;
+    7)
+      echo
+      echo "No Google Cloud, crie um cliente OAuth do tipo Aplicativo da Web."
+      echo "URI de redirecionamento autorizada (copie exatamente):"
+      echo "https://kbos.kayquebrito.com.br/api/auth/google/callback/"
+      echo
+      read -r -p "ID do cliente Google: " google_id
+      google_id=$(printf '%s' "$google_id" | tr -d '[:space:]\"')
+      if [[ ! "$google_id" =~ ^[A-Za-z0-9._-]+\.apps\.googleusercontent\.com$ ]]; then
+        echo "O ID não parece ser de um cliente OAuth Google. Nada foi alterado."
+        continue
+      fi
+      google_secret=$(ask_secret "Segredo do cliente (não aparece na tela): ")
+      google_secret=$(printf '%s' "$google_secret" | tr -d '[:space:]\"')
+      if [[ ! "$google_secret" =~ ^[A-Za-z0-9._-]{10,}$ ]]; then
+        echo "Segredo vazio ou em formato inesperado. Nada foi alterado."
+        unset google_secret
+        continue
+      fi
+      setvar GOOGLE_CLIENT_ID "$google_id"
+      setvar GOOGLE_CLIENT_SECRET "$google_secret"
+      setvar APP_URL "https://kbos.kayquebrito.com.br"
+      unset google_secret
+      apply
+      echo "Configuração salva. Abra o login e teste Continuar com Google."
+      echo "Use o e-mail que já está cadastrado no KBOS."
       ;;
     0) exit 0 ;;
     *) echo "Opção inválida." ;;

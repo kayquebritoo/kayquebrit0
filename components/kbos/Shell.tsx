@@ -73,6 +73,7 @@ const GROUPS: NavGroup[] = [
     label: "Mais",
     icon: ico("M5 12h.01M12 12h.01M19 12h.01"),
     links: [
+      { href: "/portal/conta", label: "Meu acesso" },
       { href: "/admin/whatsapp", label: "Conexão do WhatsApp", adminOnly: true },
       { href: "/portal/cursos", label: "Meus cursos" },
     ],

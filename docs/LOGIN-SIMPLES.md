@@ -23,7 +23,11 @@ Implementado com `openid-client`: OIDC, PKCE S256, state, nonce, validação de 
 Criar cliente OAuth web no Google Cloud, configurar a tela de consentimento e registrar o callback exato do domínio de login:
 `https://kbos.kayquebrito.com.br/api/auth/google/callback/`
 
+Na VPS, abrir `bash /opt/kbos/scripts/kbos-config.sh` e escolher **7 — Ativar login com Google**. O menu pede o ID e o segredo (oculto), grava no `.env` protegido e reaplica os serviços. A opção 5 mostra apenas se o Google está configurado, sem mostrar esses valores.
+
 Se o login operar no domínio raiz, `APP_URL` e o callback autorizado precisam corresponder ao mesmo domínio. Não copiar segredo para o chat nem para o Git: salvar no ambiente da VPS. O Compose encaminha as duas variáveis. A publicação subsequente recria o serviço com a configuração.
+
+Em **Mais → Meu acesso** (`/portal/conta/`), o titular pode escolher seu usuário e conectar o Google pessoal, inclusive se o e-mail for diferente. O vínculo exige sessão KBOS válida no início e no retorno do Google, e só altera a própria conta. Um Google já conectado a outra conta não pode ser tomado.
 
 Usa uma conta KBOS já cadastrada. Associação automática por endereço somente quando Google é autoridade do e-mail (Gmail ou Workspace do domínio correspondente); outros e-mails usam senha/código até uma vinculação assistida. Permissões vêm do usuário existente, nunca de parâmetros do navegador.
 

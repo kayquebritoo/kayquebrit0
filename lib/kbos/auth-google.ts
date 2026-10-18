@@ -14,12 +14,12 @@ async function config(){
  oidc.enableNonRepudiationChecks(cfg);
  return cfg;
 }
-export async function startGoogle(next:string){
+export async function startGoogle(next:string,linkUserId?:string){
  const cfg=await config(),verifier=oidc.randomPKCECodeVerifier(),state=oidc.randomState(),nonce=oidc.randomNonce();
  const url=oidc.buildAuthorizationUrl(cfg,{redirect_uri:googleCallback(),scope:'openid email profile',code_challenge:await oidc.calculatePKCECodeChallenge(verifier),code_challenge_method:'S256',state,nonce});
- return {url,flow:{verifier,state,nonce,next:safeAuthNext(next),expires:Date.now()+600_000}};
+ return {url,flow:{verifier,state,nonce,next:safeAuthNext(next),expires:Date.now()+600_000,...(linkUserId?{linkUserId}:{})}};
 }
-export async function finishGoogle(url:URL,raw:string){
+export async function finishGoogle(url:URL,raw:string,authenticatedUserId?:string){
  const flow=JSON.parse(raw);
  if(!flow.verifier||!flow.state||!flow.nonce||flow.expires<Date.now())throw new PublicError('A solicitação expirou. Tente novamente.');
  const tokens=await oidc.authorizationCodeGrant(await config(),url,{pkceCodeVerifier:flow.verifier,expectedState:flow.state,expectedNonce:flow.nonce,idTokenExpected:true});
@@ -27,6 +27,18 @@ export async function finishGoogle(url:URL,raw:string){
  if(!claims?.sub||typeof claims.email!=='string'||claims.email_verified!==true)throw new PublicError('Não foi possível confirmar sua conta Google.');
  const [bySubject]=await db().select().from(users).where(eq(users.googleSubject,claims.sub)).limit(1);
  let user=bySubject;
+ if(flow.linkUserId){
+  if(!authenticatedUserId||flow.linkUserId!==authenticatedUserId)throw new PublicError('Entre na sua conta antes de conectar o Google.');
+  if(bySubject&&bySubject.id!==authenticatedUserId)throw new PublicError('Esse Google já está conectado a outra conta.');
+  const [current]=await db().select().from(users).where(eq(users.id,authenticatedUserId)).limit(1);
+  if(!current||current.googleSubject&&current.googleSubject!==claims.sub)throw new PublicError('Sua conta já possui outro Google conectado.');
+  if(!current.googleSubject){
+   const [linked]=await db().update(users).set({googleSubject:claims.sub}).where(and(eq(users.id,current.id),isNull(users.googleSubject))).returning();
+   if(!linked)throw new PublicError('Sua conta mudou. Atualize e tente novamente.');
+   user=linked;
+  }else user=current;
+ }
+
  if(!user){
   // Google só é autoridade do endereço para Gmail e Workspace. Não vincular
   // contas de terceiros apenas porque Google confirmou esse e-mail no passado.
