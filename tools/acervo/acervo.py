@@ -64,7 +64,7 @@ def video_frames(path):
     """Extrai 1 quadro a cada N segundos (320 px) usando o ffmpeg; devolve [(segundo, Image)]."""
     out = []
     with tempfile.TemporaryDirectory() as tmp:
-        cmd = ["ffmpeg", "-v", "error", "-hwaccel", "videotoolbox", "-i", str(path), "-vf", f"fps=1/{VIDEO_STEP_SEC},scale=448:-2", "-q:v", "4", f"{tmp}/f_%05d.jpg"]
+        cmd = [os.environ.get("ACERVO_FFMPEG", "ffmpeg"), "-v", "error", "-hwaccel", "videotoolbox", "-i", str(path), "-vf", f"fps=1/{VIDEO_STEP_SEC},scale=448:-2", "-q:v", "4", f"{tmp}/f_%05d.jpg"]
         r = subprocess.run(cmd, capture_output=True)
         if r.returncode != 0:  # sem aceleração por hardware
             cmd.remove("-hwaccel"); cmd.remove("videotoolbox")
