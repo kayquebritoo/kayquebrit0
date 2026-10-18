@@ -117,6 +117,8 @@ Voz-e-Tom, Marca, Servicos, KBOS - Visao, logs em `20-Projetos/KBOS/log/`).
 
 ## Diário (mais recente em cima)
 
+- 2026-10-18 · Claude · CRM: aviso de contatos repetidos (mesmo telefone, ignora +55/máscara/9 extra) com botão 'Juntar' (`POST /api/admin/contacts/merge`, `lib/kbos/contact-merge.ts`: uma instrução SQL atômica move projetos/tarefas/lançamentos/negócios/conversas/orçamentos/cases/envios, completa campos vazios e ARQUIVA o duplicado, sem apagar). Workflow `Deploy VPS` deixa de falhar quando faltam os segredos (avisa e segue; o cron publica).
+
 - 2026-10-18 · Claude · Polimento mobile do /admin (visto no navegador do app): barra inferior opaca (texto da lista aparecia por trás), gráfico do Financeiro não desenhava as barras (altura em % de pai sem altura), CRM com esqueleto de carregamento (piscava 'Ninguém aqui ainda'), Projetos com formulário recolhido atrás de '+ Novo projeto' e categorias com acento. Falta: revisar Tarefas, Orçamentos, Relatórios, Agenda e o desktop; duplicatas de contato por telefone no CRM (ex.: 3x Kayque Brito).
 
 - 2026-10-18 · Claude · Roda/trackpad não rolava nenhuma página (teclado rolava): `overflow-x:hidden` + `overscroll-behavior-y:none` em html E body faziam o body virar contêiner de rolagem que bloqueava o encadeamento. Agora `overflow-x:hidden` só no body e overscroll só no html (testado ao vivo injetando o CSS). Não repetir os dois no mesmo seletor.

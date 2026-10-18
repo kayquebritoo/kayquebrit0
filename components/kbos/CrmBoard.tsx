@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CONTACT_STATUS } from "@/lib/kbos/constants";
 import Client360 from "./Client360";
+import { duplicateGroups } from "@/lib/kbos/contact-dupes";
 import { cleanDocument, isValidCNPJ, maskDocumentInput } from "@/lib/kbos/document";
 
 type Contact = {
@@ -92,6 +93,9 @@ export default function CrmBoard() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
   const [fichaId, setFichaId] = useState<string | null>(null);
+  const [dupesOpen, setDupesOpen] = useState(false);
+  const [merging, setMerging] = useState(false);
+  const [mergeMsg, setMergeMsg] = useState("");
   const [lookup, setLookup] = useState<"idle" | "busy" | "ok" | string>("idle");
 
   const load = useCallback(async () => {
@@ -119,6 +123,27 @@ export default function CrmBoard() {
     for (const s of CONTACT_STATUS) c[s.id] = items.filter((i) => i.status === s.id).length;
     return c;
   }, [items]);
+
+  const dupes = useMemo(() => duplicateGroups(items.map((c) => ({ ...c, createdAt: c.updatedAt ?? null }))), [items]);
+
+  async function mergeGroup(group: Contact[]) {
+    const [keep, ...rest] = group;
+    if (!confirm(`Juntar ${rest.length} contato(s) repetido(s) em "${keep.name}"? Projetos, cobranças, conversas e orçamentos vão para ele; os outros ficam arquivados.`)) return;
+    setMerging(true);
+    setMergeMsg("");
+    try {
+      for (const r of rest) {
+        const res = await fetch("/api/admin/contacts/merge", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keepId: keep.id, removeId: r.id }) });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Não consegui juntar.");
+      }
+      setMergeMsg(`Pronto: ${rest.length} contato(s) juntado(s) em ${keep.name}.`);
+      await load();
+    } catch (e) {
+      setMergeMsg(e instanceof Error ? e.message : "Erro.");
+    } finally {
+      setMerging(false);
+    }
+  }
 
   const shown = useMemo(
     () => items.filter((c) => (filter === "all" ? c.status !== "archived" : c.status === filter)),
@@ -239,6 +264,16 @@ export default function CrmBoard() {
         ))}
       </div>
 
+      {dupes.length > 0 && (
+        <button type="button" onClick={() => setDupesOpen(true)} className="kb-glass flex w-full items-center justify-between gap-3 rounded-2xl! px-4 py-3 text-left">
+          <span className="text-sm">
+            <b className="kb-ink">{dupes.reduce((a, g) => a + g.length - 1, 0)} contato(s) repetido(s)</b>
+            <span className="kb-muted block text-[12px]">Mesmo telefone em mais de um cadastro. Toque para juntar.</span>
+          </span>
+          <span className="kb-tag soon shrink-0">Revisar</span>
+        </button>
+      )}
+
       <section className="kb-glass px-4 py-1">
         {shown.map((c) => {
           const gaps = missing(c);
@@ -277,6 +312,33 @@ export default function CrmBoard() {
         )}
         {loaded && shown.length === 0 && <p className="kb-muted py-10 text-center text-sm">Ninguém aqui ainda.</p>}
       </section>
+
+      {dupesOpen && (
+        <div className="kb-modal-back" onClick={() => setDupesOpen(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="kb-modal space-y-4" role="dialog" aria-label="Contatos repetidos">
+            <div className="flex items-center justify-between">
+              <h2 className="font-display kb-ink text-xl">Contatos repetidos</h2>
+              <button type="button" onClick={() => setDupesOpen(false)} aria-label="Fechar" className="kb-muted -mr-2 h-11 w-11 text-2xl">×</button>
+            </div>
+            <p className="kb-muted text-sm">O primeiro de cada grupo (o mais completo) é o que fica. Os outros são arquivados e tudo deles vai para ele.</p>
+            {mergeMsg && <p role="status" className="kb-tag w-full justify-start rounded-xl! px-3! py-2! text-sm">{mergeMsg}</p>}
+            {dupes.length === 0 && <p className="kb-muted py-6 text-center text-sm">Nada repetido. Tudo certo.</p>}
+            {dupes.map((g) => (
+              <div key={g[0].id} className="kb-glass space-y-2 rounded-2xl! p-4">
+                {g.map((c, i) => (
+                  <div key={c.id} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="kb-ink min-w-0 truncate">{c.name}</span>
+                    <span className={`kb-tag shrink-0 ${i === 0 ? "" : "soon"}`}>{i === 0 ? "Fica" : "Junta"}</span>
+                  </div>
+                ))}
+                <button type="button" disabled={merging} onClick={() => mergeGroup(g)} className="kb-btn w-full">
+                  {merging ? "Juntando…" : `Juntar ${g.length} em 1`}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {fichaId && (
         <Client360
