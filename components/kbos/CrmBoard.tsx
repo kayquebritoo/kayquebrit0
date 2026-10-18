@@ -84,6 +84,7 @@ function missing(c: Contact): string[] {
 export default function CrmBoard() {
   const [items, setItems] = useState<Contact[]>([]);
   const [error, setError] = useState("");
+  const [loaded, setLoaded] = useState(false);
   const [filter, setFilter] = useState("all");
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<Contact | "new" | null>(null);
@@ -102,6 +103,7 @@ export default function CrmBoard() {
       if (!res.ok) throw new Error(data.error || "Falha ao carregar.");
       setItems(data.items || []);
       setError("");
+      setLoaded(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro.");
     }
@@ -268,7 +270,12 @@ export default function CrmBoard() {
             </button>
           );
         })}
-        {shown.length === 0 && <p className="kb-muted py-10 text-center text-sm">Ninguém aqui ainda.</p>}
+        {!loaded && !error && (
+          <div className="space-y-3 py-4" aria-busy="true" aria-label="Carregando contatos">
+            {[0, 1, 2, 3].map((i) => <span key={i} className="kb-skel h-12 w-full" />)}
+          </div>
+        )}
+        {loaded && shown.length === 0 && <p className="kb-muted py-10 text-center text-sm">Ninguém aqui ainda.</p>}
       </section>
 
       {fichaId && (

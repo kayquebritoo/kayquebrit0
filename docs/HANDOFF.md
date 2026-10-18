@@ -117,6 +117,8 @@ Voz-e-Tom, Marca, Servicos, KBOS - Visao, logs em `20-Projetos/KBOS/log/`).
 
 ## Diário (mais recente em cima)
 
+- 2026-10-18 · Claude · Polimento mobile do /admin (visto no navegador do app): barra inferior opaca (texto da lista aparecia por trás), gráfico do Financeiro não desenhava as barras (altura em % de pai sem altura), CRM com esqueleto de carregamento (piscava 'Ninguém aqui ainda'), Projetos com formulário recolhido atrás de '+ Novo projeto' e categorias com acento. Falta: revisar Tarefas, Orçamentos, Relatórios, Agenda e o desktop; duplicatas de contato por telefone no CRM (ex.: 3x Kayque Brito).
+
 - 2026-10-18 · Claude · Roda/trackpad não rolava nenhuma página (teclado rolava): `overflow-x:hidden` + `overscroll-behavior-y:none` em html E body faziam o body virar contêiner de rolagem que bloqueava o encadeamento. Agora `overflow-x:hidden` só no body e overscroll só no html (testado ao vivo injetando o CSS). Não repetir os dois no mesmo seletor.
 
 - 2026-10-18 · Claude · Redes sociais do menu sumiam no modo claro: `.soc-btn` agora tem cor/borda escuras em `html.light` (hover roxo #4F12C7).

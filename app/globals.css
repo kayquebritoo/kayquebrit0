@@ -1154,8 +1154,9 @@ html.light .kbos {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 70;
   /* No iPhone o próprio recuo do indicador já dá o respiro: sem somar 8px extra. */
   padding: 6px 10px max(8px, env(safe-area-inset-bottom, 0px));
-  background: var(--kb-glass-solid); border-top: 1px solid var(--kb-line);
-  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  /* opaca: o texto da lista não pode aparecer por trás da barra */
+  background: var(--kb-bg); border-top: 1px solid var(--kb-line);
+  box-shadow: 0 -18px 30px -18px rgba(0, 0, 0, 0.35);
 }
 .kb-tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; min-height: 48px; justify-content: center; border-radius: 14px; color: var(--kb-faint); font-size: 11px; font-weight: 500; -webkit-tap-highlight-color: transparent; }
 .kb-tab[aria-current="page"], .kb-tab[aria-expanded="true"] { color: var(--kb-ink); background: var(--kb-accent-soft); }

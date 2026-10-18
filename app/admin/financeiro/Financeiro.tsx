@@ -73,8 +73,8 @@ function CashChart({ data }: { data: CashPoint[] }) {
     <div>
       <div className="flex h-36 items-end gap-3 md:h-44" role="img" aria-label="Receitas e despesas pagas nos últimos 6 meses">
         {data.map((d) => (
-          <div key={d.key} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-            <div className="flex h-full w-full max-w-[56px] items-end justify-center gap-1">
+          <div key={d.key} className="flex h-full min-w-0 flex-1 flex-col items-center gap-1.5">
+            <div className="flex min-h-0 w-full max-w-[56px] flex-1 items-end justify-center gap-1">
               <div className="w-full rounded-t-md bg-[var(--kb-good)] opacity-80 transition-all duration-500" style={{ height: `${Math.max(2, (d.income / max) * 100)}%` }} title={`Receitas: ${brl(d.income)}`} />
               <div className="w-full rounded-t-md bg-[var(--kb-late-dot)] opacity-70 transition-all duration-500" style={{ height: `${Math.max(2, (d.expenses / max) * 100)}%` }} title={`Despesas: ${brl(d.expenses)}`} />
             </div>

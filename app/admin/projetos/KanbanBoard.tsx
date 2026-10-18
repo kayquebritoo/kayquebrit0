@@ -17,6 +17,7 @@ export default function KanbanBoard() {
   const [items, setItems] = useState<Project[]>([]);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<Project | null>(null);
+  const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ titulo: "", categoria: "video", clienteEmail: "", contactId: "", valor: "", prazo: "" });
   const [contacts, setContacts] = useState<{ id: string; name: string; company: string | null }[]>([]);
   const [notice, setNotice] = useState("");
@@ -91,6 +92,7 @@ export default function KanbanBoard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Falha.");
       setForm({ titulo: "", categoria: "video", clienteEmail: "", contactId: "", valor: "", prazo: "" });
+      setShowForm(false);
       setError("");
       setNotice(data.warning || "");
       load();
@@ -111,11 +113,17 @@ export default function KanbanBoard() {
 
   return (
     <div>
-      <form onSubmit={create} className="mb-6 grid gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-4 md:grid-cols-6">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <p className="kb-muted text-sm">Toque num projeto para abrir. No computador, arraste entre as etapas.</p>
+        <button type="button" className="kb-btn shrink-0" aria-expanded={showForm} onClick={() => setShowForm((v) => !v)}>
+          {showForm ? "Fechar" : "+ Novo projeto"}
+        </button>
+      </div>
+      <form onSubmit={create} hidden={!showForm} className="mb-6 grid gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-4 md:grid-cols-6">
         <input value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} required placeholder="Novo projeto..." className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 md:col-span-2" />
         <select value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none">
-          {["fotografia", "video", "sites", "apps", "lojas", "design"].map((c) => (
-            <option key={c} value={c} className="bg-[#1a1828]">{c}</option>
+          {[["fotografia", "Fotografia"], ["video", "Vídeo"], ["sites", "Sites"], ["apps", "Apps"], ["lojas", "Lojas"], ["design", "Design"]].map(([c, label]) => (
+            <option key={c} value={c} className="bg-[#1a1828]">{label}</option>
           ))}
         </select>
         <input value={form.clienteEmail} onChange={(e) => setForm({ ...form, clienteEmail: e.target.value })} placeholder="E-mail do cliente" type="email" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50" />
