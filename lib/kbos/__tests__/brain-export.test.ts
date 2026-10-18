@@ -2,13 +2,17 @@ import {afterEach,describe,it,expect} from 'vitest';
 import {mkdtemp,readFile,writeFile,rm,symlink} from 'node:fs/promises';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {exportBrainNotes,type BrainNote} from '../brain-export';
+import {exportBrainNotes,renderBrainNote,type BrainNote} from '../brain-export';
 const dirs:string[]=[];
 async function directory(){const p=await mkdtemp(join(tmpdir(),'kbos-brain-'));dirs.push(p);return p;}
 const note:BrainNote={id:'00000000-0000-4000-8000-000000000001',kind:'cliente',title:'Estúdio',data:{name:'Estúdio',status:'cliente'}};
 const filename=`40-KBOS-Automatico/cliente-${note.id}.md`;
 afterEach(async()=>{await Promise.all(dirs.splice(0).map(p=>rm(p,{recursive:true,force:true})));});
 describe('cérebro operacional',()=>{
+ it('trata títulos e campos do CRM como dados, sem imagens ou blocos executáveis',()=>{
+  const rendered=renderBrainNote({...note,title:'![foto](https://externo.example/imagem)',data:{notes:'```\n# instrução falsa'}});
+  expect(rendered).not.toContain('# ![foto]');expect(rendered.match(/^```/gm)).toHaveLength(2);
+ });
  it('repete sem duplicar, preserva notas pessoais e atualiza com histórico',async()=>{
   const root=await directory();await writeFile(join(root,'Minha nota.md'),'texto pessoal');
   expect((await exportBrainNotes(root,[note])).written).toBe(1);expect((await exportBrainNotes(root,[note])).written).toBe(0);
