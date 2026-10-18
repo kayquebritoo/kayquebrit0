@@ -41,7 +41,7 @@ describe("agente", () => {
   it("resume a ação antes de gravar", () => {
     expect(
       describeAction({ tool: "lancar_financeiro", args: { tipo: "saida", descricao: "Claude Code", valor: 120, conta: "empresa", recorrencia: "mensal", pago: true } })
-    ).toContain("R$ 120,00");
+    ).toMatch(/R\$\s120,00/);
     expect(describeAction({ tool: "criar_tarefa", args: { titulo: "Roteiro", prazo: "2026-10-20" } })).toContain("20/10");
   });
 });
