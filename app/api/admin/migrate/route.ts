@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       const rows = (await db().execute(sql.raw(CLEANUP_GROUP_CONTACTS))) as unknown as { rows?: unknown[] } | unknown[];
       removed = Array.isArray(rows) ? rows.length : rows.rows?.length ?? 0;
     }
-    return NextResponse.json({ ok: result.failed.length === 0, ...result, removed });
+    return NextResponse.json({ ok: result.failed.length === 0, applied: result.ok, failed: result.failed, removed });
   } catch (e) {
     return serverError(e);
   }
