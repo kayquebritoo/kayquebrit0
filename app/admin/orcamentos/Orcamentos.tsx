@@ -1,4 +1,5 @@
 "use client";
+import SaleLink from "./SaleLink";
 import { maskDocumentInput } from "@/lib/kbos/document";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BUDGET_STATUS, DEFAULT_PIX_INFO } from "@/lib/kbos/constants";
@@ -101,6 +102,7 @@ export default function Orcamentos() {
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("all");
   const [modal, setModal] = useState(false);
+  const [saleBudget, setSaleBudget] = useState<{ id: string; contactId: string | null } | null>(null);
   const [editing, setEditing] = useState<Budget | null>(null);
   const [form, setForm] = useState<FormState>(blankForm);
   const [saving, setSaving] = useState(false);
@@ -399,6 +401,7 @@ export default function Orcamentos() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2 text-xs">
+                    {["draft", "sent"].includes(b.status) && <button className="kb-btn min-h-12" onClick={() => setSaleBudget({ id: b.id, contactId: b.contactId })}>Link de aceite</button>}
                     <a
                       href={`/api/budgets/${b.id}/pdf`}
                       className="rounded-lg border border-white/15 px-2.5 py-1 hover:border-white/40"
@@ -432,6 +435,7 @@ export default function Orcamentos() {
         </table>
       </div>
 
+      {saleBudget && <SaleLink budgetId={saleBudget.id} contactId={saleBudget.contactId} onClose={() => setSaleBudget(null)} onCreated={() => void load()} />}
       {modal ? (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-3 sm:p-4">
           <div className="my-4 w-full max-w-3xl space-y-4 rounded-2xl border border-white/10 bg-[#14141c] p-4 sm:p-6">

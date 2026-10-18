@@ -12,6 +12,7 @@ import { mailable, renderTemplate, sendDelayMs, staggeredDelayMs, targetStatuses
 import { onlyDigits } from "./inbox";
 import { dueReminders, reminderMessage } from "./agenda";
 import { ADMIN_EMAIL } from "./admin-access";
+import { localDay } from "./sale-plan";
 
 export const FOLLOWUP_AFTER_H = Number(process.env.BRIEFING_FOLLOWUP_HOURS || 48);
 
@@ -23,16 +24,22 @@ function isMisconfigured(e: unknown) {
 
 export async function handleNotifyWhatsapp(p: WhatsappPayload) {
   const d = db();
+  if (p.billingTransactionId) {
+    const [bill] = await d.select().from(transactions).where(eq(transactions.id, p.billingTransactionId)).limit(1);
+    // Uma cobrança quitada, cancelada/excluída ou reagendada não deve receber
+    // um lembrete antigo que ficou esperando na fila.
+    if (!bill || !["pendente", "vencido"].includes(bill.status) || !bill.vencimento || localDay(bill.vencimento) !== p.billingDueDate || p.billingReminderDay !== localDay()) return { skipped: true };
+  }
   try {
     await sendEvolutionText(p.destino, p.mensagem);
-    await d
+    if (p.notificationId) await d
       .update(notifications)
       .set({ status: "enviado", erro: null })
       .where(eq(notifications.id, p.notificationId));
     return { sent: true };
   } catch (e) {
     const erro = e instanceof Error ? e.message : String(e);
-    await d
+    if (p.notificationId) await d
       .update(notifications)
       .set({ status: "falha", erro })
       .where(eq(notifications.id, p.notificationId));

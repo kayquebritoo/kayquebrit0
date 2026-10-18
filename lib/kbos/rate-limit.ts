@@ -15,6 +15,7 @@ const POLICIES: Record<string, { limit: number; windowMs: number }> = {
   "auth:request": { limit: num(process.env.RATE_AUTH_MIN, 5), windowMs: WINDOW_MS },
   "auth:verify": { limit: num(process.env.RATE_VERIFY_MIN, 30), windowMs: WINDOW_MS },
   "briefings:create": { limit: num(process.env.RATE_BRIEFING_MIN, 10), windowMs: WINDOW_MS },
+  "proposals:accept": { limit: 10, windowMs: WINDOW_MS },
   "lms:checkout": { limit: num(process.env.RATE_CHECKOUT_MIN, 10), windowMs: WINDOW_MS },
   "admin:whatsapp": { limit: num(process.env.RATE_ADMIN_MIN, 30), windowMs: WINDOW_MS },
   "admin:channels": { limit: num(process.env.RATE_ADMIN_MIN, 30), windowMs: WINDOW_MS },

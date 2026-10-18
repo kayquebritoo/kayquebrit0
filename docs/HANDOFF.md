@@ -69,18 +69,22 @@ Receita); financeiro mobile com recorrência; tarefas com prazo no quadro do
 Hoje; PDF com degradê; menu de configuração; agente no WhatsApp
 (`lib/kbos/agent.ts`).
 
-**Pendente imediato — ligar o agente:**
-1. Na VPS: `cd /opt/kbos && ./deploy.sh` (publica `1a34afc` ou mais novo).
-2. `bash scripts/kbos-config.sh` → 1 (colar chave OpenAI; deve aparecer
-   "Chave recebida …xxxx") → 6 (protege o webhook) → 0.
-3. Testar no WhatsApp, conversa "Você": "o que tenho hoje?".
-4. Diagnóstico: `GET /api/ai/assistant` (bloco `agent`) e
-   `GET /api/admin/whatsapp/?log=1` (diário do webhook).
+**Agente validado em 18/out/2026:** chave OpenAI carregada, webhook protegido
+e conversa “Você” testada com “o que tenho hoje?”. O dono confirmou a
+resposta no WhatsApp. Após ativar a opção 6, foi necessário sincronizar a
+escuta em `GET /api/admin/whatsapp/?repair=1`: a Evolution ainda usava a
+configuração anterior e recebia 401. O diário confirmou comando recebido,
+processamento e resposta enviada.
+
+Diagnóstico: `GET /api/ai/assistant` (bloco `agent`) e
+`GET /api/admin/whatsapp/?log=1` (diário do webhook).
 
 ## Próximas fases (ordem aprovada)
-2. Venda conectada: link de aceite do orçamento; aceite gera projeto (modelo
-   por serviço), cobranças e datas na agenda; funil automático; lembrete de
-   cobrança no WhatsApp (2 dias antes e no dia).
+2. Venda conectada implementada: link de aceite no painel de Orçamentos;
+   aceite gera projeto (modelo por serviço), cobranças e datas na agenda;
+   funil automático; lembrete de cobrança no WhatsApp (2 dias antes e no
+   dia). Uso e validação: `docs/VENDA-CONECTADA.md`. Migração 0012 automática
+   no boot. Testes com PostgreSQL descartável (PGlite, só desenvolvimento).
 3. Ficha do cliente (painel lateral, linha do tempo, próxima ação,
    etiquetas) + busca global ⌘K.
 4. Agente: voz própria via VoiceStudio no Mac (API compatível OpenAI em

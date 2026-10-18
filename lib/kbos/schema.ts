@@ -636,3 +636,20 @@ export const budgets = pgTable("kbos_budgets", {
     .notNull()
     .$onUpdate(() => new Date()),
 });
+
+// Uma proposta publicada por orçamento; a reemissão revoga o link anterior.
+export const budgetSales = pgTable("kbos_budget_sales", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  budgetId: uuid("budget_id").notNull().unique().references(() => budgets.id, { onDelete: "restrict" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  budgetVersion: timestamp("budget_version", { withTimezone: true }).notNull(),
+  snapshot: jsonb("snapshot").notNull().$type<import("./sales").SaleSnapshot>(),
+  plan: jsonb("plan").notNull().$type<import("./sale-plan").SalePlan>(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+  signerName: text("signer_name"),
+  contractAccepted: boolean("contract_accepted").notNull().default(false),
+  manualAccepted: boolean("manual_accepted").notNull().default(false),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "restrict" }),
+  createdAt: ts("created_at"),
+});

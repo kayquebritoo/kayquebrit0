@@ -25,6 +25,7 @@ import {
 import { handleMorningBriefing, morningCronPattern } from "../lib/kbos/morning-briefing";
 import type { WhatsappPayload } from "../lib/kbos/whatsapp";
 import { jobAttempts } from "../lib/kbos/jobs";
+import { handleBillingReminders } from "../lib/kbos/billing-reminders";
 
 export const newConn = (url: string) =>
   new IORedis(url, { maxRetriesPerRequest: null });
@@ -39,6 +40,8 @@ export async function processJob(
         return await handleNotifyWhatsapp(job.data as WhatsappPayload);
       case "billing.reconcile":
         return await handleBillingReconcile();
+      case "billing.reminders":
+        return await handleBillingReminders();
       case "briefing.followup":
         return await handleBriefingFollowup();
       case "briefing.morning":
@@ -80,6 +83,9 @@ export function reminderPollMs(): number {
 export async function ensureCrons(queue: Queue, everyMs: number) {
   const existing = await queue.getJobSchedulers();
   const has = (id: string) => existing.some((j) => j.id === id);
+  if (!has("cron--billing.reminders")) {
+    await queue.upsertJobScheduler("cron--billing.reminders", { every: 300_000 }, { name: "billing.reminders", data: {} });
+  }
   if (!has("cron--billing.reconcile")) {
     await queue.upsertJobScheduler(
       "cron--billing.reconcile",

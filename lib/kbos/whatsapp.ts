@@ -10,7 +10,10 @@ import { buildIdempotencyKey, enqueueJob } from "./jobs";
 import { evoConfig, warnEvoFallbackOnce } from "./evolution";
 
 export type WhatsappPayload = {
-  notificationId: string;
+  notificationId?: string;
+  billingTransactionId?: string;
+  billingDueDate?: string;
+  billingReminderDay?: string;
   destino: string;
   mensagem: string;
   evento?: string;

@@ -85,6 +85,13 @@
       "when": 1792500000000,
       "tag": "0011_tarefas_prazos",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792600000000,
+      "tag": "0012_venda_conectada",
+      "breakpoints": true
     }
   ]
 }

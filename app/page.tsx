@@ -24,17 +24,6 @@ const SLIDES = [
   { id: "contato", label: "Contato" },
 ];
 
-export const SLIDE_INDEX = {
-  topo: 0,
-  sobre: 1,
-  servicos: 2,
-  audiovisual: 3,
-  dev: 4,
-  branding: 5,
-  depoimentos: 6,
-  contato: 7,
-} as const;
-
 export default function Home() {
   return (
     <main className="bg-[#11101E] text-[#EDE6EC]">

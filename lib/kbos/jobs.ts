@@ -16,6 +16,7 @@ export const QUEUE_NAME = "kbos";
 export const JOB_TYPES = [
   "notify.whatsapp",
   "billing.reconcile",
+  "billing.reminders",
   "briefing.followup",
   "briefing.morning",
   "lms.welcome",

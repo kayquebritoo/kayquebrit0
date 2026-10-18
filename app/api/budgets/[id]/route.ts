@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/kbos/db";
 import { budgets } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { budgetPatchSchema, checkId, readBody } from "@/lib/kbos/validators";
 import { calcBudgetWithDiscount, type BudgetItem } from "@/lib/kbos/budgets";
-import { serverError } from "@/lib/kbos/http";
+import { PublicError, serverError } from "@/lib/kbos/http";
 
 // /api/budgets/[id] — detalhe, atualização e exclusão (admin).
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -80,8 +80,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       patch.items = items;
       patch.totalAmount = String(total);
     }
-    const rows = await db().update(budgets).set(patch).where(eq(budgets.id, id)).returning();
-    if (!rows[0]) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
+    const rows = await db().update(budgets).set(patch).where(and(eq(budgets.id, id),
+      sql`date_trunc('milliseconds', ${budgets.updatedAt}) = ${current.updatedAt.toISOString()}::timestamptz`,
+      sql`NOT EXISTS (SELECT 1 FROM kbos_budget_sales s WHERE s.budget_id = ${budgets.id} AND s.accepted_at IS NOT NULL)`)).returning();
+    if (!rows[0]) throw new PublicError("O orçamento aceito está preservado. Crie uma nova proposta para alterar o contrato.", 409);
     return NextResponse.json({ ok: true, item: rows[0] });
   } catch (e) {
     return serverError(e);
@@ -96,6 +98,8 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const bad = checkId(id);
   if (bad) return bad;
   try {
+    const published = await db().execute(sql`SELECT 1 FROM kbos_budget_sales WHERE budget_id = ${id}::uuid LIMIT 1`);
+    if (published.rows.length) throw new PublicError("Este orçamento tem um link de aceite. Cancele o orçamento para invalidar o link; o histórico deve ser preservado.", 409);
     const rows = await db().delete(budgets).where(eq(budgets.id, id)).returning({ id: budgets.id });
     if (!rows[0]) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
     return NextResponse.json({ ok: true });
