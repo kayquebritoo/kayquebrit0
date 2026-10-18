@@ -1,11 +1,12 @@
 # Fase 2 — Venda conectada
 
 Em **Admin → Orçamentos → Link de aceite**, escolha modelo de serviço,
-negociação (ou crie uma nova), início, entrega final e o link HTTPS do
-Manual de Identidade. Vincule o orçamento ao contato do CRM e escolha a
-condição de pagamento antes de publicar. Para planos mensais, a vigência
-em meses deve corresponder ao período informado. As datas dos itens devem
-estar dentro desse período.
+negociação (ou crie uma nova), início e entrega final. Anexe o Manual de
+Identidade e referências usando **Enviar arquivos** ou **Adicionar link**. Vincule o orçamento ao contato do CRM e escolha a
+condição de pagamento antes de publicar. Para planos mensais, informe o
+início e a **Duração do plano (meses)**: o término é calculado automaticamente.
+Exemplo: 01/11/2026 + cinco meses = 01/04/2027, com cinco mensalidades.
+As datas dos itens devem estar dentro desse período.
 
 O link publica uma cópia das condições e leva a negociação para Proposta.
 Compartilhe o link com o cliente após revisá-lo. Não há envio automático
@@ -34,6 +35,23 @@ todos os registros são revertidos. Orçamentos publicados não são excluídos:
 cancele os não aceitos para invalidar o link. Após o aceite, alterações
 comerciais exigem outra proposta.
 
+## Arquivos e links
+
+O botão **Enviar arquivos** aceita seleção múltipla: PDF, DOC/DOCX,
+PPT/PPTX, XLS/XLSX, JPEG, PNG, WebP, GIF, documentos OpenDocument, TXT,
+CSV e RTF. Limites: 10 MB por arquivo, 50 MB armazenados por orçamento e
+20 materiais selecionados (arquivos + links) por proposta. Arquivos enviados
+podem ser reutilizados ao reabrir o formulário, sem novo upload.
+
+Marque pelo menos um arquivo ou link como **Manual de Identidade**. Os
+outros podem ser referências. O cliente recebe a lista na proposta e pode
+baixar cada arquivo. Nenhum arquivo tem endereço público avulso: o download
+exige o token da proposta e o vínculo do anexo à versão publicada. Nome,
+tamanho e hash são congelados na proposta; o binário é imutável e permanece
+no Postgres após o deploy. Links antigos de manual continuam funcionando.
+Remover um item da seleção apenas o desvincula dessa proposta, preservando
+o arquivo enviado para reutilização e os aceites anteriores.
+
 ## Cobrança
 
 Avulso: à vista com o desconto de 10% já oferecido pelo orçamento, cartão
@@ -54,8 +72,8 @@ entrega no provedor pode ocasionar reenvio).
 
 ## Publicação e validação
 
-A migração `0012_venda_conectada.sql` está espelhada em `migrations.ts` e
-`schema.ts`. O servidor a aplica no boot. Não há nova chave ou serviço de
+As migrações `0012_venda_conectada.sql` e `0013_arquivos_proposta.sql` estão espelhadas em `migrations.ts` e
+`schema.ts`. O servidor as aplica no boot. Não há nova chave ou serviço de
 produção: usa Neon, Redis e Evolution existentes.
 
 `npm test` inclui Postgres descartável em memória (PGlite, só dependência

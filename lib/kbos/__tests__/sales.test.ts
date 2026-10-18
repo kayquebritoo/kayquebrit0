@@ -6,7 +6,8 @@ import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { eq } from "drizzle-orm";
 import * as schema from "../schema";
-import { localDay, type SalePlan } from "../sale-plan";
+import { localDay, planEndDate, type SalePlan } from "../sale-plan";
+import { readSaleFile, uploadSaleFile } from "../sale-uploads";
 
 const holder = vi.hoisted(() => ({ db: null as unknown }));
 vi.mock("../db", () => ({ db: () => holder.db }));
@@ -98,13 +99,42 @@ describe("aceite atômico", () => {
     await expect(acceptSale(token, "Cliente")).rejects.toThrow("cancelada");
   });
   it("plano mensal gera uma cobrança integral por mês sem desconto", async () => {
-    const end = new Date(`${today.slice(0,7)}-28T12:00:00Z`); end.setUTCMonth(end.getUTCMonth() + 2);
     await d.update(schema.budgets).set({ title: "Plano mensal", paymentCondition: "cash" });
-    const { token } = await issueSaleLink(budgetId, { ...plan, service: "mensal", months: 3, deliveryDate: end.toISOString().slice(0,10) });
+    const { token } = await issueSaleLink(budgetId, { ...plan, service: "mensal", months: 3, deliveryDate: planEndDate(today, 3) });
     await acceptSale(token, "Cliente");
     const bills = await d.select().from(schema.transactions);
     expect(bills).toHaveLength(3);
     expect(bills.every((b) => Number(b.valor) === 100.01)).toBe(true);
+  });
+});
+describe("arquivos da proposta", () => {
+  const pdf = Buffer.from("%PDF-1.4\nArquivo de teste\n%%EOF");
+  it("preserva bytes, valida vínculo e congela metadados na proposta", async () => {
+    const file = await uploadSaleFile(budgetId, "Manual da marca.pdf", pdf);
+    const { token } = await issueSaleLink(budgetId, { ...plan, manualUrl: "", attachments: [{ kind: "file", fileId: file.id, name: "nome forjado", role: "manual", sha256: "falso" }] });
+    const sale = await readSale(token);
+    expect(sale.plan.attachments?.[0]).toMatchObject({ name: "Manual da marca.pdf", sha256: file.sha256, size: pdf.length });
+    expect((await readSaleFile(token, file.id)).bytes.equals(pdf)).toBe(true);
+    const other = await uploadSaleFile(budgetId, "Outra referência.pdf", pdf);
+    await expect(readSaleFile(token, other.id)).rejects.toThrow("Arquivo não encontrado");
+    await acceptSale(token, "Cliente de teste");
+    expect((await readSaleFile(token, file.id)).bytes.equals(pdf)).toBe(true);
+    await expect(uploadSaleFile(budgetId, "Alterado.pdf", pdf)).rejects.toThrow("não está disponível");
+  });
+  it("não aceita arquivo de outro orçamento nem link revogado", async () => {
+    const file = await uploadSaleFile(budgetId, "Manual.pdf", pdf);
+    const first = await issueSaleLink(budgetId, { ...plan, attachments: [{ kind: "file", fileId: file.id, name: file.name, role: "reference" }] });
+    await issueSaleLink(budgetId, plan);
+    await expect(readSaleFile(first.token, file.id)).rejects.toThrow("Link não encontrado");
+    const [other] = await d.insert(schema.budgets).values({ code: "#14002", title: "Outro", contactId: (await d.select().from(schema.contacts))[0].id, totalAmount: "100", paymentCondition: "cash" }).returning();
+    await expect(issueSaleLink(other.id, { ...plan, attachments: [{ kind: "file", fileId: file.id, name: "Manual.pdf", role: "manual" }] })).rejects.toThrow("não pertence");
+  });
+  it("limita armazenamento por orçamento de forma atômica", async () => {
+    await d.update(schema.budgets).set({ uploadBytes: 52428800 - pdf.length });
+    await uploadSaleFile(budgetId, "Último.pdf", pdf);
+    await expect(uploadSaleFile(budgetId, "Excesso.pdf", pdf)).rejects.toThrow("50 MB");
+    await d.delete(schema.budgets).where(eq(schema.budgets.id, budgetId));
+    expect(await count("kbos_budget_uploads")).toBe(0);
   });
 });
 describe("lembretes de cobrança", () => {

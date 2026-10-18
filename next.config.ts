@@ -8,6 +8,8 @@ const isStatic = !!process.env.STATIC_EXPORT;
 const isDocker = !!process.env.DOCKER_BUILD;
 
 const nextConfig: NextConfig = {
+  // 10 MB por arquivo + envelope multipart; o handler aplica o limite real.
+  experimental: { proxyClientMaxBodySize: "12mb" },
   // Vercel: build completo (otimização de imagens, etc.)
   // Hostinger (deploy-hostinger.sh): export estático p/ hospedagem
   // compartilhada — gera `out/` com HTML/CSS/JS puros.

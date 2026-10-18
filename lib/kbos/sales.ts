@@ -25,6 +25,14 @@ export async function issueSaleLink(id: string, input: unknown) {
     .leftJoin(contacts, eq(budgets.contactId, contacts.id)).where(eq(budgets.id, id)).limit(1);
   if (!row) throw new PublicError("Orçamento não encontrado.", 404);
   const b = row.budget;
+  // Metadados vêm do banco, nunca do nome/hash enviados pelo navegador.
+  for (const material of plan.attachments || []) {
+    if (material.kind !== "file") continue;
+    const found = await d.execute(sql`SELECT name, size, sha256 FROM kbos_budget_uploads WHERE id = ${material.fileId}::uuid AND budget_id = ${id}::uuid`);
+    const file = found.rows[0];
+    if (!file) throw new PublicError("Um dos arquivos não pertence a este orçamento. Envie-o novamente.");
+    material.name = String(file.name); material.size = Number(file.size); material.sha256 = String(file.sha256);
+  }
   if (!b.contactId || !row.contact) throw new PublicError("Vincule o orçamento a um contato do CRM antes de gerar o link.");
   if (!["draft", "sent"].includes(b.status)) throw new PublicError("Somente orçamentos em rascunho ou enviados podem gerar aceite.", 409);
   if (plan.dealId) {

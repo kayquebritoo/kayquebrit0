@@ -19,6 +19,7 @@
 //      retornam 401 em vez de 500 para valores inesperados.
 import {
   boolean,
+  customType,
   integer,
   jsonb,
   numeric,
@@ -605,6 +606,7 @@ export type BudgetItem = {
 };
 
 export const budgets = pgTable("kbos_budgets", {
+  uploadBytes: integer("upload_bytes").notNull().default(0),
   id: uuid("id").primaryKey().defaultRandom(),
   code: text("code").notNull().unique(),
   contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
@@ -651,5 +653,18 @@ export const budgetSales = pgTable("kbos_budget_sales", {
   contractAccepted: boolean("contract_accepted").notNull().default(false),
   manualAccepted: boolean("manual_accepted").notNull().default(false),
   projectId: uuid("project_id").references(() => projects.id, { onDelete: "restrict" }),
+  createdAt: ts("created_at"),
+});
+
+// Binários preservados no banco, fora dos arquivos temporários do contêiner.
+const binary = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });
+export const budgetUploads = pgTable("kbos_budget_uploads", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  budgetId: uuid("budget_id").notNull().references(() => budgets.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  mime: text("mime").notNull(),
+  size: integer("size").notNull(),
+  sha256: text("sha256").notNull(),
+  content: binary("content").notNull(),
   createdAt: ts("created_at"),
 });

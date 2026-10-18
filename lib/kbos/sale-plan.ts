@@ -19,20 +19,36 @@ const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((s) => {
   return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === s;
 }, "Data inválida.");
 
+/** Um plano iniciado em 01/11, por 5 meses, termina em 01/04. */
+export function planEndDate(start: string, months: number): string {
+  if (!day.safeParse(start).success || !Number.isInteger(months) || months < 1 || months > 36) return "";
+  const [y, m, d] = start.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(y, m - 1 + months + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(y, m - 1 + months, Math.min(d, lastDay), 12)).toISOString().slice(0, 10);
+}
+const httpsUrl = z.url().max(2000).refine((v) => v.startsWith("https://"), "Use um link HTTPS.");
+const materialRole = z.enum(["manual", "reference"]);
+export const saleMaterialSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("file"), fileId: z.uuid(), name: z.string().max(200), role: materialRole,
+    sha256: z.string().optional(), size: z.number().optional() }),
+  z.object({ kind: z.literal("link"), url: httpsUrl, name: z.string().trim().min(1).max(200), role: materialRole }),
+]);
+export type SaleMaterial = z.infer<typeof saleMaterialSchema>;
+
 export const salePlanSchema = z.object({
   service: z.enum(["branding", "site", "audiovisual", "mensal"]),
   startDate: day,
   deliveryDate: day,
   months: z.number().int().min(1).max(36).default(1),
-  manualUrl: z.url().max(2000).refine((v) => v.startsWith("https://"), "Use um link HTTPS para o Manual de Identidade."),
+  manualUrl: z.union([httpsUrl, z.literal("")]).default(""),
+  attachments: z.array(saleMaterialSchema).max(20).optional(),
   dealId: z.uuid().nullable().optional(),
 }).refine((v) => v.deliveryDate >= v.startDate, "A entrega deve ser igual ou posterior ao início.")
   .refine((v) => {
     if (v.service !== "mensal") return true;
-    const [sy, sm] = v.startDate.split("-").map(Number);
-    const [ey, em] = v.deliveryDate.split("-").map(Number);
-    return (ey - sy) * 12 + em - sm + 1 === v.months && (v.months === 1 || Number(v.deliveryDate.slice(-2)) >= 5);
-  }, "A vigência em meses deve corresponder às datas de início e entrega.");
+    return v.deliveryDate === planEndDate(v.startDate, v.months);
+  }, "O término do plano deve corresponder ao início mais a duração em meses.")
+  .refine((v) => !!v.manualUrl || v.attachments?.some((a) => a.role === "manual"), "Envie o Manual de Identidade ou adicione um link e marque como Manual de Identidade.");
 export type SalePlan = z.infer<typeof salePlanSchema>;
 export const saleAcceptanceSchema = z.object({
   signerName: z.string().trim().min(3).max(160),

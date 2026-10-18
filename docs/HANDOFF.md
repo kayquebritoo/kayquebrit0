@@ -84,7 +84,9 @@ Diagnóstico: `GET /api/ai/assistant` (bloco `agent`) e
    aceite gera projeto (modelo por serviço), cobranças e datas na agenda;
    funil automático; lembrete de cobrança no WhatsApp (2 dias antes e no
    dia). Uso e validação: `docs/VENDA-CONECTADA.md`. Migração 0012 automática
-   no boot. Testes com PostgreSQL descartável (PGlite, só desenvolvimento).
+   no boot. Anexos enviados do dispositivo e links externos (migração 0013);
+   duração mensal calcula o término automaticamente (01/11 + 5 meses = 01/04).
+   Testes com PostgreSQL descartável (PGlite, só desenvolvimento).
 3. Ficha do cliente (painel lateral, linha do tempo, próxima ação,
    etiquetas) + busca global ⌘K.
 4. Agente: voz própria via VoiceStudio no Mac (API compatível OpenAI em

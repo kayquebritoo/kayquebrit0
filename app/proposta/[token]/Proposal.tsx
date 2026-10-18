@@ -36,7 +36,7 @@ export default function Proposal({ token }: { token: string }) {
       {data.acceptedAt && <p role="status" className="kb-glass my-6 p-6">Aceite registrado em {new Date(data.acceptedAt).toLocaleString("pt-BR", { timeZone: "America/Belem" })}. Seu projeto foi criado. O início depende das condições de pagamento e materiais combinados.</p>}
       <section className="kb-glass my-6 space-y-4 p-5"><h2 className="text-xl font-semibold">Escopo e cronograma</h2>
         {s.items.map((i, index) => <div className="kb-row flex flex-wrap justify-between gap-3" key={index}><div>{i.service} · {i.quantity} un.{i.description && <p className="text-sm">{i.description}</p>}{i.date && <p>{date(i.date)}</p>}</div><span>{formatBRL(i.total)}</span></div>)}
-        <p>Início: {date(data.plan.startDate)} · Entrega final: {date(data.plan.deliveryDate)}</p>
+        <p>Início: {date(data.plan.startDate)} · {data.plan.service === "mensal" ? `Término do plano (${data.plan.months} meses)` : "Entrega final"}: {date(data.plan.deliveryDate)}</p>
         <h3 className="font-semibold">Condição de pagamento</h3>
         {s.installments.map((i, index) => <p key={index}>{i.label}: {formatBRL(i.amount)} · {i.onAcceptance ? "no aceite" : date(i.dueDate)}</p>)}
         {s.bankInfo && <p className="whitespace-pre-line">{s.bankInfo}</p>}
@@ -46,7 +46,10 @@ export default function Proposal({ token }: { token: string }) {
         {s.clauses.map((c) => <div key={c.title}><h3 className="mb-2 font-semibold">{c.title}</h3><p>{c.body}</p></div>)}
         {s.terms && <div><h3 className="font-semibold">Observações da proposta</h3><p className="whitespace-pre-line">{s.terms}</p></div>}
       </section>
-      <a className="kb-btn inline-flex min-h-12 items-center" href={data.plan.manualUrl} target="_blank" rel="noreferrer">Ler Manual de Identidade</a>
+      <section className="kb-glass my-6 space-y-3 p-5"><h2 className="text-xl font-semibold">Manual de Identidade e referências</h2>
+        {data.plan.manualUrl && <a className="kb-btn-ghost min-h-12" href={data.plan.manualUrl} target="_blank" rel="noreferrer">Ler Manual de Identidade</a>}
+        {data.plan.attachments?.map((a, i) => <div key={i}><a className="kb-btn-ghost min-h-12 max-w-full break-all" href={a.kind === "file" ? `/api/proposals/${token}/files/${a.fileId}/` : a.url} target="_blank" rel="noreferrer">{a.kind === "file" ? "Baixar" : "Abrir"} {a.name}</a><p className="mt-1 text-sm kb-muted">{a.role === "manual" ? "Manual de Identidade" : "Referência"}</p></div>)}
+      </section>
       {!data.acceptedAt && <form onSubmit={accept} className="kb-glass my-6 space-y-4 p-5">
         <h2 className="text-xl font-semibold">Assinatura eletrônica simples</h2>
         <p>Ao confirmar, você aceita esta proposta e autoriza a abertura do projeto e das cobranças descritas acima.</p>

@@ -92,6 +92,13 @@
       "when": 1792600000000,
       "tag": "0012_venda_conectada",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792700000000,
+      "tag": "0013_arquivos_proposta",
+      "breakpoints": true
     }
   ]
 }

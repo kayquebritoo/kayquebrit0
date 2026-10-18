@@ -9,8 +9,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
   try {
     const sale = await readSale((await params).token);
     // O link não expõe contatos, documentos, IDs internos ou o hash do token.
-    const { service, startDate, deliveryDate, months, manualUrl } = sale.plan;
-    return NextResponse.json({ snapshot: sale.snapshot, plan: { service, startDate, deliveryDate, months, manualUrl }, acceptedAt: sale.acceptedAt, expiresAt: sale.expiresAt }, { headers });
+    const { service, startDate, deliveryDate, months, manualUrl, attachments } = sale.plan;
+    return NextResponse.json({ snapshot: sale.snapshot, plan: { service, startDate, deliveryDate, months, manualUrl, attachments }, acceptedAt: sale.acceptedAt, expiresAt: sale.expiresAt }, { headers });
   } catch (e) { return serverError(e); }
 }
 export async function POST(req: Request, { params }: { params: Promise<{ token: string }> }) {

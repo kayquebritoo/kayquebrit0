@@ -1,7 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { localDay, paymentSchedule, reminderOffset, saleAcceptanceSchema, salePlanSchema, type SalePlan } from "../sale-plan";
+import { localDay, paymentSchedule, planEndDate, reminderOffset, saleAcceptanceSchema, salePlanSchema, type SalePlan } from "../sale-plan";
 const plan: SalePlan = { service: "site", startDate: "2026-10-18", deliveryDate: "2026-11-18", months: 1, manualUrl: "https://example.com/manual" };
 describe("venda conectada", () => {
+  it("calcula cinco meses de 01/11 a 01/04 sem exigir duas datas", () => {
+    expect(planEndDate("2026-11-01", 5)).toBe("2027-04-01");
+    expect(salePlanSchema.safeParse({ ...plan, service: "mensal", startDate: "2026-11-01", deliveryDate: "2027-04-01", months: 5 }).success).toBe(true);
+    expect(planEndDate("2027-01-31", 1)).toBe("2027-02-28");
+    expect(planEndDate("2028-01-31", 1)).toBe("2028-02-29");
+  });
+  it("aceita manual enviado e referências externas, mas exige um manual", () => {
+    const attachments = [{ kind: "file", fileId: "d7a758ad-783b-442d-b477-81bdbbf0e362", name: "manual.pdf", role: "manual" }, { kind: "link", url: "https://example.com/referencia", name: "Referência", role: "reference" }];
+    expect(salePlanSchema.safeParse({ ...plan, manualUrl: "", attachments }).success).toBe(true);
+    expect(salePlanSchema.safeParse({ ...plan, manualUrl: "", attachments: [] }).success).toBe(false);
+    expect(salePlanSchema.safeParse({ ...plan, manualUrl: "", attachments: attachments.map((a) => ({ ...a, role: "reference" })) }).success).toBe(false);
+  });
   it("exige nome e os dois aceites expressos", () => {
     expect(saleAcceptanceSchema.safeParse({ signerName: "Cliente", contractAccepted: true, manualAccepted: true }).success).toBe(true);
     expect(saleAcceptanceSchema.safeParse({ signerName: "Cliente", contractAccepted: true, manualAccepted: false }).success).toBe(false);
