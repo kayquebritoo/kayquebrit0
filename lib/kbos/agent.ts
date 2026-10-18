@@ -19,6 +19,7 @@ import { fetchInboundMedia, onlyDigits, type InboundMessage } from "./inbox";
 import { llmConfig, transcribeAudio } from "./assistant";
 import { documentKind, formatDocument } from "./document";
 import { queueWhatsApp } from "./whatsapp";
+import { logHook } from "./webhook-log";
 
 export const AGENT_PREFIX = "🤖 ";
 const TZ = "America/Belem";
@@ -301,8 +302,19 @@ async function sendToOwner(owner: string, text: string): Promise<void> {
     body: JSON.stringify({ number: owner, text: `${AGENT_PREFIX}${text}` }),
     signal: AbortSignal.timeout(15_000),
   });
-  const j = (await res.json().catch(() => ({}))) as { key?: { id?: string } };
+  const raw = await res.text().catch(() => "");
+  let j: { key?: { id?: string } } = {};
+  try {
+    j = JSON.parse(raw);
+  } catch {
+    /* corpo não-JSON */
+  }
   const id = j.key?.id;
+  await logHook({
+    event: "agente",
+    result: res.ok ? "resposta enviada ao dono" : `falha ao enviar resposta (${res.status})`,
+    detail: res.ok ? undefined : raw.slice(0, 160),
+  });
   // Marca o que o agente mandou: o eco "fromMe" disso não pode virar comando.
   if (id) await getRedis().set(`${K(owner).sent}:${id}`, "1", "EX", 86_400).catch(() => {});
 }
@@ -352,7 +364,11 @@ async function llmCall(messages: ChatMsg[]) {
 export async function runAgentTurn(inb: InboundMessage): Promise<void> {
   const owner = ownerPhone();
   if (!owner) return;
-  if (!(await ensureRedis(1500))) return;
+  if (!(await ensureRedis(1500))) {
+    console.error("[KBOS agente] Redis fora do ar");
+    return;
+  }
+  await logHook({ event: "agente", result: "pensando…", detail: inb.messageType });
   const r = getRedis();
   const keys = K(owner);
   if (inb.externalId) {
@@ -434,6 +450,7 @@ export async function runAgentTurn(inb: InboundMessage): Promise<void> {
     return sendToOwner(owner, "Me enrolei aqui. Pode reformular em uma frase?");
   } catch (e) {
     console.error("[KBOS agente]", e);
+    await logHook({ event: "agente", result: "erro no turno", detail: e instanceof Error ? e.message.slice(0, 160) : String(e) });
     await sendToOwner(owner, "Deu um erro do meu lado agora. Tenta de novo em instantes?").catch(() => {});
   }
 }
