@@ -48,7 +48,12 @@ function provider(prefix: "AI" | "STT" | "TTS", defModel: string): ProviderConfi
   const env = (n: string) => (process.env[`${prefix}_${n}`] || "").trim();
   const url = (env("BASE_URL") || OPENAI_URL).replace(/\/$/, "");
   const own = url !== OPENAI_URL;
-  const key = env("API_KEY") || (own ? "" : openaiKey() || "");
+  // Na OpenAI, a mesma chave serve para cérebro, ouvido e voz: sem chave
+  // própria, usa OPENAI_API_KEY ou a do cérebro (AI_API_KEY) quando ele
+  // também aponta para a OpenAI.
+  const aiUrl = ((process.env.AI_BASE_URL || "").trim() || OPENAI_URL).replace(/\/$/, "");
+  const shared = openaiKey() || (aiUrl === OPENAI_URL ? (process.env.AI_API_KEY || "").trim() : "");
+  const key = env("API_KEY") || (own ? "" : shared);
   const legacyModel = prefix === "TTS" ? (process.env.AI_TTS_MODEL || "").trim() : "";
   // Servidor próprio (Ollama, Whisper local) não precisa de chave para estar ligado.
   return { url, key: key || null, model: env("MODEL") || legacyModel || defModel, enabled: own || !!key };

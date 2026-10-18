@@ -16,7 +16,7 @@ import { contacts, events, projects, tasks, transactions } from "./schema";
 import { evoConfig } from "./evolution";
 import { ensureRedis, getRedis } from "./jobs";
 import { fetchInboundMedia, onlyDigits, type InboundMessage } from "./inbox";
-import { llmConfig, transcribeAudio } from "./assistant";
+import { llmConfig, synthesizeSpeech, transcribeAudio, ttsConfig } from "./assistant";
 import { documentKind, formatDocument } from "./document";
 import { queueWhatsApp } from "./whatsapp";
 import { logHook } from "./webhook-log";
@@ -319,6 +319,33 @@ async function sendToOwner(owner: string, text: string): Promise<void> {
   if (id) await getRedis().set(`${K(owner).sent}:${id}`, "1", "EX", 86_400).catch(() => {});
 }
 
+/** Resposta em áudio (nota de voz) — usada quando o dono falou por áudio. */
+async function sendVoiceToOwner(owner: string, text: string): Promise<void> {
+  if (!ttsConfig().enabled) return;
+  // Fala sem emojis/asteriscos e no máximo ~600 caracteres (áudio curto).
+  const speakable = text.replace(/[*_~`]/g, "").replace(/\p{Extended_Pictographic}/gu, "").slice(0, 600);
+  const dataUri = await synthesizeSpeech(speakable);
+  if (!dataUri) {
+    await logHook({ event: "agente", result: "voz: falhou ao gerar o áudio" });
+    return;
+  }
+  const { url, key, instance } = evoConfig();
+  const res = await fetch(`${url.replace(/\/$/, "")}/message/sendWhatsAppAudio/${encodeURIComponent(instance)}`, {
+    method: "POST",
+    headers: { apikey: key, "Content-Type": "application/json" },
+    body: JSON.stringify({ number: owner, audio: dataUri.split(",")[1] }),
+    signal: AbortSignal.timeout(30_000),
+  });
+  const raw = await res.text().catch(() => "");
+  try {
+    const id = (JSON.parse(raw) as { key?: { id?: string } }).key?.id;
+    if (id) await getRedis().set(`${K(owner).sent}:${id}`, "1", "EX", 86_400).catch(() => {});
+  } catch {
+    /* corpo não-JSON */
+  }
+  await logHook({ event: "agente", result: res.ok ? "voz enviada ao dono" : `voz: falha ao enviar (${res.status})`, detail: res.ok ? undefined : raw.slice(0, 160) });
+}
+
 export function ownerPhone(): string | null {
   const p = onlyDigits(process.env.ASSISTANT_OWNER_PHONE || "");
   return p.length >= 12 ? p : null;
@@ -379,6 +406,7 @@ export async function runAgentTurn(inb: InboundMessage): Promise<void> {
   try {
     // 1) Texto: digitado ou áudio transcrito.
     let text = (inb.content || "").trim();
+    const spoke = inb.messageType === "audio";
     if (inb.messageType === "audio" && inb.externalId) {
       const media = await fetchInboundMedia({ externalId: inb.externalId, chatId: inb.chatId, fromMe: inb.fromMe, messageType: "audio" });
       if (media) {
@@ -397,7 +425,9 @@ export async function runAgentTurn(inb: InboundMessage): Promise<void> {
         await r.del(keys.pend);
         const done = await executeAction(pend);
         await remember(owner, text, done);
-        return sendToOwner(owner, done);
+        await sendToOwner(owner, done);
+        if (spoke) await sendVoiceToOwner(owner, done);
+        return;
       }
       if (isNo(text)) {
         await r.del(keys.pend);
@@ -421,7 +451,10 @@ export async function runAgentTurn(inb: InboundMessage): Promise<void> {
       if (!calls.length) {
         const reply = (m.content || "").trim() || "Feito.";
         await remember(owner, text, reply);
-        return sendToOwner(owner, reply);
+        await sendToOwner(owner, reply);
+        // Falou por áudio? Responde também em áudio.
+        if (spoke) await sendVoiceToOwner(owner, reply);
+        return;
       }
       msgs.push({ role: "assistant", content: m.content ?? null, tool_calls: calls });
       for (const c of calls) {
@@ -436,7 +469,9 @@ export async function runAgentTurn(inb: InboundMessage): Promise<void> {
           await r.set(keys.pend, JSON.stringify(pend), "EX", 1800);
           const ask = `Vou ${describeAction(pend)}. Confirma? (sim/não)`;
           await remember(owner, text, ask);
-          return sendToOwner(owner, ask);
+          await sendToOwner(owner, ask);
+          if (spoke) await sendVoiceToOwner(owner, ask);
+          return;
         }
         let out: unknown;
         try {
