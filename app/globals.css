@@ -169,16 +169,13 @@ html.fullpage-locked body {
   .header-glass { animation: none; }
 }
 
-/* menu fullscreen — vidro ESCURO e legível: o conteúdo de trás some,
-   o blur dá o acabamento frosted sem comprometer a leitura */
+/* menu fullscreen — fundo OPACO: nada da página (hero, títulos gigantes, pontos, CTA)
+   pode aparecer por trás do menu. O degradê é só acabamento por cima do sólido. */
 .glass-menu {
-  /* Degradê roxo bem visível (vidro menos opaco); o rosa só aparece no fim. */
   background:
-    radial-gradient(110% 70% at 50% -5%, rgba(79, 18, 199, 0.55), rgba(53, 12, 133, 0.22) 45%, transparent 72%),
-    radial-gradient(90% 60% at 100% 100%, rgba(79, 18, 199, 0.4), rgba(232, 14, 253, 0.07) 70%, transparent),
-    linear-gradient(180deg, rgba(17, 16, 30, 0.8), rgba(17, 16, 30, 0.9));
-  backdrop-filter: blur(26px) saturate(1.5);
-  -webkit-backdrop-filter: blur(26px) saturate(1.5);
+    radial-gradient(110% 70% at 50% -5%, rgba(79, 18, 199, 0.42), rgba(53, 12, 133, 0.16) 45%, transparent 72%),
+    radial-gradient(90% 60% at 100% 100%, rgba(79, 18, 199, 0.3), rgba(232, 14, 253, 0.05) 70%, transparent),
+    linear-gradient(180deg, #11101E, #0B0B1E);
 }
 .glass-menu::before {
   content: "";
@@ -780,8 +777,8 @@ html.light header img[class*="brightness-0"] {
 html.light header [class*="bg-[#EDE6EC]"] { background-color: var(--lb-ink) !important; }
 html.light .glass-menu {
   background:
-    radial-gradient(120% 90% at 50% 0%, rgba(79, 18, 199, 0.1), transparent 60%),
-    linear-gradient(180deg, rgba(241, 238, 231, 0.92), rgba(241, 238, 231, 0.97));
+    radial-gradient(120% 90% at 50% 0%, rgba(79, 18, 199, 0.08), transparent 60%),
+    linear-gradient(180deg, #F1EEE7, #EBE7DE);
   border-bottom: 1px solid rgba(23, 23, 46, 0.1);
   box-shadow: 0 30px 80px -30px rgba(23, 23, 46, 0.25);
 }

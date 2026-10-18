@@ -152,13 +152,13 @@ export default function Header() {
       {/* menu fullscreen — vidro translúcido + big titles (100% CSS, sem GSAP) */}
       <div
         aria-hidden={!open}
-        className={`glass-menu fixed inset-0 z-[55] flex flex-col justify-between overflow-y-auto transition-[opacity,visibility] duration-500 ease-out ${
+        className={`glass-menu fixed inset-0 z-[58] flex flex-col justify-between overflow-y-auto transition-[opacity,visibility] duration-500 ease-out ${
           open ? "visible opacity-100" : "invisible opacity-0"
         }`}
       >
         <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col justify-between gap-10 px-6 pb-[max(1.75rem,env(safe-area-inset-bottom))] pt-[calc(7rem+env(safe-area-inset-top))] sm:px-10 md:flex-row md:items-end md:gap-16 md:px-[80px] md:pb-14 md:pt-36">
           {/* navegação: alinhada à esquerda, com respiro */}
-          <nav aria-label={t("menu.open")} className="flex flex-col items-start gap-1 md:gap-1.5">
+          <nav aria-label={t("menu.open")} className="flex flex-col items-start gap-1.5 md:gap-2">
             <MenuItem
               num="01"
               label={t("menu.home")}
@@ -201,7 +201,7 @@ export default function Header() {
 
           {/* utilidades ancoradas embaixo (no desktop, à direita) */}
           <div
-            className={`flex w-full flex-col gap-5 transition-[opacity,transform] duration-500 md:w-auto md:max-w-[360px] md:items-end ${
+            className={`flex w-full flex-col gap-5 border-t border-white/10 pt-6 transition-[opacity,transform] duration-500 md:w-auto md:max-w-[360px] md:items-end md:border-t-0 md:pt-0 ${
               open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
             }`}
             style={{ transitionDelay: open ? "460ms" : "0ms" }}

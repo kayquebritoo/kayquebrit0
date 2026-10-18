@@ -117,6 +117,8 @@ Voz-e-Tom, Marca, Servicos, KBOS - Visao, logs em `20-Projetos/KBOS/log/`).
 
 ## Diário (mais recente em cima)
 
+- 2026-10-18 · Claude · Menu do site: fundo do menu fullscreen agora OPACO (antes 80-90% de transparência deixava hero, títulos gigantes e CTA aparecendo por trás), z-58 abaixo do header, separador nas utilidades. Falta: revisar visualmente mobile/desktop depois do deploy e redesenhar a composição se ainda incomodar.
+
 - 2026-10-18 · Claude · Fase 5 (parte 2): `lib/kbos/relationship.ts` — follow-up de orçamento `sent` sem resposta (3-7 e 10-14 dias da criação) e pedido de depoimento/autorização de portfólio 2-7 dias após `entregue` (sem case do contato); textos aprovados. Roda dentro do job `billing.reminders` (5 em 5 min), com guardas no `handleNotifyWhatsapp` (orçamento ainda `sent`, projeto ainda `entregue`). Lembrete pré-vencimento agora também respeita seg-sáb 9h-19h (Belém) no worker. Falta: renovação de plano mensal (depende de modelar plano), tela para ver quem saiu das campanhas.
 
 - 2026-10-18 · Claude · Fase 5 (parte 1): campanhas com descadastro (`lib/kbos/optout.ts`: SAIR/PARAR/STOP em mensagem inteira → `contacts.marketing_opt_out_at`, migração 0018 + SCHEMA_STEP), rodapé automático e teto diário `CAMPAIGN_DAILY_CAP` (padrão 80). Gancho de 1 linha no webhook da Evolution. Falta: follow-up de orçamento, pedido de depoimento/portfólio pós-entrega e renovação de plano mensal (aguardam textos aprovados); lembrete pré-vencimento sem janela 9h-19h.
