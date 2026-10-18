@@ -187,6 +187,43 @@ html.fullpage-locked body {
     radial-gradient(50% 35% at 85% 80%, rgba(79, 18, 199, 0.28), transparent 70%);
 }
 
+/* gradiente em movimento atrás do menu (só CSS; respeita "reduzir movimento") */
+.glass-menu::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  pointer-events: none;
+  background:
+    radial-gradient(38% 32% at 20% 25%, rgba(79, 18, 199, 0.5), transparent 70%),
+    radial-gradient(34% 30% at 80% 70%, rgba(53, 12, 133, 0.55), transparent 70%),
+    radial-gradient(22% 20% at 88% 92%, rgba(232, 14, 253, 0.16), transparent 70%);
+  filter: blur(30px);
+  animation: menu-drift 22s ease-in-out infinite alternate;
+}
+@keyframes menu-drift {
+  0% { transform: translate3d(-4%, -3%, 0) scale(1); }
+  50% { transform: translate3d(3%, 4%, 0) scale(1.08); }
+  100% { transform: translate3d(5%, -2%, 0) scale(1.03); }
+}
+@media (prefers-reduced-motion: reduce) { .glass-menu::after { animation: none; } }
+
+/* painel de vidro das utilidades do menu (área do cliente, redes, tema, idioma) */
+.menu-panel {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
+  border: 1px solid rgba(237, 230, 236, 0.14);
+  border-radius: 28px;
+  padding: 22px;
+  backdrop-filter: blur(22px) saturate(1.4);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  box-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+html.light .menu-panel {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.4));
+  border-color: rgba(23, 23, 46, 0.12);
+  box-shadow: 0 24px 60px -30px rgba(23, 23, 46, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+html.light .glass-menu::after { opacity: 0.55; }
+
 /* big titles do menu — medida contida p/ caber na composição desktop */
 .menu-big {
   font-family: var(--font-display);

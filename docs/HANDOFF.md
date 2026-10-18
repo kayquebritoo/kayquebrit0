@@ -117,6 +117,8 @@ Voz-e-Tom, Marca, Servicos, KBOS - Visao, logs em `20-Projetos/KBOS/log/`).
 
 ## Diário (mais recente em cima)
 
+- 2026-10-18 · Claude · Menu do site no gosto do Kayque (vidro + movimento): base opaca com gradiente animado (`.glass-menu::after`, 22s, respeita reduzir movimento), painel de vidro (`.menu-panel`) nas utilidades, itens deslizam no hover. Gosto registrado: glassmorphism, maximalismo, degradês em movimento, microinterações, mobile first, app nativo. Falta: aplicar o mesmo padrão nas outras telas do site/portal.
+
 - 2026-10-18 · Claude · Menu do site: fundo do menu fullscreen agora OPACO (antes 80-90% de transparência deixava hero, títulos gigantes e CTA aparecendo por trás), z-58 abaixo do header, separador nas utilidades. Falta: revisar visualmente mobile/desktop depois do deploy e redesenhar a composição se ainda incomodar.
 
 - 2026-10-18 · Claude · Fase 5 (parte 2): `lib/kbos/relationship.ts` — follow-up de orçamento `sent` sem resposta (3-7 e 10-14 dias da criação) e pedido de depoimento/autorização de portfólio 2-7 dias após `entregue` (sem case do contato); textos aprovados. Roda dentro do job `billing.reminders` (5 em 5 min), com guardas no `handleNotifyWhatsapp` (orçamento ainda `sent`, projeto ainda `entregue`). Lembrete pré-vencimento agora também respeita seg-sáb 9h-19h (Belém) no worker. Falta: renovação de plano mensal (depende de modelar plano), tela para ver quem saiu das campanhas.

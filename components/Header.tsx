@@ -156,7 +156,7 @@ export default function Header() {
           open ? "visible opacity-100" : "invisible opacity-0"
         }`}
       >
-        <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col justify-between gap-10 px-6 pb-[max(1.75rem,env(safe-area-inset-bottom))] pt-[calc(7rem+env(safe-area-inset-top))] sm:px-10 md:flex-row md:items-end md:gap-16 md:px-[80px] md:pb-14 md:pt-36">
+        <div className="relative z-10 mx-auto flex min-h-full w-full max-w-6xl flex-col justify-between gap-10 px-6 pb-[max(1.75rem,env(safe-area-inset-bottom))] pt-[calc(7rem+env(safe-area-inset-top))] sm:px-10 md:flex-row md:items-end md:gap-16 md:px-[80px] md:pb-14 md:pt-36">
           {/* navegação: alinhada à esquerda, com respiro */}
           <nav aria-label={t("menu.open")} className="flex flex-col items-start gap-1.5 md:gap-2">
             <MenuItem
@@ -201,7 +201,7 @@ export default function Header() {
 
           {/* utilidades ancoradas embaixo (no desktop, à direita) */}
           <div
-            className={`flex w-full flex-col gap-5 border-t border-white/10 pt-6 transition-[opacity,transform] duration-500 md:w-auto md:max-w-[360px] md:items-end md:border-t-0 md:pt-0 ${
+            className={`menu-panel flex w-full flex-col gap-5 transition-[opacity,transform] duration-500 md:w-[380px] md:items-end ${
               open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
             }`}
             style={{ transitionDelay: open ? "460ms" : "0ms" }}
@@ -298,7 +298,7 @@ function MenuItem({ label, num, open, delay, onClick }: { label: string; num: st
       style={{ transitionDelay: open ? `${delay}ms` : "0ms" }}
     >
       <span className="menu-num">{num}</span>
-      <span className="relative">
+      <span className="relative inline-block transition-transform duration-300 ease-out group-hover:translate-x-2">
         {label}
         <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-white/70 transition-[width] duration-500 group-hover:w-full" />
       </span>
