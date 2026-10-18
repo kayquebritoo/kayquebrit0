@@ -4,7 +4,7 @@ import { db } from "@/lib/kbos/db";
 import { transactions } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { checkId, financePatchSchema, readBody } from "@/lib/kbos/validators";
-import { toDbPatch, toFinanceEntry } from "@/lib/kbos/finance";
+import { nextDueDate, toDbPatch, toFinanceEntry } from "@/lib/kbos/finance";
 import { serverError } from "@/lib/kbos/http";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -29,8 +29,33 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (bad) return bad;
     const parsed = await readBody(req, financePatchSchema);
     if ("error" in parsed) return parsed.error;
+    const before = (await db().select().from(transactions).where(eq(transactions.id, id)).limit(1))[0];
+    if (!before) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
     await db().update(transactions).set(toDbPatch(parsed.data)).where(eq(transactions.id, id));
-    return NextResponse.json({ ok: true });
+    // Recorrente pago agora: já deixa a próxima parcela pendente na fila.
+    let next: string | null = null;
+    const recurrence = parsed.data.recurrence !== undefined ? parsed.data.recurrence : before.recurrence;
+    if (parsed.data.status === "paid" && before.status !== "pago" && (recurrence === "mensal" || recurrence === "anual")) {
+      const base = before.vencimento ?? new Date();
+      const rows = await db()
+        .insert(transactions)
+        .values({
+          tipo: before.tipo,
+          descricao: before.descricao,
+          categoria: before.categoria,
+          valor: before.valor,
+          vencimento: nextDueDate(new Date(base), recurrence),
+          status: "pendente",
+          scope: before.scope,
+          contactId: before.contactId,
+          paymentMethod: before.paymentMethod,
+          recurrence,
+          projectId: before.projectId,
+        })
+        .returning({ id: transactions.id });
+      next = rows[0]?.id ?? null;
+    }
+    return NextResponse.json({ ok: true, next });
   } catch (e) {
     return serverError(e);
   }

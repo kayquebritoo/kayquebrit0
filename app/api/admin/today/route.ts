@@ -82,7 +82,8 @@ export async function GET() {
       d
         .select({ n: sql<number>`coalesce(sum(${conversations.unreadCount}), 0)::int` })
         .from(conversations)
-        .where(eq(conversations.status, "open")),
+        // Grupos não contam: são conversa, não demanda.
+        .where(and(eq(conversations.status, "open"), eq(conversations.isGroup, false))),
       d
         .select({
           id: messages.id,
@@ -95,7 +96,7 @@ export async function GET() {
         .from(messages)
         .innerJoin(conversations, eq(messages.conversationId, conversations.id))
         .leftJoin(contacts, eq(conversations.contactId, contacts.id))
-        .where(eq(messages.senderType, "customer"))
+        .where(and(eq(messages.senderType, "customer"), eq(conversations.isGroup, false)))
         .orderBy(desc(messages.createdAt))
         .limit(6),
       d

@@ -3,7 +3,7 @@ import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { db } from "@/lib/kbos/db";
 import { contacts } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
-import { contactCreateSchema, readBody } from "@/lib/kbos/validators";
+import { CONTACT_EXTRA_KEYS, contactCreateSchema, readBody } from "@/lib/kbos/validators";
 import { serverError } from "@/lib/kbos/http";
 
 const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as const;
@@ -23,7 +23,16 @@ export async function GET(req: Request) {
     }
     if (q) {
       const like = `%${q}%`;
-      filters.push(or(ilike(contacts.name, like), ilike(contacts.email, like), ilike(contacts.company, like)));
+      filters.push(
+        or(
+          ilike(contacts.name, like),
+          ilike(contacts.email, like),
+          ilike(contacts.company, like),
+          ilike(contacts.phone, like),
+          ilike(contacts.document, like),
+          ilike(contacts.legalName, like)
+        )
+      );
     }
     const rows = await db()
       .select()
@@ -55,6 +64,8 @@ export async function POST(req: Request) {
         company: b.company || null,
         status: b.status ?? "lead",
         notes: b.notes || null,
+        ...Object.fromEntries(CONTACT_EXTRA_KEYS.map((k) => [k, b[k] || null])),
+        kind: b.kind ?? (b.document && b.document.length > 14 ? "pj" : "pf"),
       })
       .returning();
     return NextResponse.json({ ok: true, item: rows[0] }, { status: 201 });

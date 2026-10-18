@@ -50,6 +50,7 @@ export type BudgetCreateInput = {
   // Retrato do cliente (0008): preenchido mesmo sem vínculo no CRM.
   clientName?: string | null;
   clientCompany?: string | null;
+  clientDocument?: string | null;
   // Datas de execução da proposta (coberturas/eventos) — ISO `yyyy-mm-dd`.
   eventDates?: string[] | null;
   discountType?: DiscountType | null;
@@ -85,6 +86,7 @@ export async function createBudget(input: BudgetCreateInput) {
           items,
           clientName: input.clientName?.trim() || null,
           clientCompany: input.clientCompany?.trim() || null,
+          clientDocument: input.clientDocument?.trim() || null,
           eventDates: eventDates.length ? eventDates : null,
           discountType: input.discountType ?? null,
           discountValue: input.discountValue != null ? String(input.discountValue) : null,

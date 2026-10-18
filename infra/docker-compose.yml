@@ -169,6 +169,13 @@ services:
       CACHE_REDIS_PREFIX_KEY: evolution
       CACHE_REDIS_SAVE_INSTANCES: "false"
       CACHE_LOCAL_ENABLED: "false"
+      # Guarda as mensagens na Evolution: o KBOS baixa fotos/áudios/vídeos
+      # por elas (getBase64FromMediaMessage precisa achar a mensagem salva).
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "true"
+      DATABASE_SAVE_MESSAGE_UPDATE: "true"
+      DATABASE_SAVE_DATA_CONTACTS: "true"
+      DATABASE_SAVE_DATA_CHATS: "true"
       # Sem DEBUG: nesse nível a Evolution grava o payload inteiro (com a apikey) no log.
       LOG_LEVEL: ERROR,WARN,INFO
       LOG_BAILEYS: error

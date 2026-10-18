@@ -35,6 +35,11 @@ export type BudgetPdfData = {
   // Retrato do cliente + proposta (0008, opcionais p/ orçamentos antigos).
   clientName?: string | null;
   clientCompany?: string | null;
+  // Qualificação do contratante (0010): documento, razão social e endereço.
+  clientDocument?: string | null;
+  contactDocument?: string | null;
+  contactLegalName?: string | null;
+  contactAddress?: string | null;
   eventDates?: string[] | null;
   discountType?: string | null;
   discountValue?: string | number | null;
@@ -458,6 +463,8 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
     data.revisionsCount == null ? null : plural(data.revisionsCount, "revisão inclusa", "revisões inclusas");
   const contractorName = "Kayque Brito";
   const contractingName = partyName(clientName, clientCompany);
+  const clientDoc = data.contactDocument || data.clientDocument || null;
+  const clientDocLabel = clientDoc && clientDoc.replace(/[^0-9A-Z]/gi, "").length === 11 ? "CPF" : "CNPJ";
   const recurring = isRecurringBudget(data);
   const period = executionPeriodLabel(data, recurring);
   const clauses = [
@@ -665,8 +672,12 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
           <View style={s.card}>
             <Text style={s.cardLabel}>CONTRATANTE</Text>
             <Text style={s.cardTitle}>{contractingName}</Text>
-            {data.contactEmail ? <Text style={s.cardLine}>{data.contactEmail}</Text> : null}
-            {data.contactPhone ? <Text style={s.cardLine}>{data.contactPhone}</Text> : null}
+            {data.contactLegalName && data.contactLegalName !== clientCompany ? <Text style={s.cardLine}>{data.contactLegalName}</Text> : null}
+            {clientDoc ? <Text style={s.cardLine}>{clientDocLabel}: {clientDoc}</Text> : null}
+            {data.contactAddress ? <Text style={s.cardLine}>{data.contactAddress}</Text> : null}
+            {[data.contactEmail, data.contactPhone].filter(Boolean).length ? (
+              <Text style={s.cardLine}>{[data.contactEmail, data.contactPhone].filter(Boolean).join(" · ")}</Text>
+            ) : null}
             {period ? <Text style={s.cardLine}>Vigência: {period}</Text> : null}
           </View>
         </View>

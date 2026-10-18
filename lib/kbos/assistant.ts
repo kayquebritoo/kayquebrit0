@@ -285,8 +285,14 @@ export async function handleAssistantTurn(input: AssistantTurnInput): Promise<As
     });
     transcript = t.text;
     transcriptStub = t.stub;
+    if (!transcript && !openaiKey()) {
+      throw coded(
+        "A transcrição de áudio ainda não está ligada (falta a OPENAI_API_KEY na VPS). Use o microfone do teclado para ditar.",
+        "TRANSCRIBE_UNAVAILABLE"
+      );
+    }
   }
-  if (!transcript) throw coded("Nenhum texto ou áudio aproveitável.", "EMPTY_INPUT");
+  if (!transcript) throw coded("Não entendi o áudio. Tente de novo, falando perto do microfone.", "EMPTY_INPUT");
 
   // 3) Resposta do LLM (ou stub em modo base).
   const system = buildSystemPrompt(input.voicePrompt);

@@ -34,7 +34,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       .where(and(...filters))
       .orderBy(desc(messages.createdAt))
       .limit(limit);
-    return NextResponse.json({ items: rows.reverse() });
+    // Mídia do WhatsApp sai pelo proxy (a URL original é criptografada).
+    const items = rows.reverse().map((m) => ({
+      ...m,
+      mediaSrc:
+        m.messageType !== "text" && (m.mediaUrl || m.externalId)
+          ? m.mediaUrl && /^https:\/\//.test(m.mediaUrl) && !m.mediaUrl.includes(".whatsapp.net")
+            ? m.mediaUrl
+            : `/api/conversations/${id}/messages/${m.id}/media/`
+          : null,
+    }));
+    return NextResponse.json({ items });
   } catch (e) {
     return serverError(e);
   }

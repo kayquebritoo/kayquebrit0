@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { NextResponse } from "next/server";
 import { PIPELINE, ROLE_LABELS } from "./constants";
+import { documentKind, formatDocument } from "./document";
 
 const ROLES = Object.keys(ROLE_LABELS) as [string, ...string[]];
 const PROJECT_STATUS = PIPELINE.map((p) => p.id) as [string, ...string[]];
@@ -13,9 +14,23 @@ export const emailField = z
   .trim()
   .transform((s) => s.toLowerCase())
   .pipe(z.email({ error: "E-mail inválido." }).max(160));
-export const moneyField = z
-  .union([z.string().regex(/^\d{1,12}(\.\d{1,2})?$/, { error: "Valor inválido." }), z.number().positive().max(1e12)])
-  .transform((v) => String(v));
+/**
+ * Aceita o jeito brasileiro de digitar dinheiro: "1.234,56", "R$ 100",
+ * "100,5", "1234.56". Devolve "1234.56" (ou o texto original se não for número).
+ */
+export function normalizeMoney(v: unknown): unknown {
+  if (typeof v !== "string") return v;
+  let t = v.replace(/R\$|\s/gi, "");
+  if (t.includes(",")) t = t.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, "");
+  return t;
+}
+export const moneyField = z.preprocess(
+  normalizeMoney,
+  z
+    .union([z.string().regex(/^\d{1,12}(\.\d{1,2})?$/, { error: "Valor inválido. Ex.: 1.500,00" }), z.number().positive().max(1e12)])
+    .transform((v) => String(v))
+);
 export const dateField = z
   .string()
   .refine((s) => !Number.isNaN(Date.parse(s)), { error: "Data inválida." });
@@ -266,6 +281,29 @@ const optionalEmail = z
   .refine((s) => !s || /.+@.+\..+/.test(s), { error: "E-mail inválido." });
 const optionalUrl = z.url({ error: "URL inválida." }).max(2000);
 
+/** CPF ou CNPJ válido (dígitos verificadores conferidos); guarda formatado. */
+const documentField = z
+  .string()
+  .trim()
+  .max(24)
+  .refine((v) => !v || documentKind(v) !== null, { error: "CPF/CNPJ inválido — confira os números." })
+  .transform((v) => (v ? formatDocument(v) : v));
+const opt = (max: number) => z.string().trim().max(max);
+const contactExtra = {
+  kind: z.enum(["pf", "pj"]).optional(),
+  document: documentField.optional(),
+  legalName: opt(200).optional(),
+  stateRegistration: opt(40).optional(),
+  role: opt(80).optional(),
+  address: opt(240).optional(),
+  city: opt(80).optional(),
+  state: opt(2).optional(),
+  zipCode: opt(12).optional(),
+  website: opt(200).optional(),
+  instagram: opt(80).optional(),
+  source: opt(60).optional(),
+};
+export const CONTACT_EXTRA_KEYS = Object.keys(contactExtra) as (keyof typeof contactExtra)[];
 export const contactCreateSchema = z.object({
   name: shortText(120),
   email: optionalEmail,
@@ -273,6 +311,7 @@ export const contactCreateSchema = z.object({
   company: z.string().trim().max(160).optional(),
   status: z.enum(["lead", "client", "partner", "archived"]).optional(),
   notes: z.string().trim().max(5000).optional(),
+  ...contactExtra,
 });
 export const contactPatchSchema = nonEmpty(
   z.object({
@@ -282,6 +321,18 @@ export const contactPatchSchema = nonEmpty(
     company: z.string().trim().max(160).nullable().optional(),
     status: z.enum(["lead", "client", "partner", "archived"]).optional(),
     notes: z.string().trim().max(5000).nullable().optional(),
+    kind: z.enum(["pf", "pj"]).optional(),
+    document: documentField.nullable().optional(),
+    legalName: opt(200).nullable().optional(),
+    stateRegistration: opt(40).nullable().optional(),
+    role: opt(80).nullable().optional(),
+    address: opt(240).nullable().optional(),
+    city: opt(80).nullable().optional(),
+    state: opt(2).nullable().optional(),
+    zipCode: opt(12).nullable().optional(),
+    website: opt(200).nullable().optional(),
+    instagram: opt(80).nullable().optional(),
+    source: opt(60).nullable().optional(),
   })
 );
 
@@ -326,7 +377,7 @@ export const inboxSendSchema = z
   .object({
     content: z.string().trim().max(4000).optional(),
     mediaUrl: z.url({ error: "URL inválida." }).max(2000).optional(),
-    messageType: z.enum(["text", "image", "audio", "document"]).optional(),
+    messageType: z.enum(["text", "image", "audio", "document", "video"]).optional(),
   })
   .refine((b) => (b.content?.trim() ? true : !!b.mediaUrl), {
     error: "Informe texto ou anexo.",
@@ -371,6 +422,13 @@ export const assistantTurnSchema = z
   });
 
 /* ---------- Fase 4: financeiro + agenda ---------- */
+const financeExtra = {
+  scope: z.enum(["empresa", "pessoal"]).optional(),
+  paymentMethod: z.string().trim().max(40).optional(),
+  recurrence: z.enum(["mensal", "anual"]).nullable().optional(),
+  contactId: uuidField.optional(),
+  notes: z.string().trim().max(2000).optional(),
+};
 export const financeCreateSchema = z.object({
   type: z.enum(["income", "expense"]),
   description: shortText(200),
@@ -378,6 +436,7 @@ export const financeCreateSchema = z.object({
   category: z.string().trim().max(80).optional(),
   dueDate: dateField.optional(),
   status: z.enum(["pending", "paid"]).optional(),
+  ...financeExtra,
 });
 export const financePatchSchema = nonEmpty(
   z.object({
@@ -387,6 +446,11 @@ export const financePatchSchema = nonEmpty(
     category: z.string().trim().max(80).nullable().optional(),
     dueDate: dateField.nullable().optional(),
     status: z.enum(["pending", "paid"]).optional(),
+    scope: z.enum(["empresa", "pessoal"]).optional(),
+    paymentMethod: z.string().trim().max(40).nullable().optional(),
+    recurrence: z.enum(["mensal", "anual"]).nullable().optional(),
+    contactId: uuidField.nullable().optional(),
+    notes: z.string().trim().max(2000).nullable().optional(),
   })
 );
 
@@ -441,6 +505,7 @@ export const budgetCreateSchema = z.object({
   bankInfo: z.string().trim().max(2000).nullable().optional(),
   clientName: z.string().trim().max(160).nullable().optional(),
   clientCompany: z.string().trim().max(160).nullable().optional(),
+  clientDocument: documentField.nullable().optional(),
   eventDates: eventDatesField.nullable().optional(),
   discountType: discountTypeEnum.nullable().optional(),
   discountValue: discountValueField.nullable().optional(),
@@ -459,6 +524,7 @@ export const budgetPatchSchema = nonEmpty(
     bankInfo: z.string().trim().max(2000).nullable().optional(),
     clientName: z.string().trim().max(160).nullable().optional(),
     clientCompany: z.string().trim().max(160).nullable().optional(),
+    clientDocument: documentField.nullable().optional(),
     eventDates: eventDatesField.nullable().optional(),
     discountType: discountTypeEnum.nullable().optional(),
     discountValue: discountValueField.nullable().optional(),

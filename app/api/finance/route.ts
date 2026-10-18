@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { desc } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 import { db } from "@/lib/kbos/db";
 import { transactions } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
@@ -15,8 +15,14 @@ export async function GET(req: Request) {
   if (denied) return denied;
   try {
     const q = new URL(req.url).searchParams;
-    const rows = await db().select().from(transactions).orderBy(desc(transactions.createdAt)).limit(500);
-    const items = rows.map(toFinanceEntry);
+    const rows = await db()
+      .select()
+      .from(transactions)
+      .orderBy(desc(sql`coalesce(${transactions.vencimento}, ${transactions.createdAt})`))
+      .limit(1000);
+    const scope = q.get("scope");
+    // Resumo e gráfico respeitam a visão (Empresa / Pessoal / Tudo).
+    const items = rows.map((r) => toFinanceEntry(r)).filter((e) => !scope || scope === "all" || e.scope === scope);
     const type = q.get("type");
     const status = q.get("status");
     const filtered = items.filter(

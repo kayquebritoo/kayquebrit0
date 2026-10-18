@@ -114,9 +114,6 @@ type SR = {
 /** Ditado nativo do navegador (Chrome desktop/Android, Safari fora do app). */
 function speechCtor(): (new () => SR) | null {
   const W = window as unknown as { SpeechRecognition?: new () => SR; webkitSpeechRecognition?: new () => SR };
-  const nav = navigator as Navigator & { standalone?: boolean };
-  // No iPhone com o app instalado o ditado falha: lá vai direto p/ gravação.
-  if (nav.standalone === true) return null;
   return W.SpeechRecognition || W.webkitSpeechRecognition || null;
 }
 
@@ -138,6 +135,13 @@ export default function Today() {
   const [busy, setBusy] = useState(false);
   const [reply, setReply] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
+  const canTranscribe = useRef<boolean | null>(null);
+  useEffect(() => {
+    fetch("/api/ai/assistant")
+      .then((r) => r.json())
+      .then((j) => (canTranscribe.current = !!j.transcription))
+      .catch(() => (canTranscribe.current = false));
+  }, []);
   const [clock, setClock] = useState(() => Date.now());
   const seen = useRef<Set<string>>(new Set());
   const [fresh, setFresh] = useState<Set<string>>(new Set());
@@ -243,6 +247,15 @@ export default function Today() {
       mediaRef.current?.stop();
       return;
     }
+    // App instalado no iPhone sem transcrição no servidor: o ditado do
+    // navegador não existe lá, então abre o teclado (que tem o 🎤 do iOS).
+    // Precisa ser síncrono, dentro do toque, senão o iOS não abre o teclado.
+    const standalone = (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    if (standalone && canTranscribe.current !== true) {
+      (document.getElementById("kb-cmd") as HTMLInputElement | null)?.focus();
+      setReply("Toque no 🎤 do teclado para ditar e depois em enviar. (A gravação direta liga quando a OPENAI_API_KEY estiver na VPS.)");
+      return;
+    }
     // 1º: ditado nativo (não depende de chave no servidor).
     const Speech = speechCtor();
     if (Speech) {
@@ -287,7 +300,20 @@ export default function Today() {
   };
 
   // 2º: grava o áudio e o servidor transcreve (precisa de OPENAI_API_KEY).
+  // Sem a chave, gravar seria inútil: abre o teclado para o ditado do sistema.
   const recordAudio = async () => {
+    if (canTranscribe.current === null) {
+      canTranscribe.current = await fetch("/api/ai/assistant")
+        .then((r) => r.json())
+        .then((j) => !!j.transcription)
+        .catch(() => false);
+    }
+    if (!canTranscribe.current) {
+      const input = document.getElementById("kb-cmd") as HTMLInputElement | null;
+      input?.focus();
+      setReply("Use o microfone do teclado para ditar e toque em enviar. (A gravação direta liga quando a OPENAI_API_KEY estiver na VPS.)");
+      return;
+    }
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
       setReply("Este navegador não grava áudio. Digite o comando ou mande um áudio no WhatsApp.");
       return;

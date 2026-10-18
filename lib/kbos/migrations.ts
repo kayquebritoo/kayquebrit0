@@ -1,0 +1,78 @@
+// Migrações idempotentes aplicadas no boot do servidor (instrumentation.ts)
+// e sob demanda em `POST /api/admin/migrate`. Cada passo usa IF NOT EXISTS,
+// então rodar de novo é inofensivo. Espelho em `drizzle/0010_*.sql`.
+//
+// Por que no boot: o deploy da VPS não roda `drizzle-kit push`, e código novo
+// que lê colunas novas quebraria até alguém migrar à mão.
+import { sql } from "drizzle-orm";
+import { db } from "./db";
+
+export const SCHEMA_STEPS: { id: string; sql: string }[] = [
+  // ── 0010 · cadastro completo de contatos (PF/PJ, CNPJ/CPF, endereço)
+  { id: "contacts.kind", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'pf'` },
+  { id: "contacts.document", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS document text` },
+  { id: "contacts.legal_name", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS legal_name text` },
+  { id: "contacts.state_registration", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS state_registration text` },
+  { id: "contacts.role", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS role text` },
+  { id: "contacts.address", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS address text` },
+  { id: "contacts.city", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS city text` },
+  { id: "contacts.state", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS state text` },
+  { id: "contacts.zip_code", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS zip_code text` },
+  { id: "contacts.website", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS website text` },
+  { id: "contacts.instagram", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS instagram text` },
+  { id: "contacts.source", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS source text` },
+  { id: "contacts.document_idx", sql: `CREATE INDEX IF NOT EXISTS kbos_contacts_document_idx ON kbos_contacts (document)` },
+  // ── 0010 · inbox: grupos com título próprio e autor por mensagem
+  { id: "conversations.title", sql: `ALTER TABLE kbos_conversations ADD COLUMN IF NOT EXISTS title text` },
+  { id: "conversations.is_group", sql: `ALTER TABLE kbos_conversations ADD COLUMN IF NOT EXISTS is_group boolean NOT NULL DEFAULT false` },
+  { id: "conversations.last_preview", sql: `ALTER TABLE kbos_conversations ADD COLUMN IF NOT EXISTS last_preview text` },
+  { id: "messages.sender_name", sql: `ALTER TABLE kbos_messages ADD COLUMN IF NOT EXISTS sender_name text` },
+  { id: "messages.sender_phone", sql: `ALTER TABLE kbos_messages ADD COLUMN IF NOT EXISTS sender_phone text` },
+  { id: "message_type.video", sql: `ALTER TYPE kbos_message_type ADD VALUE IF NOT EXISTS 'video'` },
+  // ── 0010 · financeiro: empresa × pessoal, vínculo com cliente, forma de pagamento
+  { id: "transactions.scope", sql: `ALTER TABLE kbos_transactions ADD COLUMN IF NOT EXISTS scope text NOT NULL DEFAULT 'empresa'` },
+  { id: "transactions.contact_id", sql: `ALTER TABLE kbos_transactions ADD COLUMN IF NOT EXISTS contact_id uuid REFERENCES kbos_contacts(id) ON DELETE SET NULL` },
+  { id: "transactions.payment_method", sql: `ALTER TABLE kbos_transactions ADD COLUMN IF NOT EXISTS payment_method text` },
+  { id: "transactions.recurrence", sql: `ALTER TABLE kbos_transactions ADD COLUMN IF NOT EXISTS recurrence text` },
+  { id: "transactions.notes", sql: `ALTER TABLE kbos_transactions ADD COLUMN IF NOT EXISTS notes text` },
+  // ── 0010 · orçamento: documento do cliente no contrato
+  { id: "budgets.client_document", sql: `ALTER TABLE kbos_budgets ADD COLUMN IF NOT EXISTS client_document text` },
+  // ── 0010 · grupos que já entraram: marca como grupo e solta do contato errado
+  {
+    id: "conversations.mark_groups",
+    sql: `UPDATE kbos_conversations SET is_group = true, contact_id = NULL WHERE channel_chat_id LIKE '%@g.us' AND (is_group = false OR contact_id IS NOT NULL)`,
+  },
+];
+
+/**
+ * Contatos-fantasma criados por mensagens de grupo (um por mensagem!) e que
+ * não têm nada ligado a eles. Só roda via endpoint, nunca no boot.
+ */
+export const CLEANUP_GROUP_CONTACTS = `
+DELETE FROM kbos_contacts c
+WHERE c.notes LIKE 'Criado automaticamente via inbox (%@g.us).'
+  AND NOT EXISTS (SELECT 1 FROM kbos_conversations v WHERE v.contact_id = c.id)
+  AND NOT EXISTS (SELECT 1 FROM kbos_deals d WHERE d.contact_id = c.id)
+  AND NOT EXISTS (SELECT 1 FROM kbos_budgets b WHERE b.contact_id = c.id)
+RETURNING c.id`;
+
+let applied: Promise<{ ok: string[]; failed: { id: string; error: string }[] }> | null = null;
+
+export function ensureSchema(force = false) {
+  if (applied && !force) return applied;
+  applied = (async () => {
+    const ok: string[] = [];
+    const failed: { id: string; error: string }[] = [];
+    for (const step of SCHEMA_STEPS) {
+      try {
+        await db().execute(sql.raw(step.sql));
+        ok.push(step.id);
+      } catch (e) {
+        failed.push({ id: step.id, error: e instanceof Error ? e.message.slice(0, 200) : String(e) });
+      }
+    }
+    if (failed.length) console.error("[kbos] migração com falhas:", failed);
+    return { ok, failed };
+  })();
+  return applied;
+}

@@ -1,4 +1,5 @@
 "use client";
+import { maskDocumentInput } from "@/lib/kbos/document";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BUDGET_STATUS, DEFAULT_PIX_INFO } from "@/lib/kbos/constants";
 import {
@@ -23,6 +24,7 @@ type Budget = {
   items: Item[];
   clientName?: string | null;
   clientCompany?: string | null;
+  clientDocument?: string | null;
   eventDates?: string[] | null;
   discountType?: string | null;
   discountValue?: string | number | null;
@@ -33,7 +35,7 @@ type Budget = {
   contactName?: string | null;
   contactCompany?: string | null;
 };
-type Contact = { id: string; name: string; company: string | null; phone?: string | null; email?: string | null };
+type Contact = { id: string; name: string; company: string | null; phone?: string | null; email?: string | null; document?: string | null };
 
 const num = (v: unknown): number => {
   if (typeof v === "string") v = v.replace(/\./g, "").replace(",", ".");
@@ -57,6 +59,7 @@ type FormState = {
   contactId: string;
   company: string;
   responsible: string;
+  document: string;
   items: Item[];
   discountType: "fixed" | "percent";
   discountValue: string;
@@ -73,6 +76,7 @@ const blankForm = (): FormState => ({
   contactId: "",
   company: "",
   responsible: "",
+  document: "",
   items: [emptyItem()],
   discountType: "fixed",
   discountValue: "",
@@ -116,7 +120,7 @@ export default function Orcamentos() {
       ]);
       if (!b.ok) throw new Error(b.j.error || "Falha ao carregar orçamentos.");
       setItems(b.j.items || []);
-      if (c.ok) setContacts((c.j.items || []).map((x: Contact) => ({ id: x.id, name: x.name, company: x.company, phone: x.phone, email: x.email })));
+      if (c.ok) setContacts((c.j.items || []).map((x: Contact) => ({ id: x.id, name: x.name, company: x.company, phone: x.phone, email: x.email, document: x.document })));
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro.");
@@ -188,6 +192,7 @@ export default function Orcamentos() {
       contactId: b.contactId || "",
       company: b.contactCompany || b.clientCompany || "",
       responsible: b.contactName || b.clientName || "",
+      document: b.clientDocument || contacts.find((c) => c.id === b.contactId)?.document || "",
       items,
       discountType: b.discountType === "percent" ? "percent" : "fixed",
       discountValue: dv ? String(dv).replace(".", ",") : "",
@@ -205,7 +210,7 @@ export default function Orcamentos() {
   };
 
   const pickContact = (c: Contact) => {
-    setForm((f) => ({ ...f, contactId: c.id, responsible: c.name, company: c.company || f.company }));
+    setForm((f) => ({ ...f, contactId: c.id, responsible: c.name, company: c.company || f.company, document: c.document || f.document }));
     setRespOpen(false);
   };
 
@@ -269,6 +274,7 @@ export default function Orcamentos() {
         contactId: form.contactId || null,
         clientName: form.responsible.trim() || null,
         clientCompany: form.company.trim() || null,
+        clientDocument: form.document.trim() || null,
         items: cleanItems,
         eventDates: derivedDates.length ? derivedDates : null,
         discountType: form.discountType,
@@ -505,6 +511,18 @@ export default function Orcamentos() {
                       </ul>
                     ) : null}
                   </div>
+                </div>
+                <div>
+                  <label className={labelCls} htmlFor="orc-doc">CPF ou CNPJ do contratante</label>
+                  <input
+                    id="orc-doc"
+                    className={inputCls}
+                    placeholder="Sai no contrato (página 2)"
+                    value={form.document}
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    onChange={(e) => setForm((f) => ({ ...f, document: maskDocumentInput(e.target.value) }))}
+                  />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {linkedContact ? (

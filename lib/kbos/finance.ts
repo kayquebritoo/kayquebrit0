@@ -14,9 +14,19 @@ export type FinanceEntry = {
   category: string | null;
   dueDate: string | null;
   status: FinanceStatus;
+  /** Empresa ou pessoal (0010). */
+  scope: FinanceScope;
+  paymentMethod: string | null;
+  /** null | "mensal" | "anual" — ao marcar pago, nasce a próxima. */
+  recurrence: FinanceRecurrence | null;
+  contactId: string | null;
+  notes: string | null;
   createdAt: string;
   updatedAt: string;
 };
+
+export type FinanceScope = "empresa" | "pessoal";
+export type FinanceRecurrence = "mensal" | "anual";
 
 type DbRow = {
   id: string;
@@ -28,6 +38,11 @@ type DbRow = {
   status: string;
   createdAt: string | Date;
   updatedAt?: string | Date | null;
+  scope?: string | null;
+  paymentMethod?: string | null;
+  recurrence?: string | null;
+  contactId?: string | null;
+  notes?: string | null;
 };
 
 const iso = (v: string | Date | null | undefined): string | null => {
@@ -36,16 +51,25 @@ const iso = (v: string | Date | null | undefined): string | null => {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 };
 
-/** Linha PT do banco → contrato EN da API. `vencido` vira `overdue` (leitura). */
-export function toFinanceEntry(r: DbRow): FinanceEntry {
+/** Linha PT do banco → contrato EN da API. `vencido` vira `overdue` (leitura),
+ * e pendente com vencimento antes de hoje também (ninguém precisa marcar à mão). */
+export function toFinanceEntry(r: DbRow, now = new Date()): FinanceEntry {
+  const due = iso(r.vencimento);
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const lateByDate = r.status === "pendente" && !!due && new Date(due).getTime() < startToday;
   return {
     id: r.id,
     type: r.tipo === "saida" ? "expense" : "income",
     description: r.descricao,
     amount: Number(r.valor || 0) || 0,
     category: r.categoria ?? null,
-    dueDate: iso(r.vencimento),
-    status: r.status === "pago" ? "paid" : r.status === "vencido" ? "overdue" : "pending",
+    dueDate: due,
+    status: r.status === "pago" ? "paid" : r.status === "vencido" || lateByDate ? "overdue" : "pending",
+    scope: r.scope === "pessoal" ? "pessoal" : "empresa",
+    paymentMethod: r.paymentMethod ?? null,
+    recurrence: r.recurrence === "mensal" || r.recurrence === "anual" ? r.recurrence : null,
+    contactId: r.contactId ?? null,
+    notes: r.notes ?? null,
     createdAt: iso(r.createdAt) ?? new Date(0).toISOString(),
     updatedAt: iso(r.updatedAt) ?? iso(r.createdAt) ?? new Date(0).toISOString(),
   };
@@ -59,8 +83,18 @@ export function toDbInsert(b: {
   category?: string;
   dueDate?: string;
   status?: "pending" | "paid";
+  scope?: FinanceScope;
+  paymentMethod?: string;
+  recurrence?: FinanceRecurrence | null;
+  contactId?: string;
+  notes?: string;
 }) {
   return {
+    scope: b.scope ?? "empresa",
+    paymentMethod: b.paymentMethod || null,
+    recurrence: b.recurrence ?? null,
+    contactId: b.contactId || null,
+    notes: b.notes || null,
     tipo: (b.type === "expense" ? "saida" : "entrada") as "entrada" | "saida",
     descricao: b.description,
     categoria: b.category ?? null,
@@ -77,8 +111,18 @@ export function toDbPatch(b: {
   category?: string | null;
   dueDate?: string | null;
   status?: "pending" | "paid";
+  scope?: FinanceScope;
+  paymentMethod?: string | null;
+  recurrence?: FinanceRecurrence | null;
+  contactId?: string | null;
+  notes?: string | null;
 }): Record<string, unknown> {
   const p: Record<string, unknown> = { updatedAt: new Date() };
+  if (b.scope !== undefined) p.scope = b.scope;
+  if (b.paymentMethod !== undefined) p.paymentMethod = b.paymentMethod || null;
+  if (b.recurrence !== undefined) p.recurrence = b.recurrence || null;
+  if (b.contactId !== undefined) p.contactId = b.contactId || null;
+  if (b.notes !== undefined) p.notes = b.notes || null;
   if (b.type !== undefined) p.tipo = b.type === "expense" ? "saida" : "entrada";
   if (b.description !== undefined) p.descricao = b.description;
   if (b.amount !== undefined) p.valor = b.amount;
@@ -147,4 +191,14 @@ export function cashFlowByMonth(
     else b.expenses += e.amount;
   }
   return buckets;
+}
+
+/** Próximo vencimento de um lançamento recorrente (mantém o dia; fim de mês ajusta). */
+export function nextDueDate(due: Date, recurrence: FinanceRecurrence): Date {
+  const months = recurrence === "anual" ? 12 : 1;
+  const y = due.getUTCFullYear();
+  const m = due.getUTCMonth() + months;
+  const day = due.getUTCDate();
+  const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(y, m, Math.min(day, lastDay), due.getUTCHours(), due.getUTCMinutes()));
 }

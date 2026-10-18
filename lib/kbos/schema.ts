@@ -178,6 +178,12 @@ export const transactions = pgTable("kbos_transactions", {
   status: trxStatus("status").notNull().default("pendente"),
   projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
   gatewayRef: text("gateway_ref"),
+  // 0010: empresa × pessoal, cliente/fornecedor, forma de pagamento, recorrência.
+  scope: text("scope").notNull().default("empresa"),
+  contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
+  paymentMethod: text("payment_method"),
+  recurrence: text("recurrence"),
+  notes: text("notes"),
   createdAt: ts("created_at"),
   // Fase 4 — `updated_at` (a API `/api/finance` o expõe como `updatedAt`).
   updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -364,6 +370,19 @@ export const contacts = pgTable("kbos_contacts", {
   company: text("company"),
   status: contactStatus("status").notNull().default("lead"),
   notes: text("notes"),
+  // Cadastro completo (0010): PF/PJ, CPF/CNPJ, razão social, endereço.
+  kind: text("kind").notNull().default("pf"),
+  document: text("document"),
+  legalName: text("legal_name"),
+  stateRegistration: text("state_registration"),
+  role: text("role"),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  zipCode: text("zip_code"),
+  website: text("website"),
+  instagram: text("instagram"),
+  source: text("source"),
   createdAt: ts("created_at"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
@@ -424,6 +443,10 @@ export const conversations = pgTable(
     status: convStatus("status").notNull().default("open"),
     unreadCount: integer("unread_count").notNull().default(0),
     lastMessageAt: timestamp("last_message_at", { withTimezone: true }),
+    // Grupos (0010): nome do grupo e prévia da última mensagem.
+    title: text("title"),
+    isGroup: boolean("is_group").notNull().default(false),
+    lastPreview: text("last_preview"),
     createdAt: ts("created_at"),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
@@ -438,7 +461,7 @@ export const conversations = pgTable(
 
 export const senderType = pgEnum("kbos_sender_type", ["customer", "agent", "ai"]);
 
-export const messageType = pgEnum("kbos_message_type", ["text", "image", "audio", "document"]);
+export const messageType = pgEnum("kbos_message_type", ["text", "image", "audio", "document", "video"]);
 
 export const messageStatus = pgEnum("kbos_message_status", ["sent", "delivered", "read"]);
 
@@ -455,6 +478,9 @@ export const messages = pgTable(
     messageType: messageType("message_type").notNull().default("text"),
     status: messageStatus("status").notNull().default("sent"),
     externalId: text("external_id"),
+    // Autor dentro de grupos (0010).
+    senderName: text("sender_name"),
+    senderPhone: text("sender_phone"),
     createdAt: ts("created_at"),
   },
   (t) => [
@@ -582,6 +608,7 @@ export const budgets = pgTable("kbos_budgets", {
   // - desconto fixo (R$) ou percentual aplicado sobre o subtotal.
   clientName: text("client_name"),
   clientCompany: text("client_company"),
+  clientDocument: text("client_document"),
   eventDates: jsonb("event_dates").$type<string[]>(),
   discountType: text("discount_type"),
   discountValue: numeric("discount_value"),

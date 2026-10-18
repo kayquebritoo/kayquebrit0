@@ -3,7 +3,7 @@ import { db } from "@/lib/kbos/db";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { withRateLimit } from "@/lib/kbos/rate-limit";
 import { assistantTurnSchema, readBody } from "@/lib/kbos/validators";
-import { handleAssistantTurn } from "@/lib/kbos/assistant";
+import { handleAssistantTurn, openaiKey } from "@/lib/kbos/assistant";
 import { serverError } from "@/lib/kbos/http";
 
 const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as const;
@@ -15,6 +15,14 @@ const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as con
 // `send: true` p/ entregar via Evolution, `tts: true` p/ gerar áudio).
 // Sem `OPENAI_API_KEY`, responde em modo base (`stub: true`) — o contrato é
 // o mesmo, então plugar a chave na VPS ativa a IA real sem mudar chamadas.
+// GET — o que o assistente consegue fazer agora (a tela decide se grava áudio).
+export async function GET() {
+  const user = await sessionUser();
+  const denied = deny(user, ...STAFF);
+  if (denied) return denied;
+  return NextResponse.json({ transcription: !!openaiKey(), llm: !!openaiKey() });
+}
+
 export async function POST(req: Request) {
   const limited = await withRateLimit(req, "ai:assistant");
   if (limited) return limited;
@@ -51,6 +59,9 @@ export async function POST(req: Request) {
       const code = (e as NodeJS.ErrnoException).code;
       if (code === "EMPTY_INPUT" || code === "NO_CONVERSATION") {
         return NextResponse.json({ error: e instanceof Error ? e.message : "Entrada inválida." }, { status: 400 });
+      }
+      if (code === "TRANSCRIBE_UNAVAILABLE") {
+        return NextResponse.json({ error: e instanceof Error ? e.message : "Transcrição indisponível.", code }, { status: 503 });
       }
       if (code === "NOT_FOUND") {
         return NextResponse.json({ error: "Conversa não encontrada." }, { status: 404 });

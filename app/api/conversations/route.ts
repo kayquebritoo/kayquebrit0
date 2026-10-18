@@ -27,10 +27,14 @@ export async function GET(req: Request) {
     if (channel && (CHANNELS as readonly string[]).includes(channel)) {
       filters.push(eq(conversations.channel, channel as "whatsapp"));
     }
+    const kind = url.searchParams.get("kind");
+    if (kind === "groups") filters.push(eq(conversations.isGroup, true));
+    if (kind === "people") filters.push(eq(conversations.isGroup, false));
     if (q) {
       const like = `%${q}%`;
       filters.push(
         or(
+          ilike(conversations.title, like),
           ilike(contacts.name, like),
           ilike(contacts.phone, like),
           ilike(contacts.company, like),
@@ -47,6 +51,9 @@ export async function GET(req: Request) {
         status: conversations.status,
         unreadCount: conversations.unreadCount,
         lastMessageAt: conversations.lastMessageAt,
+        title: conversations.title,
+        isGroup: conversations.isGroup,
+        lastPreview: conversations.lastPreview,
         createdAt: conversations.createdAt,
         updatedAt: conversations.updatedAt,
         contactName: contacts.name,

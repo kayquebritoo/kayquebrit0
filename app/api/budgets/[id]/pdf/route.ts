@@ -43,6 +43,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       contactCompany: row.contact?.company ?? null,
       clientName: row.budget.clientName,
       clientCompany: row.budget.clientCompany,
+      clientDocument: row.budget.clientDocument,
+      contactDocument: row.contact?.document ?? null,
+      contactLegalName: row.contact?.legalName ?? null,
+      contactAddress: row.contact
+        ? [row.contact.address, [row.contact.city, row.contact.state].filter(Boolean).join("/"), row.contact.zipCode && `CEP ${row.contact.zipCode}`]
+            .filter(Boolean)
+            .join(" · ") || null
+        : null,
       eventDates: row.budget.eventDates,
       discountType: row.budget.discountType,
       discountValue: row.budget.discountValue,

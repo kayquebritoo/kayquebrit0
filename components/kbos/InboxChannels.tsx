@@ -72,7 +72,7 @@ export default function InboxChannels() {
             <span className={dot(waOn, !!wa?.configured)} aria-hidden />
             <p className="text-sm font-semibold">✆ WhatsApp</p>
             <span className="ml-auto text-[11px] uppercase tracking-[0.12em] text-white/45">
-              {!wa ? "…" : !wa.configured ? "não configurado" : waOn ? "conectado" : wa.state}
+              {!wa ? "…" : !wa.configured ? "não configurado" : waOn ? "conectado" : ({ connecting: "conectando", close: "desconectado" } as Record<string, string>)[wa.state] ?? "sem resposta"}
             </span>
           </div>
           <p className="text-[12px] leading-relaxed text-white/50">

@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CONTACT_STATUS } from "@/lib/kbos/constants";
+import { cleanDocument, isValidCNPJ, maskDocumentInput } from "@/lib/kbos/document";
 
 type Contact = {
   id: string;
@@ -10,245 +11,398 @@ type Contact = {
   company: string | null;
   status: string;
   notes: string | null;
+  kind: "pf" | "pj" | null;
+  document: string | null;
+  legalName: string | null;
+  stateRegistration: string | null;
+  role: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zipCode: string | null;
+  website: string | null;
+  instagram: string | null;
+  source: string | null;
   updatedAt?: string;
+};
+
+type Form = {
+  kind: "pf" | "pj";
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  status: string;
+  notes: string;
+  document: string;
+  legalName: string;
+  stateRegistration: string;
+  role: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  website: string;
+  instagram: string;
 };
 
 const STATUS_LABEL: Record<string, string> = Object.fromEntries(CONTACT_STATUS.map((s) => [s.id, s.label]));
 const FILTERS = [{ id: "all", label: "Todos" }, ...CONTACT_STATUS];
+const TEXT_KEYS = ["email", "phone", "company", "notes", "document", "legalName", "stateRegistration", "role", "address", "city", "state", "zipCode", "website", "instagram"] as const;
 
-const emptyForm = { name: "", email: "", phone: "", company: "", status: "lead", notes: "" };
+const emptyForm: Form = {
+  kind: "pj",
+  name: "",
+  email: "",
+  phone: "",
+  company: "",
+  status: "lead",
+  notes: "",
+  document: "",
+  legalName: "",
+  stateRegistration: "",
+  role: "",
+  address: "",
+  city: "",
+  state: "",
+  zipCode: "",
+  website: "",
+  instagram: "",
+};
+
+/** Cadastro completo? (o que um contrato pede: nome, documento, contato e endereço) */
+function missing(c: Contact): string[] {
+  const out: string[] = [];
+  if (!c.document) out.push(c.kind === "pf" ? "CPF" : "CNPJ");
+  if (!c.email) out.push("e-mail");
+  if (!c.phone) out.push("telefone");
+  if (!c.city) out.push("endereço");
+  return out;
+}
 
 export default function CrmBoard() {
   const [items, setItems] = useState<Contact[]>([]);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("all");
   const [q, setQ] = useState("");
-  const [modal, setModal] = useState<null | { mode: "create" } | { mode: "edit"; item: Contact }>(null);
-  const [form, setForm] = useState(emptyForm);
+  const [editing, setEditing] = useState<Contact | "new" | null>(null);
+  const [form, setForm] = useState<Form>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [lookup, setLookup] = useState<"idle" | "busy" | "ok" | string>("idle");
 
   const load = useCallback(async () => {
     try {
-      setError("");
       const params = new URLSearchParams();
-      if (filter !== "all") params.set("status", filter);
       if (q.trim()) params.set("q", q.trim());
       const res = await fetch(`/api/contacts?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Falha ao carregar.");
       setItems(data.items || []);
+      setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro.");
     }
-  }, [filter, q]);
+  }, [q]);
 
   useEffect(() => {
     const t = setTimeout(load, q ? 300 : 0);
     return () => clearTimeout(t);
   }, [load, q]);
 
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { all: items.filter((i) => i.status !== "archived").length };
+    for (const s of CONTACT_STATUS) c[s.id] = items.filter((i) => i.status === s.id).length;
+    return c;
+  }, [items]);
+
+  const shown = useMemo(
+    () => items.filter((c) => (filter === "all" ? c.status !== "archived" : c.status === filter)),
+    [items, filter]
+  );
+
   function openCreate() {
     setForm(emptyForm);
-    setModal({ mode: "create" });
+    setFormError("");
+    setLookup("idle");
+    setEditing("new");
   }
-  function openEdit(item: Contact) {
-    setForm({
-      name: item.name || "",
-      email: item.email || "",
-      phone: item.phone || "",
-      company: item.company || "",
-      status: item.status || "lead",
-      notes: item.notes || "",
-    });
-    setModal({ mode: "edit", item });
+
+  function openEdit(c: Contact) {
+    const f: Form = { ...emptyForm, kind: c.kind === "pf" ? "pf" : c.document && cleanDocument(c.document).length === 11 ? "pf" : "pj", name: c.name, status: c.status };
+    for (const k of TEXT_KEYS) f[k] = (c[k] as string | null) ?? "";
+    setForm(f);
+    setFormError("");
+    setLookup("idle");
+    setEditing(c);
+  }
+
+  const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
+
+  async function fillFromCnpj(doc: string) {
+    setLookup("busy");
+    try {
+      const res = await fetch(`/api/contacts/cnpj?doc=${encodeURIComponent(cleanDocument(doc))}`);
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Não achei esse CNPJ.");
+      setForm((f) => ({
+        ...f,
+        legalName: d.legalName || f.legalName,
+        company: f.company || d.company || "",
+        name: f.name || d.company || d.legalName || "",
+        address: d.address || f.address,
+        city: d.city || f.city,
+        state: d.state || f.state,
+        zipCode: d.zipCode || f.zipCode,
+        phone: f.phone || d.phone || "",
+        email: f.email || d.email || "",
+      }));
+      setLookup(d.situation && d.situation !== "ATIVA" ? `Atenção: situação na Receita "${d.situation}".` : "ok");
+    } catch (e) {
+      setLookup(e instanceof Error ? e.message : "Falhou.");
+    }
+  }
+
+  function onDocument(v: string) {
+    const masked = maskDocumentInput(v);
+    set("document", masked);
+    const clean = cleanDocument(masked);
+    if (form.kind === "pj" && clean.length === 14 && isValidCNPJ(clean)) void fillFromCnpj(clean);
   }
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    setError("");
+    setFormError("");
     try {
-      const payload = {
-        name: form.name.trim(),
-        email: form.email.trim() || undefined,
-        phone: form.phone.trim() || undefined,
-        company: form.company.trim() || undefined,
-        status: form.status,
-        notes: form.notes.trim() || undefined,
-      };
-      const isEdit = modal && "item" in modal;
-      const res = await fetch(isEdit ? `/api/contacts/${(modal as { item: Contact }).item.id}` : "/api/contacts", {
+      const isEdit = editing && editing !== "new";
+      const payload: Record<string, unknown> = { name: form.name.trim(), status: form.status, kind: form.kind };
+      for (const k of TEXT_KEYS) {
+        const v = form[k].trim();
+        payload[k] = v ? (k === "state" ? v.toUpperCase().slice(0, 2) : v) : isEdit ? null : undefined;
+      }
+      const res = await fetch(isEdit ? `/api/contacts/${(editing as Contact).id}` : "/api/contacts", {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.details?.[0]?.mensagem || data.error || "Falha ao salvar.");
-      setModal(null);
+      setEditing(null);
       load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro.");
+      setFormError(e instanceof Error ? e.message : "Erro.");
     } finally {
       setSaving(false);
     }
   }
 
-  async function archive(id: string) {
-    if (!confirm("Arquivar este contato?")) return;
-    await fetch(`/api/contacts/${id}`, { method: "DELETE" });
+  async function archive() {
+    if (!editing || editing === "new" || !confirm("Arquivar este contato?")) return;
+    await fetch(`/api/contacts/${editing.id}`, { method: "DELETE" });
+    setEditing(null);
     load();
   }
 
-  const counts = useMemo(() => {
-    const c: Record<string, number> = { all: items.length };
-    for (const s of CONTACT_STATUS) c[s.id] = 0;
-    return c;
-  }, [items]);
+  const isPJ = form.kind === "pj";
 
   return (
-    <div>
-      {error && (
-        <div className="mb-4 rounded-2xl border border-rose-300/30 bg-rose-300/10 px-5 py-3 text-sm text-rose-100">{error}</div>
-      )}
+    <div className="space-y-4">
+      {error && <div className="kb-tag late w-full justify-start rounded-2xl! px-4! py-3! text-sm">{error}</div>}
 
-      {/* Filtros rápidos + busca + novo */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          {FILTERS.map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setFilter(f.id)}
-              className={`rounded-full px-4 py-2 text-[12px] uppercase tracking-[0.12em] transition-all duration-200 active:scale-95 ${
-                filter === f.id ? "bg-white font-bold text-black" : "border border-white/15 text-white/65 hover:border-white/40 hover:text-white"
-              }`}
-            >
-              {f.label}
-              {f.id !== "all" && counts[f.id] ? ` · ${counts[f.id]}` : ""}
-            </button>
-          ))}
-          <button
-            onClick={openCreate}
-            className="ml-auto rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:opacity-90 active:scale-95"
-          >
-            + Novo contato
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="kb-glass flex min-w-0 flex-1 items-center gap-2 rounded-2xl! px-4">
+          <span aria-hidden className="kb-faint">⌕</span>
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar nome, empresa, CNPJ, telefone…"
+            className="kb-input"
+            aria-label="Buscar contatos"
+          />
+        </label>
+        <button type="button" onClick={openCreate} className="kb-btn">
+          + Novo contato
+        </button>
+      </div>
+
+      <div className="kb-scroll-x -mx-4 scroll-px-4 px-4 sm:mx-0 sm:px-0">
+        {FILTERS.map((f) => (
+          <button key={f.id} type="button" className="kb-chip" aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>
+            {f.label}
+            <span className="kb-faint tabular-nums">{counts[f.id] ?? 0}</span>
           </button>
-        </div>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar por nome, e-mail ou empresa..."
-          className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50"
-        />
+        ))}
       </div>
 
-      {/* Tabela (desktop) / cards (mobile) */}
-      <div className="mt-4 overflow-hidden rounded-2xl border border-white/10">
-        <div className="hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-white/10 text-[11px] uppercase tracking-[0.2em] text-white/40">
-                <th className="px-5 py-3 font-medium">Nome</th>
-                <th className="px-5 py-3 font-medium">Empresa</th>
-                <th className="px-5 py-3 font-medium">Contato</th>
-                <th className="px-5 py-3 font-medium">Status</th>
-                <th className="px-5 py-3 text-right font-medium">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((c) => (
-                <tr key={c.id} className="border-b border-white/5 transition-colors last:border-0 hover:bg-white/[0.03]">
-                  <td className="px-5 py-3.5">
-                    <p className="font-medium">{c.name}</p>
-                    {c.notes && <p className="mt-0.5 max-w-[260px] truncate text-[12px] text-white/40">{c.notes}</p>}
-                  </td>
-                  <td className="px-5 py-3.5 text-white/70">{c.company || "—"}</td>
-                  <td className="px-5 py-3.5 text-[13px] text-white/70">
-                    {c.email && <p>{c.email}</p>}
-                    {c.phone && <p className="text-white/50">{c.phone}</p>}
-                    {!c.email && !c.phone && "—"}
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-white/75">
-                      {STATUS_LABEL[c.status] ?? c.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5 text-right">
-                    <button onClick={() => openEdit(c)} className="rounded-lg border border-white/15 px-3 py-1.5 text-[12px] uppercase tracking-wider transition hover:bg-white hover:text-black">
-                      Editar
-                    </button>{" "}
-                    <button onClick={() => archive(c.id)} className="rounded-lg px-3 py-1.5 text-[12px] uppercase tracking-wider text-white/45 transition hover:text-rose-300">
-                      Arquivar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {items.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-5 py-10 text-center text-sm text-white/40">
-                    Nenhum contato aqui ainda. Clique em “Novo contato”.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="divide-y divide-white/5 md:hidden">
-          {items.map((c) => (
-            <div key={c.id} className="p-4 transition active:bg-white/[0.03]">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-medium">{c.name}</p>
-                  <p className="text-[12px] text-white/50">{[c.company, c.email, c.phone].filter(Boolean).join(" · ") || "—"}</p>
-                </div>
-                <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-white/75">
-                  {STATUS_LABEL[c.status] ?? c.status}
+      <section className="kb-glass px-4 py-1">
+        {shown.map((c) => {
+          const gaps = missing(c);
+          return (
+            <button key={c.id} type="button" onClick={() => openEdit(c)} className="kb-row w-full text-left first:border-t-0">
+              <span className="flex min-w-0 flex-1 items-center gap-3">
+                <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--kb-accent-soft)] text-sm font-semibold uppercase">
+                  {c.name.replace(/[^\p{L}\p{N}]/gu, "").slice(0, 1) || "?"}
                 </span>
-              </div>
-              <div className="mt-3 flex gap-2">
-                <button onClick={() => openEdit(c)} className="flex-1 rounded-xl border border-white/15 py-2 text-[12px] uppercase tracking-wider transition active:scale-95">
-                  Editar
-                </button>
-                <button onClick={() => archive(c.id)} className="rounded-xl px-4 py-2 text-[12px] uppercase text-white/45">
-                  Arquivar
-                </button>
-              </div>
-            </div>
-          ))}
-          {items.length === 0 && <p className="p-8 text-center text-sm text-white/40">Nenhum contato ainda.</p>}
-        </div>
-      </div>
+                <span className="min-w-0">
+                  <span className="kb-ink block truncate text-[15px]">
+                    {c.name}
+                    {c.company && c.company !== c.name ? <span className="kb-muted"> · {c.company}</span> : null}
+                  </span>
+                  <span className="kb-faint block truncate text-[12px]">
+                    {[c.document, c.phone, c.email, c.city && `${c.city}${c.state ? `/${c.state}` : ""}`].filter(Boolean).join(" · ") || "Sem dados de contato"}
+                  </span>
+                </span>
+              </span>
+              <span className="flex shrink-0 flex-col items-end gap-1">
+                <span className="kb-tag">{STATUS_LABEL[c.status] ?? c.status}</span>
+                {c.status === "client" && gaps.length > 0 && (
+                  <span className="kb-tag soon" title={`Falta: ${gaps.join(", ")}`}>
+                    Falta {gaps[0]}
+                    {gaps.length > 1 ? ` +${gaps.length - 1}` : ""}
+                  </span>
+                )}
+              </span>
+            </button>
+          );
+        })}
+        {shown.length === 0 && <p className="kb-muted py-10 text-center text-sm">Ninguém aqui ainda.</p>}
+      </section>
 
-      {/* Modal cadastro/edição */}
-      {modal && (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-6" onClick={() => setModal(null)}>
-          <form
-            onSubmit={save}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg animate-[kbosUp_0.25s_ease] rounded-t-3xl border border-white/10 bg-[#1a1828] p-6 sm:rounded-3xl"
-          >
+      {editing && (
+        <div className="kb-modal-back" onClick={() => setEditing(null)}>
+          <form onSubmit={save} onClick={(e) => e.stopPropagation()} className="kb-modal space-y-4" aria-label="Cadastro do contato">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-xl">{"item" in modal ? "Editar contato" : "Novo contato"}</h2>
-              <button type="button" onClick={() => setModal(null)} aria-label="Fechar" className="rounded-lg px-2 text-2xl leading-none text-white/60 hover:text-white">
-                ×
-              </button>
+              <h2 className="font-display kb-ink text-xl">{editing === "new" ? "Novo contato" : "Cadastro"}</h2>
+              <button type="button" onClick={() => setEditing(null)} aria-label="Fechar" className="kb-muted -mr-2 h-11 w-11 text-2xl">×</button>
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Nome *" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 sm:col-span-2" />
-              <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="E-mail" type="email" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50" />
-              <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Telefone / WhatsApp" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50" />
-              <input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="Empresa" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50" />
-              <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none">
+
+            <div className="kb-seg" role="group" aria-label="Tipo de pessoa">
+              <button type="button" aria-pressed={isPJ} onClick={() => set("kind", "pj")}>Empresa (CNPJ)</button>
+              <button type="button" aria-pressed={!isPJ} onClick={() => set("kind", "pf")}>Pessoa (CPF)</button>
+            </div>
+
+            <label className="kb-field">
+              <span>{isPJ ? "CNPJ — preenche o resto sozinho" : "CPF"}</span>
+              <input
+                className="kb-control tabular-nums"
+                value={form.document}
+                onChange={(e) => onDocument(e.target.value)}
+                placeholder={isPJ ? "00.000.000/0000-00" : "000.000.000-00"}
+                inputMode={isPJ ? "text" : "numeric"}
+                autoCapitalize="characters"
+              />
+              {lookup !== "idle" && (
+                <span className={lookup === "ok" ? "text-[var(--kb-good)]!" : lookup === "busy" ? "" : "text-[var(--kb-soon)]!"}>
+                  {lookup === "busy" ? "Consultando a Receita…" : lookup === "ok" ? "✓ Dados da Receita preenchidos" : lookup}
+                </span>
+              )}
+            </label>
+
+            {isPJ && (
+              <label className="kb-field">
+                <span>Razão social</span>
+                <input className="kb-control" value={form.legalName} onChange={(e) => set("legalName", e.target.value)} placeholder="Como está no CNPJ" />
+              </label>
+            )}
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="kb-field">
+                <span>{isPJ ? "Nome de quem fala com você" : "Nome completo"}</span>
+                <input className="kb-control" value={form.name} onChange={(e) => set("name", e.target.value)} required autoComplete="off" />
+              </label>
+              {isPJ ? (
+                <label className="kb-field">
+                  <span>Nome fantasia / marca</span>
+                  <input className="kb-control" value={form.company} onChange={(e) => set("company", e.target.value)} />
+                </label>
+              ) : (
+                <label className="kb-field">
+                  <span>Empresa (se tiver)</span>
+                  <input className="kb-control" value={form.company} onChange={(e) => set("company", e.target.value)} />
+                </label>
+              )}
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="kb-field">
+                <span>WhatsApp</span>
+                <input className="kb-control" value={form.phone} onChange={(e) => set("phone", e.target.value)} inputMode="tel" placeholder="(91) 9 0000-0000" />
+              </label>
+              <label className="kb-field">
+                <span>E-mail</span>
+                <input className="kb-control" value={form.email} onChange={(e) => set("email", e.target.value)} type="email" inputMode="email" autoCapitalize="off" />
+              </label>
+            </div>
+
+            <div className="grid grid-cols-[1fr_88px] gap-3 sm:grid-cols-[140px_1fr_88px]">
+              <label className="kb-field col-span-2 sm:col-span-1">
+                <span>CEP</span>
+                <input className="kb-control" value={form.zipCode} onChange={(e) => set("zipCode", e.target.value)} inputMode="numeric" />
+              </label>
+              <label className="kb-field">
+                <span>Cidade</span>
+                <input className="kb-control" value={form.city} onChange={(e) => set("city", e.target.value)} />
+              </label>
+              <label className="kb-field">
+                <span>UF</span>
+                <input className="kb-control uppercase" value={form.state} onChange={(e) => set("state", e.target.value.slice(0, 2))} maxLength={2} />
+              </label>
+            </div>
+            <label className="kb-field">
+              <span>Endereço</span>
+              <input className="kb-control" value={form.address} onChange={(e) => set("address", e.target.value)} placeholder="Rua, número, bairro" />
+            </label>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="kb-field">
+                <span>Instagram</span>
+                <input className="kb-control" value={form.instagram} onChange={(e) => set("instagram", e.target.value)} placeholder="@marca" autoCapitalize="off" />
+              </label>
+              <label className="kb-field">
+                <span>Site</span>
+                <input className="kb-control" value={form.website} onChange={(e) => set("website", e.target.value)} inputMode="url" autoCapitalize="off" />
+              </label>
+              {isPJ && (
+                <>
+                  <label className="kb-field">
+                    <span>Cargo de quem fala com você</span>
+                    <input className="kb-control" value={form.role} onChange={(e) => set("role", e.target.value)} placeholder="Ex.: sócio, marketing" />
+                  </label>
+                  <label className="kb-field">
+                    <span>Inscrição estadual</span>
+                    <input className="kb-control" value={form.stateRegistration} onChange={(e) => set("stateRegistration", e.target.value)} />
+                  </label>
+                </>
+              )}
+            </div>
+
+            <label className="kb-field">
+              <span>Situação</span>
+              <select className="kb-control" value={form.status} onChange={(e) => set("status", e.target.value)}>
                 {CONTACT_STATUS.map((s) => (
-                  <option key={s.id} value={s.id} className="bg-[#1a1828]">{s.label}</option>
+                  <option key={s.id} value={s.id}>{s.label}</option>
                 ))}
               </select>
-              <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Notas (contexto, origem do lead...)" rows={3} className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 sm:col-span-2" />
+            </label>
+            <label className="kb-field">
+              <span>Notas</span>
+              <textarea className="kb-control" value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Como chegou, o que precisa, preferências…" />
+            </label>
+
+            {formError && <p className="kb-tag late w-full justify-start rounded-xl! px-3! py-2! text-sm">{formError}</p>}
+
+            <div className="flex gap-3 pt-1">
+              {editing !== "new" && (
+                <button type="button" className="kb-btn-ghost" onClick={archive}>
+                  Arquivar
+                </button>
+              )}
+              <button type="submit" disabled={saving} className="kb-btn flex-1">
+                {saving ? "Salvando…" : editing === "new" ? "Cadastrar" : "Salvar"}
+              </button>
             </div>
-            <button type="submit" disabled={saving} className="mt-4 w-full rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:opacity-90 active:scale-[0.99] disabled:opacity-50">
-              {saving ? "Salvando..." : "item" in modal ? "Salvar alterações" : "Cadastrar contato"}
-            </button>
           </form>
-          <style>{`@keyframes kbosUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}`}</style>
         </div>
       )}
     </div>

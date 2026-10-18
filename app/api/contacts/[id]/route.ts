@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/kbos/db";
 import { contacts } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
-import { checkId, contactPatchSchema, readBody } from "@/lib/kbos/validators";
+import { CONTACT_EXTRA_KEYS, checkId, contactPatchSchema, readBody } from "@/lib/kbos/validators";
 import { serverError } from "@/lib/kbos/http";
 
 const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as const;
@@ -38,6 +38,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (b.company !== undefined) patch.company = b.company || null;
     if (b.status !== undefined) patch.status = b.status;
     if (b.notes !== undefined) patch.notes = b.notes || null;
+    for (const k of CONTACT_EXTRA_KEYS) {
+      if (b[k] !== undefined) patch[k] = b[k] || null;
+    }
+    if (b.kind !== undefined) patch.kind = b.kind;
     await db().update(contacts).set(patch).where(eq(contacts.id, id));
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -15,6 +15,9 @@ type Conversation = {
   contactPhone: string | null;
   contactCompany: string | null;
   contactStatus: string | null;
+  title: string | null;
+  isGroup: boolean;
+  lastPreview: string | null;
 };
 
 type Message = {
@@ -25,7 +28,23 @@ type Message = {
   messageType: string;
   status: string;
   createdAt: string;
+  senderName: string | null;
+  mediaSrc: string | null;
 };
+
+/** Nome que aparece na lista e no topo do chat. */
+function convName(c: Conversation): string {
+  if (c.isGroup) return c.title || "Grupo do WhatsApp";
+  return c.contactName || c.contactPhone || c.channelChatId.split("@")[0];
+}
+
+/** Cor estável por pessoa nos grupos (como no WhatsApp). */
+const AUTHOR_HUES = [268, 292, 200, 160, 32, 340, 220];
+function authorColor(name: string): string {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return `hsl(${AUTHOR_HUES[h % AUTHOR_HUES.length]} 70% 72%)`;
+}
 
 const CHANNEL_ICON: Record<string, string> = {
   whatsapp: "✆",
@@ -67,6 +86,8 @@ export default function InboxBoard() {
   const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [channelFilter, setChannelFilter] = useState("whatsapp");
+  // Pessoas primeiro: grupos ficam numa aba própria para não misturar com clientes.
+  const [kind, setKind] = useState<"people" | "groups" | "all">("people");
   const [q, setQ] = useState("");
   // Busca com debounce: só o termo "assentado" dispara a consulta.
   const [qDebounced, setQDebounced] = useState("");
@@ -92,6 +113,7 @@ export default function InboxBoard() {
       if (statusFilter !== "all") p.set("status", statusFilter);
       if (channelFilter !== "all") p.set("channel", channelFilter);
       if (qDebounced) p.set("q", qDebounced);
+      if (kind !== "all") p.set("kind", kind);
       const res = await fetch(`/api/conversations?${p.toString()}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Falha ao carregar conversas.");
@@ -101,7 +123,7 @@ export default function InboxBoard() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro.");
     }
-  }, [statusFilter, channelFilter, qDebounced]);
+  }, [statusFilter, channelFilter, qDebounced, kind]);
 
   const loadMsgs = useCallback(async (id: string, silent = true) => {
     try {
@@ -218,37 +240,50 @@ export default function InboxBoard() {
     }
   }
 
-  function bubble(m: Message) {
+  function bubble(m: Message, prev: Message | undefined) {
     const mine = m.senderType === "agent" || m.senderType === "ai";
+    const showAuthor = !!selected?.isGroup && !mine && !!m.senderName && prev?.senderName !== m.senderName;
+    const src = m.mediaSrc;
+    const isReaction = m.messageType === "text" && /^Reagiu com /.test(m.content || "");
+    if (isReaction) {
+      return (
+        <p key={m.id} className={`text-[12px] text-white/45 ${mine ? "text-right" : ""}`}>
+          {m.senderName ? `${m.senderName} · ` : ""}
+          {m.content} · {msgTime(m.createdAt)}
+        </p>
+      );
+    }
     return (
       <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
         <div
-          className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed transition-all duration-200 ${
-            mine
-              ? "rounded-br-md bg-white text-black"
-              : "rounded-bl-md border border-white/10 bg-white/[0.06]"
+          className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
+            mine ? "rounded-br-md bg-[#4F12C7]/55 text-white" : "rounded-bl-md border border-white/10 bg-white/[0.06]"
           }`}
         >
-          {m.senderType === "ai" && (
-            <p className="mb-1 text-[10px] uppercase tracking-[0.2em] opacity-60">IA · auto</p>
+          {showAuthor && (
+            <p className="mb-0.5 text-[12px] font-semibold" style={{ color: authorColor(m.senderName || "") }}>
+              {m.senderName}
+            </p>
           )}
-          {m.messageType === "image" && m.mediaUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={m.mediaUrl} alt={m.content || "Imagem recebida"} loading="lazy" className="mb-1.5 max-h-64 rounded-xl object-cover" />
-          ) : null}
-          {m.messageType === "audio" && m.mediaUrl ? (
-            <audio controls preload="none" src={m.mediaUrl} className="mb-1.5 w-full min-w-[200px]" />
-          ) : null}
-          {m.messageType === "document" && m.mediaUrl ? (
-            <a href={m.mediaUrl} target="_blank" rel="noreferrer" className="mb-1.5 block underline underline-offset-2">
-              📎 {m.content || "Abrir anexo"}
+          {m.senderType === "ai" && <p className="mb-1 text-[10px] uppercase tracking-[0.2em] opacity-60">IA · auto</p>}
+          {m.messageType === "image" && src ? (
+            <a href={src} target="_blank" rel="noreferrer" className="mb-1.5 block">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={src} alt={m.content || "Foto"} loading="lazy" className="max-h-72 min-h-16 min-w-24 rounded-xl bg-white/5 object-cover" />
             </a>
           ) : null}
-          {!(m.messageType === "document" && m.mediaUrl) && m.content ? (
-            <p className="whitespace-pre-wrap break-words">{m.content}</p>
+          {m.messageType === "video" && src ? (
+            <video controls preload="none" playsInline src={src} className="mb-1.5 max-h-72 w-full min-w-[220px] rounded-xl bg-black/40" />
           ) : null}
-          {!m.content && !m.mediaUrl ? <p className="italic opacity-50">[mensagem vazia]</p> : null}
-          <p className={`mt-1 text-right text-[10px] tabular-nums ${mine ? "text-black/50" : "text-white/40"}`}>
+          {m.messageType === "audio" && src ? <audio controls preload="none" src={src} className="mb-1.5 w-full min-w-[220px]" /> : null}
+          {m.messageType === "document" && src ? (
+            <a href={src} target="_blank" rel="noreferrer" className="mb-1.5 flex items-center gap-2 rounded-xl bg-black/20 px-3 py-2 underline-offset-2 hover:underline">
+              📎 <span className="truncate">{m.content || "Abrir documento"}</span>
+            </a>
+          ) : null}
+          {!(m.messageType === "document" && src) && m.content ? <p className="whitespace-pre-wrap break-words">{m.content}</p> : null}
+          {!m.content && !src ? <p className="italic opacity-50">Mensagem sem conteúdo</p> : null}
+          <p className="mt-0.5 text-right text-[10px] tabular-nums text-white/45">
             {msgTime(m.createdAt)}
             {mine ? ` · ${m.status === "read" ? "✓✓ lida" : m.status === "delivered" ? "✓✓" : "✓"}` : ""}
           </p>
@@ -271,6 +306,25 @@ export default function InboxBoard() {
             }`}
           >
             {s.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-1.5 px-3 pb-2">
+        {(
+          [
+            { id: "people", label: "Pessoas" },
+            { id: "groups", label: "Grupos" },
+            { id: "all", label: "Tudo" },
+          ] as const
+        ).map((k) => (
+          <button
+            key={k.id}
+            onClick={() => setKind(k.id)}
+            className={`flex-1 rounded-xl px-3 py-2 text-[12px] font-medium transition active:scale-95 ${
+              kind === k.id ? "bg-white/[0.12] text-white" : "text-white/55 hover:text-white"
+            }`}
+          >
+            {k.label}
           </button>
         ))}
       </div>
@@ -304,8 +358,8 @@ export default function InboxBoard() {
                 active ? "bg-white/[0.08]" : "hover:bg-white/[0.04] active:bg-white/[0.06]"
               }`}
             >
-              <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-base">
-                {CHANNEL_ICON[c.channel] ?? "✉"}
+              <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#4F12C7]/45 to-white/5 text-[15px] font-semibold uppercase">
+                {c.isGroup ? "👥" : convName(c).replace(/[^\p{L}\p{N}]/gu, "").slice(0, 1) || CHANNEL_ICON[c.channel] || "✉"}
                 {c.unreadCount > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-400 px-1 text-[10px] font-bold text-black">
                     {c.unreadCount > 9 ? "9+" : c.unreadCount}
@@ -314,13 +368,12 @@ export default function InboxBoard() {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-baseline justify-between gap-2">
-                  <span className="truncate text-sm font-medium">{c.contactName || c.channelChatId}</span>
+                  <span className={`truncate text-sm ${c.unreadCount > 0 ? "font-semibold" : "font-medium"}`}>{convName(c)}</span>
                   <span className="shrink-0 text-[11px] tabular-nums text-white/40">{relTime(c.lastMessageAt)}</span>
                 </span>
                 <span className="mt-0.5 flex items-center justify-between gap-2">
                   <span className="truncate text-[12px] text-white/50">
-                    {c.contactPhone || CHANNEL_LABEL[c.channel] || c.channel}
-                    {c.contactCompany ? ` · ${c.contactCompany}` : ""}
+                    {c.lastPreview || (c.isGroup ? "Grupo" : c.contactPhone || CHANNEL_LABEL[c.channel] || c.channel)}
                   </span>
                   <span className="shrink-0 text-[10px] uppercase tracking-[0.12em] text-white/35">
                     {STATUS_LABEL[c.status] ?? c.status}
@@ -357,13 +410,14 @@ export default function InboxBoard() {
           <button onClick={() => setSelectedId(null)} aria-label="Voltar à lista" className="rounded-lg border border-white/15 px-2.5 py-1.5 md:hidden">
             ←
           </button>
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 font-bold uppercase">
-            {(selected.contactName || "?").slice(0, 1)}
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#4F12C7]/45 to-white/5 font-bold uppercase">
+            {selected.isGroup ? "👥" : convName(selected).slice(0, 1)}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{selected.contactName || selected.channelChatId}</p>
+            <p className="truncate text-sm font-semibold">{convName(selected)}</p>
             <p className="truncate text-[12px] text-white/50">
-              {CHANNEL_ICON[selected.channel] ?? ""} {CHANNEL_LABEL[selected.channel] || selected.channel}
+              {selected.isGroup ? "Grupo · " : ""}
+              {CHANNEL_LABEL[selected.channel] || selected.channel}
               {selected.contactPhone ? ` · ${selected.contactPhone}` : ""}
               {selected.contactCompany ? ` · ${selected.contactCompany}` : ""}
             </p>
@@ -396,7 +450,7 @@ export default function InboxBoard() {
       )}
       {/* Bolhas */}
       <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto p-3.5">
-        {shownMsgs.map(bubble)}
+        {shownMsgs.map((m, i) => bubble(m, shownMsgs[i - 1]))}
         <div ref={bottomRef} />
         {shownMsgs.length === 0 && <p className="pt-10 text-center text-[13px] text-white/35">Sem mensagens ainda. Diga oi 👋</p>}
       </div>

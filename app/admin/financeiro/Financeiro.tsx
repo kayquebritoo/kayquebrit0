@@ -1,6 +1,5 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FINANCE_STATUS, FINANCE_TYPES } from "@/lib/kbos/constants";
 
 type Entry = {
   id: string;
@@ -10,42 +9,82 @@ type Entry = {
   category: string | null;
   dueDate: string | null;
   status: "pending" | "paid" | "overdue";
+  scope: "empresa" | "pessoal";
+  paymentMethod: string | null;
+  recurrence: "mensal" | "anual" | null;
+  contactId: string | null;
+  notes: string | null;
   createdAt: string;
 };
 
 type Summary = { income: number; expenses: number; balance: number; receivable: number; payable: number };
 type CashPoint = { key: string; label: string; income: number; expenses: number };
+type ContactLite = { id: string; name: string; company: string | null; status: string };
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const STATUS_LABEL: Record<string, string> = Object.fromEntries(FINANCE_STATUS.map((s) => [s.id, s.label]));
-const emptyForm = { type: "income", description: "", amount: "", category: "", dueDate: "", status: "pending" };
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const dayLabel = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", timeZone: "UTC" }).replace(".", "");
+
+const PAYMENT_METHODS = ["Pix", "Cartão de crédito", "Cartão de débito", "Boleto", "Transferência", "Dinheiro"];
+const CATEGORY_HINTS = {
+  expense: ["Assinaturas", "Ferramentas", "Equipamento", "Transporte", "Alimentação", "Impostos", "Aluguel", "Freelancer", "Marketing", "Casa", "Saúde"],
+  income: ["Pacote mensal", "Projeto avulso", "Cobertura de evento", "Curso", "Consultoria", "Reembolso"],
+};
+
+type Form = {
+  id: string | null;
+  type: "income" | "expense";
+  description: string;
+  amount: string;
+  dueDate: string;
+  status: "pending" | "paid";
+  scope: "empresa" | "pessoal";
+  category: string;
+  paymentMethod: string;
+  recurrence: "" | "mensal" | "anual";
+  contactId: string;
+  notes: string;
+};
+
+const blank = (scope: "empresa" | "pessoal", type: "income" | "expense" = "expense"): Form => ({
+  id: null,
+  type,
+  description: "",
+  amount: "",
+  dueDate: todayISO(),
+  status: "paid",
+  scope,
+  category: "",
+  paymentMethod: "Pix",
+  recurrence: "",
+  contactId: "",
+  notes: "",
+});
+
+/** "1234.5" → "1.234,50" para o campo; aceita o que o usuário digitar. */
+const toFieldMoney = (n: number) => n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function CashChart({ data }: { data: CashPoint[] }) {
   const max = Math.max(1, ...data.flatMap((d) => [d.income, d.expenses]));
   return (
     <div>
-      <div className="flex h-40 items-end gap-3 md:h-48">
+      <div className="flex h-36 items-end gap-3 md:h-44" role="img" aria-label="Receitas e despesas pagas nos últimos 6 meses">
         {data.map((d) => (
           <div key={d.key} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-            <div className="flex h-full w-full max-w-[64px] items-end justify-center gap-1">
-              <div
-                className="w-full rounded-t-md bg-emerald-400/80 transition-all duration-500"
-                style={{ height: `${Math.max(2, (d.income / max) * 100)}%` }}
-                title={`Receitas: ${brl(d.income)}`}
-              />
-              <div
-                className="w-full rounded-t-md bg-rose-400/80 transition-all duration-500"
-                style={{ height: `${Math.max(2, (d.expenses / max) * 100)}%` }}
-                title={`Despesas: ${brl(d.expenses)}`}
-              />
+            <div className="flex h-full w-full max-w-[56px] items-end justify-center gap-1">
+              <div className="w-full rounded-t-md bg-[var(--kb-good)] opacity-80 transition-all duration-500" style={{ height: `${Math.max(2, (d.income / max) * 100)}%` }} title={`Receitas: ${brl(d.income)}`} />
+              <div className="w-full rounded-t-md bg-[var(--kb-late-dot)] opacity-70 transition-all duration-500" style={{ height: `${Math.max(2, (d.expenses / max) * 100)}%` }} title={`Despesas: ${brl(d.expenses)}`} />
             </div>
-            <span className="truncate text-[11px] capitalize text-white/45">{d.label}</span>
+            <span className="kb-faint truncate text-[11px] capitalize">{d.label}</span>
           </div>
         ))}
       </div>
-      <div className="mt-2 flex gap-4 text-[11px] text-white/50">
-        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Receitas pagas</span>
-        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-400" /> Despesas pagas</span>
+      <div className="kb-muted mt-2 flex gap-4 text-[12px]">
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[var(--kb-good)]" /> Entrou</span>
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[var(--kb-late-dot)]" /> Saiu</span>
       </div>
     </div>
   );
@@ -55,21 +94,20 @@ export default function Financeiro() {
   const [items, setItems] = useState<Entry[]>([]);
   const [summary, setSummary] = useState<Summary>({ income: 0, expenses: 0, balance: 0, receivable: 0, payable: 0 });
   const [cash, setCash] = useState<CashPoint[]>([]);
+  const [contacts, setContacts] = useState<ContactLite[]>([]);
   const [error, setError] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [modal, setModal] = useState(false);
-  const [form, setForm] = useState(emptyForm);
+  const [scope, setScope] = useState<"empresa" | "pessoal" | "all">("empresa");
+  const [view, setView] = useState<"all" | "income" | "expense" | "open">("all");
+  const [form, setForm] = useState<Form | null>(null);
+  const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [more, setMore] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const p = new URLSearchParams();
-      if (typeFilter !== "all") p.set("type", typeFilter);
-      if (statusFilter !== "all") p.set("status", statusFilter);
-      const res = await fetch(`/api/finance?${p.toString()}`);
+      const res = await fetch(`/api/finance?scope=${scope}`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Falha.");
+      if (!res.ok) throw new Error(data.error || "Falha ao carregar.");
       setItems(data.items || []);
       setSummary(data.summary);
       setCash(data.cashFlow || []);
@@ -77,43 +115,100 @@ export default function Financeiro() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro.");
     }
-  }, [typeFilter, statusFilter]);
+  }, [scope]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch assíncrono: o setState só ocorre após o await.
     load();
   }, [load]);
 
-  async function create(e: React.FormEvent) {
-    e.preventDefault();
+  useEffect(() => {
+    fetch("/api/contacts")
+      .then((r) => r.json())
+      .then((d) => {
+        const list: ContactLite[] = (d.items || d.contacts || []).filter((c: ContactLite) => c.status !== "archived");
+        setContacts(list.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")));
+      })
+      .catch(() => {});
+  }, []);
+
+  const shown = useMemo(() => {
+    if (view === "income") return items.filter((e) => e.type === "income");
+    if (view === "expense") return items.filter((e) => e.type === "expense");
+    if (view === "open") return items.filter((e) => e.status !== "paid");
+    return items;
+  }, [items, view]);
+
+  const categories = useMemo(() => {
+    const t = form?.type ?? "expense";
+    const used = items.filter((e) => e.type === t && e.category).map((e) => e.category as string);
+    return [...new Set([...used, ...CATEGORY_HINTS[t]])];
+  }, [items, form?.type]);
+
+  function openNew(type: "income" | "expense" = "expense") {
+    setFormError("");
+    setMore(false);
+    setForm(blank(scope === "pessoal" ? "pessoal" : "empresa", type));
+  }
+
+  function openEdit(e: Entry) {
+    setFormError("");
+    setMore(!!(e.notes || e.contactId));
+    setForm({
+      id: e.id,
+      type: e.type,
+      description: e.description,
+      amount: toFieldMoney(e.amount),
+      dueDate: e.dueDate ? e.dueDate.slice(0, 10) : "",
+      status: e.status === "paid" ? "paid" : "pending",
+      scope: e.scope,
+      category: e.category ?? "",
+      paymentMethod: e.paymentMethod ?? "",
+      recurrence: e.recurrence ?? "",
+      contactId: e.contactId ?? "",
+      notes: e.notes ?? "",
+    });
+  }
+
+  async function save(ev: React.FormEvent) {
+    ev.preventDefault();
+    if (!form) return;
     setSaving(true);
+    setFormError("");
+    const body = {
+      type: form.type,
+      description: form.description.trim(),
+      amount: form.amount.trim(),
+      category: form.category.trim() || (form.id ? null : undefined),
+      // Meio-dia UTC: a data não "volta um dia" no fuso de Belém.
+      dueDate: form.dueDate ? `${form.dueDate}T12:00:00.000Z` : form.id ? null : undefined,
+      status: form.status,
+      scope: form.scope,
+      paymentMethod: form.paymentMethod || (form.id ? null : undefined),
+      recurrence: form.recurrence || null,
+      contactId: form.contactId || (form.id ? null : undefined),
+      notes: form.notes.trim() || (form.id ? null : undefined),
+    };
     try {
-      const res = await fetch("/api/finance", {
-        method: "POST",
+      const res = await fetch(form.id ? `/api/finance/${form.id}` : "/api/finance", {
+        method: form.id ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: form.type,
-          description: form.description.trim(),
-          amount: form.amount,
-          category: form.category.trim() || undefined,
-          dueDate: form.dueDate || undefined,
-          status: form.status,
-        }),
+        body: JSON.stringify(body),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.details?.[0]?.mensagem || data.error || "Falha.");
-      setForm(emptyForm);
-      setModal(false);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.details?.[0]?.mensagem || data.error || "Não consegui salvar.");
+      setForm(null);
       load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro.");
+      setFormError(e instanceof Error ? e.message : "Erro.");
     } finally {
       setSaving(false);
     }
   }
 
-  async function toggle(e: Entry) {
+  async function markPaid(e: Entry) {
     const next = e.status === "paid" ? "pending" : "paid";
+    setItems((s) => s.map((x) => (x.id === e.id ? { ...x, status: next } : x)));
     await fetch(`/api/finance/${e.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -122,141 +217,233 @@ export default function Financeiro() {
     load();
   }
 
-  async function remove(id: string) {
-    if (!confirm("Excluir este lançamento?")) return;
-    await fetch(`/api/finance/${id}`, { method: "DELETE" });
+  async function remove() {
+    if (!form?.id || !confirm("Excluir este lançamento?")) return;
+    await fetch(`/api/finance/${form.id}`, { method: "DELETE" });
+    setForm(null);
     load();
   }
 
-  const cards = useMemo(
-    () => [
-      { k: "Recebido", v: brl(summary.income), c: "text-emerald-300" },
-      { k: "Pago", v: brl(summary.expenses), c: "text-rose-300" },
-      { k: "Saldo", v: brl(summary.balance), c: "text-white" },
-      { k: "A receber", v: brl(summary.receivable), c: "text-amber-200" },
-      { k: "A pagar", v: brl(summary.payable), c: "text-amber-200" },
-    ],
-    [summary]
-  );
-
-  if (error && items.length === 0) {
-    return (
-      <div className="rounded-2xl border border-amber-300/30 bg-amber-300/10 p-6 text-sm text-amber-100">
-        {error.includes("DATABASE_URL") || error.includes("connect")
-          ? "Banco não conectado — defina DATABASE_URL e rode `npx drizzle-kit push` (migration 0005_fase4_finance_agenda)."
-          : error}
-      </div>
-    );
-  }
+  const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => (f ? { ...f, [k]: v } : f));
 
   return (
-    <div>
-      {error && (
-        <div className="mb-4 rounded-2xl border border-rose-300/30 bg-rose-300/10 px-5 py-3 text-sm text-rose-100">{error}</div>
-      )}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        {cards.map((s) => (
-          <div key={s.k} className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 transition-colors hover:border-white/25">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-white/40">{s.k}</p>
-            <p className={`font-display mt-1 text-xl tabular-nums md:text-2xl ${s.c}`}>{s.v}</p>
-          </div>
-        ))}
-      </div>
+    <div className="space-y-4">
+      {error && <div className="kb-tag late w-full justify-start rounded-2xl! px-4! py-3! text-sm">{error}</div>}
 
-      <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-        <p className="text-[11px] uppercase tracking-[0.25em] text-white/40">Fluxo de caixa · últimos 6 meses</p>
-        <div className="mt-3">
-          <CashChart data={cash} />
+      {/* Visão: empresa × pessoal */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="kb-seg min-w-[260px] flex-1 sm:flex-none" role="group" aria-label="Visão do caixa">
+          {(
+            [
+              ["empresa", "Empresa"],
+              ["pessoal", "Pessoal"],
+              ["all", "Tudo"],
+            ] as const
+          ).map(([id, label]) => (
+            <button key={id} type="button" aria-pressed={scope === id} onClick={() => setScope(id)}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="ml-auto hidden gap-2 sm:flex">
+          <button type="button" className="kb-btn-ghost" onClick={() => openNew("income")}>+ Entrada</button>
+          <button type="button" className="kb-btn" onClick={() => openNew("expense")}>+ Despesa</button>
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-3">
-        {[{ id: "all", label: "Tudo" }, ...FINANCE_TYPES].map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTypeFilter(t.id)}
-            className={`rounded-full px-3.5 py-1.5 text-[11px] uppercase tracking-[0.12em] transition active:scale-95 ${
-              typeFilter === t.id ? "bg-white font-bold text-black" : "border border-white/15 text-white/60 hover:text-white"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-        <span className="mx-1 hidden h-5 w-px bg-white/10 sm:block" />
-        {[{ id: "all", label: "Todos status" }, ...FINANCE_STATUS].map((s) => (
-          <button
-            key={s.id}
-            onClick={() => setStatusFilter(s.id)}
-            className={`rounded-full px-3.5 py-1.5 text-[11px] uppercase tracking-[0.12em] transition active:scale-95 ${
-              statusFilter === s.id ? "bg-white font-bold text-black" : "border border-white/15 text-white/60 hover:text-white"
-            }`}
-          >
-            {s.label}
-          </button>
-        ))}
-        <button onClick={() => setModal(true)} className="ml-auto rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:opacity-90 active:scale-95">
-          + Lançar
-        </button>
-      </div>
-
-      <div className="mt-3 space-y-2">
-        {items.map((t) => (
-          <div key={t.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm transition hover:border-white/25">
-            <button onClick={() => toggle(t)} title="Toque para alternar pago/pendente" className="flex min-w-0 flex-1 items-center gap-3 text-left">
-              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${t.type === "income" ? "bg-emerald-400" : "bg-rose-400"}`} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate">{t.description}</span>
-                <span className="block truncate text-[12px] text-white/40">
-                  {[t.category, t.dueDate ? new Date(t.dueDate).toLocaleDateString("pt-BR") : null].filter(Boolean).join(" · ") || "—"}
-                </span>
-              </span>
-              <span className="font-medium tabular-nums">{brl(Number(t.amount))}</span>
-              <span className="w-[86px] shrink-0 text-right text-[11px] uppercase tracking-[0.15em] text-white/55">
-                {STATUS_LABEL[t.status] ?? t.status}
-              </span>
-            </button>
-            <button onClick={() => remove(t.id)} aria-label="Excluir" className="shrink-0 rounded-lg px-2 py-1 text-white/35 transition hover:text-rose-300">
-              ×
-            </button>
+      {/* Resumo */}
+      <section className="kb-glass grid grid-cols-2 gap-px overflow-hidden p-0! sm:grid-cols-5">
+        {[
+          { k: "Saldo do período", v: summary.balance, c: summary.balance < 0 ? "text-[var(--kb-late)]" : "kb-ink", wide: true },
+          { k: "Entrou", v: summary.income, c: "text-[var(--kb-good)]" },
+          { k: "Saiu", v: summary.expenses, c: "text-[var(--kb-late)]" },
+          { k: "A receber", v: summary.receivable, c: "text-[var(--kb-soon)]" },
+          { k: "A pagar", v: summary.payable, c: "text-[var(--kb-soon)]" },
+        ].map((s) => (
+          <div key={s.k} className={`bg-[var(--kb-chip)] p-4 ${s.wide ? "col-span-2 sm:col-span-1" : ""}`}>
+            <p className="kb-muted text-[12px]">{s.k}</p>
+            <p className={`font-display mt-1 text-xl tabular-nums md:text-2xl ${s.c}`}>{brl(s.v)}</p>
           </div>
         ))}
-        {items.length === 0 && <p className="py-6 text-center text-sm font-light text-white/40">Nenhum lançamento neste filtro.</p>}
+      </section>
+
+      <section className="kb-glass p-5">
+        <p className="kb-muted text-[12px]">Fluxo dos últimos 6 meses</p>
+        <div className="mt-3">
+          <CashChart data={cash} />
+        </div>
+      </section>
+
+      {/* Filtros */}
+      <div className="kb-scroll-x -mx-4 scroll-px-4 px-4 sm:mx-0 sm:px-0">
+        {(
+          [
+            ["all", "Tudo"],
+            ["open", "Em aberto"],
+            ["income", "Entradas"],
+            ["expense", "Despesas"],
+          ] as const
+        ).map(([id, label]) => (
+          <button key={id} type="button" className="kb-chip" aria-pressed={view === id} onClick={() => setView(id)}>
+            {label}
+          </button>
+        ))}
       </div>
 
-      {modal && (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-6" onClick={() => setModal(false)}>
-          <form onSubmit={create} onClick={(e) => e.stopPropagation()} className="w-full max-w-md animate-[kbosUp_0.25s_ease] rounded-t-3xl border border-white/10 bg-[#1a1828] p-6 sm:rounded-3xl">
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-xl">Lançamento rápido</h2>
-              <button type="button" onClick={() => setModal(false)} aria-label="Fechar" className="rounded-lg px-2 text-2xl leading-none text-white/60 hover:text-white">×</button>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {(["income", "expense"] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setForm({ ...form, type: t })}
-                  className={`rounded-xl border py-2.5 text-[12px] font-bold uppercase tracking-[0.12em] transition active:scale-95 ${
-                    form.type === t ? (t === "income" ? "border-emerald-400 bg-emerald-400/15 text-emerald-200" : "border-rose-400 bg-rose-400/15 text-rose-200") : "border-white/15 text-white/55"
-                  }`}
-                >
-                  {t === "income" ? "↑ Receita" : "↓ Despesa"}
-                </button>
-              ))}
-              <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required placeholder="Descrição *" className="col-span-2 rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50" />
-              <input value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required placeholder="Valor R$ *" inputMode="decimal" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50" />
-              <input value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} type="date" aria-label="Vencimento" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none" />
-              <input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Categoria" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50" />
-              <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none">
-                <option value="pending" className="bg-[#1a1828]">Pendente</option>
-                <option value="paid" className="bg-[#1a1828]">Pago</option>
-              </select>
-            </div>
-            <button type="submit" disabled={saving} className="mt-4 w-full rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-white transition hover:opacity-90 disabled:opacity-50">
-              {saving ? "Lançando..." : "Lançar"}
+      {/* Lançamentos */}
+      <section className="kb-glass px-4 py-1">
+        {shown.map((t) => (
+          <div key={t.id} className="kb-row">
+            <button type="button" onClick={() => openEdit(t)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+              <span aria-hidden className={`h-2.5 w-2.5 shrink-0 rounded-full ${t.type === "income" ? "bg-[var(--kb-good)]" : "bg-[var(--kb-late-dot)]"}`} />
+              <span className="min-w-0 flex-1">
+                <span className="kb-ink block truncate text-[15px]">
+                  {t.description}
+                  {t.recurrence ? <span className="kb-faint" title={`Repete ${t.recurrence}`}> ↻</span> : null}
+                </span>
+                <span className="kb-faint block truncate text-[12px]">
+                  {[t.dueDate ? dayLabel(t.dueDate) : null, t.category, t.paymentMethod, scope === "all" ? (t.scope === "pessoal" ? "Pessoal" : "Empresa") : null]
+                    .filter(Boolean)
+                    .join(" · ") || "—"}
+                </span>
+              </span>
             </button>
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <span className={`text-[15px] font-semibold tabular-nums ${t.type === "income" ? "text-[var(--kb-good)]" : "kb-ink"}`}>
+                {t.type === "income" ? "+" : "−"} {brl(Number(t.amount))}
+              </span>
+              <button
+                type="button"
+                onClick={() => markPaid(t)}
+                className={`kb-tag ${t.status === "overdue" ? "late" : t.status === "pending" ? "soon" : ""}`}
+                aria-label={t.status === "paid" ? "Marcar como pendente" : "Marcar como pago"}
+              >
+                {t.status === "paid" ? "✓ Pago" : t.status === "overdue" ? "Vencido · pagar" : "Pendente · pagar"}
+              </button>
+            </div>
+          </div>
+        ))}
+        {shown.length === 0 && <p className="kb-muted py-10 text-center text-sm">Nada por aqui ainda. Toque em + para lançar.</p>}
+      </section>
+
+      {/* Ação rápida no celular, acima da tab bar */}
+      <button
+        type="button"
+        onClick={() => openNew("expense")}
+        aria-label="Novo lançamento"
+        className="kb-mic fixed right-4 z-[65] h-14! w-14! text-2xl sm:hidden"
+        style={{ bottom: "calc(84px + env(safe-area-inset-bottom, 0px))" }}
+      >
+        +
+      </button>
+
+      {form && (
+        <div className="kb-modal-back" onClick={() => setForm(null)}>
+          <form onSubmit={save} onClick={(e) => e.stopPropagation()} className="kb-modal space-y-4" aria-label={form.id ? "Editar lançamento" : "Novo lançamento"}>
+            <div className="flex items-center justify-between">
+              <h2 className="font-display kb-ink text-xl">{form.id ? "Editar lançamento" : "Novo lançamento"}</h2>
+              <button type="button" onClick={() => setForm(null)} aria-label="Fechar" className="kb-muted -mr-2 h-11 w-11 text-2xl">×</button>
+            </div>
+
+            <div className="kb-seg" role="group" aria-label="Tipo">
+              <button type="button" data-tone="out" aria-pressed={form.type === "expense"} onClick={() => set("type", "expense")}>↓ Despesa</button>
+              <button type="button" data-tone="in" aria-pressed={form.type === "income"} onClick={() => set("type", "income")}>↑ Entrada</button>
+            </div>
+
+            <label className="kb-field">
+              <span>Descrição</span>
+              <input className="kb-control" value={form.description} onChange={(e) => set("description", e.target.value)} required placeholder={form.type === "expense" ? "Ex.: Google Drive" : "Ex.: Mensalidade Pará Super Foods"} autoComplete="off" />
+            </label>
+
+            <div className="grid grid-cols-2 gap-3">
+              <label className="kb-field">
+                <span>Valor (R$)</span>
+                <input className="kb-control tabular-nums" value={form.amount} onChange={(e) => set("amount", e.target.value.replace(/[^\d.,]/g, ""))} required inputMode="decimal" placeholder="0,00" />
+              </label>
+              <label className="kb-field">
+                <span>{form.status === "paid" ? "Data" : "Vencimento"}</span>
+                <input className="kb-control" type="date" value={form.dueDate} onChange={(e) => set("dueDate", e.target.value)} />
+              </label>
+            </div>
+
+            <div className="kb-seg" role="group" aria-label="Situação">
+              <button type="button" aria-pressed={form.status === "paid"} onClick={() => set("status", "paid")}>{form.type === "income" ? "Recebido" : "Pago"}</button>
+              <button type="button" aria-pressed={form.status === "pending"} onClick={() => set("status", "pending")}>{form.type === "income" ? "A receber" : "A pagar"}</button>
+            </div>
+
+            <div className="kb-seg" role="group" aria-label="Conta">
+              <button type="button" aria-pressed={form.scope === "empresa"} onClick={() => set("scope", "empresa")}>Empresa</button>
+              <button type="button" aria-pressed={form.scope === "pessoal"} onClick={() => set("scope", "pessoal")}>Pessoal</button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <label className="kb-field">
+                <span>Categoria</span>
+                <input className="kb-control" list="kb-cats" value={form.category} onChange={(e) => set("category", e.target.value)} placeholder="Escolha ou digite" />
+                <datalist id="kb-cats">
+                  {categories.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              </label>
+              <label className="kb-field">
+                <span>Forma</span>
+                <select className="kb-control" value={form.paymentMethod} onChange={(e) => set("paymentMethod", e.target.value)}>
+                  <option value="">—</option>
+                  {PAYMENT_METHODS.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <label className="kb-field">
+              <span>Repete</span>
+              <select className="kb-control" value={form.recurrence} onChange={(e) => set("recurrence", e.target.value as Form["recurrence"])}>
+                <option value="">Não repete</option>
+                <option value="mensal">Todo mês (assinatura, mensalidade)</option>
+                <option value="anual">Todo ano</option>
+              </select>
+            </label>
+
+            {!more ? (
+              <button type="button" className="kb-muted text-sm underline underline-offset-4" onClick={() => setMore(true)}>
+                + Cliente/fornecedor e observações
+              </button>
+            ) : (
+              <>
+                <label className="kb-field">
+                  <span>{form.type === "income" ? "Cliente" : "Fornecedor"}</span>
+                  <select className="kb-control" value={form.contactId} onChange={(e) => set("contactId", e.target.value)}>
+                    <option value="">Nenhum</option>
+                    {contacts.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                        {c.company ? ` · ${c.company}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="kb-field">
+                  <span>Observações</span>
+                  <textarea className="kb-control" value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Nota fiscal, parcela 2/5, etc." />
+                </label>
+              </>
+            )}
+
+            {formError && <p className="kb-tag late w-full justify-start rounded-xl! px-3! py-2! text-sm">{formError}</p>}
+
+            <div className="flex gap-3 pt-1">
+              {form.id && (
+                <button type="button" className="kb-btn-ghost text-[var(--kb-late)]!" onClick={remove}>
+                  Excluir
+                </button>
+              )}
+              <button type="submit" disabled={saving} className="kb-btn flex-1">
+                {saving ? "Salvando…" : form.id ? "Salvar" : "Lançar"}
+              </button>
+            </div>
           </form>
-          <style>{`@keyframes kbosUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}`}</style>
         </div>
       )}
     </div>

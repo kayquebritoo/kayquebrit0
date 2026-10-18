@@ -46,6 +46,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (b.bankInfo !== undefined) patch.bankInfo = b.bankInfo;
     if (b.clientName !== undefined) patch.clientName = b.clientName?.trim() || null;
     if (b.clientCompany !== undefined) patch.clientCompany = b.clientCompany?.trim() || null;
+    if (b.clientDocument !== undefined) patch.clientDocument = b.clientDocument?.trim() || null;
     if (b.eventDates !== undefined) {
       patch.eventDates =
         b.eventDates && b.eventDates.length
