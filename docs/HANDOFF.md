@@ -90,9 +90,9 @@ Diagnóstico: `GET /api/ai/assistant` (bloco `agent`) e
   `docs/LOGIN-SIMPLES.md`. Não trocar credenciais do dono para testar.
 - Marca: copy em primeira pessoa revisada contra o PDF original LDP e
   `Voz-e-Tom.md`, preservando o layout autoral. `docs/REVISAO-MARCA-LDP.md`.
-- Segundo cérebro: estudo em `docs/SEGUNDO-CEREBRO.md`. Recomenda Sync +
-  headless e exportador determinístico KBOS → notas. Não instalado/ativado;
-  falta escolher sincronização e medir VPS (SSH por IPv4 expira; hostname conecta por IPv6, identidade já conhecida, root recusa as chaves do Mac).
+- Segundo cérebro: implementação e estudo em `docs/SEGUNDO-CEREBRO.md`. Recomenda Sync +
+  headless; exportador determinístico KBOS → notas implementado. Conexão com vault pessoal pendente.
+  Diagnóstico SSH: IPv4 expira; hostname conecta por IPv6, identidade já conhecida, root recusa as chaves do Mac.
   Console Hostinger acessível. Medição: ~5,5 GB disponíveis e 29 GB livres.
   Exportador operacional implementado no worker (volume `brain-vault`, cinco minutos);
   cliente oficial headless opcional no profile `brain-sync`. Sync pessoal/MCP ainda
@@ -123,4 +123,5 @@ Segundo cérebro no Obsidian: `Documents/Obsidian Vault` (CONTEXTO-IA,
 Voz-e-Tom, Marca, Servicos, KBOS - Visao, logs em `20-Projetos/KBOS/log/`).
 
 ## Diário (mais recente em cima)
+- 2026-10-18 · Codex · cadastro verificado WhatsApp/e-mail/Google, sessão persistente, movimento no login/portal e exportador KBOS → volume do segundo cérebro (cinco minutos); VPS medida pelo console. Pendente: autorização/criação OAuth, contratação/conexão Sync e conectores autenticados das IAs. Atualização de voz do Claude preservada.
 - 2026-10-18 · Claude · agente responde em áudio quando você fala por áudio (voz da OpenAI; voz própria via `TTS_BASE_URL` = VoiceStudio); regras de convivência no AGENTS.md.
