@@ -85,6 +85,18 @@ services:
       AI_TTS_MODEL: ${AI_TTS_MODEL:-tts-1}
       AI_TTS_VOICE: ${AI_TTS_VOICE:-alloy}
       ASSISTANT_SYSTEM_PROMPT: ${ASSISTANT_SYSTEM_PROMPT:-}
+      # Provedores trocáveis (cérebro / ouvido / voz) — ver lib/kbos/assistant.ts.
+      # Configure com: bash /opt/kbos/scripts/kbos-config.sh
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      STT_BASE_URL: ${STT_BASE_URL:-}
+      STT_API_KEY: ${STT_API_KEY:-}
+      STT_MODEL: ${STT_MODEL:-}
+      TTS_BASE_URL: ${TTS_BASE_URL:-}
+      TTS_API_KEY: ${TTS_API_KEY:-}
+      TTS_MODEL: ${TTS_MODEL:-}
+      TTS_VOICE: ${TTS_VOICE:-}
+      ASSISTANT_OWNER_PHONE: ${ASSISTANT_OWNER_PHONE:-}
       RATE_AI_MIN: ${RATE_AI_MIN:-20}
       MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
       MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET:-}
