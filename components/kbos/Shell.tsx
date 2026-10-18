@@ -64,6 +64,7 @@ const GROUPS: NavGroup[] = [
       { href: "/admin/projetos", label: "Projetos e entregas" },
       { href: "/admin/planejamentos", label: "Marcas e planejamentos", adminOnly: true },
       { href: "/admin/agenda", label: "Agenda", adminOnly: true },
+      { href: "/admin/galeria", label: "Galeria do cliente", adminOnly: true },
       { href: "/admin/cursos", label: "Cursos", adminOnly: true },
       { href: "/portal", label: "Portal do cliente" },
     ],

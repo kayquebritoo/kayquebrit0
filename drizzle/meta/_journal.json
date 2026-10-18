@@ -134,6 +134,13 @@
       "when": 1793100000000,
       "tag": "0018_campanhas_sair",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793200000000,
+      "tag": "0019_galeria",
+      "breakpoints": true
     }
   ]
 }

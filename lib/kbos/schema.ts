@@ -765,3 +765,42 @@ export const showcaseConsents = pgTable("kbos_showcase_consents", {
   decidedAt: timestamp("decided_at", { withTimezone: true }),
   createdAt: ts("created_at"),
 });
+
+
+/** Galeria do cliente: álbum por captação, acesso por link privado (guardado só o hash). */
+export const albums = pgTable("kbos_albums", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tokenHash: text("token_hash").notNull().unique(),
+  title: text("title").notNull(),
+  brand: text("brand").notNull().default(""),
+  eventDate: text("event_date"),
+  status: text("status").notNull().default("draft"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
+  createdAt: ts("created_at"),
+});
+
+export const albumPhotos = pgTable("kbos_album_photos", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  albumId: uuid("album_id").notNull().references(() => albums.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  width: integer("width"),
+  height: integer("height"),
+  takenAt: timestamp("taken_at", { withTimezone: true }),
+  downloads: integer("downloads").notNull().default(0),
+  createdAt: ts("created_at"),
+});
+
+/** Uma linha por foto autorizada: quem autorizou, qual texto, quando. revoked_at = cliente retirou a autorização. */
+export const albumAuthorizations = pgTable("kbos_album_authorizations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  albumId: uuid("album_id").notNull().references(() => albums.id, { onDelete: "cascade" }),
+  photoId: uuid("photo_id").notNull().references(() => albumPhotos.id, { onDelete: "cascade" }),
+  signerName: text("signer_name").notNull(),
+  signerPhone: text("signer_phone").notNull(),
+  consentVersion: text("consent_version").notNull(),
+  acceptedAt: ts("accepted_at"),
+  ipHash: text("ip_hash"),
+  userAgent: text("user_agent"),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+});

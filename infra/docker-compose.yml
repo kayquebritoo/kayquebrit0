@@ -46,7 +46,12 @@ services:
         EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-kbos-primary}
     ports:
       - "${WEB_PORT:-3000}:3000"
+    volumes:
+      # Fotos da galeria do cliente (cópias leves com marca d'água; originais ficam no Drive).
+      - gallery-data:/data/gallery
     environment:
+      GALLERY_DIR: /data/gallery
+      GALLERY_INGEST_TOKEN: ${GALLERY_INGEST_TOKEN:-}
       HOSTNAME: "0.0.0.0"
       PORT: "3000"
       GIT_SHA: ${GIT_SHA:-local}
@@ -216,6 +221,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  gallery-data:
   whisper-models:
   redis-data:
   pg-data:

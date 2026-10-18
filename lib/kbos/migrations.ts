@@ -8,6 +8,41 @@ import { sql } from "drizzle-orm";
 import { db } from "./db";
 
 export const SCHEMA_STEPS: { id: string; sql: string }[] = [
+  { id: "gallery.0", sql: `CREATE TABLE IF NOT EXISTS kbos_albums (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  token_hash text NOT NULL UNIQUE,
+  title text NOT NULL,
+  brand text NOT NULL DEFAULT '',
+  event_date text,
+  status text NOT NULL DEFAULT 'draft',
+  expires_at timestamptz,
+  contact_id uuid REFERENCES kbos_contacts(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+)` },
+  { id: "gallery.1", sql: `CREATE TABLE IF NOT EXISTS kbos_album_photos (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  album_id uuid NOT NULL REFERENCES kbos_albums(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  width integer,
+  height integer,
+  taken_at timestamptz,
+  downloads integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
+)` },
+  { id: "gallery.2", sql: `CREATE INDEX IF NOT EXISTS kbos_album_photos_album_idx ON kbos_album_photos(album_id)` },
+  { id: "gallery.3", sql: `CREATE TABLE IF NOT EXISTS kbos_album_authorizations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  album_id uuid NOT NULL REFERENCES kbos_albums(id) ON DELETE CASCADE,
+  photo_id uuid NOT NULL REFERENCES kbos_album_photos(id) ON DELETE CASCADE,
+  signer_name text NOT NULL,
+  signer_phone text NOT NULL,
+  consent_version text NOT NULL,
+  accepted_at timestamptz NOT NULL DEFAULT now(),
+  ip_hash text,
+  user_agent text,
+  revoked_at timestamptz
+)` },
+  { id: "gallery.4", sql: `CREATE INDEX IF NOT EXISTS kbos_album_auth_photo_idx ON kbos_album_authorizations(photo_id)` },
   { id: "contacts.optout.0", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS marketing_opt_out_at timestamptz` },
   { id: "sales.uploads.0", sql: `ALTER TABLE kbos_budgets ADD COLUMN IF NOT EXISTS upload_bytes integer NOT NULL DEFAULT 0` },
   { id: "sales.uploads.1", sql: `CREATE TABLE IF NOT EXISTS kbos_budget_uploads (
