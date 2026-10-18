@@ -79,7 +79,9 @@ describe("moneyField", () => {
     expect(moneyField.safeParse(1500).data).toBe("1500");
   });
   it("rejeita formatos ruins", () => {
-    for (const v of ["abc", "15,00", "1.5.2", "-10", -5, ""]) {
+    // "15,00" passou a valer (formato brasileiro) — ver auditoria.test.ts.
+    expect(moneyField.safeParse("15,00").data).toBe("15.00");
+    for (const v of ["abc", "1.5.2", "-10", -5, ""]) {
       expect(moneyField.safeParse(v).success).toBe(false);
     }
   });
