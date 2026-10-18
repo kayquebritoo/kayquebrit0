@@ -114,7 +114,7 @@ export default function AgendaBoard() {
 
   function card(e: EventItem) {
     return (
-      <div key={e.id} className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 transition hover:border-white/25">
+      <div key={e.id} className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.02] p-4 transition hover:border-white/25">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{e.title}</p>
@@ -122,13 +122,13 @@ export default function AgendaBoard() {
             {e.location && <p className="mt-0.5 truncate text-[12px] text-white/45">📍 {e.location}</p>}
             {e.description && <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-white/55">{e.description}</p>}
           </div>
-          <div className="flex shrink-0 gap-1">
+          <div className="-mr-2 -mt-2 flex shrink-0">
             {!e.notificationSent && (
-              <button onClick={() => resend(e.id)} title="Reavisar (rearma o alerta)" className="rounded-lg px-2 py-1 text-white/40 transition hover:text-white">
+              <button onClick={() => resend(e.id)} title="Reavisar (rearma o alerta)" className="flex h-11 w-11 items-center justify-center rounded-lg text-white/40 transition hover:text-white">
                 ↻
               </button>
             )}
-            <button onClick={() => remove(e.id)} aria-label="Excluir" className="rounded-lg px-2 py-1 text-white/35 transition hover:text-rose-300">
+            <button onClick={() => remove(e.id)} aria-label="Excluir" className="flex h-11 w-11 items-center justify-center rounded-lg text-white/35 transition hover:text-rose-300">
               ×
             </button>
           </div>
@@ -174,7 +174,7 @@ export default function AgendaBoard() {
       </div>
 
       <p className="mb-2 mt-6 text-[11px] uppercase tracking-[0.25em] text-white/40">Próximos</p>
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {upcoming.map(card)}
         {upcoming.length === 0 && (
           <p className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-sm text-white/40 md:col-span-2">
@@ -186,7 +186,7 @@ export default function AgendaBoard() {
       {past.length > 0 && (
         <>
           <p className="mb-2 mt-8 text-[11px] uppercase tracking-[0.25em] text-white/40">Passados</p>
-          <div className="grid gap-3 opacity-70 md:grid-cols-2">{past.slice(0, 10).map(card)}</div>
+          <div className="grid grid-cols-1 gap-3 opacity-70 md:grid-cols-2">{past.slice(0, 10).map(card)}</div>
         </>
       )}
 
