@@ -37,6 +37,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     // Mídia do WhatsApp sai pelo proxy (a URL original é criptografada).
     const items = rows.reverse().map((m) => ({
       ...m,
+      // Vídeos antigos entraram como "documento [vídeo]".
+      ...(m.messageType === "document" && m.content === "[vídeo]" ? { messageType: "video" as const, content: null } : {}),
       mediaSrc:
         m.messageType !== "text" && (m.mediaUrl || m.externalId)
           ? m.mediaUrl && /^https:\/\//.test(m.mediaUrl) && !m.mediaUrl.includes(".whatsapp.net")
