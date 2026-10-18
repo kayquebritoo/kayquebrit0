@@ -117,6 +117,8 @@ Voz-e-Tom, Marca, Servicos, KBOS - Visao, logs em `20-Projetos/KBOS/log/`).
 
 ## Diário (mais recente em cima)
 
+- 2026-10-18 · Claude · Escada de cobrança pós-vencimento (`lib/kbos/billing-ladder.ts`): 1 dia gentil, 5 firme, 12 último aviso, textos aprovados pelo Kayque. Roda dentro do job `billing.reminders` (mesmo outbox/guarda do `handleNotifyWhatsapp`), só vendas aceitas com telefone, seg-sáb 9h-19h Belém. Falta: lembrete antes do vencimento ainda dispara à meia-noite (sem janela) e o resumo da manhã é outro mecanismo; unificar.
+
 - 2026-10-18 · Claude · Fase 4: `/admin/relatorios` (resultado do mês por carteira/categoria/frente, lucro por projeto e R$/hora, previsão de caixa 30/60/90, teto do MEI R$ 81 mil). Lógica pura em `lib/kbos/reports.ts`, API `GET /api/admin/reports`. Data de referência = vencimento (não há data de pagamento no schema). Falta: ladder de cobrança pós-vencimento.
 
 - 2026-10-18 · Claude · Fase 3: ficha 360° do cliente (CRM: clique na linha abre linha do tempo + resumo; API `GET /api/admin/contacts/[id]/360`, regras puras em `lib/kbos/client360.ts`) e lista única de serviços por frente (`lib/kbos/fronts.ts`, tag no Kanban de projetos). Falta: frente em transações/relatórios (fase 4), ladder de cobrança pós-vencimento (aguarda textos aprovados).
