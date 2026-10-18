@@ -11,11 +11,11 @@ export const viewport = { width: "device-width", initialScale: 1, maximumScale: 
 export default async function EntrarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; preview?: string }>;
 }) {
   const user = await sessionUser();
-  if (user) {
-    const { next } = await searchParams;
+  const { next, preview } = await searchParams;
+  if (user && !(preview === "1" && user.role === "admin")) {
     redirect(
       next && next.startsWith("/") && !next.startsWith("//")
         ? next

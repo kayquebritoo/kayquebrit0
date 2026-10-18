@@ -2,6 +2,8 @@
 
 O formulário principal usa usuário/e-mail e senha. `kayque` é alias reservado do administrador principal. Outros titulares podem escolher um usuário ao recuperar/definir a senha após validar um código. O e-mail continua válido.
 
+Administrador já autenticado pode conferir a apresentação sem sair da conta em `/entrar/?preview=1`. A rota normal continua encaminhando usuários autenticados ao painel.
+
 ## Código de acesso
 
 - WhatsApp ou e-mail, somente para conta existente e destino já cadastrado. Visitante não escolhe livremente o número de entrega.
