@@ -41,6 +41,7 @@ export default function VideoEmbed({
     <div className="anim-in group relative mt-6 overflow-hidden rounded-2xl border border-white/10 bg-[#131316] md:mt-8 md:rounded-3xl">
       <Image
         src={poster}
+        unoptimized={poster.startsWith("http")}
         alt={title}
         width={1400}
         height={800}

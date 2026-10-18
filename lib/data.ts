@@ -80,6 +80,10 @@ export type Project = {
   videoStart?: number;
   /** site/produto ao vivo (link externo) */
   siteUrl?: string;
+  /** resultado em números — só aparece com autorização do cliente */
+  metrics?: string;
+  /** depoimento — só aparece com autorização do cliente */
+  testimonial?: { text: string; author: string };
 };
 
 export const PROJECTS: Project[] = [

@@ -714,3 +714,52 @@ export const services = pgTable("kbos_services", {
   active: boolean("active").notNull().default(true),
   updatedAt: ts("updated_at"),
 });
+
+/** Cases do portfólio (0017). Um case pode vir de um projeto; só vai ao ar
+ * com autorização válida (ver `showcase-model.ts`). Os cases antigos do
+ * código (`lib/data.ts`) continuam valendo até existir uma linha com o mesmo slug. */
+export const showcases = pgTable("kbos_showcases", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  slug: text("slug").notNull().unique(),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+  contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
+  status: text("status").notNull().default("draft"),
+  basis: text("basis").notNull().default("consent"),
+  service: text("service").notNull().default("audiovisual"),
+  title: text("title").notNull(),
+  category: text("category"),
+  clientName: text("client_name"),
+  clientLogo: text("client_logo"),
+  year: text("year"),
+  description: text("description"),
+  longDescription: text("long_description"),
+  about: jsonb("about").$type<string[]>(),
+  img: text("img"),
+  gallery: jsonb("gallery").$type<string[]>(),
+  videoLabel: text("video_label"),
+  videoId: text("video_id"),
+  siteUrl: text("site_url"),
+  metrics: text("metrics"),
+  testimonial: text("testimonial"),
+  testimonialAuthor: text("testimonial_author"),
+  contentHash: text("content_hash"),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  createdAt: ts("created_at"),
+  updatedAt: ts("updated_at"),
+});
+
+/** Pedido de autorização enviado ao cliente (link seguro, guardado só o hash). */
+export const showcaseConsents = pgTable("kbos_showcase_consents", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  showcaseId: uuid("showcase_id").notNull().references(() => showcases.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  status: text("status").notNull().default("pending"),
+  requestedScopes: jsonb("requested_scopes").$type<string[]>().notNull(),
+  grantedScopes: jsonb("granted_scopes").$type<string[]>(),
+  snapshot: jsonb("snapshot").$type<Record<string, unknown>>().notNull(),
+  contentHash: text("content_hash").notNull(),
+  signerName: text("signer_name"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  decidedAt: timestamp("decided_at", { withTimezone: true }),
+  createdAt: ts("created_at"),
+});

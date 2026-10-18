@@ -1,17 +1,21 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PROJECTS, getProject } from "@/lib/data";
+import { PROJECTS } from "@/lib/data";
+import { listPublicCases } from "@/lib/kbos/showcase";
 import SingleAnim from "./SingleAnim";
 import VideoEmbed from "./VideoEmbed";
+
+// Cases novos (vindos do banco) são gerados sob demanda e renovados a cada 60 s.
+export const revalidate = 60;
 
 export function generateStaticParams() {
   return PROJECTS.map((p) => ({ slug: p.slug }));
 }
 
 export function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  return params.then(({ slug }) => {
-    const p = getProject(slug);
+  return params.then(async ({ slug }) => {
+    const p = (await listPublicCases()).find((x) => x.slug === slug);
     return {
       title: p ? `${p.title} — Kayque Brito` : "Projeto — Kayque Brito",
       description: p?.description ?? "",
@@ -27,14 +31,15 @@ const SERVICE_LABEL: Record<string, string> = {
 
 export default async function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const project = getProject(slug);
+  const ALL = await listPublicCases();
+  const project = ALL.find((p) => p.slug === slug);
   if (!project) notFound();
 
-  const idx = PROJECTS.findIndex((p) => p.slug === slug);
-  const others = PROJECTS.filter((p) => p.slug !== slug && p.service === project.service)
-    .concat(PROJECTS.filter((p) => p.slug !== slug && p.service !== project.service))
+  const idx = ALL.findIndex((p) => p.slug === slug);
+  const others = ALL.filter((p) => p.slug !== slug && p.service === project.service)
+    .concat(ALL.filter((p) => p.slug !== slug && p.service !== project.service))
     .slice(0, 3);
-  const next = PROJECTS[(idx + 1) % PROJECTS.length];
+  const next = ALL[(idx + 1) % ALL.length];
 
   return (
     <main className="bg-[#11101E] text-[#EDE6EC]">
@@ -56,7 +61,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
           </div>
 
           <p className="anim-in mt-8 text-[11px] uppercase tracking-[0.32em] text-white/45 md:mt-10">
-            {String(idx + 1).padStart(2, "0")} / {String(PROJECTS.length).padStart(2, "0")} — {project.category}
+            {String(idx + 1).padStart(2, "0")} / {String(ALL.length).padStart(2, "0")} — {project.category}
           </p>
           <h1
             className="anim-in font-display mt-3 max-w-5xl font-light leading-[0.95] text-white"
@@ -95,6 +100,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
             ))}
           </div>
 
+          {project.metrics && (
+            <p className="anim-in mt-6 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4 text-[15px] font-light leading-relaxed text-white/80">
+              {project.metrics}
+            </p>
+          )}
+
           {/* vídeo real (YouTube) ou capa estática quando não há vídeo */}
           {project.videoId ? (
             <VideoEmbed
@@ -108,6 +119,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
             <div className="anim-in group relative mt-6 overflow-hidden rounded-2xl border border-white/10 bg-[#131316] md:mt-8 md:rounded-3xl">
               <Image
                 src={project.img}
+                unoptimized={project.img.startsWith("http")}
                 alt={project.title}
                 width={1400}
                 height={800}
@@ -168,6 +180,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
                 {i === 0 ? (
                   <Image
                     src={g}
+                    unoptimized={g.startsWith("http")}
                     alt={`${project.title} — ${i + 1}`}
                     width={1400}
                     height={800}
@@ -179,6 +192,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
                     <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#131316]">
                       <Image
                         src={g}
+                    unoptimized={g.startsWith("http")}
                         alt={`${project.title} — ${i + 1}`}
                         width={1200}
                         height={800}
@@ -200,6 +214,13 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
             ))}
           </div>
         </div>
+
+        {project.testimonial && (
+          <blockquote className="anim-in mt-12 border-l-2 border-[#4F12C7] pl-5 md:mt-20 md:pl-8">
+            <p className="font-display text-xl font-light italic leading-snug text-white/85 md:text-3xl">“{project.testimonial.text}”</p>
+            {project.testimonial.author && <footer className="mt-3 text-[11px] uppercase tracking-[0.28em] text-white/45">{project.testimonial.author}</footer>}
+          </blockquote>
+        )}
 
         {/* CTA */}
         <div className="anim-in relative mt-12 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.02] px-6 py-12 text-center backdrop-blur md:mt-20 md:py-16">
@@ -233,6 +254,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
           <div className="relative aspect-[16/10] sm:aspect-[21/9]">
             <Image
               src={next.img}
+              unoptimized={next.img.startsWith("http")}
               alt={next.title}
               fill
               loading="lazy"
@@ -266,6 +288,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
               <div className="relative aspect-[16/10] overflow-hidden">
                 <Image
                   src={o.img}
+                  unoptimized={o.img.startsWith("http")}
                   alt={o.title}
                   fill
                   loading="lazy"

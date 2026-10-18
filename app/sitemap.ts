@@ -1,14 +1,16 @@
 import type { MetadataRoute } from "next";
-import { PROJECTS } from "@/lib/data";
+import { listPublicCases } from "@/lib/kbos/showcase";
 
-export const dynamic = "force-static";
+// Os cases publicados entram no mapa do site; renova a cada hora.
+export const revalidate = 3600;
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = "https://kayquebrito.com.br";
+  const cases = await listPublicCases();
   return [
     { url: `${base}/`, lastModified: new Date(), changeFrequency: "weekly", priority: 1 },
     { url: `${base}/trabalho`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.9 },
-    ...PROJECTS.map((p) => ({
+    ...cases.map((p) => ({
       url: `${base}/trabalho/${p.slug}`,
       lastModified: new Date(),
       changeFrequency: "monthly" as const,

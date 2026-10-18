@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BRIEFING_CATEGORIES } from "@/lib/kbos/briefing-forms";
 import { getService, listServices } from "@/lib/kbos/services";
-import { PROJECTS } from "@/lib/data";
+import { listPublicCases } from "@/lib/kbos/showcase";
 import CategoryAnim from "./CategoryAnim";
 import PageBackdrop from "@/components/PageBackdrop";
 
@@ -29,7 +29,7 @@ export default async function CategoriaDetail({ params }: { params: Promise<{ ca
   const cat = await getService(categoria);
   if (!cat || !cat.active) notFound();
 
-  const related = PROJECTS.filter((p) => cat.portfolioService.includes(p.service));
+  const related = (await listPublicCases()).filter((p) => cat.portfolioService.includes(p.service));
   const others = (await listServices()).filter((c) => c.id !== cat.id).slice(0, 3);
 
   return (
@@ -144,7 +144,7 @@ export default async function CategoriaDetail({ params }: { params: Promise<{ ca
                   className="cat-in work-card group relative overflow-hidden rounded-2xl border border-white/10 bg-[#131316] transition hover:border-white/25"
                 >
                   <div className="relative aspect-[16/10] overflow-hidden">
-                    <Image src={p.img} alt={p.title} fill loading="lazy" className="object-cover transition duration-700 group-hover:scale-105" sizes="(max-width:768px) 100vw, 45vw" />
+                    <Image src={p.img} alt={p.title} fill loading="lazy" unoptimized={p.img.startsWith("http")} className="object-cover transition duration-700 group-hover:scale-105" sizes="(max-width:768px) 100vw, 45vw" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
                     <span className="absolute left-5 top-5 rounded-full border border-white/20 bg-black/45 px-3.5 py-1.5 text-[10px] uppercase tracking-[0.24em] text-white/85 backdrop-blur">
                       {p.category}

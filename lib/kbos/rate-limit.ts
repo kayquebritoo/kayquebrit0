@@ -17,6 +17,7 @@ const POLICIES: Record<string, { limit: number; windowMs: number }> = {
   "briefings:create": { limit: num(process.env.RATE_BRIEFING_MIN, 10), windowMs: WINDOW_MS },
   "planning:review": { limit: 15, windowMs: WINDOW_MS },
   "proposals:accept": { limit: 10, windowMs: WINDOW_MS },
+  "consent:decide": { limit: 10, windowMs: WINDOW_MS },
   "proposals:upload": { limit: 30, windowMs: WINDOW_MS },
   "lms:checkout": { limit: num(process.env.RATE_CHECKOUT_MIN, 10), windowMs: WINDOW_MS },
   "admin:whatsapp": { limit: num(process.env.RATE_ADMIN_MIN, 30), windowMs: WINDOW_MS },
