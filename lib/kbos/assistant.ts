@@ -178,7 +178,40 @@ export async function chatReply(system: string, userText: string): Promise<Reply
 /* ---------------- voz (TTS) ---------------- */
 
 /** Gera áudio da resposta (data-URI mp3) ou null (sem chave / falha = não fatal). */
+/**
+ * Voz clonada 24 h no ar, sem depender do Mac: Fish Audio
+ * (TTS_PROVIDER=fish, TTS_API_KEY, TTS_VOICE = id do modelo de voz).
+ */
+async function fishSpeech(text: string): Promise<string | null> {
+  const key = (process.env.TTS_API_KEY || "").trim();
+  const voice = (process.env.TTS_VOICE || "").trim();
+  if (!key || !voice) return null;
+  try {
+    const res = await fetchTimeout("https://api.fish.audio/v1/tts", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", model: (process.env.TTS_MODEL || "s1").trim() || "s1" },
+      body: JSON.stringify({ text: text.slice(0, 2000), reference_id: voice, format: "mp3", latency: "normal" }),
+    }, 60_000);
+    if (!res.ok) {
+      console.error("[KBOS voz] Fish Audio", res.status, (await res.text().catch(() => "")).slice(0, 200));
+      return null;
+    }
+    const buf = Buffer.from(await res.arrayBuffer());
+    return buf.length ? `data:audio/mp3;base64,${buf.toString("base64")}` : null;
+  } catch (e) {
+    console.error("[KBOS voz] Fish Audio", e);
+    return null;
+  }
+}
+
+export const ttsProvider = () => ((process.env.TTS_PROVIDER || "").trim().toLowerCase() === "fish" ? "fish" : "openai");
+
 export async function synthesizeSpeech(text: string, voice?: string): Promise<string | null> {
+  if (ttsProvider() === "fish") {
+    // Sua voz; se o Fish falhar, cai na voz padrão para não ficar sem resposta.
+    const mine = await fishSpeech(text);
+    if (mine) return mine;
+  }
   const tts = ttsConfig();
   if (!tts.enabled) return null;
   try {
@@ -187,7 +220,7 @@ export async function synthesizeSpeech(text: string, voice?: string): Promise<st
       headers: { ...authHeader(tts), "Content-Type": "application/json" },
       body: JSON.stringify({
         model: tts.model,
-        voice: (voice || process.env.TTS_VOICE || process.env.AI_TTS_VOICE || "alloy").trim() || "alloy",
+        voice: (voice || (ttsProvider() === "fish" ? "" : process.env.TTS_VOICE) || process.env.AI_TTS_VOICE || "alloy").trim() || "alloy",
         input: text.slice(0, 4000),
         response_format: "mp3",
       }),

@@ -16,7 +16,7 @@ import { contacts, events, projects, tasks, transactions } from "./schema";
 import { evoConfig } from "./evolution";
 import { ensureRedis, getRedis } from "./jobs";
 import { fetchInboundMedia, onlyDigits, type InboundMessage } from "./inbox";
-import { llmConfig, synthesizeSpeech, transcribeAudio, ttsConfig } from "./assistant";
+import { llmConfig, synthesizeSpeech, transcribeAudio, ttsConfig, ttsProvider } from "./assistant";
 import { documentKind, formatDocument } from "./document";
 import { queueWhatsApp } from "./whatsapp";
 import { logHook } from "./webhook-log";
@@ -352,7 +352,7 @@ async function sendToOwner(owner: string, text: string): Promise<void> {
 
 /** Resposta em áudio (nota de voz) — usada quando o dono falou por áudio. */
 async function sendVoiceToOwner(owner: string, text: string): Promise<void> {
-  if (!ttsConfig().enabled) return;
+  if (!ttsConfig().enabled && ttsProvider() !== "fish") return;
   // Fala sem emojis/asteriscos e no máximo ~600 caracteres (áudio curto).
   const speakable = text.replace(/[*_~`]/g, "").replace(/\p{Extended_Pictographic}/gu, "").slice(0, 600);
   const dataUri = await synthesizeSpeech(speakable);

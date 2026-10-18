@@ -115,5 +115,6 @@ Segundo cérebro no Obsidian: `Documents/Obsidian Vault` (CONTEXTO-IA,
 Voz-e-Tom, Marca, Servicos, KBOS - Visao, logs em `20-Projetos/KBOS/log/`).
 
 ## Diário (mais recente em cima)
+- 2026-10-18 · Claude · voz clonada 24 h via Fish Audio (TTS_PROVIDER=fish, menu opção 8; cai na voz OpenAI se falhar). Manifesto PWA por domínio (kbos.* abre /entrar → painel). Instalar o app SEMPRE a partir de kbos.kayquebrito.com.br: abrir o outro domínio dentro do app mostra a barra do Safari.
 - 2026-10-18 · Claude · agente só atende com “Fala Kayque” (sessão de 5 min; ASSISTANT_TRIGGER) e fala no tom do Kayque. Falta: voz clonada (VoiceStudio no Mac via Tailscale → TTS_BASE_URL/TTS_API_KEY/TTS_VOICE).
 - 2026-10-18 · Claude · agente responde em áudio quando você fala por áudio (voz da OpenAI; voz própria via `TTS_BASE_URL` = VoiceStudio); regras de convivência no AGENTS.md.

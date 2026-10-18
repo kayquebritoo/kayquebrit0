@@ -57,6 +57,7 @@ while true; do
   echo " 5) Ver o que está configurado (sem mostrar chaves)"
   echo " 6) Ligar o assistente no WhatsApp (protege o webhook com senha)"
   echo " 7) Ativar login com Google"
+  echo " 8) Minha voz no assistente (Fish Audio, 24 h no ar)"
   echo " 0) Sair"
   read -r -p "Escolha: " opt
   case "$opt" in
@@ -108,10 +109,10 @@ while true; do
       ;;
     5)
       echo
-      for k in AI_BASE_URL AI_MODEL STT_BASE_URL STT_MODEL TTS_BASE_URL ASSISTANT_OWNER_PHONE; do
+      for k in AI_BASE_URL AI_MODEL STT_BASE_URL STT_MODEL TTS_PROVIDER TTS_VOICE ASSISTANT_OWNER_PHONE; do
         printf ' %-22s %s\n' "$k" "$(getvar "$k" | sed 's/^$/—/')"
       done
-      for k in AI_API_KEY OPENAI_API_KEY EVOLUTION_API_KEY EVOLUTION_WEBHOOK_TOKEN; do
+      for k in AI_API_KEY OPENAI_API_KEY TTS_API_KEY EVOLUTION_API_KEY EVOLUTION_WEBHOOK_TOKEN; do
         v=$(getvar "$k")
         v=${v//\"/}
         if [ ${#v} -lt 4 ]; then s="não configurada"; elif [ "$v" = "kbos-dev-key" ]; then s="PADRÃO (troque: opção 3)"; else s="configurada (…${v: -4})"; fi
@@ -159,6 +160,26 @@ while true; do
       apply
       echo "Configuração salva. Abra o login e teste Continuar com Google."
       echo "Se o Google usa outro e-mail, conecte-o em Mais > Meu acesso antes de sair da conta."
+      ;;
+    8)
+      echo
+      echo "1. Em https://fish.audio crie um modelo de voz com 15–30 s de você falando."
+      echo "2. Copie o ID do modelo (está na URL da página do modelo)."
+      echo "3. Em https://fish.audio/app/api-keys crie uma chave de API e adicione crédito."
+      echo
+      read -r -p "ID do modelo de voz: " voice_id
+      voice_id=$(printf '%s' "$voice_id" | tr -d '[:space:]"')
+      if [ ${#voice_id} -lt 8 ]; then echo "ID curto demais. Nada foi alterado."; continue; fi
+      fkey=$(ask_secret "Chave da API do Fish Audio (não aparece na tela): ")
+      fkey=$(printf '%s' "$fkey" | tr -d '[:space:]"')
+      if [ ${#fkey} -lt 16 ]; then echo "Não recebi a chave. Nada foi alterado."; continue; fi
+      setvar TTS_PROVIDER "fish"
+      setvar TTS_VOICE "$voice_id"
+      setvar TTS_API_KEY "$fkey"
+      echo "Chave recebida (termina em …${fkey: -4})."
+      unset fkey
+      apply
+      echo "Pronto. No WhatsApp mande um áudio: 'Fala Kayque, o que tenho hoje?' — a resposta vem na sua voz."
       ;;
     0) exit 0 ;;
     *) echo "Opção inválida." ;;
