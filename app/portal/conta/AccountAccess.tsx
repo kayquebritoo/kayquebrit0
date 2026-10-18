@@ -1,9 +1,9 @@
 "use client";
 import { useEffect,useState } from "react";
 type Me={name:string;email:string;username:string|null;googleConnected:boolean};
-export default function AccountAccess(){
+export default function AccountAccess({googleError=false}:{googleError?:boolean}){
  const [me,setMe]=useState<Me|null>(null),[username,setUsername]=useState(''),[google,setGoogle]=useState(false);
- const [busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+ const [busy,setBusy]=useState(false),[error,setError]=useState(googleError?'Não foi possível conectar esse Google. Tente novamente ou use uma conta Google que ainda não esteja vinculada a outro cadastro.':''),[notice,setNotice]=useState('');
  useEffect(()=>{let active=true;Promise.all([fetch('/api/auth/me/').then(r=>{if(!r.ok)throw new Error('Entre novamente para conferir seu acesso.');return r.json();}),fetch('/api/auth/options/').then(r=>r.json())]).then(([a,b])=>{if(active){setMe(a.user);setUsername(a.user.username||'');setGoogle(b.google===true);}}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[]);
  async function save(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');setNotice('');try{const r=await fetch('/api/auth/me/',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({username})});const j=await r.json();if(!r.ok)throw new Error(j.error);setUsername(j.username);setNotice('Usuário salvo. Seu e-mail também continua funcionando.');}catch(e){setError(e instanceof Error?e.message:'Não foi possível salvar.');}finally{setBusy(false);}}
  return <div className="mx-auto max-w-2xl space-y-5">{error&&<p role="alert" className="kb-glass p-5">{error}</p>}{notice&&<p role="status" className="kb-glass p-5">{notice}</p>}{!me&&!error&&<p>Carregando seu acesso…</p>}{me&&<>
