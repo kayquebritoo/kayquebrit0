@@ -1,0 +1,8 @@
+{
+  "name": "galeria-uploader",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Prepara fotos (miniatura, prévia, download com logo) e envia para uma galeria do KBOS.",
+  "dependencies": { "sharp": "^0.34.0" }
+}

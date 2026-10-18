@@ -116,6 +116,7 @@ Segundo cérebro no Obsidian: `Documents/Obsidian Vault` (CONTEXTO-IA,
 Voz-e-Tom, Marca, Servicos, KBOS - Visao, logs em `20-Projetos/KBOS/log/`).
 
 ## Diário (mais recente em cima)
+- 2026-10-18 · Claude · GALERIA DO CLIENTE (fase 1): álbuns com link privado (`/galeria/<token>/`), cliente escolhe fotos, autoriza uso nas redes (texto `galeria-v1`, nome+WhatsApp+IP em hash, revogável) e só então baixa o JPEG com logo; painel `/admin/galeria`; API `/api/gallery/*` e `/api/admin/gallery/*` (sessão admin OU Bearer `GALLERY_INGEST_TOKEN`); arquivos no volume `gallery-data` (`GALLERY_DIR`); migração 0019; ferramenta Mac `tools/galeria-uploader` (sharp; NÃO testada de ponta a ponta — sem rede no sandbox). Falta: configurar GALLERY_INGEST_TOKEN na VPS, mostrar o id do álbum no painel, busca por rosto (fase 2, LGPD: selfie só no aparelho, guardar só vetores, aviso no local, revisão jurídica do texto), busca interna de takes.
 - 2026-10-18 · Claude · /admin/agenda no celular: cartões não estouram mais a largura (grid-cols-1) e ↻/× com alvo de 44px. Falta: revisar desktop.
 - 2026-10-18 · Claude · /admin/relatorios no celular: abas Empresa/Pessoal/Tudo em largura total, mês com "de" minúsculo, números dos cartões menores em telas ≤420px (não encostam na borda). Falta: Agenda e desktop.
 - 2026-10-18 · Claude · /admin/orcamentos no celular: lista vira cartões (código, cliente, total, status, ações de 44px) e os 3 totais ficam compactos em linha; tabela só em md+. Falta: revisar Relatórios, Agenda e desktop.

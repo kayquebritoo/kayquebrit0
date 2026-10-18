@@ -81,6 +81,7 @@ export default function Galeria() {
             </div>
             <p className="kb-muted mt-3 text-sm">{a.photos} foto(s) · {a.authorized} autorizada(s) · {a.downloads} download(s)</p>
             <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" className="kb-btn-ghost flex-1" onClick={() => void navigator.clipboard.writeText(a.id).then(() => setMsg("Id do álbum copiado."), () => setMsg(`Id: ${a.id}`))}>Copiar id</button>
               {a.status !== "published" && <button type="button" className="kb-btn min-h-11 flex-1" onClick={() => void status(a.id, "published")}>Publicar</button>}
               {a.status === "published" && <button type="button" className="kb-btn-ghost flex-1" onClick={() => void status(a.id, "closed")}>Encerrar</button>}
             </div>
