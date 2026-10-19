@@ -8,7 +8,7 @@ describe("venda conectada", () => {
     expect(planEndDate("2027-01-31", 1)).toBe("2027-02-28");
     expect(planEndDate("2028-01-31", 1)).toBe("2028-02-29");
   });
-  it("aceita manual enviado e referências externas, mas exige um manual", () => {
+  it("aceita manual enviado, referências externas ou nenhum material (manual opcional)", () => {
     const attachments = [{ kind: "file", fileId: "d7a758ad-783b-442d-b477-81bdbbf0e362", name: "manual.pdf", role: "manual" }, { kind: "link", url: "https://example.com/referencia", name: "Referência", role: "reference" }];
     expect(salePlanSchema.safeParse({ ...plan, manualUrl: "", attachments }).success).toBe(true);
     expect(salePlanSchema.safeParse({ ...plan, manualUrl: "", attachments: [] }).success).toBe(true);
