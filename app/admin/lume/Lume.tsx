@@ -13,6 +13,13 @@ const STEPS = [
   { t: "Depois", d: "Módulo de mídia dentro do KBOS e, mais à frente, portal privado de clientes com QR e galeria. Ainda não construído." },
 ];
 
+// Ondas fixas (sem aleatório, para não variar entre servidor e navegador).
+const BARS = Array.from({ length: 72 }, (_, i) => {
+  const t = i / 71;
+  const env = 0.3 + 0.7 * Math.abs(Math.sin(t * 9.4) * Math.cos(t * 3.1 + 0.6));
+  return { h: Math.round(14 + env * 100 * (0.55 + 0.45 * Math.sin(t * Math.PI))), d: (3 + ((i * 37) % 17) / 10).toFixed(2), dl: (-((i * 53) % 29) / 10).toFixed(2) };
+});
+
 export default function Lume() {
   const [saved, setSaved] = useState("");
   const [value, setValue] = useState("");
@@ -30,20 +37,20 @@ export default function Lume() {
 
   return (
     <div className="kb-page mx-auto w-full max-w-4xl space-y-4 pb-10">
-      <section className="kb-glass relative overflow-hidden p-5 sm:p-8">
-        <div className="lume-halo" aria-hidden />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center">
-          <LumeMark size={84} animate title="Lume" />
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="kb-chip">Ferramenta interna</span>
-              <span className="kb-chip">Roda no seu Mac</span>
-              <span className="kb-chip">Em desenvolvimento</span>
-            </div>
-            <h1 className="mt-3 font-display text-3xl font-light leading-tight sm:text-4xl">Lume <span className="kb-muted">· acervo inteligente</span></h1>
-            <p className="mt-2 max-w-xl kb-muted">Ache a cena certa pelo que ela mostra: “chapa mista”, “pôr do sol na praia”. Luz para revelar os momentos que você já gravou.</p>
+      <section className="lm-hero">
+        <div className="aurora" aria-hidden><i className="o1" /><i className="o2" /><i className="o3" /></div>
+        <div className="relative z-[2] max-w-2xl">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="kb-chip">Ferramenta interna</span>
+            <span className="kb-chip">Roda no seu Mac</span>
+            <span className="kb-chip">Em desenvolvimento</span>
           </div>
-          <div className="lume-wave sm:ml-auto" aria-hidden>{[0, 1, 2, 3, 4, 5, 6].map((i) => <i key={i} style={{ ["--i" as string]: i, height: `${[38, 62, 86, 100, 74, 52, 34][i]}%` }} />)}</div>
+          <div className="mt-5 flex items-center gap-4"><LumeMark size={64} animate title="Lume" /><span className="cp-eyebrow">LUME · ACERVO INTELIGENTE</span></div>
+          <h1 className="font-display">Encontre o <em>momento</em> certo.</h1>
+          <p className="kb-muted max-w-xl">Descreva a cena do roteiro, como “chapa mista” ou “pôr do sol”. O Lume mostra os takes; você confere e baixa.</p>
+        </div>
+        <div className="lm-wavefield" aria-hidden>
+          {BARS.map((b, i) => <i key={i} style={{ ["--h" as string]: `${b.h}%`, ["--d" as string]: `${b.d}s`, ["--dl" as string]: `${b.dl}s` }} />)}
         </div>
       </section>
 

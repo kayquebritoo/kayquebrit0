@@ -1439,3 +1439,24 @@ html.light .lume-halo { background: radial-gradient(closest-side, rgba(79, 18, 1
 @media (prefers-reduced-motion: reduce) {
   .lume-animate .lume-bar, .lume-wave i, .lume-halo { animation: none; }
 }
+
+/* Lume v2 — hero em vidro, aurora e ondas (mesma identidade do app local) */
+.lm-hero{position:relative;overflow:hidden;isolation:isolate;border-radius:30px;padding:clamp(24px,5vw,52px) clamp(18px,4vw,48px) clamp(140px,18vw,190px);border:1px solid rgba(237,230,236,.16);background:linear-gradient(140deg,rgba(237,230,236,.08),rgba(237,230,236,.03) 55%,rgba(79,18,199,.1));box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 40px 90px -40px rgba(79,18,199,.65)}
+.lm-hero .aurora{position:absolute;inset:0;z-index:-2;overflow:hidden;background:radial-gradient(120% 90% at 0 0,rgba(53,12,133,.4),transparent 60%),#11101e}
+.lm-hero .aurora i{position:absolute;border-radius:50%;filter:blur(60px);will-change:transform}
+.lm-hero .o1{width:46%;aspect-ratio:1;left:-8%;top:-30%;background:#4f12c7;opacity:.55;animation:lmAur1 24s ease-in-out infinite alternate}
+.lm-hero .o2{width:38%;aspect-ratio:1;right:-6%;top:5%;background:#350c85;opacity:.7;animation:lmAur2 29s ease-in-out infinite alternate}
+.lm-hero .o3{width:22%;aspect-ratio:1;right:14%;bottom:-18%;background:#e80efd;opacity:.16;animation:lmAur3 33s ease-in-out infinite alternate}
+@keyframes lmAur1{to{transform:translate3d(24%,18%,0) scale(1.15)}}@keyframes lmAur2{to{transform:translate3d(-20%,22%,0) scale(1.1)}}@keyframes lmAur3{to{transform:translate3d(-30%,-14%,0) scale(1.4)}}
+.lm-hero h1{font-size:clamp(34px,6vw,60px);font-weight:300;letter-spacing:-2.2px;line-height:1.05;margin:.35em 0 .3em}
+.lm-hero h1 em{font-style:normal;background:linear-gradient(95deg,#ede6ec 0%,#cdb8ff 70%,#e80efd 150%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lm-wavefield{position:absolute;left:0;right:0;bottom:0;height:clamp(100px,14vw,150px);display:flex;align-items:flex-end;justify-content:space-between;gap:clamp(2px,.4vw,5px);padding:0 clamp(12px,3vw,32px) 16px;pointer-events:none;-webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent);mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent)}
+.lm-wavefield i{flex:1;max-width:9px;min-width:2px;height:var(--h);border-radius:99px;background:linear-gradient(to top,#350c85,#4f12c7 55%,#c01af0 92%,#e80efd);opacity:.62;transform-origin:50% 100%;animation:lmBar var(--d,3.6s) ease-in-out infinite;animation-delay:var(--dl,0s)}
+@keyframes lmBar{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.38)}}
+html.light .lm-hero{border-color:rgba(53,12,133,.2);box-shadow:0 30px 70px -40px rgba(79,18,199,.45)}
+html.light .lm-hero .aurora{background:radial-gradient(120% 90% at 0 0,rgba(79,18,199,.18),transparent 60%),#ede6ec}
+html.light .lm-hero .o3{opacity:.1}
+html.light .lm-hero h1 em{background:linear-gradient(95deg,#11101e 0%,#350c85 70%,#4f12c7 150%);-webkit-background-clip:text;background-clip:text}
+html.light .lm-wavefield i{background:linear-gradient(to top,#350c85,#4f12c7)}
+@media (max-width:640px){.lm-wavefield i:nth-child(3n){display:none}}
+@media (prefers-reduced-motion:reduce){.lm-hero .aurora i,.lm-wavefield i{animation:none!important}}
