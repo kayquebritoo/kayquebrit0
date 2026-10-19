@@ -7,6 +7,7 @@ import {
   PAYMENT_CONDITIONS,
   calcDiscountAmount,
   calcPaymentOptions,
+  isRecurringInput,
   formatBRL as brl,
   type PaymentCondition,
 } from "@/lib/kbos/budget-calc";
@@ -178,6 +179,11 @@ export default function Orcamentos() {
     [form.discountValue, form.discountType, subtotal]
   );
   const formTotal = Math.round((subtotal - discountAmount) * 100) / 100;
+  // Mensalidade: só pré-pago (sem desconto à vista nem parcelamento). Mesma regra do contrato.
+  const recurringForm = useMemo(
+    () => isRecurringInput({ title: form.title, terms: form.terms, dates: form.items.map((i) => i.date) }),
+    [form.title, form.terms, form.items]
+  );
 
   const linkedContact = contacts.find((c) => c.id === form.contactId) || null;
   const respMatches = useMemo(() => {
@@ -774,6 +780,19 @@ export default function Orcamentos() {
                 <strong className="font-display text-2xl font-light text-white">{brl(formTotal)}</strong>
               </div>
 
+              {recurringForm ? (
+                <div className="mt-3">
+                  <span className={labelCls}>Condição de pagamento</span>
+                  <div className="rounded-xl border border-emerald-300/50 bg-emerald-400/10 px-3 py-2.5">
+                    <span className="flex items-center justify-between text-sm font-medium">
+                      Plano mensal pré-pago
+                      <span className="text-emerald-300">✓</span>
+                    </span>
+                    <span className="mt-0.5 block text-[11px] text-white/45">Pix até o dia 5 · 1ª mensalidade na assinatura · sem desconto à vista nem parcelamento</span>
+                    <span className="mt-1 block text-sm font-semibold text-white/90">{brl(formTotal)} /mês</span>
+                  </div>
+                </div>
+              ) : (
               <div className="mt-3">
                 <span className={labelCls}>Condição de pagamento preferida</span>
                 <div className="grid gap-2 sm:grid-cols-3">
@@ -804,6 +823,7 @@ export default function Orcamentos() {
                   })}
                 </div>
               </div>
+              )}
 
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <div>

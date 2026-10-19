@@ -15,7 +15,7 @@ import { Document, Page, Text, View, StyleSheet, Image as PdfImage, Font, Svg, D
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { BudgetItem } from "./schema";
-import { calcBudgetWithDiscount, calcPaymentOptions, formatBRL } from "./budget-calc";
+import { calcBudgetWithDiscount, calcPaymentOptions, formatBRL, isRecurringInput } from "./budget-calc";
 import { DEFAULT_PIX_INFO } from "./constants";
 
 export type BudgetPdfData = {
@@ -255,10 +255,7 @@ function executionDates(data: BudgetPdfData): string[] {
  * execução espalhada por 3+ meses distintos. Nunca por nome de cliente.
  */
 export function isRecurringBudget(data: Pick<BudgetPdfData, "title" | "terms" | "items" | "eventDates">): boolean {
-  const hay = `${data.title || ""} ${data.terms || ""}`.toLowerCase();
-  if (/recorrente|mensalidade|\bmensal\b|acompanhamento mensal|por m[eê]s/.test(hay)) return true;
-  const months = new Set(executionDates(data as BudgetPdfData).map((d) => d.slice(0, 7)));
-  return months.size >= 3;
+  return isRecurringInput({ title: data.title, terms: data.terms, dates: executionDates(data as BudgetPdfData) });
 }
 
 /** Orçamento de cobertura/captação (exibe o escopo padrão por evento). */

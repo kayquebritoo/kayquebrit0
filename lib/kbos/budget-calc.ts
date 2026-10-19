@@ -98,3 +98,15 @@ export function calcPaymentOptions(total: number): {
     card: round2(base),
   };
 }
+
+/**
+ * Orçamento recorrente (mensalidade) x projeto pontual. Fonte única usada pelo
+ * PDF/contrato e pelo formulário do admin: palavra-chave explícita no
+ * título/termos ou execução espalhada por 3+ meses distintos. Nunca por cliente.
+ */
+export function isRecurringInput(input: { title?: string | null; terms?: string | null; dates?: (string | null | undefined)[] }): boolean {
+  const hay = `${input.title || ""} ${input.terms || ""}`.toLowerCase();
+  if (/recorrente|mensalidade|\bmensal\b|acompanhamento mensal|por m[eê]s/.test(hay)) return true;
+  const months = new Set((input.dates || []).filter((d): d is string => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d)).map((d) => d.slice(0, 7)));
+  return months.size >= 3;
+}
