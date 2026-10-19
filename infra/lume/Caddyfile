@@ -1,0 +1,6 @@
+lume.kayquebrito.com.br {
+    encode zstd gzip
+    reverse_proxy lume:8765 {
+        transport http { response_header_timeout 120s }
+    }
+}

@@ -1,0 +1,33 @@
+# Lume online. Subir de /opt/lume:  docker compose --env-file .env -f src/infra/lume/docker-compose.yml up -d --build
+services:
+  lume:
+    build: { context: ., dockerfile: Dockerfile }
+    restart: always
+    env_file: /opt/lume/.env          # LUME_API_TOKEN, LUME_DRIVE_KEY
+    volumes: ["/opt/lume/data:/data"]
+    expose: ["8765"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8765/health',timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    mem_limit: 5g
+
+  indexador:
+    build: { context: ., dockerfile: Dockerfile }
+    restart: always
+    env_file: /opt/lume/.env
+    volumes: ["/opt/lume/data:/data"]
+    command: ["sh", "-c", "sleep 300; while true; do python indexar_drive.py; sleep 21600; done"]
+    mem_limit: 3g
+
+  caddy:
+    image: caddy:2
+    restart: always
+    ports: ["80:80", "443:443"]
+    volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddy_data:/data"]
+    depends_on: [lume]
+
+volumes:
+  caddy_data:

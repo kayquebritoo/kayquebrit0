@@ -6,7 +6,7 @@
 
 O índice fica em ~/Acervo (banco + miniaturas). Os arquivos originais nunca são alterados.
 """
-import argparse, hashlib, io, json, os, sqlite3, subprocess, sys, tempfile, threading, time, webbrowser
+import argparse, hashlib, hmac, io, json, os, sqlite3, subprocess, sys, tempfile, threading, time, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -23,6 +23,50 @@ THUMBS = HOME / "thumbs"
 PHOTO_EXT = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".tif", ".tiff"}
 VIDEO_EXT = {".mp4", ".mov", ".m4v", ".mxf", ".avi", ".mkv"}
 VIDEO_STEP_SEC = int(os.environ.get("ACERVO_PASSO", "5"))  # um quadro a cada N segundos de vídeo
+
+NUVEM = os.environ.get("LUME_MODO", "") == "nuvem"  # servidor online (VPS): sem SSD, sem Finder, protegido por token
+SEGREDO = os.environ.get("LUME_API_TOKEN", "").strip()
+COOKIE = "lume_s"
+SESSAO_SEG = 30 * 86400
+
+
+def _hm(msg):
+    return hmac.new(SEGREDO.encode(), msg.encode(), hashlib.sha256).hexdigest()
+
+
+def entrada_valida(e, s):
+    """Link de entrada gerado pelo KBOS (admin logado): /entrar?e=<expira>&s=<hmac>. Vale 2 minutos."""
+    try:
+        exp = int(e)
+    except (TypeError, ValueError):
+        return False
+    return bool(SEGREDO) and time.time() < exp <= time.time() + 600 and hmac.compare_digest(_hm(f"entrar:{exp}"), s or "")
+
+
+def nova_sessao():
+    exp = int(time.time()) + SESSAO_SEG
+    return f"{exp}.{_hm(f'sessao:{exp}')}"
+
+
+def sessao_valida(valor):
+    try:
+        exp, ass = (valor or "").split(".", 1)
+        return bool(SEGREDO) and time.time() < int(exp) and hmac.compare_digest(_hm(f"sessao:{int(exp)}"), ass)
+    except ValueError:
+        return False
+
+
+def autenticado(headers):
+    if not NUVEM:
+        return True
+    if SEGREDO and hmac.compare_digest(headers.get("Authorization", ""), "Bearer " + SEGREDO):
+        return True
+    for parte in headers.get("Cookie", "").split(";"):
+        k, _, v = parte.strip().partition("=")
+        if k == COOKIE and sessao_valida(v):
+            return True
+    return False
+
 
 try:
     import pillow_heif
@@ -178,18 +222,20 @@ def servir(porta):
         def do_HEAD(self):
             u = urlparse(self.path); qs = {k: v[0] for k, v in parse_qs(u.query).items()}
             qid = u.path.rsplit('/',1)[-1]
-            if u.path.startswith('/midia/') and qid.isdigit():
+            if not autenticado(self.headers): self.send_error(401); return
+            if u.path.startswith('/midia/') and qid.isdigit() and not NUVEM:
                 servir_arquivo(self,catalogo.caminho(int(qid)),qs.get('download')=='1',head=True)
             else:self.send_error(404)
         def do_POST(self):
             u = urlparse(self.path)
+            if not autenticado(self.headers): self._j({"erro": "Entre pelo KBOS."}, 401); return
             if u.path != "/feedback":
                 self.send_error(404); return
             # Servidor local: só aceita pedidos feitos pela própria página (mesmo computador, JSON).
             origem = self.headers.get("Origin", "")
             host_ok = self.headers.get("Host", "").split(":")[0] in {"localhost", "127.0.0.1"}
             origem_ok = not origem or urlparse(origem).hostname in {"localhost", "127.0.0.1"}
-            if not (host_ok and origem_ok):
+            if not NUVEM and not (host_ok and origem_ok):
                 self._j({"erro": "Origem não permitida."}, 403); return
             if "application/json" not in self.headers.get("Content-Type", ""):
                 self._j({"erro": "Envie JSON."}, 415); return
@@ -208,6 +254,18 @@ def servir(porta):
 
         def do_GET(self):
             u = urlparse(self.path); qs = {k: v[0] for k, v in parse_qs(u.query).items()}
+            if u.path == "/health":
+                self._j({"ok": True}); return
+            if u.path == "/entrar":
+                if entrada_valida(qs.get("e"), qs.get("s")):
+                    self.send_response(302); self.send_header("Set-Cookie", f"{COOKIE}={nova_sessao()}; Path=/; Max-Age={SESSAO_SEG}; HttpOnly; Secure; SameSite=Lax")
+                    self.send_header("Location", "/"); self.end_headers()
+                else:
+                    self._j({"erro": "Link de entrada inválido ou expirado. Abra o Lume pelo KBOS."}, 401)
+                return
+            if not autenticado(self.headers):
+                b = "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><body style='background:#11101E;color:#EDE6EC;font:16px system-ui;display:grid;place-items:center;min-height:100vh;margin:0;text-align:center'><p>Lume · acervo inteligente<br><br>Abra pelo painel do KBOS:<br><a style='color:#E80EFD' href='https://kbos.kayquebrito.com.br/admin/lume'>kbos.kayquebrito.com.br/admin/lume</a></p>".encode()
+                self.send_response(401); self.send_header("Content-Type", "text/html; charset=utf-8"); self.end_headers(); self.wfile.write(b); return
             de = ate = None
             if u.path in {'/buscar','/parecidos','/catalogo'}:
                 try: de,ate = intervalo(qs)
@@ -215,7 +273,7 @@ def servir(porta):
             if u.path == "/":
                 b = (lambda d: (d/'interface.lume.html' if (d/'interface.lume.html').is_file() else d/'interface.html'))(Path(__file__).parent).read_text(encoding='utf-8').encode(); self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.end_headers(); self.wfile.write(b)
             elif u.path == '/info':
-                self._j({'arquivos':catalogo.total_indexados,'arquivos_navegaveis':len(catalogo.arquivos),'quadros':len(idx.rows),'modo':'local'})
+                self._j({'arquivos':catalogo.total_indexados,'arquivos_navegaveis':len(catalogo.arquivos),'quadros':len(idx.rows),'modo':'nuvem' if NUVEM else 'local'})
             elif u.path == '/catalogo':
                 try: offset=max(0,int(qs.get('offset','0')))
                 except ValueError: self._j({'erro':'Página inválida.'},400); return
@@ -223,6 +281,16 @@ def servir(porta):
             elif u.path.startswith('/midia/'):
                 qid=u.path.rsplit('/',1)[-1]
                 if not qid.isdigit():self.send_error(404);return
+                if NUVEM:
+                    pos = idx.pos.get(int(qid)); drive_id = None
+                    if pos is not None:
+                        c = sqlite3.connect(DB)
+                        try: r = c.execute("SELECT drive_id FROM drive WHERE arquivo_id=?", (idx.rows[pos][1],)).fetchone(); drive_id = r[0] if r else None
+                        except sqlite3.OperationalError: pass
+                        c.close()
+                    if not drive_id: self.send_error(404); return
+                    alvo = f"https://drive.google.com/uc?export=download&id={drive_id}" if qs.get('download')=='1' else f"https://drive.google.com/file/d/{drive_id}/view"
+                    self.send_response(302); self.send_header("Location", alvo); self.end_headers(); return
                 servir_arquivo(self,catalogo.caminho(int(qid)),qs.get('download')=='1')
             elif u.path.startswith("/thumb/"):
                 f = THUMBS / Path(u.path).name
@@ -283,9 +351,18 @@ def servir(porta):
             else:
                 self.send_error(404)
 
-    srv = ThreadingHTTPServer(("127.0.0.1", porta), H)  # só neste computador
+    if NUVEM:  # o indexador toca HOME/.reload; sair faz o Docker reiniciar já com o índice novo
+        marca, inicio = HOME / ".reload", time.time()
+        def vigiar():
+            while True:
+                time.sleep(30)
+                try:
+                    if marca.stat().st_mtime > inicio: print("Índice novo: reiniciando.", flush=True); os._exit(0)
+                except FileNotFoundError: pass
+        threading.Thread(target=vigiar, daemon=True).start()
+    srv = ThreadingHTTPServer((os.environ.get("ACERVO_HOST", "127.0.0.1"), porta), H)  # padrão: só neste computador
     print(f"Abra http://localhost:{porta}  (Ctrl+C para sair)")
-    threading.Timer(1, lambda: webbrowser.open(f"http://localhost:{porta}")).start()
+    if not NUVEM: threading.Timer(1, lambda: webbrowser.open(f"http://localhost:{porta}")).start()
     try: srv.serve_forever()
     except KeyboardInterrupt: pass
     finally: motor.encerrar()
