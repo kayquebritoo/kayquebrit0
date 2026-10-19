@@ -7,7 +7,7 @@
 Só LÊ o Drive (chave de API de leitura; a pasta é pública). Não baixa nada, não altera o SSD nem o Drive.
 A chave fica num arquivo, nunca no código: Acervo-app/drive-key.txt (ou ~/.lume/drive-key.txt, ou a variável LUME_DRIVE_KEY).
 """
-import json, os, sqlite3, sys, time
+import json, os, re, sqlite3, sys, time
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -20,12 +20,18 @@ PASTA_APP = HOME.parent
 FOLDER = "application/vnd.google-apps.folder"
 
 
+def _so_chave(texto):
+    """Extrai só a chave (AIza + 35 caracteres), ignorando espaços, quebras de linha e códigos invisíveis da colagem."""
+    m = re.search(r"AIza[0-9A-Za-z_\-]{35}", texto or "")
+    return m.group(0) if m else ""
+
+
 def ler_chave():
-    if os.environ.get("LUME_DRIVE_KEY", "").strip():
-        return os.environ["LUME_DRIVE_KEY"].strip()
+    if _so_chave(os.environ.get("LUME_DRIVE_KEY", "")):
+        return _so_chave(os.environ["LUME_DRIVE_KEY"])
     for p in (PASTA_APP / "drive-key.txt", Path.home() / ".lume" / "drive-key.txt"):
-        if p.is_file() and p.read_text().strip():
-            return p.read_text().strip()
+        if p.is_file() and _so_chave(p.read_text(errors="ignore")):
+            return _so_chave(p.read_text(errors="ignore"))
     raise SystemExit("Chave do Drive não encontrada. Copie a chave no Console e rode:\n  pbpaste > \"%s\"" % (PASTA_APP / "drive-key.txt"))
 
 
