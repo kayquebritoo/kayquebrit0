@@ -129,6 +129,40 @@ export async function listCasesAdmin(): Promise<CaseAdmin[]> {
   });
 }
 
+const dupe = (e: unknown) => /duplicate|unique/i.test(e instanceof Error ? e.message : "");
+
+/** Cases que ainda só existem no código do site (`lib/data.ts`) e não têm linha no banco. */
+export async function legacyPending(): Promise<Project[]> {
+  const rows = await db().select({ slug: showcases.slug }).from(showcases);
+  const taken = new Set(rows.map((r) => r.slug));
+  return PROJECTS.filter((p) => !taken.has(p.slug));
+}
+
+/** Traz os cases do site para o painel, já no ar e com o mesmo conteúdo (base "contrato": sem números/depoimento).
+ * Não duplica: só cria o que ainda não tem linha com o mesmo slug. */
+export async function importLegacyCases(): Promise<{ imported: string[] }> {
+  const pending = await legacyPending();
+  const now = new Date();
+  const imported: string[] = [];
+  for (const p of pending) {
+    const row: CaseRow = {
+      slug: p.slug, title: p.title, status: "published", basis: "contract", service: p.service,
+      category: p.category, clientName: p.client, clientLogo: null, year: p.year, description: p.description,
+      longDescription: p.longDescription, about: p.about, img: p.img, gallery: p.gallery, videoLabel: p.videoLabel,
+      videoId: p.videoId ?? null, siteUrl: p.siteUrl ?? null, metrics: p.metrics ?? null,
+      testimonial: p.testimonial?.text ?? null, testimonialAuthor: p.testimonial?.author ?? null,
+    };
+    // Com números ou depoimento, a base "contrato" não permite publicar: esses entram como rascunho com pedido de autorização.
+    const live = canPublish(row, null).ok;
+    if (!live) { row.basis = "consent"; row.status = "draft"; }
+    try {
+      const [r] = await db().insert(showcases).values({ ...row, contentHash: contentHash(row), publishedAt: live ? now : null }).onConflictDoNothing().returning();
+      if (r) imported.push(p.slug);
+    } catch (e) { if (!dupe(e)) throw e; }
+  }
+  return { imported };
+}
+
 export type CaseInput = Partial<Omit<CaseRow, "status" | "slug">> & { slug?: string; projectId?: string | null; contactId?: string | null };
 
 const clean = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null);
@@ -158,7 +192,6 @@ function values(input: CaseInput) {
   return v;
 }
 
-const dupe = (e: unknown) => /duplicate|unique/i.test(e instanceof Error ? e.message : "");
 
 export async function createCase(input: CaseInput & { title: string }): Promise<string> {
   const slug = slugify(input.slug || input.title);

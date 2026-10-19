@@ -1,180 +1,209 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FRONT_LABEL, frontOf } from "@/lib/kbos/fronts";
 import { PIPELINE } from "@/lib/kbos/constants";
-import ProjectPanel from "./ProjectPanel";
+import ProjectPanel, { type PanelProject } from "./ProjectPanel";
 
-type Project = {
-  id: string;
-  titulo: string;
-  categoria: string;
-  status: string;
-  valor: string | null;
-  prazo: string | null;
-};
+type Project = PanelProject & { tasksTotal?: number; tasksDone?: number };
+type Contact = { id: string; name: string; company: string | null };
+
+const CATS: [string, string][] = [["fotografia", "Fotografia"], ["video", "Vídeo"], ["sites", "Sites"], ["apps", "Apps"], ["lojas", "Lojas"], ["design", "Design"]];
+const brl = (v: string | null) => (v && Number(v) ? Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }) : "");
+const day = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", timeZone: "America/Belem" });
+
+function due(p: Project): { text: string; cls: string } | null {
+  if (!p.prazo || p.status === "entregue") return null;
+  const ms = new Date(p.prazo).getTime() - Date.now();
+  const days = Math.ceil(ms / 86_400_000);
+  if (days < 0) return { text: `Atrasado · ${day(p.prazo)}`, cls: "late" };
+  if (days <= 3) return { text: `Vence ${day(p.prazo)}`, cls: "soon" };
+  return { text: day(p.prazo), cls: "" };
+}
 
 export default function KanbanBoard() {
-  const [items, setItems] = useState<Project[]>([]);
+  const [items, setItems] = useState<Project[] | null>(null);
   const [error, setError] = useState("");
-  const [selected, setSelected] = useState<Project | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ titulo: "", categoria: "video", clienteEmail: "", contactId: "", valor: "", prazo: "" });
-  const [contacts, setContacts] = useState<{ id: string; name: string; company: string | null }[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [notice, setNotice] = useState("");
+  const [q, setQ] = useState("");
+  const [only, setOnly] = useState<"all" | "late">("all");
+  const [stage, setStage] = useState("producao");
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/projects");
+      const res = await fetch("/api/projects", { cache: "no-store" });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Falha.");
+      if (!res.ok) throw new Error(data.error || "Falha ao carregar.");
       setItems(data.items);
+      setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro.");
     }
   }, []);
 
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const res = await fetch("/api/projects");
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Falha.");
-        if (alive) setItems(data.items);
-      } catch (e) {
-        if (alive) setError(e instanceof Error ? e.message : "Erro.");
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let alive = true;
+    const t = setTimeout(load, 0);
     fetch("/api/contacts")
       .then((r) => (r.ok ? r.json() : { items: [] }))
-      .then((j) => alive && setContacts(Array.isArray(j.items) ? j.items : []))
+      .then((j) => setContacts(Array.isArray(j.items) ? j.items.filter((c: Contact & { status?: string }) => c.status !== "archived") : []))
       .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, []);
+    return () => clearTimeout(t);
+  }, [load]);
 
   async function move(id: string, status: string) {
-    setItems((s) => s.map((p) => (p.id === id ? { ...p, status } : p)));
+    setItems((s) => s && s.map((p) => (p.id === id ? { ...p, status } : p)));
     try {
-      const res = await fetch(`/api/projects/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
+      const res = await fetch(`/api/projects/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
       if (!res.ok) throw new Error("Falha ao mover.");
     } catch {
+      setNotice("Não consegui mover o projeto. Atualizei a lista.");
       load();
     }
   }
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
+    setBusy(true);
     try {
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          clienteEmail: form.clienteEmail || undefined,
-          contactId: form.contactId || undefined,
-          valor: form.valor || undefined,
-          prazo: form.prazo || undefined,
-        }),
+        body: JSON.stringify({ ...form, clienteEmail: form.clienteEmail || undefined, contactId: form.contactId || undefined, valor: form.valor || undefined, prazo: form.prazo || undefined }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Falha.");
+      if (!res.ok) throw new Error(data.error || "Falha ao criar.");
       setForm({ titulo: "", categoria: "video", clienteEmail: "", contactId: "", valor: "", prazo: "" });
       setShowForm(false);
-      setError("");
-      setNotice(data.warning || "");
-      load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro.");
+      setNotice(data.warning || "Projeto criado.");
+      setStage("novo");
+      await load();
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Erro.");
+    } finally {
+      setBusy(false);
     }
   }
 
-  if (error && items.length === 0) {
+  const shown = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    return (items ?? []).filter((p) => {
+      if (only === "late" && due(p)?.cls !== "late") return false;
+      if (!t) return true;
+      return [p.titulo, p.categoria, p.contactName, p.contactCompany].some((v) => v?.toLowerCase().includes(t));
+    });
+  }, [items, q, only]);
+  const lateCount = (items ?? []).filter((p) => due(p)?.cls === "late").length;
+  const selected = items?.find((p) => p.id === selectedId) ?? null;
+
+  if (error && !items) {
     return (
-      <div className="rounded-2xl border border-amber-300/30 bg-amber-300/10 p-6 text-sm text-amber-100">
-        {error.includes("DATABASE_URL") || error.includes("connect")
-          ? "Banco não conectado — defina DATABASE_URL e rode `npx drizzle-kit push`."
-          : error}
+      <div className="kb-glass p-6">
+        <p className="font-semibold">Não deu para carregar os projetos.</p>
+        <p className="kb-muted mt-1 text-sm">{error.includes("DATABASE_URL") || error.includes("connect") ? "Banco não conectado — defina DATABASE_URL e rode `npx drizzle-kit push`." : error}</p>
+        <button type="button" onClick={load} className="kb-chip mt-4 min-h-11">Tentar de novo</button>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <p className="kb-muted text-sm">Toque num projeto para abrir. No computador, arraste entre as etapas.</p>
-        <button type="button" className="kb-btn shrink-0" aria-expanded={showForm} onClick={() => setShowForm((v) => !v)}>
-          {showForm ? "Fechar" : "+ Novo projeto"}
-        </button>
+    <div className="kb-stagger flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar projeto ou cliente" aria-label="Buscar projeto ou cliente" className="kb-control min-h-11 min-w-0 flex-1 basis-52" />
+        <button type="button" className="kb-chip min-h-11" aria-pressed={only === "late"} onClick={() => setOnly(only === "late" ? "all" : "late")}>Atrasados{lateCount ? ` · ${lateCount}` : ""}</button>
+        <button type="button" className="kb-btn min-h-11 shrink-0" aria-expanded={showForm} onClick={() => setShowForm((v) => !v)}>{showForm ? "Fechar" : "+ Novo projeto"}</button>
       </div>
-      <form onSubmit={create} hidden={!showForm} className="mb-6 grid gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-4 md:grid-cols-6">
-        <input value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} required placeholder="Novo projeto..." className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50 md:col-span-2" />
-        <select value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none">
-          {[["fotografia", "Fotografia"], ["video", "Vídeo"], ["sites", "Sites"], ["apps", "Apps"], ["lojas", "Lojas"], ["design", "Design"]].map(([c, label]) => (
-            <option key={c} value={c} className="bg-[#1a1828]">{label}</option>
-          ))}
-        </select>
-        <input value={form.clienteEmail} onChange={(e) => setForm({ ...form, clienteEmail: e.target.value })} placeholder="E-mail do cliente" type="email" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50" />
-        <input value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} placeholder="Valor R$" inputMode="decimal" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none placeholder:text-white/25 focus:border-white/50" />
-        <select value={form.contactId} onChange={(e) => setForm({ ...form, contactId: e.target.value })} aria-label="Cliente do CRM" className="rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm outline-none md:col-span-2">
-          <option value="" className="bg-[#1a1828]">Cliente do CRM (opcional)</option>
-          {contacts.map((c) => (
-            <option key={c.id} value={c.id} className="bg-[#1a1828]">{c.company ? `${c.name} · ${c.company}` : c.name}</option>
-          ))}
-        </select>
-        <label className="flex items-center gap-2 rounded-xl border border-white/15 bg-black/30 px-4 py-2.5 text-sm text-white/60 md:col-span-2">
-          Prazo
-          <input type="date" value={form.prazo} onChange={(e) => setForm({ ...form, prazo: e.target.value })} className="min-w-0 flex-1 bg-transparent outline-none" />
-        </label>
-        <button type="submit" className="rounded-xl bg-gradient-to-r from-brand-blue to-brand-mag py-2.5 text-[12px] font-bold uppercase tracking-[0.15em] text-white md:col-span-2">Criar</button>
-      </form>
-      {notice && <p role="status" className="mb-4 rounded-xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">{notice}</p>}
 
-      <div className="flex gap-3 overflow-x-auto pb-4">
-        {PIPELINE.map((col) => (
-          <div
-            key={col.id}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              const id = e.dataTransfer.getData("text/project-id");
-              if (id) move(id, col.id);
-            }}
-            className="w-[260px] shrink-0 rounded-2xl border border-white/10 bg-black/20 p-3"
-          >
-            <p className="px-1 text-[11px] uppercase tracking-[0.25em] text-white/50">
-              {col.label} · {items.filter((p) => p.status === col.id).length}
-            </p>
-            <div className="mt-3 space-y-2">
-              {items.filter((p) => p.status === col.id).map((p) => (
-                <button
-                  key={p.id}
-                  draggable
-                  onDragStart={(e) => e.dataTransfer.setData("text/project-id", p.id)}
-                  onClick={() => setSelected(p)}
-                  className="block w-full cursor-grab rounded-xl border border-white/10 bg-white/[0.04] p-3 text-left transition hover:border-white/30 active:cursor-grabbing"
-                >
-                  <p className="text-sm font-medium leading-snug">{p.titulo}</p>
-                  <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-white/40">{frontOf(p.categoria) ? `${FRONT_LABEL[frontOf(p.categoria)!]} · ${p.categoria}` : p.categoria}</p>
-                </button>
-              ))}
-            </div>
-          </div>
+      {showForm && (
+        <form onSubmit={create} className="kb-glass grid gap-3 p-4 md:grid-cols-6">
+          <label className="kb-field md:col-span-3">Nome do projeto
+            <input value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} required placeholder="Ex.: Site da loja" className="kb-control min-h-11" />
+          </label>
+          <label className="kb-field md:col-span-3">Cliente
+            <select value={form.contactId} onChange={(e) => setForm({ ...form, contactId: e.target.value })} className="kb-control min-h-11">
+              <option value="">Sem cliente por enquanto</option>
+              {contacts.map((c) => <option key={c.id} value={c.id}>{c.company ? `${c.name} · ${c.company}` : c.name}</option>)}
+            </select>
+          </label>
+          <label className="kb-field md:col-span-2">Tipo
+            <select value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} className="kb-control min-h-11">
+              {CATS.map(([c, label]) => <option key={c} value={c}>{label}</option>)}
+            </select>
+          </label>
+          <label className="kb-field md:col-span-2">Valor (R$)
+            <input value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} inputMode="decimal" placeholder="Opcional" className="kb-control min-h-11" />
+          </label>
+          <label className="kb-field md:col-span-2">Prazo
+            <input type="date" value={form.prazo} onChange={(e) => setForm({ ...form, prazo: e.target.value })} className="kb-control min-h-11" />
+          </label>
+          <label className="kb-field md:col-span-4">E-mail do portal do cliente (para ele ver o projeto)
+            <input value={form.clienteEmail} onChange={(e) => setForm({ ...form, clienteEmail: e.target.value })} type="email" placeholder="Opcional" className="kb-control min-h-11" />
+          </label>
+          <button type="submit" disabled={busy} className="kb-btn min-h-11 md:col-span-2 md:self-end">{busy ? "Criando…" : "Criar projeto"}</button>
+        </form>
+      )}
+      {notice && <p role="status" className="kb-tag self-start">{notice}</p>}
+
+      <div className="kb-seg md:hidden" role="tablist" aria-label="Etapa do projeto" style={{ gridAutoColumns: "minmax(88px,1fr)", overflowX: "auto" }}>
+        {PIPELINE.map((c) => (
+          <button key={c.id} role="tab" aria-selected={stage === c.id} onClick={() => setStage(c.id)} className="kb-chip min-h-11 whitespace-nowrap" aria-pressed={stage === c.id}>
+            {c.label} · {shown.filter((p) => p.status === c.id).length}
+          </button>
         ))}
       </div>
 
-      {selected && <ProjectPanel project={selected} onClose={() => { setSelected(null); load(); }} />}
+      {!items ? (
+        <div className="grid gap-3 md:grid-cols-3">{[0, 1, 2].map((i) => <div key={i} className="kb-skel h-28" />)}</div>
+      ) : (
+        <div className="grid gap-3 md:flex md:overflow-x-auto md:pb-4">
+          {PIPELINE.map((col) => {
+            const list = shown.filter((p) => p.status === col.id);
+            return (
+              <section
+                key={col.id}
+                aria-label={col.label}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => { const id = e.dataTransfer.getData("text/project-id"); if (id) move(id, col.id); }}
+                className={`${col.id === stage ? "block" : "hidden"} kb-glass min-w-0 p-3 md:block md:w-[272px] md:shrink-0`}
+              >
+                <p className="kb-faint hidden px-1 text-[11px] uppercase tracking-[0.22em] md:block">{col.label} · {list.length}</p>
+                <div className="flex flex-col gap-2 md:mt-3">
+                  {list.map((p) => {
+                    const dd = due(p);
+                    const total = p.tasksTotal ?? 0;
+                    const pct = total ? Math.round(((p.tasksDone ?? 0) / total) * 100) : 0;
+                    const who = p.contactCompany || p.contactName;
+                    return (
+                      <button key={p.id} draggable onDragStart={(e) => e.dataTransfer.setData("text/project-id", p.id)} onClick={() => setSelectedId(p.id)} className={`kb-card cursor-grab text-left active:cursor-grabbing ${dd?.cls === "late" ? "late" : ""}`}>
+                        <span className="text-sm font-medium leading-snug">{p.titulo}</span>
+                        {who && <span className="kb-muted text-xs">{who}</span>}
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <span className="kb-tag">{frontOf(p.categoria) ? FRONT_LABEL[frontOf(p.categoria)!] : p.categoria}</span>
+                          {dd && <span className={`kb-tag ${dd.cls}`}>{dd.text}</span>}
+                          {brl(p.valor) && <span className="kb-tag">{brl(p.valor)}</span>}
+                        </span>
+                        {total > 0 && (
+                          <span className="flex items-center gap-2" aria-label={`${p.tasksDone} de ${total} tarefas feitas`}>
+                            <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"><span className="block h-full rounded-full bg-gradient-to-r from-[#4F12C7] to-[#E80EFD]" style={{ width: `${pct}%` }} /></span>
+                            <span className="kb-faint text-[11px]">{p.tasksDone}/{total}</span>
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                  {list.length === 0 && <p className="kb-faint px-1 py-3 text-sm">{q || only === "late" ? "Nada com esse filtro." : "Nenhum projeto nesta etapa."}</p>}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      )}
+
+      {items && items.length === 0 && <p className="kb-muted text-sm">Nenhum projeto ainda. Crie um acima, ou aceite um orçamento que o projeto nasce sozinho.</p>}
+      {selected && <ProjectPanel project={selected} contacts={contacts} onClose={() => setSelectedId(null)} onChanged={load} onMoved={move} />}
     </div>
   );
 }

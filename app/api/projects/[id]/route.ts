@@ -71,3 +71,21 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 }
 
+
+// DELETE: remove o projeto (admin). Tarefas e arquivos saem junto; se houver venda/plano ligado, o banco recusa.
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const denied = deny(await sessionUser(), "admin");
+  if (denied) return denied;
+  try {
+    const { id } = await params;
+    const bad = checkId(id);
+    if (bad) return bad;
+    await db().delete(projects).where(eq(projects.id, id));
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    if (/foreign key|violates|restrict/i.test(e instanceof Error ? e.message : "")) {
+      return NextResponse.json({ error: "Este projeto tem venda ou plano ligados. Desfaça o aceite antes de apagar." }, { status: 409 });
+    }
+    return serverError(e);
+  }
+}

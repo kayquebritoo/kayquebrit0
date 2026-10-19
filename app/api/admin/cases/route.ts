@@ -4,7 +4,7 @@ import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { serverError } from "@/lib/kbos/http";
 import { readBody } from "@/lib/kbos/validators";
 import { caseSchema } from "@/lib/kbos/showcase-schema";
-import { createCase, listCasesAdmin } from "@/lib/kbos/showcase";
+import { createCase, legacyPending, listCasesAdmin } from "@/lib/kbos/showcase";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,8 @@ export async function GET() {
   const denied = deny(await sessionUser(), "admin");
   if (denied) return denied;
   try {
-    return NextResponse.json({ items: await listCasesAdmin() });
+    const [items, legacy] = await Promise.all([listCasesAdmin(), legacyPending()]);
+    return NextResponse.json({ items, legacy: legacy.map((p) => ({ slug: p.slug, title: p.title, service: p.service })) });
   } catch (e) {
     return serverError(e);
   }

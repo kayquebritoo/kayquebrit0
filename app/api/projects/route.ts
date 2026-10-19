@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/kbos/db";
-import { projects, users } from "@/lib/kbos/schema";
+import { contacts, projects, tasks, users } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { projectCreateSchema, readBody } from "@/lib/kbos/validators";
 import { serverError } from "@/lib/kbos/http";
@@ -12,10 +12,26 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   try {
     const d = db();
-    const rows =
-      user.role === "cliente"
-        ? await d.select().from(projects).where(eq(projects.clienteId, user.id)).orderBy(desc(projects.updatedAt))
-        : await d.select().from(projects).orderBy(desc(projects.updatedAt)).limit(200);
+    const isClient = user.role === "cliente";
+    // Equipe: já vem o nome do cliente e o andamento das tarefas (sem N consultas na tela).
+    const base = d
+      .select({
+        project: projects,
+        contactName: contacts.name,
+        contactCompany: contacts.company,
+        tasksTotal: sql<number>`(select count(*)::int from ${tasks} where ${tasks.projectId} = ${projects.id})`,
+        tasksDone: sql<number>`(select count(*)::int from ${tasks} where ${tasks.projectId} = ${projects.id} and ${tasks.status} = 'done')`,
+      })
+      .from(projects)
+      .leftJoin(contacts, eq(contacts.id, projects.contactId));
+    const joined = isClient
+      ? await base.where(eq(projects.clienteId, user.id)).orderBy(desc(projects.updatedAt))
+      : await base.orderBy(desc(projects.updatedAt)).limit(200);
+    const rows = joined.map((r) =>
+      isClient
+        ? r.project
+        : { ...r.project, contactName: r.contactName, contactCompany: r.contactCompany, tasksTotal: r.tasksTotal, tasksDone: r.tasksDone },
+    );
     return NextResponse.json({ items: rows });
   } catch (e) {
     return serverError(e);

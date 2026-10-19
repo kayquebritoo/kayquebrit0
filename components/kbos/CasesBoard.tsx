@@ -87,6 +87,7 @@ export default function CasesBoard() {
   const [busy, setBusy] = useState(false);
   const [link, setLink] = useState<{ title: string; url: string; waLink: string | null } | null>(null);
   const [note, setNote] = useState("");
+  const [legacy, setLegacy] = useState<{ slug: string; title: string }[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -94,6 +95,7 @@ export default function CasesBoard() {
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "Não deu para carregar os cases.");
       setItems(j.items);
+      setLegacy(Array.isArray(j.legacy) ? j.legacy : []);
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao carregar.");
@@ -171,6 +173,20 @@ export default function CasesBoard() {
     }
   }
 
+  async function importLegacy() {
+    setBusy(true);
+    setNote("");
+    try {
+      const j = await api("/api/admin/cases/import/", "POST");
+      setNote(j.imported?.length ? `${j.imported.length} case(s) do site agora estão aqui, no ar do mesmo jeito.` : "Nada novo para trazer.");
+      await load();
+    } catch (err) {
+      setNote(err instanceof Error ? err.message : "Não consegui importar.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function remove() {
     if (!form?.id) return;
     setBusy(true);
@@ -204,6 +220,14 @@ export default function CasesBoard() {
         <button type="button" className="kb-btn shrink-0" onClick={() => { setFormError(""); setForm({ ...blank }); }}>+ Novo case</button>
       </div>
       {note && <p role="status" className="kb-tag self-start">{note}</p>}
+      {legacy.length > 0 && (
+        <div className="kb-glass flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm leading-relaxed">
+            <strong>{legacy.length} case(s) do site</strong> ainda não estão no painel: {legacy.map((l) => l.title).join(", ")}. Importar não muda nada no ar; só passa a dar para editar e gerenciar aqui.
+          </p>
+          <button type="button" className="kb-btn min-h-11 shrink-0" disabled={busy} onClick={importLegacy}>Importar do site</button>
+        </div>
+      )}
 
       {!items ? (
         <div className="flex flex-col gap-3">{[0, 1].map((i) => <div key={i} className="kb-skel h-28" />)}</div>

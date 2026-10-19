@@ -1,47 +1,55 @@
 "use client";
 import { useState } from "react";
 
+const DONE: Record<string, string> = { aprovado: "Aprovado", reprovado: "Ajuste pedido" };
+
 export default function ApproveButtons({ projectId, fileId, status }: { projectId: string; fileId: string; status: string }) {
   const [state, setState] = useState(status);
   const [busy, setBusy] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const [error, setError] = useState("");
 
   async function act(next: "aprovado" | "reprovado") {
-    let feedback: string | undefined;
-    if (next === "reprovado") {
-      feedback = prompt("O que precisa ajustar?") || undefined;
-      if (feedback === undefined) return;
-    }
+    if (next === "reprovado" && feedback.trim().length < 3) { setError("Conte em poucas palavras o que precisa ajustar."); return; }
     setBusy(true);
+    setError("");
     try {
       const res = await fetch(`/api/projects/${projectId}/files/${fileId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: next, feedback }),
+        body: JSON.stringify({ status: next, feedback: next === "reprovado" ? feedback.trim() : undefined }),
       });
-      if (!res.ok) throw new Error("Falha.");
+      if (!res.ok) throw new Error();
       setState(next);
+      setAsking(false);
     } catch {
-      alert("Não foi possível registrar. Tente de novo.");
+      setError("Não consegui registrar. Tente de novo.");
     } finally {
       setBusy(false);
     }
   }
 
   if (state !== "enviado") {
-    return (
-      <span className={`rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em] ${state === "aprovado" ? "bg-emerald-400/15 text-emerald-300" : "bg-rose-400/15 text-rose-300"}`}>
-        {state}
-      </span>
-    );
+    return <span className={`kb-tag ${state === "aprovado" ? "" : "late"}`}>{DONE[state] ?? state}</span>;
   }
   return (
-    <div className="flex gap-2">
-      <button disabled={busy} onClick={() => act("aprovado")} className="rounded-full bg-emerald-400 px-4 py-1.5 text-[12px] font-bold uppercase tracking-[0.15em] text-black disabled:opacity-50">
-        Aprovar
-      </button>
-      <button disabled={busy} onClick={() => act("reprovado")} className="rounded-full border border-white/25 px-4 py-1.5 text-[12px] uppercase tracking-[0.15em] text-white/80 disabled:opacity-50">
-        Ajustar
-      </button>
+    <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+      {!asking ? (
+        <div className="flex gap-2">
+          <button disabled={busy} onClick={() => act("aprovado")} className="kb-btn min-h-11 flex-1 sm:flex-none">Aprovar</button>
+          <button disabled={busy} onClick={() => setAsking(true)} className="kb-btn-ghost min-h-11 flex-1 sm:flex-none">Pedir ajuste</button>
+        </div>
+      ) : (
+        <div className="flex w-full flex-col gap-2">
+          <textarea className="kb-control min-h-20" autoFocus value={feedback} onChange={(e) => setFeedback(e.target.value)} placeholder="O que precisa ajustar?" aria-label="O que precisa ajustar" />
+          <div className="flex gap-2">
+            <button disabled={busy} onClick={() => act("reprovado")} className="kb-btn min-h-11 flex-1">Enviar pedido</button>
+            <button disabled={busy} onClick={() => { setAsking(false); setError(""); }} className="kb-btn-ghost min-h-11">Voltar</button>
+          </div>
+        </div>
+      )}
+      {error && <p role="alert" className="text-xs text-red-300">{error}</p>}
     </div>
   );
 }
