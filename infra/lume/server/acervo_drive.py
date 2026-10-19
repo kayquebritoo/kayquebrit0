@@ -121,11 +121,12 @@ def sincronizar():
     print("Listando a pasta pública do Drive (só leitura)…")
     drive = listar(chave, PASTA_DRIVE)
     c = conn()
-    locais = [(i, p, t) for i, p, t in c.execute("SELECT id, caminho, tamanho FROM arquivos")]
+    # arquivos que o próprio indexador do servidor trouxe do Drive (caminho "Drive/...") já têm link: não mexer neles
+    locais = [(i, p, t) for i, p, t in c.execute("SELECT id, caminho, tamanho FROM arquivos WHERE caminho NOT LIKE 'Drive/%'")]
     achados, ambiguos = casar(locais, drive)
     agora = time.time()
     with c:
-        c.execute("DELETE FROM drive")
+        c.execute("DELETE FROM drive WHERE arquivo_id IN (SELECT id FROM arquivos WHERE caminho NOT LIKE 'Drive/%')")
         c.executemany("INSERT INTO drive(arquivo_id, drive_id, drive_caminho, atualizado) VALUES(?,?,?,?)", [(a, d, p, agora) for a, (d, p) in achados.items()])
     conhecidos = {(Path(p).name.casefold(), t) for _, p, t in locais}
     novos = [(n, p) for _, n, t, p in drive if (n.casefold(), t) not in conhecidos]

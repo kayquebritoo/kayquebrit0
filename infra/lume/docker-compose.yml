@@ -20,7 +20,7 @@ services:
     restart: always
     env_file: /opt/lume/.env
     volumes: ["/opt/lume/data:/data"]
-    command: ["sh", "-c", "sleep 300; while true; do python indexar_drive.py; sleep 21600; done"]
+    command: ["sh", "-c", "sleep 45; while true; do python indexar_drive.py; sleep 21600; done"]
     mem_limit: 3g
 
   caddy:

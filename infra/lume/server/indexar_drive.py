@@ -69,6 +69,11 @@ def quadros_video(path):
 
 def main():
     chave = drv.ler_chave()
+    if "--listar" not in sys.argv:
+        try:  # liga ao Drive os arquivos que vieram do SSD (idempotente; o resultado aparece no log)
+            drv.sincronizar()
+        except SystemExit as e:
+            print("Sincronização do Drive não concluída:", e, flush=True); return
     c = acervo.conn()
     c.execute("CREATE TABLE IF NOT EXISTS drive (arquivo_id INTEGER PRIMARY KEY, drive_id TEXT NOT NULL, drive_caminho TEXT, atualizado REAL)")
     ligados = {r[0] for r in c.execute("SELECT drive_id FROM drive")}
