@@ -1,0 +1,21 @@
+{
+  "versao": 1,
+  "modelo": "sentence-transformers/clip-ViT-B-32",
+  "revisao": "327ab6726d33c0e22f920c83f2ff9e4bd38ca37f",
+  "perfis": [
+    {
+      "id": "chapa_mista",
+      "padrao": "\\bchapas?\\s+mistas?\\b|\\bmixed\\s+grill\\b",
+      "descricao": "chapa de grelhados variados com acompanhamentos",
+      "alvos": ["a sizzling mixed grill platter with grilled meat and side dishes"],
+      "alternativas": ["a breakfast table with bread eggs and coffee", "a pizza topped with cheese", "a hamburger sandwich", "a grilled whole fish served on a plate", "an empty glass on a table", "a cocktail drink in a glass", "people eating at a restaurant", "the interior of a restaurant with tables and chairs", "a kitchen with pots and cooking equipment", "a plate of french fries without meat", "a blurry photo of furniture or a wall", "a beach with sand and ocean", "a person walking in a hallway", "a close-up of a person's clothing", "a barbecue grill cooking meat", "raw meat before cooking"]
+    },
+    {
+      "id": "astronauta",
+      "padrao": "\\bastronaut[ao]s?\\b|\\bastronauts?\\b",
+      "descricao": "astronauta usando traje espacial",
+      "alvos": ["a photo of an astronaut wearing a space suit"],
+      "alternativas": ["a photo of the full moon in the night sky", "a photo of clouds in the sky", "a photo of a beach with sand and ocean", "a photo of a chef wearing a white hat cooking in a kitchen", "a photo of a scuba diver underwater", "a photo of a person wearing casual clothes", "a photo of a motorcycle rider wearing a helmet", "a photo of people at a restaurant", "a photo of grilled food on a platter", "a photo of an empty glass", "a photo of furniture inside a room", "a blurry photo of a wall", "a photo of a building", "a photo of a cocktail drink", "a photo of a boat on the ocean", "a photo of a cartoon character or advertising graphic"]
+    }
+  ]
+}

@@ -5,6 +5,6 @@ COPY server/requirements.txt .
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
  && pip install --no-cache-dir -r requirements.txt
 COPY server/ /app/
-ENV PYTHONUNBUFFERED=1 HF_HOME=/data/hf ACERVO_DIR=/data/indice ACERVO_HOST=0.0.0.0 LUME_MODO=nuvem
+ENV TZ=America/Belem PYTHONUNBUFFERED=1 HF_HOME=/data/hf ACERVO_DIR=/data/indice ACERVO_HOST=0.0.0.0 LUME_MODO=nuvem
 EXPOSE 8765
 CMD ["python", "acervo.py", "buscar", "--porta", "8765"]

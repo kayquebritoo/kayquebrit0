@@ -6,6 +6,7 @@ services:
     env_file: /opt/lume/.env          # LUME_API_TOKEN, LUME_DRIVE_KEY
     volumes: ["/opt/lume/data:/data"]
     expose: ["8765"]
+    command: ["python", "acervo.py", "buscar", "--porta", "8765"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8765/health',timeout=5)"]
       interval: 30s
