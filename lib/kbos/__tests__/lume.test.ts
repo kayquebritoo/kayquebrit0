@@ -19,3 +19,15 @@ describe("endereço do Lume", () => {
     }
   });
 });
+
+import { createHmac } from "node:crypto";
+import { lumeEntryUrl } from "../lume";
+
+describe("link de entrada do Lume online", () => {
+  it("assina expira+HMAC que o servidor Python reconhece", () => {
+    const u = new URL(lumeEntryUrl("https://lume.exemplo.com/", "segredo", 1000));
+    expect(u.origin + u.pathname).toBe("https://lume.exemplo.com/entrar");
+    expect(u.searchParams.get("e")).toBe("1120");
+    expect(u.searchParams.get("s")).toBe(createHmac("sha256", "segredo").update("entrar:1120").digest("hex"));
+  });
+});

@@ -42,7 +42,7 @@ export default function Lume() {
         <div className="relative z-[2] max-w-2xl">
           <div className="flex flex-wrap items-center gap-2">
             <span className="kb-chip">Ferramenta interna</span>
-            <span className="kb-chip">Roda no seu Mac</span>
+            <span className="kb-chip">Online</span>
             <span className="kb-chip">Em desenvolvimento</span>
           </div>
           <div className="mt-5 flex items-center gap-4"><LumeMark size={64} animate title="Lume" /><span className="cp-eyebrow">LUME · ACERVO INTELIGENTE</span></div>
@@ -55,7 +55,16 @@ export default function Lume() {
       </section>
 
       <section className="kb-glass space-y-3 p-5">
-        <h2 className="text-lg font-semibold">Abrir o Lume</h2>
+        <h2 className="text-lg font-semibold">Lume online</h2>
+        <p className="text-sm kb-muted">Roda no servidor próprio do Lume e lê o acervo direto da pasta do Drive: não precisa do Mac nem do SSD ligados. Você entra pelo KBOS, sem outra senha.</p>
+        {typeof window !== "undefined" && new URLSearchParams(window.location.search).get("erro") === "config" && (
+          <p role="alert" className="text-sm text-red-300">O KBOS ainda não tem o token do Lume (LUME_API_TOKEN) no servidor.</p>
+        )}
+        <a className="kb-btn min-h-12" href="/api/admin/lume/entrar">Abrir Lume online ↗</a>
+      </section>
+
+      <section className="kb-glass space-y-3 p-5">
+        <h2 className="text-lg font-semibold">Abrir o Lume no Mac (modo local)</h2>
         <p className="text-sm kb-muted">O Lume é um programa local: ele lê o SSD no computador onde está ligado. O KBOS não hospeda o Lume, não acessa o SSD e não verifica se ele está rodando. Aqui você só guarda o endereço e abre.</p>
         <label className="kb-field">Endereço no seu computador
           <input className="kb-control min-h-12 text-base" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false}

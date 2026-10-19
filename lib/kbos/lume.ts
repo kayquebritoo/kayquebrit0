@@ -29,3 +29,16 @@ export function parseLumeEndpoint(input: string): LumeEndpoint {
   if (!loopback && !lan) return { ok: false, error: "O Lume roda no seu computador: use localhost, 127.0.0.1 ou um IP da sua rede (192.168.x.x, 10.x.x.x)." };
   return { ok: true, url: url.origin, kind: loopback ? "este-computador" : "rede-local" };
 }
+
+// ── Lume online (VPS própria) ────────────────────────────────────────────────
+// O KBOS só assina um link de entrada de 2 minutos; o Lume confere a assinatura e abre a própria sessão.
+import { createHmac } from "node:crypto";
+
+export const LUME_ONLINE_DEFAULT = "https://lume.kayquebrito.com.br";
+
+/** Link `/entrar?e=<expira>&s=<hmac>` aceito pelo servidor do Lume (mesma regra de `entrada_valida` no Python). */
+export function lumeEntryUrl(base: string, secret: string, nowSec = Math.floor(Date.now() / 1000)): string {
+  const exp = nowSec + 120;
+  const s = createHmac("sha256", secret).update(`entrar:${exp}`).digest("hex");
+  return `${base.replace(/\/+$/, "")}/entrar?e=${exp}&s=${s}`;
+}
