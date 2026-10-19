@@ -11,8 +11,8 @@ describe("venda conectada", () => {
   it("aceita manual enviado e referências externas, mas exige um manual", () => {
     const attachments = [{ kind: "file", fileId: "d7a758ad-783b-442d-b477-81bdbbf0e362", name: "manual.pdf", role: "manual" }, { kind: "link", url: "https://example.com/referencia", name: "Referência", role: "reference" }];
     expect(salePlanSchema.safeParse({ ...plan, manualUrl: "", attachments }).success).toBe(true);
-    expect(salePlanSchema.safeParse({ ...plan, manualUrl: "", attachments: [] }).success).toBe(false);
-    expect(salePlanSchema.safeParse({ ...plan, manualUrl: "", attachments: attachments.map((a) => ({ ...a, role: "reference" })) }).success).toBe(false);
+    expect(salePlanSchema.safeParse({ ...plan, manualUrl: "", attachments: [] }).success).toBe(true);
+    expect(salePlanSchema.safeParse({ ...plan, manualUrl: "", attachments: attachments.map((a) => ({ ...a, role: "reference" })) }).success).toBe(true);
   });
   it("exige nome e os dois aceites expressos", () => {
     expect(saleAcceptanceSchema.safeParse({ signerName: "Cliente", contractAccepted: true, manualAccepted: true }).success).toBe(true);

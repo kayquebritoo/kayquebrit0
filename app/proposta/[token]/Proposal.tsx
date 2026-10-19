@@ -49,10 +49,10 @@ export default function Proposal({ token }: { token: string }) {
         {s.clauses.map((c) => <div key={c.title}><h3 className="mb-2 font-semibold">{c.title}</h3><p>{c.body}</p></div>)}
         {s.terms && <div><h3 className="font-semibold">Observações da proposta</h3><p className="whitespace-pre-line">{s.terms}</p></div>}
       </section>
-      <section className="kb-glass my-6 space-y-3 p-5"><h2 className="text-xl font-semibold">Manual de Identidade e referências</h2>
+      {(data.plan.manualUrl || data.plan.attachments?.length) ? <section className="kb-glass my-6 space-y-3 p-5"><h2 className="text-xl font-semibold">Manual de Identidade e referências</h2>
         {data.plan.manualUrl && <a className="kb-btn-ghost min-h-12" href={data.plan.manualUrl} target="_blank" rel="noreferrer">Ler Manual de Identidade</a>}
         {data.plan.attachments?.map((a, i) => <div key={i}><a className="kb-btn-ghost min-h-12 max-w-full break-all" href={a.kind === "file" ? `/api/proposals/${token}/files/${a.fileId}/` : a.url} target="_blank" rel="noreferrer">{a.kind === "file" ? "Baixar" : "Abrir"} {a.name}</a><p className="mt-1 text-sm kb-muted">{a.role === "manual" ? "Manual de Identidade" : "Referência"}</p></div>)}
-      </section>
+      </section> : null}
       {data.planningUrl && <a href={data.planningUrl} className="kb-btn my-4 w-full">Abrir minha marca e planejamento →</a>}
       {!data.acceptedAt && <section className="kb-glass my-6 p-5"><p className="cp-eyebrow">ANTES DE ASSINAR</p><h2 className="mb-3 text-xl font-semibold">Sua empresa, sua marca</h2><p className="mb-6 text-sm kb-muted">Confira os dados e envie a identidade atual da empresa. Essas informações serão confirmadas com sua assinatura e vão iniciar seu planejamento estratégico.</p>
         <CompanyProfileFields value={data.companyProfile} onChange={(companyProfile)=>setData(v=>v?{...v,companyProfile}:v)} uploadUrl={`/api/proposals/${token}/brand-files/`} assetUrl={(id,preview)=>`/api/proposals/${token}/brand-files/${id}/${preview?'?preview=1':''}`} onBusy={setUploading} />
@@ -62,7 +62,7 @@ export default function Proposal({ token }: { token: string }) {
         <p>Ao confirmar, você aceita esta proposta e autoriza a abertura do projeto e das cobranças descritas acima.</p>
         <label className="kb-field">Nome completo de quem aceita<input className="kb-control min-h-12 text-base" autoComplete="name" required minLength={3} maxLength={160} value={name} onChange={(e) => setName(e.target.value)} /></label>
         <label className="flex min-h-12 items-center gap-3"><input type="checkbox" required checked={contract} onChange={(e) => setContract(e.target.checked)} />Li e aceito o orçamento e todas as cláusulas do contrato.</label>
-        <label className="flex min-h-12 items-center gap-3"><input type="checkbox" required checked={manual} onChange={(e) => setManual(e.target.checked)} />Revisei os dados da minha empresa e aceito o Manual de Identidade e os materiais da marca apresentados nesta proposta.</label>
+        <label className="flex min-h-12 items-center gap-3"><input type="checkbox" required checked={manual} onChange={(e) => setManual(e.target.checked)} />{(data.plan.manualUrl || data.plan.attachments?.length) ? "Revisei os dados da minha empresa e aceito o Manual de Identidade e os materiais da marca apresentados nesta proposta." : "Revisei os dados da minha empresa e enviarei o Manual de Identidade e os materiais da marca (ou aceito a sugestão do contratado), conforme o contrato."}</label>
         <button className="kb-btn min-h-12 w-full" disabled={busy || uploading || !contract || !manual || !data.companyProfile.companyName.trim()}>{busy ? "Registrando…" : "Aceitar e assinar proposta"}</button>
         <p className="text-sm">Link válido até {new Date(data.expiresAt).toLocaleString("pt-BR", { timeZone: "America/Belem" })}.</p>
       </form>}

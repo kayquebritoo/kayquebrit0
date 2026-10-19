@@ -42,6 +42,14 @@ beforeEach(async () => {
 afterAll(async () => { await pg.close(); });
 const count = async (table: string) => Number((await pg.query<{ n: number }>(`SELECT count(*)::int n FROM ${table}`)).rows[0].n);
 
+describe("manual de identidade opcional", () => {
+  it("publica e aceita sem manual nem anexos", async () => {
+    const { token } = await issueSaleLink(budgetId, { ...plan, manualUrl: "" });
+    expect((await acceptSale(token, "Cliente")).alreadyAccepted).toBe(false);
+    expect(await count("kbos_projects")).toBe(1);
+  });
+});
+
 describe("desfazer aceite de teste", () => {
   it("remove os efeitos do aceite, devolve o orçamento a enviado e permite novo link", async () => {
     const { token } = await issueSaleLink(budgetId, plan);

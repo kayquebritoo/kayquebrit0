@@ -52,7 +52,7 @@ export default function SaleMaterials({ budgetId, value, onChange, onBusy }: {
   }
   return <fieldset className="space-y-3 rounded-2xl border border-[var(--kb-line-strong)] p-4" disabled={busy}>
     <legend className="px-1 font-semibold">Manual de Identidade e referências</legend>
-    <p className="text-sm kb-muted">Envie arquivos do dispositivo ou adicione links. Identifique pelo menos um material como Manual de Identidade.</p>
+    <p className="text-sm kb-muted">Opcional. Envie arquivos do dispositivo ou adicione links; se tiver o Manual de Identidade, marque-o. Se não tiver, o cliente envia a marca na página de aceite.</p>
     <input ref={picker} aria-label="Selecionar arquivos do dispositivo" type="file" multiple accept={UPLOAD_ACCEPT} className="hidden" onChange={(e) => void upload(e.target.files)} />
     <button type="button" className="kb-btn min-h-12" onClick={() => picker.current?.click()}>Enviar arquivos</button>
     <p className="text-xs kb-muted">PDF, Word, PowerPoint, planilhas, JPEG, PNG e outros. Até 10 MB por arquivo e 50 MB por orçamento.</p>

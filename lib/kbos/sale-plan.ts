@@ -48,8 +48,8 @@ export const salePlanSchema = z.object({
   .refine((v) => {
     if (v.service !== "mensal") return true;
     return v.deliveryDate === planEndDate(v.startDate, v.months);
-  }, "O término do plano deve corresponder ao início mais a duração em meses.")
-  .refine((v) => !!v.manualUrl || v.attachments?.some((a) => a.role === "manual"), "Envie o Manual de Identidade ou adicione um link e marque como Manual de Identidade.");
+  }, "O término do plano deve corresponder ao início mais a duração em meses.");
+// O Manual de Identidade é opcional ao publicar: o cliente pode enviar a marca na própria página de aceite.
 export type SalePlan = z.infer<typeof salePlanSchema>;
 export const saleAcceptanceSchema = z.object({
   signerName: z.string().trim().min(3).max(160),
