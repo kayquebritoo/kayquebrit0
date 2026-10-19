@@ -1413,3 +1413,29 @@ html.light .soc-btn:hover { color: #4F12C7; border-color: rgba(79, 18, 199, 0.55
 .kb-pulse-dot { box-shadow: 0 0 0 0 rgba(217, 139, 255, .6); animation: kbDot 2s ease-out infinite; }
 @keyframes kbDot { 0% { box-shadow: 0 0 0 0 rgba(217, 139, 255, .55); } 100% { box-shadow: 0 0 0 12px rgba(217, 139, 255, 0); } }
 @media (prefers-reduced-motion: reduce) { .kb-pulse-dot { animation: none; } }
+
+/* ───────── Lume — acervo inteligente (identidade) ───────── */
+.lume-mark, .lume-scope {
+  --lm-frame-a: #1b1830; --lm-frame-b: #11101e; --lm-stroke: #ede6ec; --lm-stroke-o: .22;
+  --lm-ring-a: #350c85; --lm-ring-b: #4f12c7; --lm-ring-c: #e80efd;
+  --lm-halo: #4f12c7; --lm-halo-o: .55; --lm-bar: #ede6ec;
+}
+html.light .lume-mark:not([data-variant="dark"]), .lume-mark[data-variant="light"] {
+  --lm-frame-a: #f6f1f5; --lm-frame-b: #ede6ec; --lm-stroke: #4f12c7; --lm-stroke-o: .35;
+  --lm-ring-a: #350c85; --lm-ring-b: #4f12c7; --lm-ring-c: #4f12c7;
+  --lm-halo-o: .2; --lm-bar: #350c85;
+}
+.lume-bar { transform-box: fill-box; transform-origin: center; }
+.lume-animate .lume-bar { animation: lumeWave 3.2s ease-in-out infinite; animation-delay: calc(var(--i) * -0.42s); }
+@keyframes lumeWave { 0%, 100% { transform: scaleY(.6); } 50% { transform: scaleY(1); } }
+/* Onda discreta de assinatura: usa só transform/opacity. */
+.lume-wave { display: flex; align-items: center; gap: 5px; height: 40px; }
+.lume-wave i { display: block; width: 4px; height: 100%; border-radius: 4px; transform-origin: center; background: linear-gradient(180deg, #4f12c7, #e80efd); opacity: .75; animation: lumeWave 3.6s ease-in-out infinite; animation-delay: calc(var(--i) * -0.3s); }
+html.light .lume-wave i { background: linear-gradient(180deg, #350c85, #4f12c7); }
+.lume-halo { position: absolute; inset: -30% -10% auto auto; width: 320px; height: 320px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(79, 18, 199, .45), rgba(232, 14, 253, .10) 55%, transparent 72%); filter: blur(8px); animation: lumeDrift 26s ease-in-out infinite alternate; }
+html.light .lume-halo { background: radial-gradient(closest-side, rgba(79, 18, 199, .22), transparent 70%); }
+@keyframes lumeDrift { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(-40px, 30px, 0) scale(1.12); } }
+@media (prefers-reduced-motion: reduce) {
+  .lume-animate .lume-bar, .lume-wave i, .lume-halo { animation: none; }
+}
