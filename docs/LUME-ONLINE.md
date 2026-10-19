@@ -1,0 +1,37 @@
+# Lume online — orquestração entre as duas VPS
+
+> Ponto de parada para Claude/Codex. Atualize a tabela "Estado" a cada etapa.
+
+## Mapa
+| | VPS 1 (existente, 179.236.67.19) | VPS 2 (nova, KVM 2 Hostinger) |
+|---|---|---|
+| Papel | KBOS web + worker + redis + Evolution | **Lume**: índice, busca, indexador do Drive (+ voz depois) |
+| Não mexer | tudo que já roda | — |
+| Público | `kbos.kayquebrito.com.br` | `lume.kayquebrito.com.br` (Caddy/TLS), só aceita a VPS 1 |
+
+## Fluxo
+1. Kayque abre `/admin/lume` no KBOS (login admin normal).
+2. A página chama `/api/admin/lume/*` (rota do KBOS, só admin). A rota repassa à VPS 2 com
+   `Authorization: Bearer LUME_API_TOKEN` (segredo só no `.env` da VPS 1). O navegador nunca vê o token.
+3. VPS 2 responde busca, miniaturas, 👍/👎 e link do Drive. Vídeo abre direto no Drive.
+4. Cron noturno na VPS 2: lista a pasta pública do Drive → baixa **só arquivos novos** (um por vez) →
+   extrai quadros (1 a cada 5 s) → vetoriza (CLIP) → grava no índice → **apaga o arquivo**. Terabytes nunca ficam no disco.
+5. O índice atual (13.412 quadros, `acervo.db`) é enviado uma vez e mapeado a IDs do Drive (`acervo_drive.py sincronizar`).
+
+## Segurança
+- UFW na VPS 2: 22 (só chave SSH), 80/443; a API só responde com o token e (opcional) só ao IP da VPS 1.
+- Chave de leitura do Drive em `/opt/lume/drive-key.txt` (nunca no git).
+- Nada de segredo no repositório.
+
+## Estado
+| Etapa | Quem | Estado |
+|---|---|---|
+| Identidade Lume v2 (app local + KBOS) | Claude | feita (PR #1, rascunho) |
+| Treino 👍/👎 + filtro de proxy | Claude | feito (local) |
+| Comprar VPS 2 (KVM 2, Ubuntu 24.04) | Kayque | **comprada** — falta passar o IP |
+| Subdomínio `lume.` apontando para a VPS 2 | Kayque | pendente |
+| Chave SSH do Claude instalada na VPS 2 | Kayque | pendente |
+| Pacote `infra/lume/` (compose + Caddy + indexador) | Claude | pendente |
+| Rota `/api/admin/lume/*` + página usando a VPS 2 | Claude | pendente (`lib/kbos/lume.ts` hoje só aceita localhost) |
+| Enviar `acervo.db` e rodar `acervo_drive.py sincronizar` | Kayque + Claude | pendente |
+| Voz própria (STT local + clonagem por API) | Claude | depois do Lume |
