@@ -198,7 +198,6 @@ class Indice:
         return out
 
 
-PAGINA = Path(__file__).with_name('interface.html').read_text(encoding='utf-8')
 
 
 def servir(porta):
