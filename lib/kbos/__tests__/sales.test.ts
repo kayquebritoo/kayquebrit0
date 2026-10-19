@@ -12,7 +12,7 @@ import { readSaleFile, uploadSaleFile } from "../sale-uploads";
 const holder = vi.hoisted(() => ({ db: null as unknown }));
 vi.mock("../db", () => ({ db: () => holder.db }));
 vi.mock("../whatsapp", () => ({ sendEvolutionText: vi.fn() }));
-import { acceptSale, issueSaleLink, readSale, tokenHash } from "../sales";
+import { acceptSale, issueSaleLink, readSale, tokenHash, undoAcceptedSale } from "../sales";
 import { handleBillingReminders } from "../billing-reminders";
 import { handleNotifyWhatsapp } from "../job-handlers";
 import { sendEvolutionText } from "../whatsapp";
@@ -41,6 +41,34 @@ beforeEach(async () => {
 });
 afterAll(async () => { await pg.close(); });
 const count = async (table: string) => Number((await pg.query<{ n: number }>(`SELECT count(*)::int n FROM ${table}`)).rows[0].n);
+
+describe("desfazer aceite de teste", () => {
+  it("remove os efeitos do aceite, devolve o orçamento a enviado e permite novo link", async () => {
+    const { token } = await issueSaleLink(budgetId, plan);
+    await acceptSale(token, "Teste");
+    expect(await count("kbos_projects")).toBe(1);
+    await expect(undoAcceptedSale(budgetId, "errado")).rejects.toThrow();
+    expect(await count("kbos_projects")).toBe(1);
+    await undoAcceptedSale(budgetId, "#14001");
+    for (const t of ["kbos_projects", "kbos_tasks", "kbos_transactions", "kbos_events", "kbos_client_plans", "kbos_budget_sales"]) expect(await count(t)).toBe(0);
+    expect((await d.select().from(schema.budgets))[0].status).toBe("sent");
+    expect((await d.select().from(schema.deals))[0].stage).toBe("proposal");
+    await expect(readSale(token)).rejects.toThrow();
+    await issueSaleLink(budgetId, plan);
+    expect(await count("kbos_budget_sales")).toBe(1);
+  });
+  it("recusa se houver cobrança paga", async () => {
+    const { token } = await issueSaleLink(budgetId, plan);
+    await acceptSale(token, "Cliente");
+    await pg.exec("UPDATE kbos_transactions SET status = 'pago'");
+    await expect(undoAcceptedSale(budgetId, "#14001")).rejects.toThrow();
+    expect(await count("kbos_projects")).toBe(1);
+  });
+  it("recusa orçamento sem aceite", async () => {
+    await issueSaleLink(budgetId, plan);
+    await expect(undoAcceptedSale(budgetId, "#14001")).rejects.toThrow();
+  });
+});
 
 describe("aceite atômico", () => {
   it("publica sem aceitar, depois conecta projeto, modelo, cobranças, agenda, cliente e funil", async () => {

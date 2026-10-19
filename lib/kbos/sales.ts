@@ -177,3 +177,33 @@ export async function acceptSale(token: string, signerName: string, companyInput
   }
   return { acceptedAt: result.rows[0].accepted_at, alreadyAccepted: false, planningUrl: `/planejamento/${token}/` };
 }
+
+/**
+ * Desfaz um aceite feito por engano/teste: remove projeto, tarefas, cobranças
+ * pendentes, agenda e modelo de planejamento criados no aceite, apaga o link
+ * e devolve o orçamento a "enviado" (e o negócio a "proposta").
+ * Recusa se alguma cobrança já foi paga: dinheiro real não se apaga.
+ * `confirm` precisa ser o código do orçamento (ex.: "#14002"), como confirmação.
+ */
+export async function undoAcceptedSale(budgetId: string, confirm: string) {
+  const d = db();
+  const [row] = (await d.execute(sql`
+    SELECT s.id AS sale_id, s.project_id, s.plan, b.code
+    FROM kbos_budget_sales s JOIN kbos_budgets b ON b.id = s.budget_id
+    WHERE s.budget_id = ${budgetId}::uuid AND s.accepted_at IS NOT NULL`)).rows as { sale_id: string; project_id: string | null; plan: { dealId?: string | null }; code: string }[];
+  if (!row) throw new PublicError("Este orçamento não tem aceite para desfazer.", 404);
+  if (confirm !== row.code) throw new PublicError(`Confirmação inválida: envie o código do orçamento (${row.code}).`, 400);
+  if (row.project_id) {
+    const paid = await d.execute(sql`SELECT 1 FROM kbos_transactions WHERE project_id = ${row.project_id}::uuid AND status = 'pago' LIMIT 1`);
+    if (paid.rows.length) throw new PublicError("Há cobrança já paga neste projeto. Não dá para desfazer o aceite.", 409);
+    await d.execute(sql`DELETE FROM kbos_transactions WHERE project_id = ${row.project_id}::uuid`);
+    await d.execute(sql`DELETE FROM kbos_events e USING kbos_projects p WHERE p.id = ${row.project_id}::uuid AND e.description = ${"Orçamento " + row.code} AND e.title LIKE p.titulo || ' · %'`);
+  }
+  await d.execute(sql`DELETE FROM kbos_client_plans WHERE sale_id = ${row.sale_id}::uuid`);
+  await d.execute(sql`UPDATE kbos_budget_sales SET project_id = NULL WHERE id = ${row.sale_id}::uuid`);
+  if (row.project_id) await d.execute(sql`DELETE FROM kbos_projects WHERE id = ${row.project_id}::uuid`);
+  await d.execute(sql`DELETE FROM kbos_budget_sales WHERE id = ${row.sale_id}::uuid`);
+  if (row.plan?.dealId) await d.execute(sql`UPDATE kbos_deals SET stage = 'proposal', updated_at = now() WHERE id = ${row.plan.dealId}::uuid AND stage = 'won'`);
+  await d.execute(sql`UPDATE kbos_budgets SET status = 'sent', updated_at = now() WHERE id = ${budgetId}::uuid`);
+  return { ok: true, code: row.code };
+}
