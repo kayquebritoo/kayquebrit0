@@ -177,7 +177,7 @@ export const PROJECTS: Project[] = [
     videoLabel: "Play — institucional",
     videoId: "CNvxRXS_BpM",
     client: "Pará Super Foods",
-    year: "2018 — atual",
+    year: "2020–2025",
   },
   {
     slug: "passos-imoveis",
