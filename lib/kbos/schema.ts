@@ -848,6 +848,10 @@ export const socialPosts = pgTable("kbos_social_posts", {
   decidedAt: timestamp("decided_at", { withTimezone: true }),
   decidedBy: uuid("decided_by").references(() => users.id, { onDelete: "set null" }),
   postedUrl: text("posted_url"),
+  scriptBy: text("script_by"),
+  captureBy: text("capture_by"),
+  editor: text("editor"),
+  errorMessage: text("error_message"),
   createdAt: ts("created_at"),
   updatedAt: ts("updated_at"),
 });

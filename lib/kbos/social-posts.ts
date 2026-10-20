@@ -6,7 +6,7 @@ import { POST_FORMATS, POST_STATUS, parseIcs, type PostFormat, type PostStatus }
 
 export type Post = typeof socialPosts.$inferSelect;
 
-const PORTAL_STATUS: PostStatus[] = ["aprovacao", "ajustes", "aprovado", "agendado", "postado"];
+const PORTAL_STATUS: PostStatus[] = ["aprovacao", "ajustes", "aprovado", "agendado", "postado"]; // "erro" é interno
 
 export async function previewImport(projectId: string, icsText: string) {
   const parsed = parseIcs(icsText, projectId);
@@ -43,7 +43,7 @@ export async function listPosts(opts: { projectId?: string; from?: Date; to?: Da
   return db().select().from(socialPosts).where(conds.length ? and(...conds) : undefined).orderBy(asc(socialPosts.scheduledAt)).limit(1000);
 }
 
-export type PostPatch = Partial<{ title: string; brand: string | null; format: PostFormat; networks: string[]; scheduledAt: Date | null; status: PostStatus; script: string | null; caption: string | null; mediaUrl: string | null; postedUrl: string | null }>;
+export type PostPatch = Partial<{ title: string; brand: string | null; format: PostFormat; networks: string[]; scheduledAt: Date | null; status: PostStatus; script: string | null; caption: string | null; mediaUrl: string | null; postedUrl: string | null; scriptBy: string | null; captureBy: string | null; editor: string | null; errorMessage: string | null }>;
 
 export class PostError extends Error {}
 

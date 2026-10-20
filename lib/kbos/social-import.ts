@@ -6,7 +6,7 @@ import { createHash } from "node:crypto";
 
 export const POST_FORMATS = ["reels", "carrossel", "estatico", "story", "outro"] as const;
 export type PostFormat = (typeof POST_FORMATS)[number];
-export const POST_STATUS = ["roteiro", "producao", "aprovacao", "ajustes", "aprovado", "agendado", "postado"] as const;
+export const POST_STATUS = ["roteiro", "captacao", "producao", "aprovacao", "ajustes", "aprovado", "agendado", "postado", "erro"] as const;
 export type PostStatus = (typeof POST_STATUS)[number];
 
 export type ParsedPost = {

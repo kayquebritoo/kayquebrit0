@@ -19,6 +19,10 @@ const patch = z.object({
   caption: z.string().max(5000).nullable().optional(),
   mediaUrl: z.string().max(1000).nullable().optional(),
   postedUrl: z.string().max(1000).nullable().optional(),
+  scriptBy: z.string().max(80).nullable().optional(),
+  captureBy: z.string().max(80).nullable().optional(),
+  editor: z.string().max(80).nullable().optional(),
+  errorMessage: z.string().max(500).nullable().optional(),
 });
 
 type Ctx = { params: Promise<{ id: string }> };

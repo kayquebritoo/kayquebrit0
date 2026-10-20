@@ -254,7 +254,11 @@ export const SCHEMA_STEPS: { id: string; sql: string }[] = [
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 )` },
-  { id: "conteudo.1", sql: `CREATE INDEX IF NOT EXISTS kbos_social_posts_project_idx ON kbos_social_posts (project_id, scheduled_at)` }
+  { id: "conteudo.1", sql: `CREATE INDEX IF NOT EXISTS kbos_social_posts_project_idx ON kbos_social_posts (project_id, scheduled_at)` },
+  { id: "conteudo.2", sql: `ALTER TABLE kbos_social_posts ADD COLUMN IF NOT EXISTS script_by text` },
+  { id: "conteudo.3", sql: `ALTER TABLE kbos_social_posts ADD COLUMN IF NOT EXISTS capture_by text` },
+  { id: "conteudo.4", sql: `ALTER TABLE kbos_social_posts ADD COLUMN IF NOT EXISTS editor text` },
+  { id: "conteudo.5", sql: `ALTER TABLE kbos_social_posts ADD COLUMN IF NOT EXISTS error_message text` }
 ];
 
 /**

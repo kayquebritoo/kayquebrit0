@@ -74,6 +74,11 @@ describe("calendário de conteúdo no banco", () => {
     const sent = await updatePost(post.id, { mediaUrl: "https://drive.google.com/x", caption: "Legenda", status: "aprovacao" });
     expect(sent.sentToApproval).toBe(true);
 
+    const team = await updatePost(post.id, { scriptBy: "Kayque", captureBy: "Léo", editor: "Ana" });
+    expect([team.post.scriptBy, team.post.captureBy, team.post.editor]).toEqual(["Kayque", "Léo", "Ana"]);
+    expect((await updatePost(post.id, { status: "erro", errorMessage: "Instagram recusou" })).post.status).toBe("erro");
+    await updatePost(post.id, { status: "aprovacao", errorMessage: null });
+
     // reimportar não desfaz o status
     await importPosts(proj.id, ICS);
     expect((await listPosts({ projectId: proj.id })).find((p) => p.id === post.id)!.status).toBe("aprovacao");
@@ -81,7 +86,7 @@ describe("calendário de conteúdo no banco", () => {
     // portal: só vê o dono, e sem roteiro; roteiros em andamento não aparecem
     const mine = await portalPosts(cli.id);
     expect(mine.map((p) => p.id)).toContain(post.id);
-    expect(mine.every((p) => !("script" in p))).toBe(true);
+    expect(mine.every((p) => !("script" in p) && !("editor" in p))).toBe(true);
     expect(mine.find((p) => p.status === "roteiro")).toBeUndefined();
     expect(await portalPosts(outro.id)).toEqual([]);
 
