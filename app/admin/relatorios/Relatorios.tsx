@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { FRONT_LABEL } from "@/lib/kbos/fronts";
+import ClientProfitCard from "@/components/kbos/ClientProfit";
 import type { Forecast, MeiStatus, MonthResult, ProjectProfit } from "@/lib/kbos/reports";
 
 type Data = { month: string; scope: string; result: MonthResult; profit: ProjectProfit[]; forecast: Forecast[]; mei: MeiStatus };
@@ -45,6 +46,7 @@ export default function Relatorios() {
 
   return (
     <div className="space-y-4">
+      <ClientProfitCard />
       {error && <div className="kb-tag late w-full justify-start rounded-2xl! px-4! py-3! text-sm">{error}</div>}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
