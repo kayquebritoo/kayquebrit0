@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { LocalTime, useMagnetic } from "@/components/fx";
+import { useMagnetic } from "@/components/fx";
 import { SocialIcon } from "@/components/SocialIcons";
 import { SOCIALS } from "@/lib/data";
 import { LANGS } from "@/lib/i18n";
@@ -149,165 +149,146 @@ export default function Header() {
         </header>
       )}
 
-      {/* menu fullscreen — vidro translúcido + big titles (100% CSS, sem GSAP) */}
+      {/* menu fullscreen — vidro + big titles centralizados (100% CSS, sem GSAP).
+          Cabe sempre na altura visível do aparelho: as medidas usam dvh, então
+          não há rolagem em retrato; só sobra rolagem de emergência em telas
+          muito baixas (celular deitado), nunca na horizontal. */}
       <div
         aria-hidden={!open}
         className={`glass-menu fixed inset-0 z-[58] transition-[opacity,visibility] duration-500 ease-out ${
           open ? "visible opacity-100" : "invisible opacity-0"
         }`}
       >
-        {/* A camada de fundo (::after com inset negativo) fica presa no contêiner
-            sem rolagem; só esta camada interna rola, e só na vertical. Antes o
-            próprio .glass-menu rolava e o degradê vazando 20% para os lados
-            deixava o menu arrastar na horizontal no celular. */}
         <div className="glass-menu-scroll relative z-10 h-full overflow-y-auto overflow-x-hidden overscroll-contain">
-        <div className="relative mx-auto flex min-h-full w-full min-w-0 max-w-6xl flex-col justify-between gap-10 px-6 pb-[max(1.75rem,env(safe-area-inset-bottom))] pt-[calc(7rem+env(safe-area-inset-top))] sm:px-10 md:flex-row md:items-end md:gap-16 md:px-[80px] md:pb-14 md:pt-36">
-          {/* navegação: alinhada à esquerda, com respiro */}
-          <nav aria-label={t("menu.open")} className="flex flex-col items-start gap-1.5 md:gap-2">
-            <MenuItem
-              num="01"
-              label={t("menu.home")}
-              open={open}
-              delay={80}
-              onClick={() => {
-                setOpen(false);
-                goToSlide(0);
-              }}
-            />
-            {MENU.map((n, i) => (
+          <div className="menu-layout">
+            <nav aria-label={t("menu.open")} className="menu-nav">
               <MenuItem
-                key={n.label}
-                num={String(i + 2).padStart(2, "0")}
-                label={n.label}
+                label={t("menu.home")}
                 open={open}
-                delay={120 + i * 50}
+                delay={80}
                 onClick={() => {
                   setOpen(false);
-                  setTimeout(() => goToSlide(n.index), 120);
+                  goToSlide(0);
                 }}
               />
-            ))}
-            <Link
-              href="/trabalho"
-              onClick={() => setOpen(false)}
-              tabIndex={open ? 0 : -1}
-              className={`menu-big group relative py-1 text-left text-[#EDE6EC]/90 transition-[opacity,transform,color] duration-500 hover:text-white sm:py-1.5 ${
+              {MENU.map((n, i) => (
+                <MenuItem
+                  key={n.label}
+                  label={n.label}
+                  open={open}
+                  delay={120 + i * 50}
+                  onClick={() => {
+                    setOpen(false);
+                    setTimeout(() => goToSlide(n.index), 120);
+                  }}
+                />
+              ))}
+              <Link
+                href="/trabalho"
+                onClick={() => setOpen(false)}
+                tabIndex={open ? 0 : -1}
+                className={`menu-big group ${open ? "is-in" : ""}`}
+                style={{ transitionDelay: open ? "420ms" : "0ms" }}
+              >
+                <span className="menu-label">{t("menu.allWorks")}</span>
+              </Link>
+            </nav>
+
+            {/* utilidades: painel de vidro embaixo (no desktop, barra única centrada) */}
+            <div
+              className={`menu-panel transition-[opacity,transform] duration-500 ${
                 open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
               }`}
-              style={{ transitionDelay: open ? "420ms" : "0ms" }}
+              style={{ transitionDelay: open ? "460ms" : "0ms" }}
             >
-              <span className="menu-num">07</span>
-              <span className="relative">
-                {t("menu.allWorks")}
-                <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-current transition-[width] duration-500 group-hover:w-full" />
-              </span>
-            </Link>
-          </nav>
-
-          {/* utilidades ancoradas embaixo (no desktop, à direita) */}
-          <div
-            className={`menu-panel flex w-full flex-col gap-5 transition-[opacity,transform] duration-500 md:w-[380px] md:items-end ${
-              open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
-            }`}
-            style={{ transitionDelay: open ? "460ms" : "0ms" }}
-          >
-            <p className="text-[13px] font-light text-white/50">
-              Belém — <LocalTime />
-            </p>
-            <Link
-              href="/entrar"
-              onClick={() => setOpen(false)}
-              tabIndex={open ? 0 : -1}
-              className="flex h-14 w-full items-center justify-center rounded-full border border-white/25 px-7 text-[15px] text-white/90 transition-[background-color,color,border-color] hover:border-white hover:bg-white hover:text-black md:w-[320px]"
-            >
-              Área do cliente
-            </Link>
-            <div className="soc-row">
-              {SOCIALS.map((s) => (
-                <a
-                  key={s.name}
-                  href={s.href}
-                  target="_blank"
-                  rel="noopener"
-                  tabIndex={open ? 0 : -1}
-                  aria-label={s.name}
-                  title={s.name}
-                  className="soc-btn"
-                >
-                  <SocialIcon icon={s.icon} size={16} />
-                </a>
-              ))}
-            </div>
-            <div className="flex w-full flex-wrap items-center justify-between gap-3 md:justify-end">
-              <button
-                type="button"
-                onClick={toggle}
+              <Link
+                href="/entrar"
+                onClick={() => setOpen(false)}
                 tabIndex={open ? 0 : -1}
-                aria-label={theme === "dark" ? t("menu.themeLight") : t("menu.themeDark")}
-                title={theme === "dark" ? t("menu.themeLight") : t("menu.themeDark")}
-                className="flex h-11 items-center gap-2 rounded-full border border-white/15 px-4 text-[13px] text-white/70 transition-[color,border-color] hover:border-white/60 hover:text-white"
+                className="menu-client flex items-center justify-center rounded-full border border-white/25 px-7 text-[15px] text-white/90 transition-[background-color,color,border-color,transform] hover:border-white hover:bg-white hover:text-black active:scale-[0.97]"
               >
-                <span aria-hidden className="inline-flex">
-                  {theme === "dark" ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="4" />
-                      <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
-                    </svg>
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
-                    </svg>
-                  )}
-                </span>
-                {theme === "dark" ? "Claro" : "Escuro"}
-              </button>
-              <div
-                role="group"
-                aria-label={t("menu.language")}
-                className="flex items-center gap-1 rounded-full border border-white/15 p-1"
-              >
-                {LANGS.map((l) => (
-                  <button
-                    key={l.id}
-                    type="button"
-                    onClick={() => setLang(l.id)}
+                Área do cliente
+              </Link>
+              <div className="soc-row">
+                {SOCIALS.map((s) => (
+                  <a
+                    key={s.name}
+                    href={s.href}
+                    target="_blank"
+                    rel="noopener"
                     tabIndex={open ? 0 : -1}
-                    aria-label={l.name}
-                    aria-pressed={lang === l.id}
-                    title={l.name}
-                    className={`flex h-9 items-center rounded-full px-3.5 text-[12px] font-semibold tracking-[0.08em] transition-[background-color,color] ${
-                      lang === l.id ? "bg-white text-black" : "text-white/60 hover:text-white"
-                    }`}
+                    aria-label={s.name}
+                    title={s.name}
+                    className="soc-btn"
                   >
-                    {l.label}
-                  </button>
+                    <SocialIcon icon={s.icon} size={16} />
+                  </a>
                 ))}
+              </div>
+              <div className="menu-prefs">
+                <button
+                  type="button"
+                  onClick={toggle}
+                  tabIndex={open ? 0 : -1}
+                  aria-label={theme === "dark" ? t("menu.themeLight") : t("menu.themeDark")}
+                  title={theme === "dark" ? t("menu.themeLight") : t("menu.themeDark")}
+                  className="flex h-11 items-center gap-2 rounded-full border border-white/15 px-4 text-[13px] text-white/70 transition-[color,border-color,transform] hover:border-white/60 hover:text-white active:scale-[0.96]"
+                >
+                  <span aria-hidden className="inline-flex">
+                    {theme === "dark" ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="4" />
+                        <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
+                      </svg>
+                    )}
+                  </span>
+                  {theme === "dark" ? "Claro" : "Escuro"}
+                </button>
+                <div
+                  role="group"
+                  aria-label={t("menu.language")}
+                  className="flex items-center gap-1 rounded-full border border-white/15 p-1"
+                >
+                  {LANGS.map((l) => (
+                    <button
+                      key={l.id}
+                      type="button"
+                      onClick={() => setLang(l.id)}
+                      tabIndex={open ? 0 : -1}
+                      aria-label={l.name}
+                      aria-pressed={lang === l.id}
+                      title={l.name}
+                      className={`flex h-9 items-center rounded-full px-3.5 text-[12px] font-semibold tracking-[0.08em] transition-[background-color,color] ${
+                        lang === l.id ? "bg-white text-black" : "text-white/60 hover:text-white"
+                      }`}
+                    >
+                      {l.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
         </div>
       </div>
     </>
   );
 }
 
-function MenuItem({ label, num, open, delay, onClick }: { label: string; num: string; open: boolean; delay: number; onClick: () => void }) {
+function MenuItem({ label, open, delay, onClick }: { label: string; open: boolean; delay: number; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
       type="button"
       tabIndex={open ? 0 : -1}
-      className={`menu-big group relative touch-manipulation py-1 text-left text-[#EDE6EC]/90 transition-[opacity,transform,color] duration-500 hover:text-white sm:py-1.5 ${
-        open ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
-      }`}
+      className={`menu-big group touch-manipulation ${open ? "is-in" : ""}`}
       style={{ transitionDelay: open ? `${delay}ms` : "0ms" }}
     >
-      <span className="menu-num">{num}</span>
-      <span className="relative inline-block transition-transform duration-300 ease-out group-hover:translate-x-2">
-        {label}
-        <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-white/70 transition-[width] duration-500 group-hover:w-full" />
-      </span>
+      <span className="menu-label">{label}</span>
     </button>
   );
 }

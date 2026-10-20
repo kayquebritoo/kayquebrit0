@@ -221,17 +221,104 @@ html.fullpage-locked body {
 }
 @media (prefers-reduced-motion: reduce) { .glass-menu::after { animation: none; } }
 
-/* painel de vidro das utilidades do menu (área do cliente, redes, tema, idioma) */
-.menu-panel {
-  min-width: 0;
+/* ===== menu fullscreen: layout centralizado que cabe na tela =====
+   Tudo é medido pela ALTURA visível (dvh, com vh de reserva): em retrato o
+   menu inteiro (7 links + painel) cabe sem rolagem de 320×568 até tablets.
+   --mh = espaço do header fixo (logo + X) que fica por cima do menu. */
+.menu-layout {
+  --mh: calc(68px + env(safe-area-inset-top, 0px));
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.2vh;
+  gap: 2.2dvh;
+  width: 100%;
+  max-width: 1180px;
+  min-height: 100%;
+  margin-inline: auto;
+  padding: var(--mh) 20px calc(18px + env(safe-area-inset-bottom, 0px));
+}
+.menu-nav {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+}
+
+/* big titles do menu: centralizados, sem numeração */
+.menu-big {
+  position: relative;
+  display: block;
   max-width: 100%;
+  padding-block: 0.12em;
+  font-family: var(--font-display);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+  text-align: center;
+  overflow-wrap: break-word;
+  color: rgba(237, 230, 236, 0.9);
+  /* o menor entre largura e altura: nunca passa da tela em nenhum dos eixos */
+  font-size: clamp(1.45rem, min(8.6vw, 4.5vh), 2.75rem);
+  font-size: clamp(1.45rem, min(8.6vw, 4.5dvh), 2.75rem);
+  opacity: 0;
+  transform: translateY(1.25rem);
+  transition: opacity .5s cubic-bezier(.22, 1, .36, 1), transform .5s cubic-bezier(.22, 1, .36, 1), color .3s;
+}
+.menu-big.is-in { opacity: 1; transform: none; }
+.menu-big:hover { color: #fff; }
+.menu-big:active .menu-label { transform: scale(.97); }
+.menu-big .menu-label {
+  position: relative;
+  display: inline-block;
+  transition: transform .3s cubic-bezier(.22, 1, .36, 1);
+}
+/* sublinhado que cresce a partir do centro (microinteração) */
+.menu-big .menu-label::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -0.04em;
+  width: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #4F12C7, #E80EFD);
+  transform: translateX(-50%);
+  transition: width .45s cubic-bezier(.22, 1, .36, 1);
+}
+.menu-big:hover .menu-label::after,
+.menu-big:focus-visible .menu-label::after { width: 100%; }
+
+/* painel de vidro das utilidades (área do cliente, redes, tema, idioma) */
+.menu-panel {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
+  min-width: 0;
+  padding: 16px;
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
   border: 1px solid rgba(237, 230, 236, 0.14);
   border-radius: 28px;
-  padding: 22px;
   backdrop-filter: blur(22px) saturate(1.4);
   -webkit-backdrop-filter: blur(22px) saturate(1.4);
   box-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.menu-client { width: 100%; height: 50px; }
+.menu-prefs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
 }
 html.light .menu-panel {
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.4));
@@ -240,32 +327,83 @@ html.light .menu-panel {
 }
 html.light .glass-menu::after { opacity: 0.55; }
 
-/* big titles do menu — medida contida p/ caber na composição desktop */
-.menu-big {
-  font-family: var(--font-display);
-  font-weight: 300;
-  letter-spacing: -0.02em;
-  line-height: 1.08;
-  font-size: clamp(1.9rem, 8vw, 3rem);
-  /* nunca mais largo que a tela (rótulos longos em EN/ES quebram linha) */
-  max-width: 100%;
-  overflow-wrap: break-word;
+/* celulares baixos (SE, telas com barra do navegador): painel mais enxuto */
+@media (max-height: 640px) {
+  .menu-layout { --mh: calc(78px + env(safe-area-inset-top, 0px)); padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .menu-big { font-size: clamp(1.3rem, min(8.6vw, 4.1vh), 2.75rem); font-size: clamp(1.3rem, min(8.6vw, 4.1dvh), 2.75rem); }
+  .menu-panel { gap: 10px; padding: 12px; border-radius: 24px; }
+  .menu-client { height: 44px; }
 }
+
+/* telas bem estreitas (≤359px): as 6 redes seguem numa linha só */
+@media (max-width: 359px) {
+  .menu-panel .soc-row { flex-wrap: nowrap; gap: 4px; }
+  .menu-panel .soc-btn { width: 36px; height: 36px; }
+}
+
+/* tablet e computador: links grandes no centro, utilidades numa barra única
+   de vidro centralizada embaixo — composição simétrica com o header */
 @media (min-width: 768px) {
+  .menu-layout {
+    --mh: calc(112px + env(safe-area-inset-top, 0px));
+    gap: 4vh;
+    gap: 4dvh;
+    padding-inline: 48px;
+    padding-bottom: max(32px, 5vh);
+  }
   .menu-big {
-    font-size: clamp(2rem, 3.6vw, 3.9rem);
-    line-height: 1.02;
     letter-spacing: -0.025em;
+    line-height: 1.06;
+    font-size: clamp(1.9rem, min(5.2vw, 6.1vh), 4.4rem);
+    font-size: clamp(1.9rem, min(5.2vw, 6.1dvh), 4.4rem);
   }
 }
-.menu-big .menu-num {
-  font-family: var(--font-body);
-  font-size: 0.65rem;
-  letter-spacing: 0.25em;
-  vertical-align: super;
-  margin-right: 0.6rem;
-  color: rgba(255, 255, 255, 0.45);
-  font-weight: 400;
+@media (min-width: 1024px) {
+  .menu-panel {
+    flex-direction: row;
+    justify-content: center;
+    gap: 22px;
+    width: auto;
+    max-width: 100%;
+    padding: 10px 12px 10px 10px;
+    border-radius: 999px;
+  }
+  .menu-client { flex: none; width: auto; height: 48px; padding-inline: 28px; }
+  .menu-panel .soc-row { flex: none; flex-wrap: nowrap; width: auto; gap: 10px; }
+  .menu-prefs { flex: none; width: auto; flex-wrap: nowrap; gap: 12px; }
+}
+
+/* celular deitado / janelas muito baixas: links em 2 colunas à esquerda,
+   painel à direita — cabe sem rolagem até ~360px de altura */
+@media (orientation: landscape) and (max-height: 500px) {
+  .menu-layout {
+    --mh: calc(92px + env(safe-area-inset-top, 0px));
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(24px, 5vw, 56px);
+    padding: var(--mh) max(24px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(24px, env(safe-area-inset-left, 0px));
+  }
+  /* 2 colunas lidas de cima para baixo (Início…Depoimentos | Contato…) */
+  .menu-nav {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(4, auto);
+    column-gap: clamp(20px, 4vw, 44px);
+    width: auto;
+    align-content: center;
+  }
+  .menu-big { font-size: clamp(1.2rem, min(3.8vw, 7.6vh), 2rem); font-size: clamp(1.2rem, min(3.8vw, 7.6dvh), 2rem); }
+  .menu-panel { flex-direction: column; width: 336px; max-width: 46vw; gap: 10px; padding: 12px; border-radius: 24px; }
+  .menu-panel .soc-row { flex-wrap: nowrap; width: 100%; justify-content: space-between; gap: 6px; }
+  .menu-panel .soc-btn { width: 36px; height: 36px; }
+  .menu-client { width: 100%; height: 44px; }
+  .menu-prefs { width: 100%; flex-wrap: nowrap; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-big, .menu-big .menu-label, .menu-big .menu-label::after { transition: none; }
+  .menu-big { transform: none; }
 }
 
 .hairline {
@@ -840,7 +978,7 @@ html.light .glass-menu {
 }
 html.light .menu-big { color: rgba(23, 23, 46, 0.92) !important; }
 html.light .menu-big:hover { color: var(--lb-ink) !important; }
-html.light .menu-big .menu-num { color: rgba(23, 23, 46, 0.45) !important; }
+html.light .menu-big .menu-label::after { background: linear-gradient(90deg, #350C85, #4F12C7); }
 html.light .ref-eyebrow { color: rgba(23, 23, 46, 0.62); }
 html.light .fp-dot { border-color: rgba(23, 23, 46, 0.3); background: transparent; }
 html.light .fp-dot:hover { border-color: rgba(23, 23, 46, 0.65); }
