@@ -346,6 +346,7 @@ export async function handleAssistantTurn(input: AssistantTurnInput): Promise<As
       audioUrl: input.audioUrl,
       audioBase64: input.audioBase64,
       audioMime: input.audioMime,
+      prompt: "KBOS, Lume, orçamento, contrato, Atalaia Vip, Grupo VIP, hotel, lounge, praça, Kayque, Pix, WhatsApp, briefing, tarefa, projeto.",
     });
     transcript = t.text;
     transcriptStub = t.stub;
