@@ -35,3 +35,9 @@
 | Rota `/api/admin/lume/*` + página usando a VPS 2 | Claude | pendente (`lib/kbos/lume.ts` hoje só aceita localhost) |
 | Enviar `acervo.db` e rodar `acervo_drive.py sincronizar` | Kayque + Claude | pendente |
 | Voz própria (STT local + clonagem por API) | Claude | depois do Lume |
+
+## Deploy automático (20/10/2026)
+VPS do Lume (177.7.48.110, `/opt/lume`): cron a cada 5 min roda `infra/lume/deploy.sh --auto`, que busca `origin/main` e só reconstrói `lume`, `indexador` e `caddy` quando a pasta `infra/lume` mudou (compara o hash da árvore; mudanças no KBOS ou em docs não reiniciam o Lume). Dá o deploy por bom só depois de `/health` responder. Log: `/var/log/lume-deploy.log`.
+Instalar (uma vez, no terminal web da Hostinger da VPS do Lume):
+`cd /opt/lume/src && git fetch -q origin +refs/heads/main:refs/remotes/origin/main && git reset -q --hard origin/main && bash infra/lume/deploy.sh --install`
+Forçar agora: `bash /opt/lume/src/infra/lume/deploy.sh`. O script nunca lê nem imprime o `.env`.
