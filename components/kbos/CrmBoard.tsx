@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CONTACT_STATUS } from "@/lib/kbos/constants";
 import Client360 from "./Client360";
+import ImportContacts from "./ImportContacts";
 import { duplicateGroups } from "@/lib/kbos/contact-dupes";
 import { cleanDocument, isValidCNPJ, maskDocumentInput } from "@/lib/kbos/document";
 
@@ -24,6 +25,8 @@ type Contact = {
   zipCode: string | null;
   website: string | null;
   instagram: string | null;
+  facebook?: string | null;
+  photoUrl?: string | null;
   source: string | null;
   updatedAt?: string;
 };
@@ -94,6 +97,9 @@ export default function CrmBoard() {
   const [formError, setFormError] = useState("");
   const [fichaId, setFichaId] = useState<string | null>(null);
   const [dupesOpen, setDupesOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [gSession, setGSession] = useState<string | null>(null);
+  const [importErr, setImportErr] = useState<string | null>(null);
   const [merging, setMerging] = useState(false);
   const [mergeMsg, setMergeMsg] = useState("");
   const [lookup, setLookup] = useState<"idle" | "busy" | "ok" | string>("idle");
@@ -123,6 +129,16 @@ export default function CrmBoard() {
     for (const s of CONTACT_STATUS) c[s.id] = items.filter((i) => i.status === s.id).length;
     return c;
   }, [items]);
+
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const imp = sp.get("importar");
+    if (!imp) return;
+    if (imp === "google" && sp.get("sessao")) setGSession(sp.get("sessao"));
+    if (imp === "erro") setImportErr({ "google-config": "O Google ainda não está configurado para importar contatos (falta liberar no Google Cloud).", negado: "Você não autorizou o acesso aos contatos.", estado: "A conexão com o Google expirou. Tente de novo.", token: "O Google recusou a conexão. Tente de novo." }[sp.get("motivo") || ""] || "Não consegui buscar os contatos do Google.");
+    setImportOpen(true);
+    window.history.replaceState(null, "", window.location.pathname);
+  }, []);
 
   const dupes = useMemo(() => duplicateGroups(items.map((c) => ({ ...c, createdAt: c.updatedAt ?? null }))), [items]);
 
@@ -250,6 +266,7 @@ export default function CrmBoard() {
             aria-label="Buscar contatos"
           />
         </label>
+        <button type="button" onClick={() => setImportOpen(true)} className="kb-btn-ghost min-h-11">Importar</button>
         <button type="button" onClick={openCreate} className="kb-btn">
           + Novo contato
         </button>
@@ -280,9 +297,14 @@ export default function CrmBoard() {
           return (
             <button key={c.id} type="button" onClick={() => setFichaId(c.id)} className="kb-row w-full text-left first:border-t-0">
               <span className="flex min-w-0 flex-1 items-center gap-3">
-                <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--kb-accent-soft)] text-sm font-semibold uppercase">
-                  {c.name.replace(/[^\p{L}\p{N}]/gu, "").slice(0, 1) || "?"}
-                </span>
+                {c.photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={c.photoUrl} alt="" referrerPolicy="no-referrer" loading="lazy" className="h-10 w-10 shrink-0 rounded-full object-cover" />
+                ) : (
+                  <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--kb-accent-soft)] text-sm font-semibold uppercase">
+                    {c.name.replace(/[^\p{L}\p{N}]/gu, "").slice(0, 1) || "?"}
+                  </span>
+                )}
                 <span className="min-w-0">
                   <span className="kb-ink block truncate text-[15px]">
                     {c.name}
@@ -338,6 +360,15 @@ export default function CrmBoard() {
             ))}
           </div>
         </div>
+      )}
+
+      {importOpen && (
+        <ImportContacts
+          googleSession={gSession}
+          startError={importErr}
+          onClose={() => { setImportOpen(false); setGSession(null); setImportErr(null); }}
+          onDone={() => { load(); }}
+        />
       )}
 
       {fichaId && (

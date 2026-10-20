@@ -14,7 +14,7 @@ const KIND_LABEL: Record<Kind, string> = {
   pagamento: "Pagamento", tarefa: "Tarefa", conversa: "Conversa", case: "Portfólio",
 };
 
-type Person = { id: string; name: string; company: string | null; phone: string | null; email: string | null; status: string };
+type Person = { id: string; name: string; company: string | null; phone: string | null; email: string | null; status: string; role?: string | null; photoUrl?: string | null; instagram?: string | null; facebook?: string | null; source?: string | null };
 type Data = { contact: Person; summary: Summary; timeline: TimelineEvent[] };
 
 export default function Client360({ id, onClose, onEdit }: { id: string; onClose: () => void; onEdit: () => void }) {
@@ -51,13 +51,26 @@ export default function Client360({ id, onClose, onEdit }: { id: string; onClose
   return (
     <div className="kb-modal-back" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="kb-modal space-y-4" role="dialog" aria-label="Ficha do cliente">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="font-display kb-ink truncate text-xl">{data?.contact.name ?? "Ficha do cliente"}</h2>
-            {data?.contact.company && data.contact.company !== data.contact.name && <p className="kb-muted truncate text-sm">{data.contact.company}</p>}
-            {s?.firstContact && <p className="kb-faint text-[12px]">Cliente desde {day(s.firstContact)}</p>}
+        <div className="relative">
+          <div aria-hidden className="h-24 overflow-hidden rounded-2xl" style={{ background: "linear-gradient(120deg,#350C85,#4F12C7 55%,#E80EFD)" }}>
+            <span className="block h-full w-full opacity-40" style={{ background: "radial-gradient(60% 120% at 80% 0%,#ffffff55,transparent 60%)" }} />
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar" className="kb-muted -mr-2 h-11 w-11 shrink-0 text-2xl">×</button>
+          <button type="button" onClick={onClose} aria-label="Fechar" className="absolute right-1 top-1 h-11 w-11 rounded-full bg-black/40 text-2xl text-white backdrop-blur">×</button>
+          <div className="-mt-10 flex items-end gap-3 px-1">
+            {data?.contact.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={data.contact.photoUrl} alt="" referrerPolicy="no-referrer" className="h-20 w-20 shrink-0 rounded-full border-4 border-[#11101E] object-cover" />
+            ) : (
+              <span aria-hidden className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 border-[#11101E] bg-[var(--kb-accent-soft)] text-2xl font-semibold uppercase">
+                {(data?.contact.name ?? "?").replace(/[^\p{L}\p{N}]/gu, "").slice(0, 1) || "?"}
+              </span>
+            )}
+          </div>
+          <div className="mt-2 min-w-0 px-1">
+            <h2 className="font-display kb-ink flex items-center gap-2 text-xl"><span className="truncate">{data?.contact.name ?? "Ficha do cliente"}</span>{data?.contact.status === "client" && <span title="Cliente" aria-label="Cliente" className="shrink-0 text-[#4DA3FF]">●</span>}</h2>
+            {(data?.contact.role || (data?.contact.company && data.contact.company !== data.contact.name)) && <p className="kb-muted truncate text-sm">{[data?.contact.role, data?.contact.company !== data?.contact.name ? data?.contact.company : null].filter(Boolean).join(" · ")}</p>}
+            {s?.firstContact && <p className="kb-faint text-[12px]">Cliente desde {day(s.firstContact)}{data?.contact.source ? ` · veio de ${data.contact.source}` : ""}</p>}
+          </div>
         </div>
 
         {error && <p className="kb-tag late w-full justify-start rounded-xl! px-3! py-2! text-sm">{error}</p>}
@@ -66,10 +79,12 @@ export default function Client360({ id, onClose, onEdit }: { id: string; onClose
 
         {data && (
           <>
-            <div className="flex flex-wrap gap-2">
-              {data.contact.phone && <a className="kb-chip" href={`https://wa.me/${data.contact.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">WhatsApp</a>}
-              {data.contact.email && <a className="kb-chip" href={`mailto:${data.contact.email}`}>E-mail</a>}
-              <button type="button" className="kb-chip" onClick={onEdit}>Editar cadastro</button>
+            <div className="flex flex-wrap items-center gap-2">
+              {data.contact.phone && <a className="kb-btn min-h-11" href={`https://wa.me/${data.contact.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">Falar no WhatsApp</a>}
+              <button type="button" className="kb-btn-ghost min-h-11" onClick={onEdit}>Editar</button>
+              {data.contact.email && <a className="kb-chip min-h-11 items-center" href={`mailto:${data.contact.email}`}>E-mail</a>}
+              {data.contact.instagram && <a className="kb-chip min-h-11 items-center" href={`https://instagram.com/${data.contact.instagram.replace(/^@/, "")}`} target="_blank" rel="noopener noreferrer">{data.contact.instagram}</a>}
+              {data.contact.facebook && <a className="kb-chip min-h-11 items-center" href={`https://${data.contact.facebook.replace(/^https?:\/\//, "")}`} target="_blank" rel="noopener noreferrer">Facebook</a>}
             </div>
 
             <PortalAccess contactId={data.contact.id} email={data.contact.email} phone={data.contact.phone} name={data.contact.name} />
