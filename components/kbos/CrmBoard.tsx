@@ -326,14 +326,15 @@ export default function CrmBoard() {
           return (
             <button key={c.id} type="button" onClick={() => setFichaId(c.id)} className="kb-row w-full text-left first:border-t-0">
               <span className="flex min-w-0 flex-1 items-center gap-3">
-                {c.photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={c.photoUrl} alt="" referrerPolicy="no-referrer" loading="lazy" className="h-10 w-10 shrink-0 rounded-full object-cover" />
-                ) : (
-                  <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--kb-accent-soft)] text-sm font-semibold uppercase">
+                <span className="relative h-10 w-10 shrink-0">
+                  <span aria-hidden className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--kb-accent-soft)] text-sm font-semibold uppercase">
                     {c.name.replace(/[^\p{L}\p{N}]/gu, "").slice(0, 1) || "?"}
                   </span>
-                )}
+                  {c.photoUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={`/api/contacts/${c.id}/avatar`} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-10 w-10 rounded-full object-cover" />
+                  )}
+                </span>
                 <span className="min-w-0">
                   <span className="kb-ink block truncate text-[15px]">
                     {c.name}

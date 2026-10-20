@@ -20,6 +20,24 @@ export default function ImportContacts({ onClose, onDone, googleSession, startEr
   const [done, setDone] = useState<string>("");
   const file = useRef<HTMLInputElement>(null);
 
+  // Puxa do WhatsApp a foto de quem está sem foto (clientes primeiro), em lotes, até acabar.
+  async function fetchPhotos() {
+    setBusy(true); setMsg("Buscando fotos no WhatsApp…"); setDone("");
+    let found = 0, checked = 0;
+    try {
+      for (let i = 0; i < 40; i++) {
+        const r = await fetch("/api/admin/contacts/photos", { method: "POST" });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || "Não consegui buscar as fotos.");
+        found += j.found; checked += j.checked;
+        setMsg(`Buscando fotos… ${found} encontrada(s) em ${checked} contato(s); faltam ${j.remaining}.`);
+        if (!j.checked || j.remaining === 0) break;
+      }
+      setMsg(`Pronto: ${found} foto(s) encontrada(s) em ${checked} contato(s). Quem escondeu a foto no WhatsApp continua com a inicial.`);
+      onDone();
+    } catch (e) { setMsg(e instanceof Error ? e.message : "Erro."); } finally { setBusy(false); }
+  }
+
   async function load(source: Source, text?: string, sessionId?: string) {
     setBusy(true); setMsg(""); setPv(null); setDone("");
     try {
@@ -79,6 +97,7 @@ export default function ImportContacts({ onClose, onDone, googleSession, startEr
             <a className="kb-btn min-h-12 text-center" href="/api/admin/contacts/import/google/start">Importar do Google Contatos</a>
             <button type="button" className="kb-btn-ghost min-h-12" disabled={busy} onClick={() => load("whatsapp")}>Contatos do WhatsApp conectado</button>
             <button type="button" className="kb-btn-ghost min-h-12" disabled={busy} onClick={() => file.current?.click()}>Arquivo (.vcf ou .csv)</button>
+            <button type="button" className="kb-btn-ghost min-h-12" disabled={busy} onClick={fetchPhotos}>Buscar fotos de perfil do WhatsApp</button>
             <input ref={file} type="file" accept=".vcf,.csv,text/vcard,text/csv" className="hidden" onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = ""; }} />
             <p className="kb-faint text-[12px]">
               O mesmo contato vindo de fontes diferentes vira um só. Se houver dois números, o KBOS confere no WhatsApp qual está ativo, deixa esse na ficha e guarda o antigo só para reconhecer a pessoa depois. Instagram e Facebook não liberam contatos: use um arquivo com a coluna Instagram/Facebook ou digite o @ na ficha.

@@ -3,6 +3,7 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 import {
   buildWebhookUrl,
   checkWhatsappNumbers,
+  fetchWhatsappProfilePicture,
   listWhatsappContacts,
   ensureInstance,
   evoConfig,
@@ -333,5 +334,15 @@ describe("contatos do WhatsApp", () => {
     expect(await checkWhatsappNumbers(["5591988887777", "5591977776666", "5591900000000"])).toEqual({ "5591988887777": true, "5591977776666": false, "5591900000000": null });
     mockEvo(() => ({ status: 500, body: {} }));
     expect(await checkWhatsappNumbers(["5591988887777"])).toEqual({ "5591988887777": null });
+  });
+  it("foto de perfil: devolve https, ignora vazio/erro", async () => {
+    vi.stubEnv("EVOLUTION_API_URL", BASE_ENV.EVOLUTION_API_URL);
+    vi.stubEnv("EVOLUTION_API_KEY", BASE_ENV.EVOLUTION_API_KEY);
+    mockEvo(() => ({ status: 200, body: { wuid: "x", profilePictureUrl: "https://pps.whatsapp.net/p.jpg" } }));
+    expect(await fetchWhatsappProfilePicture("5591988887777")).toBe("https://pps.whatsapp.net/p.jpg");
+    mockEvo(() => ({ status: 200, body: { profilePictureUrl: null } }));
+    expect(await fetchWhatsappProfilePicture("5591988887777")).toBeNull();
+    mockEvo(() => ({ status: 500, body: {} }));
+    expect(await fetchWhatsappProfilePicture("5591988887777")).toBeNull();
   });
 });

@@ -411,3 +411,14 @@ export async function listWhatsappContacts(): Promise<{ contacts: WaContact[]; d
     return { contacts: [], detail: e instanceof Error ? e.message : "Falha de rede." };
   }
 }
+
+/** Foto de perfil pública do número no WhatsApp (`null` se a pessoa escondeu a foto ou a Evolution não respondeu). */
+export async function fetchWhatsappProfilePicture(number: string): Promise<string | null> {
+  try {
+    const r = await evoFetch(`/chat/fetchProfilePictureUrl/${encodeURIComponent(waInstance())}`, { method: "POST", body: JSON.stringify({ number }) });
+    if (!r.ok) return null;
+    const j = r.json as { profilePictureUrl?: string | null; profilePicUrl?: string | null } | null;
+    const u = j?.profilePictureUrl || j?.profilePicUrl || "";
+    return /^https:\/\//.test(u) ? u : null;
+  } catch { return null; }
+}

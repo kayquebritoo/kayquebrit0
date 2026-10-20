@@ -57,14 +57,15 @@ export default function Client360({ id, onClose, onEdit }: { id: string; onClose
           </div>
           <button type="button" onClick={onClose} aria-label="Fechar" className="absolute right-1 top-1 h-11 w-11 rounded-full bg-black/40 text-2xl text-white backdrop-blur">×</button>
           <div className="-mt-10 flex items-end gap-3 px-1">
-            {data?.contact.photoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={data.contact.photoUrl} alt="" referrerPolicy="no-referrer" className="h-20 w-20 shrink-0 rounded-full border-4 border-[#11101E] object-cover" />
-            ) : (
-              <span aria-hidden className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 border-[#11101E] bg-[var(--kb-accent-soft)] text-2xl font-semibold uppercase">
+            <span className="relative h-20 w-20 shrink-0">
+              <span aria-hidden className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-[#11101E] bg-[var(--kb-accent-soft)] text-2xl font-semibold uppercase">
                 {(data?.contact.name ?? "?").replace(/[^\p{L}\p{N}]/gu, "").slice(0, 1) || "?"}
               </span>
-            )}
+              {data?.contact.photoUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={`/api/contacts/${data.contact.id}/avatar`} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-20 w-20 rounded-full border-4 border-[#11101E] object-cover" />
+              )}
+            </span>
           </div>
           <div className="mt-2 min-w-0 px-1">
             <h2 className="font-display kb-ink flex items-center gap-2 text-xl"><span className="truncate">{data?.contact.name ?? "Ficha do cliente"}</span>{data?.contact.status === "client" && <span title="Cliente" aria-label="Cliente" className="shrink-0 text-[#4DA3FF]">●</span>}</h2>
