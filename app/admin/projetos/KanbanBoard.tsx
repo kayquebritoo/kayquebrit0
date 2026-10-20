@@ -147,7 +147,7 @@ export default function KanbanBoard() {
       )}
       {notice && <p role="status" className="kb-tag self-start">{notice}</p>}
 
-      <div className="kb-seg md:hidden" role="tablist" aria-label="Etapa do projeto" style={{ gridAutoColumns: "minmax(88px,1fr)", overflowX: "auto" }}>
+      <div className="kb-seg md:hidden" role="tablist" aria-label="Etapa do projeto" style={{ gridAutoColumns: "max-content", overflowX: "auto" }}>
         {PIPELINE.map((c) => (
           <button key={c.id} role="tab" aria-selected={stage === c.id} onClick={() => setStage(c.id)} className="kb-chip min-h-11 whitespace-nowrap" aria-pressed={stage === c.id}>
             {c.label} · {shown.filter((p) => p.status === c.id).length}
