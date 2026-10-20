@@ -53,6 +53,8 @@ type Form = {
 
 const STATUS_LABEL: Record<string, string> = Object.fromEntries(CONTACT_STATUS.map((s) => [s.id, s.label]));
 const FILTERS = [{ id: "all", label: "Todos" }, ...CONTACT_STATUS];
+const NAMELESS = /^(sem nome)?$|^\+?[\d\s()-]{6,}$/i;
+const isNameless = (n: string) => NAMELESS.test(n.trim());
 const TEXT_KEYS = ["email", "phone", "company", "notes", "document", "legalName", "stateRegistration", "role", "address", "city", "state", "zipCode", "website", "instagram"] as const;
 
 const emptyForm: Form = {
@@ -101,6 +103,7 @@ export default function CrmBoard() {
   const [gSession, setGSession] = useState<string | null>(null);
   const [importErr, setImportErr] = useState<string | null>(null);
   const [merging, setMerging] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
   const [mergeMsg, setMergeMsg] = useState("");
   const [lookup, setLookup] = useState<"idle" | "busy" | "ok" | string>("idle");
 
@@ -188,9 +191,29 @@ export default function CrmBoard() {
   }
 
   const shown = useMemo(
-    () => items.filter((c) => (filter === "all" ? c.status !== "archived" : c.status === filter)),
+    () => items.filter((c) => (filter === "nameless" ? c.status === "lead" && isNameless(c.name) : filter === "all" ? c.status !== "archived" : c.status === filter)),
     [items, filter]
   );
+  const namelessLeads = useMemo(() => items.filter((c) => c.status === "lead" && isNameless(c.name)), [items]);
+
+  async function archiveNameless() {
+    const ids = namelessLeads.map((c) => c.id);
+    if (!ids.length) return;
+    setMerging(true);
+    try {
+      const r = await fetch("/api/admin/contacts/archive", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ids }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Não consegui arquivar.");
+      setMergeMsg(`${d.archived} lead${d.archived === 1 ? "" : "s"} sem nome arquivado${d.archived === 1 ? "" : "s"} (nada foi apagado; dá para achar em Arquivado).`);
+      setConfirmArchive(false);
+      setFilter("all");
+      await load();
+    } catch (e) {
+      setMergeMsg(e instanceof Error ? e.message : "Erro ao arquivar.");
+    } finally {
+      setMerging(false);
+    }
+  }
 
   function openCreate() {
     setForm(emptyForm);
@@ -308,7 +331,27 @@ export default function CrmBoard() {
             <span className="kb-faint tabular-nums">{counts[f.id] ?? 0}</span>
           </button>
         ))}
+        {namelessLeads.length > 0 && (
+          <button type="button" className="kb-chip" aria-pressed={filter === "nameless"} onClick={() => setFilter("nameless")}>
+            Sem nome
+            <span className="kb-faint tabular-nums">{namelessLeads.length}</span>
+          </button>
+        )}
       </div>
+      {mergeMsg && !dupesOpen && <p role="status" className="kb-tag w-full justify-start rounded-xl! px-3! py-2! text-sm">{mergeMsg}</p>}
+      {filter === "nameless" && namelessLeads.length > 0 && (
+        <div className="kb-card gap-2">
+          <p className="kb-muted text-sm">Leads que vieram só com o número. Arquivar não apaga nada: eles saem da lista e continuam em Arquivado.</p>
+          {!confirmArchive ? (
+            <button type="button" className="kb-btn-ghost min-h-11 self-start" onClick={() => setConfirmArchive(true)}>Arquivar {namelessLeads.length} sem nome</button>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className="kb-btn min-h-11" disabled={merging} onClick={() => void archiveNameless()}>{merging ? "Arquivando…" : `Confirmar: arquivar ${namelessLeads.length}`}</button>
+              <button type="button" className="kb-btn-ghost min-h-11" onClick={() => setConfirmArchive(false)}>Cancelar</button>
+            </div>
+          )}
+        </div>
+      )}
 
       {dupes.length > 0 && (
         <button type="button" onClick={() => setDupesOpen(true)} className="kb-glass flex w-full items-center justify-between gap-3 rounded-2xl! px-4 py-3 text-left">

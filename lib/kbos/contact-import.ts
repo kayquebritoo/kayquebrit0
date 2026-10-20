@@ -220,7 +220,7 @@ export type PlanItem = {
   changes: string[];
 };
 
-const looksLikeNumber = (n: string) => !n.trim() || /^\+?[\d\s()-]{6,}$/.test(n.trim());
+export const looksLikeNumber = (n: string) => !n.trim() || /^\+?[\d\s()-]{6,}$/.test(n.trim());
 const better = (a: string | null | undefined, b: string | null | undefined) => a || b || null;
 
 function mergeRecords(a: ImportRecord & { sources: ImportSource[] }, b: ImportRecord): ImportRecord & { sources: ImportSource[] } {
