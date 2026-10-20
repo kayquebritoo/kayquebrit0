@@ -176,14 +176,14 @@ export type PhoneDecision = { primary: string | null; former: string[]; reason: 
 /** Escolhe o número atual entre o que já existe e o que chegou. Quem está no WhatsApp vence; sem verificação, vale a fonte
  *  (conversa real > cadastro existente > Google/arquivo). Os outros viram "antigos": saem da ficha, mas ficam guardados só para
  *  reconhecer a mesma pessoa numa próxima importação. */
-export function decidePhones(existingPrimary: string | null, existingFormer: string[], incoming: PhoneIn[], verified: Record<string, boolean | null> = {}): PhoneDecision {
+export function decidePhones(existingPrimary: string | null, existingFormer: string[], incoming: PhoneIn[], waCheck: Record<string, boolean | null> = {}): PhoneDecision {
   type C = { number: string; onWhatsapp: boolean | null; rank: number };
   const byKey = new Map<string, C>();
   const add = (number: string, onWhatsapp: boolean | null, rank: number) => {
     const n = canonPhone(number);
     const k = n && phoneKey(n);
     if (!n || !k) return;
-    onWhatsapp = onWhatsapp ?? verified[n] ?? null;
+    onWhatsapp = onWhatsapp ?? waCheck[n] ?? null;
     const prev = byKey.get(k);
     if (!prev) byKey.set(k, { number: n, onWhatsapp, rank });
     else byKey.set(k, { number: prev.number, onWhatsapp: onWhatsapp ?? prev.onWhatsapp, rank: Math.max(prev.rank, rank) });
