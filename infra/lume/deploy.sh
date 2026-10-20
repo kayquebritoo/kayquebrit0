@@ -27,7 +27,8 @@ esac
 
 if [ "$MODE" = "--install" ]; then
   CRON="*/5 * * * * $SRC/infra/lume/deploy.sh --auto >> /var/log/lume-deploy.log 2>&1"
-  ( crontab -l 2>/dev/null | grep -v 'lume/deploy.sh' ; echo "$CRON" ) | crontab -
+  # Sem crontab ainda, `crontab -l` e o `grep -v` saem com erro: tolera (|| true) para não abortar com set -e.
+  { { crontab -l 2>/dev/null || true; } | { grep -v 'lume/deploy.sh' || true; }; echo "$CRON"; } | crontab -
   chmod +x "$SRC/infra/lume/deploy.sh"
   LOG "cron instalado: $CRON"
   MODE="--deploy"
