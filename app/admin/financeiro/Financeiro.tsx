@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import ImportStatement from "@/components/kbos/ImportStatement";
 
 type Entry = {
   id: string;
@@ -102,6 +103,7 @@ export default function Financeiro() {
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
   const [more, setMore] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -256,10 +258,13 @@ export default function Financeiro() {
           ))}
         </div>
         <div className="ml-auto hidden gap-2 sm:flex">
+          <button type="button" className="kb-btn-ghost" onClick={() => setImporting(true)}>Importar extrato</button>
           <button type="button" className="kb-btn-ghost" onClick={() => openNew("income")}>+ Entrada</button>
           <button type="button" className="kb-btn" onClick={() => openNew("expense")}>+ Despesa</button>
         </div>
       </div>
+
+      <button type="button" className="kb-btn-ghost min-h-11 self-start sm:hidden" onClick={() => setImporting(true)}>Importar extrato</button>
 
       {/* Resumo */}
       <section className="kb-glass grid grid-cols-2 gap-px overflow-hidden p-0! sm:grid-cols-5">
@@ -346,6 +351,8 @@ export default function Financeiro() {
       >
         +
       </button>
+
+      {importing && <ImportStatement onClose={() => setImporting(false)} onDone={load} />}
 
       {form && (
         <div className="kb-modal-back" onClick={() => setForm(null)}>
