@@ -21,7 +21,7 @@ describe("endereço do Lume", () => {
 });
 
 import { createHmac } from "node:crypto";
-import { lumeEntryUrl } from "../lume";
+import { lumeEntryUrl, lumePairCode, lumePastaPath, safeLumePath } from "../lume";
 
 describe("link de entrada do Lume online", () => {
   it("assina expira+HMAC que o servidor Python reconhece", () => {
@@ -29,5 +29,24 @@ describe("link de entrada do Lume online", () => {
     expect(u.origin + u.pathname).toBe("https://lume.exemplo.com/entrar");
     expect(u.searchParams.get("e")).toBe("1120");
     expect(u.searchParams.get("s")).toBe(createHmac("sha256", "segredo").update("entrar:1120").digest("hex"));
+  });
+});
+
+describe("destino e código do app", () => {
+  it("só aceita caminhos internos do Lume no destino", () => {
+    expect(safeLumePath("/?p=Hotel")).toBe("/?p=Hotel");
+    for (const bad of ["//evil.com", "https://evil.com", "evil", "/\\evil", "", null, undefined, "/" + "a".repeat(400)]) expect(safeLumePath(bad as string)).toBeNull();
+  });
+  it("inclui o destino assinado só quando é seguro", () => {
+    const ok = new URL(lumeEntryUrl("https://lume.exemplo.com", "x", 1000, lumePastaPath("Praça")));
+    expect(ok.searchParams.get("ir")).toBe("/?p=Pra%C3%A7a");
+    expect(new URL(lumeEntryUrl("https://lume.exemplo.com", "x", 1000, "//evil.com")).searchParams.get("ir")).toBeNull();
+  });
+  it("gera código de 8 letras estável na janela de 10 min e diferente na seguinte", () => {
+    const a = lumePairCode("segredo", 6000), b = lumePairCode("segredo", 6599), c = lumePairCode("segredo", 6600);
+    expect(a.code).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
+    expect(b.code).toBe(a.code);
+    expect(c.code).not.toBe(a.code);
+    expect(a.expiresAt).toBe(7200);
   });
 });

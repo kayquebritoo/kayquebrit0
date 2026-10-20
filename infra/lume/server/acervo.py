@@ -27,7 +27,7 @@ VIDEO_STEP_SEC = int(os.environ.get("ACERVO_PASSO", "5"))  # um quadro a cada N 
 NUVEM = os.environ.get("LUME_MODO", "") == "nuvem"  # servidor online (VPS): sem SSD, sem Finder, protegido por token
 SEGREDO = os.environ.get("LUME_API_TOKEN", "").strip()
 COOKIE = "lume_s"
-SESSAO_SEG = 30 * 86400
+SESSAO_SEG = 90 * 86400
 
 
 def _hm(msg):
@@ -54,6 +54,51 @@ def sessao_valida(valor):
         return bool(SEGREDO) and time.time() < int(exp) and hmac.compare_digest(_hm(f"sessao:{int(exp)}"), ass)
     except ValueError:
         return False
+
+
+# ── App instalado (PWA): o iPhone guarda os cookies do app separados do Safari, então o app entra com um
+#    código de 8 letras que o KBOS gera (vale 10-20 min). Mesma regra de `lumePairCode` no KBOS.
+_ALFA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+_tentativas = []
+
+
+def codigo_pareamento(janela):
+    d = hmac.new(SEGREDO.encode(), f"pareamento:{janela}".encode(), hashlib.sha256).digest()
+    return "".join(_ALFA[b % len(_ALFA)] for b in d[:8])
+
+
+def codigo_valido(c):
+    c = "".join(ch for ch in (c or "").upper() if ch.isalnum())
+    agora = time.time()
+    _tentativas[:] = [t for t in _tentativas if agora - t < 60]
+    if len(_tentativas) >= 10 or not SEGREDO or len(c) != 8:
+        _tentativas.append(agora); return False
+    _tentativas.append(agora)
+    j = int(agora // 600)
+    return any(hmac.compare_digest(codigo_pareamento(j - k), c) for k in (0, 1))
+
+
+def destino_seguro(ir):
+    """Só caminhos internos do próprio Lume (evita redirecionar para fora)."""
+    return ir if isinstance(ir, str) and ir.startswith("/") and not ir.startswith("//") and "\\" not in ir and len(ir) < 300 else "/"
+
+
+PWA_DIR = Path(__file__).parent / "pwa"
+KBOS_URL = os.environ.get("KBOS_URL", "https://kbos.kayquebrito.com.br").rstrip("/")
+MANIFESTO = {
+    "id": "/", "name": "Lume · KBOS", "short_name": "Lume",
+    "description": "Lume, o acervo inteligente do KBOS: ache o take certo por descrição ou por voz.",
+    "start_url": "/?app=1", "scope": "/", "display": "standalone", "orientation": "portrait",
+    "background_color": "#11101E", "theme_color": "#11101E", "lang": "pt-BR",
+    "icons": [
+        {"src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+        {"src": "/pwa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+        {"src": "/pwa/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+    ],
+    "shortcuts": [{"name": "Buscar por voz", "url": "/?voz=1"}, {"name": "Acervo", "url": "/?acervo=1"}],
+}
+SW_JS = ("self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));"
+         "self.addEventListener('fetch',()=>{});")
 
 
 def autenticado(headers):
@@ -225,9 +270,41 @@ def servir(porta):
             if u.path.startswith('/midia/') and qid.isdigit() and not NUVEM:
                 servir_arquivo(self,catalogo.caminho(int(qid)),qs.get('download')=='1',head=True)
             else:self.send_error(404)
+        def _login(self):
+            f = Path(__file__).parent / "login.lume.html"
+            b = f.read_bytes() if f.is_file() else b"Abra o Lume pelo KBOS."
+            self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Cache-Control", "no-store"); self.end_headers(); self.wfile.write(b)
         def do_POST(self):
             u = urlparse(self.path)
+            if u.path == "/acesso":  # entrada do app instalado: código gerado no KBOS
+                try:
+                    n = int(self.headers.get("Content-Length", "0"))
+                    corpo = json.loads(self.rfile.read(min(max(n, 0), 500)) or b"{}")
+                except (ValueError, TypeError):
+                    self._j({"erro": "Pedido inválido."}, 400); return
+                if not codigo_valido(corpo.get("codigo")):
+                    self._j({"erro": "Código inválido ou expirado. Gere outro no KBOS."}, 401); return
+                try:
+                    self.send_response(200); self.send_header("Content-Type", "application/json")
+                    self.send_header("Set-Cookie", f"{COOKIE}={nova_sessao()}; Path=/; Max-Age={SESSAO_SEG}; HttpOnly; Secure; SameSite=Lax")
+                    self.end_headers(); self.wfile.write(b'{"ok": true}')
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+                return
             if not autenticado(self.headers): self._j({"erro": "Entre pelo KBOS."}, 401); return
+            if u.path == "/voz":  # áudio -> KBOS (Whisper) -> texto
+                try:
+                    n = int(self.headers.get("Content-Length", "0"))
+                    if not 200 < n < 3_000_000: raise ValueError("Áudio vazio ou longo demais.")
+                    audio = self.rfile.read(n)
+                    import urllib.request
+                    req = urllib.request.Request(KBOS_URL + "/api/lume/voz", data=audio, method="POST", headers={
+                        "Authorization": "Bearer " + SEGREDO, "Content-Type": self.headers.get("Content-Type", "audio/webm")})
+                    with urllib.request.urlopen(req, timeout=45) as r:
+                        self._j(json.loads(r.read().decode() or "{}"))
+                except Exception as e:
+                    self._j({"erro": str(e)[:160] or "Não consegui transcrever."}, 502)
+                return
             if u.path != "/feedback":
                 self.send_error(404); return
             # Servidor local: só aceita pedidos feitos pela própria página (mesmo computador, JSON).
@@ -258,13 +335,21 @@ def servir(porta):
             if u.path == "/entrar":
                 if entrada_valida(qs.get("e"), qs.get("s")):
                     self.send_response(302); self.send_header("Set-Cookie", f"{COOKIE}={nova_sessao()}; Path=/; Max-Age={SESSAO_SEG}; HttpOnly; Secure; SameSite=Lax")
-                    self.send_header("Location", "/"); self.end_headers()
+                    self.send_header("Location", destino_seguro(qs.get("ir"))); self.end_headers()
                 else:
                     self._j({"erro": "Link de entrada inválido ou expirado. Abra o Lume pelo KBOS."}, 401)
                 return
+            if u.path == "/manifest.webmanifest":
+                b = json.dumps(MANIFESTO, ensure_ascii=False).encode()
+                self.send_response(200); self.send_header("Content-Type", "application/manifest+json"); self.send_header("Cache-Control", "max-age=3600"); self.end_headers(); self.wfile.write(b); return
+            if u.path == "/sw.js":
+                self.send_response(200); self.send_header("Content-Type", "text/javascript"); self.send_header("Cache-Control", "no-cache"); self.end_headers(); self.wfile.write(SW_JS.encode()); return
+            if u.path.startswith("/pwa/"):
+                f = PWA_DIR / Path(u.path).name
+                if not f.is_file() or f.suffix != ".png": self.send_error(404); return
+                self.send_response(200); self.send_header("Content-Type", "image/png"); self.send_header("Cache-Control", "max-age=604800"); self.end_headers(); self.wfile.write(f.read_bytes()); return
             if not autenticado(self.headers):
-                b = "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><body style='background:#11101E;color:#EDE6EC;font:16px system-ui;display:grid;place-items:center;min-height:100vh;margin:0;text-align:center'><p>Lume · acervo inteligente<br><br>Abra pelo painel do KBOS:<br><a style='color:#E80EFD' href='https://kbos.kayquebrito.com.br/admin/lume'>kbos.kayquebrito.com.br/admin/lume</a></p>".encode()
-                self.send_response(401); self.send_header("Content-Type", "text/html; charset=utf-8"); self.end_headers(); self.wfile.write(b); return
+                self._login(); return
             de = ate = None
             if u.path in {'/buscar','/parecidos','/catalogo'}:
                 try: de,ate = intervalo(qs)

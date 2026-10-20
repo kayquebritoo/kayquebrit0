@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import ClientHubLinks from "@/components/kbos/ClientHubLinks";
 import { PIPELINE } from "@/lib/kbos/constants";
 
 export type PanelProject = {
@@ -134,6 +135,8 @@ export default function ProjectPanel({ project, contacts, onClose, onChanged, on
           ))}
         </div>
         {project.clienteId && <p className="kb-faint mt-2 text-xs">Mudar a etapa avisa o cliente no WhatsApp.</p>}
+
+        <div className="mt-4"><ClientHubLinks name={project.contactName} company={project.contactCompany} /></div>
 
         <form onSubmit={save} className="kb-glass mt-5 grid gap-3 p-4">
           <label className="kb-field">Nome<input className="kb-control min-h-11" value={f.titulo} onChange={(e) => set("titulo", e.target.value)} required /></label>

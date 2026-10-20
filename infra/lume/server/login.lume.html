@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#11101E"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Lume">
+<link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/pwa/apple-touch-180.png"><link rel="icon" href="/pwa/icon-192.png">
+<title>Lume · KBOS</title>
+<style>
+:root{color-scheme:dark;--bg:#11101e;--text:#ede6ec;--muted:#a39cab;font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#0b0b1e;color:var(--text);touch-action:manipulation;overscroll-behavior:none}
+.stage{position:fixed;inset:0;display:grid;place-items:center;padding:calc(24px + env(safe-area-inset-top)) 22px calc(24px + env(safe-area-inset-bottom));overflow:hidden}
+.orb{position:absolute;border-radius:50%;filter:blur(40px);pointer-events:none;will-change:transform}
+.o1{width:70vmax;height:70vmax;left:-25vmax;top:-30vmax;background:radial-gradient(circle,#4f12c755,transparent 66%);animation:d1 24s ease-in-out infinite alternate}
+.o2{width:60vmax;height:60vmax;right:-28vmax;bottom:-26vmax;background:radial-gradient(circle,#350c8566,transparent 66%);animation:d2 30s ease-in-out infinite alternate}
+.o3{width:34vmax;height:34vmax;right:2vmax;bottom:8vmax;background:radial-gradient(circle,#e80efd1c,transparent 68%);animation:d1 36s ease-in-out infinite alternate-reverse}
+@keyframes d1{to{transform:translate3d(14vmax,10vmax,0) scale(1.1)}}@keyframes d2{to{transform:translate3d(-12vmax,-9vmax,0) scale(1.14)}}
+.card{position:relative;width:min(420px,100%);text-align:center;padding:30px 22px 24px;border:1px solid #ffffff22;border-radius:26px;background:linear-gradient(160deg,#ffffff12,#ffffff05);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);box-shadow:inset 0 1px 0 #ffffff1c,0 30px 80px #0008}
+.bars{display:inline-flex;align-items:center;gap:6px;height:56px;margin-bottom:10px}.bars i{width:6px;border-radius:4px;background:linear-gradient(#ede6ec,#b9a6ee);animation:w 2.6s ease-in-out infinite;animation-delay:calc(var(--i)*.16s)}
+@keyframes w{50%{transform:scaleY(.5)}}
+h1{font-size:34px;font-weight:300;letter-spacing:-1.2px;margin:0}h1 b{font-weight:650}
+.by{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#b7adc8;margin:6px 0 20px}
+p{color:var(--muted);font-size:14px;margin:0 0 18px}
+form{display:grid;gap:12px}
+input{width:100%;min-height:54px;font-size:22px!important;letter-spacing:6px;text-align:center;text-transform:uppercase;font-weight:600;background:#0b0b1ecc;border:1px solid #ffffff2b;border-radius:14px;color:var(--text);outline:none;padding:10px}
+input:focus{border-color:#9474d4;box-shadow:0 0 0 3px #754ddd22}
+button,.link{min-height:50px;border-radius:14px;border:1px solid #8d68d17a;background:linear-gradient(120deg,#350c85,#4f12c7 62%,#8a1fe0);color:#fff;font:inherit;font-weight:600;transition:transform .15s,filter .2s;display:grid;place-items:center;text-decoration:none;padding:0 16px}
+button:active,.link:active{transform:scale(.97)}button:disabled{opacity:.55}
+.link{background:#ffffff08;border-color:#ffffff22;font-weight:500;color:#cfc7dc}
+.err{min-height:20px;color:#f2b8ba;font-size:13px;margin:0}
+.step{font-size:12px;color:#9c93a8;margin:14px 0 0;line-height:1.5}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body>
+<div class="stage"><i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i>
+<main class="card">
+<div class="bars" aria-hidden="true"><i style="--i:0;height:18px"></i><i style="--i:1;height:34px"></i><i style="--i:2;height:50px"></i><i style="--i:3;height:30px"></i><i style="--i:4;height:14px"></i></div>
+<h1><b>Lume</b></h1><div class="by">acervo inteligente · KBOS</div>
+<p>O Lume é o gerenciador de arquivos do KBOS. Entre com o código do app.</p>
+<form id="f" autocomplete="off"><input id="c" inputmode="text" autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="9" placeholder="CÓDIGO" aria-label="Código de acesso"><p class="err" id="e" role="alert"></p><button id="b" type="submit">Entrar</button>
+<a class="link" href="https://kbos.kayquebrito.com.br/admin/lume">Gerar código no KBOS</a></form>
+<p class="step">No KBOS: Produção → Lume → “Código para o app”. O código vale poucos minutos e este aparelho fica conectado por 90 dias.</p>
+</main></div>
+<script>
+const f=document.getElementById('f'),c=document.getElementById('c'),e=document.getElementById('e'),b=document.getElementById('b');
+['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,x=>x.preventDefault()));
+f.onsubmit=async ev=>{ev.preventDefault();e.textContent='';b.disabled=true;
+ try{const r=await fetch('/acesso',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({codigo:c.value})});const j=await r.json();
+  if(!r.ok)throw new Error(j.erro||'Não consegui entrar.');location.replace('/')}
+ catch(x){e.textContent=x.message;b.disabled=false}};
+</script></body></html>

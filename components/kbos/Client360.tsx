@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import ClientHubLinks from "@/components/kbos/ClientHubLinks";
 import { useEffect, useState } from "react";
 import type { Summary, TimelineEvent, Kind } from "@/lib/kbos/client360";
 import { FRONT_LABEL, type Front } from "@/lib/kbos/fronts";
@@ -69,6 +70,8 @@ export default function Client360({ id, onClose, onEdit }: { id: string; onClose
               {data.contact.email && <a className="kb-chip" href={`mailto:${data.contact.email}`}>E-mail</a>}
               <button type="button" className="kb-chip" onClick={onEdit}>Editar cadastro</button>
             </div>
+
+            <ClientHubLinks name={data.contact.name} company={data.contact.company} />
 
             <section aria-label="Resumo" className="kb-stat-grid">
               {tiles.map((t) => (

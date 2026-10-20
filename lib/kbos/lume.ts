@@ -36,9 +36,29 @@ import { createHmac } from "node:crypto";
 
 export const LUME_ONLINE_DEFAULT = "https://lume.kayquebrito.com.br";
 
-/** Link `/entrar?e=<expira>&s=<hmac>` aceito pelo servidor do Lume (mesma regra de `entrada_valida` no Python). */
-export function lumeEntryUrl(base: string, secret: string, nowSec = Math.floor(Date.now() / 1000)): string {
+/** Só caminhos internos do Lume (começam com "/", sem "//" nem barra invertida): evita redirecionar para fora. */
+export function safeLumePath(ir: string | null | undefined): string | null {
+  if (!ir || ir.length > 300 || !ir.startsWith("/") || ir.startsWith("//") || ir.includes("\\")) return null;
+  return ir;
+}
+
+/** Link `/entrar?e=<expira>&s=<hmac>` aceito pelo servidor do Lume (mesma regra de `entrada_valida` no Python). `ir` = página de destino dentro do Lume. */
+export function lumeEntryUrl(base: string, secret: string, nowSec = Math.floor(Date.now() / 1000), ir?: string | null): string {
   const exp = nowSec + 120;
   const s = createHmac("sha256", secret).update(`entrar:${exp}`).digest("hex");
-  return `${base.replace(/\/+$/, "")}/entrar?e=${exp}&s=${s}`;
+  const dest = safeLumePath(ir);
+  return `${base.replace(/\/+$/, "")}/entrar?e=${exp}&s=${s}${dest ? `&ir=${encodeURIComponent(dest)}` : ""}`;
+}
+
+/** Página do Lume já filtrada por pasta/empresa (ex.: "Hotel"). */
+export const lumePastaPath = (pasta?: string | null) => (pasta ? `/?p=${encodeURIComponent(pasta)}` : "/");
+
+// ── App instalado (iPhone/Android): código de 8 letras gerado aqui e digitado no app ─────────────────────────
+const ALFA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+/** Mesma regra de `codigo_pareamento` no Python: vale na janela de 10 min em que foi gerado e na seguinte. */
+export function lumePairCode(secret: string, nowSec = Math.floor(Date.now() / 1000)): { code: string; expiresAt: number } {
+  const j = Math.floor(nowSec / 600);
+  const d = createHmac("sha256", secret).update(`pareamento:${j}`).digest();
+  const code = Array.from(d.subarray(0, 8), (b) => ALFA[b % ALFA.length]).join("");
+  return { code, expiresAt: (j + 2) * 600 };
 }

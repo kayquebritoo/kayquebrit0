@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import LumeMark from "@/components/kbos/lume/LumeMark";
+import { CLIENT_HUBS, lumeHref } from "@/lib/kbos/client-hubs";
 import { LUME_DEFAULT_ENDPOINT, LUME_STORAGE_KEY, parseLumeEndpoint } from "@/lib/kbos/lume";
 
 // O endereço fica só neste navegador (localStorage) e abre no computador de quem clica.
@@ -24,6 +25,16 @@ export default function Lume() {
   const [saved, setSaved] = useState("");
   const [value, setValue] = useState("");
   const [err, setErr] = useState("");
+  const [pair, setPair] = useState<{ code: string; expiresAt: number } | null>(null);
+  const [pairErr, setPairErr] = useState("");
+  async function gerarCodigo() {
+    setPairErr("");
+    try {
+      const r = await fetch("/api/admin/lume/codigo", { cache: "no-store" });
+      if (!r.ok) throw new Error();
+      setPair(await r.json());
+    } catch { setPair(null); setPairErr("Não deu para gerar o código agora (token do Lume ausente?)."); }
+  }
   useEffect(() => { const t = setTimeout(() => { const s = read(); setSaved(s); setValue(s); }, 0); return () => clearTimeout(t); }, []);
 
   function save() {
@@ -56,11 +67,36 @@ export default function Lume() {
 
       <section className="kb-glass space-y-3 p-5">
         <h2 className="text-lg font-semibold">Lume online</h2>
-        <p className="text-sm kb-muted">Roda no servidor próprio do Lume e lê o acervo direto da pasta do Drive: não precisa do Mac nem do SSD ligados. Você entra pelo KBOS, sem outra senha.</p>
+        <p className="text-sm kb-muted">O Lume é o gerenciador de arquivos inteligente do KBOS. Roda no servidor próprio dele e lê o acervo direto da pasta do Drive: não precisa do Mac nem do SSD ligados. Você entra pelo KBOS, sem outra senha.</p>
         {typeof window !== "undefined" && new URLSearchParams(window.location.search).get("erro") === "config" && (
           <p role="alert" className="text-sm text-red-300">O KBOS ainda não tem o token do Lume (LUME_API_TOKEN) no servidor.</p>
         )}
         <a className="kb-btn min-h-12" href="/api/admin/lume/entrar">Abrir Lume online ↗</a>
+      </section>
+
+      <section className="kb-glass space-y-3 p-5">
+        <h2 className="text-lg font-semibold">Instalar no iPhone</h2>
+        <p className="text-sm kb-muted">Abra o endereço do Lume no Safari, toque em Compartilhar → Adicionar à Tela de Início. No primeiro acesso do app, digite o código abaixo (vale por cerca de 10 a 20 minutos).</p>
+        <button type="button" className="kb-btn-ghost min-h-12" onClick={gerarCodigo}>Gerar código para o app</button>
+        {pair && (
+          <p className="font-mono text-3xl font-bold tracking-[0.3em]" aria-live="polite">
+            {pair.code} <span className="kb-faint text-xs font-normal tracking-normal">até {new Date(pair.expiresAt * 1000).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Belem" })}</span>
+          </p>
+        )}
+        {pairErr && <p role="alert" className="text-sm text-red-300">{pairErr}</p>}
+      </section>
+
+      <section className="kb-glass space-y-3 p-5">
+        <h2 className="text-lg font-semibold">Atalhos por cliente</h2>
+        {CLIENT_HUBS.map((h) => (
+          <div key={h.id} className="space-y-2">
+            <p className="cp-eyebrow">{h.label.toUpperCase()}</p>
+            <div className="flex flex-wrap gap-2">
+              <a className="kb-chip min-h-11 items-center" href={lumeHref(h.pasta)}>Todo o grupo ↗</a>
+              {h.empresas.map((e) => <a key={e.key} className="kb-chip min-h-11 items-center" href={lumeHref(e.pasta)}>{e.label} ↗</a>)}
+            </div>
+          </div>
+        ))}
       </section>
 
       <section className="kb-glass space-y-3 p-5">

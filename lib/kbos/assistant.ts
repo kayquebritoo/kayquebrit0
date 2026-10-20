@@ -99,7 +99,7 @@ export function audioFilename(mime: string): string {
 }
 
 export async function transcribeAudio(
-  input: { audioUrl?: string; audioBase64?: string; audioMime?: string }
+  input: { audioUrl?: string; audioBase64?: string; audioMime?: string; prompt?: string }
 ): Promise<Transcript> {
   let bytes: ArrayBuffer | null = null;
   let mime = "audio/ogg";
@@ -128,6 +128,7 @@ export async function transcribeAudio(
     const form = new FormData();
     form.append("model", stt.model);
     form.append("language", "pt");
+    if (input.prompt) form.append("prompt", input.prompt.slice(0, 400));
     form.append("file", new Blob([bytes], { type: mime.split(";")[0] }), audioFilename(mime));
     const res = await fetchTimeout(`${stt.url}/audio/transcriptions`, {
       method: "POST",
