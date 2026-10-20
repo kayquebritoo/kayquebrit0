@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import PortalAccess from "@/components/kbos/PortalAccess";
 import ClientHubLinks from "@/components/kbos/ClientHubLinks";
 import { useEffect, useState } from "react";
 import type { Summary, TimelineEvent, Kind } from "@/lib/kbos/client360";
@@ -70,6 +71,8 @@ export default function Client360({ id, onClose, onEdit }: { id: string; onClose
               {data.contact.email && <a className="kb-chip" href={`mailto:${data.contact.email}`}>E-mail</a>}
               <button type="button" className="kb-chip" onClick={onEdit}>Editar cadastro</button>
             </div>
+
+            <PortalAccess contactId={data.contact.id} email={data.contact.email} phone={data.contact.phone} name={data.contact.name} />
 
             <ClientHubLinks name={data.contact.name} company={data.contact.company} />
 

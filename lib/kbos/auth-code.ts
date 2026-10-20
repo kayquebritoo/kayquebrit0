@@ -6,6 +6,7 @@ import { hashPassword, verifyPassword } from "./password";
 import { sendEmail } from "./email";
 import { sendEvolutionText } from "./whatsapp";
 import { PublicError } from "./http";
+import { logHook } from "./webhook-log";
 
 export type CodeChannel = "whatsapp" | "email";
 const generic = "Se os dados estiverem cadastrados, você receberá um código de 6 dígitos. Ele vale por 5 minutos.";
@@ -23,12 +24,21 @@ export async function requestAccessCode(identifier: string, channel: CodeChannel
  ) INSERT INTO kbos_auth_challenges (id,user_id,code_hash,channel,expires_at)
  SELECT ${challengeId}::uuid,id,${hashPassword(code)},${channel},now()+interval '5 minutes' FROM account RETURNING id`);
  if(!claimed.rows.length) return {challengeId,message:generic};
+ const message=`Seu código de acesso ao KBOS é ${code}. Válido por 5 minutos. Não compartilhe este código. Se não solicitou, ignore esta mensagem.`;
+ const byEmail=async()=>{const result=await sendEmail(user.email,'Seu código de acesso — KBOS',`<p>Seu código de acesso:</p><p style="font-size:32px;letter-spacing:8px"><strong>${code}</strong></p><p>Válido por 5 minutos. Não compartilhe. Se não solicitou, ignore esta mensagem.</p>`);if(!result.sent)throw new Error(result.error||'delivery');};
  try {
-  const message=`Seu código de acesso ao KBOS é ${code}. Válido por 5 minutos. Não compartilhe este código. Se não solicitou, ignore esta mensagem.`;
-  if(channel==='whatsapp') await sendEvolutionText(phone,message,{signal:AbortSignal.timeout(8000)});
-  else {const result=await sendEmail(user.email,'Seu código de acesso — KBOS',`<p>Seu código de acesso:</p><p style="font-size:32px;letter-spacing:8px"><strong>${code}</strong></p><p>Válido por 5 minutos. Não compartilhe. Se não solicitou, ignore esta mensagem.</p>`);if(!result.sent)throw new Error('delivery');}
- } catch {
+  if(channel==='whatsapp') {
+   try { await sendEvolutionText(phone,message,{signal:AbortSignal.timeout(12000)}); }
+   catch(e) {
+    // WhatsApp fora do ar: não deixa a pessoa trancada — manda o mesmo código por e-mail (se houver).
+    await logHook({event:'login',result:'código por WhatsApp falhou; tentando e-mail',detail:(e instanceof Error?e.message:String(e)).slice(0,160)});
+    await byEmail();
+    await logHook({event:'login',result:'código enviado por e-mail (reserva)'});
+   }
+  } else await byEmail();
+ } catch(e) {
   await db().execute(sql`UPDATE kbos_auth_challenges SET consumed=true WHERE id=${challengeId}::uuid`);
+  await logHook({event:'login',result:'não foi possível entregar o código',detail:(e instanceof Error?e.message:String(e)).slice(0,160)});
   console.warn('[KBOS auth] Não foi possível entregar um código de acesso.');
  }
  return {challengeId,message:generic};
