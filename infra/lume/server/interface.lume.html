@@ -19,7 +19,8 @@ body::before{content:"";position:fixed;width:62vmax;height:62vmax;left:-18vmax;t
 
 .vote{width:33px;height:33px;border:1px solid var(--line);border-radius:9px;background:none;display:grid;place-items:center;color:#cbc3d4;font-size:15px;line-height:1;padding:0}
 .vote:hover{background:#ffffff0b}.vote.on-up{border-color:#91c7b6;background:#91c7b61f}.vote.on-down{border-color:#f2b8ba;background:#f2b8ba1f}
-.votes{display:flex;gap:5px}.card.gone{opacity:0;transform:scale(.96);transition:opacity .25s,transform .25s}
+.votes{display:flex;gap:5px}
+html[data-escopo] [data-admin],html[data-escopo] .votes,html[data-escopo] .kbos-pill{display:none!important}.card.gone{opacity:0;transform:scale(.96);transition:opacity .25s,transform .25s}
 .exemplos{color:#b9b0c3;font-size:11px;margin:-12px 0 16px}
 @media (prefers-reduced-motion:reduce){body::before,.lume-mark .lb,.lume-wave i{animation:none}}
 
@@ -164,13 +165,13 @@ dialog{max-width:100vw}
 <aside class="drawer" id="drawer" aria-label="Menu do Lume" aria-hidden="true"><div class="fx" aria-hidden="true"><i class="d1"></i><i class="d2"></i></div>
 <div class="dr-head"><div class="brand"><span><strong>Lume</strong><small>Acervo do KBOS</small></span></div><button class="menu-btn" id="menu-close" aria-label="Fechar menu"><svg><use href="#i-close"/></svg></button></div>
 <div class="dr-body">
-<div class="glass dr-kbos"><h4 style="margin:0 0 6px">Parte do KBOS</h4><strong style="font-size:15px;font-weight:600">O Lume é o gerenciador de arquivos do KBOS.</strong><p>Contratos, projetos, tarefas e arquivos de cada cliente vivem juntos. Daqui você volta ao painel quando quiser.</p></div>
-<div class="glass"><h4>Voltar ao KBOS</h4>
+<div class="glass dr-kbos" data-admin><h4 style="margin:0 0 6px">Parte do KBOS</h4><strong style="font-size:15px;font-weight:600">O Lume é o gerenciador de arquivos do KBOS.</strong><p>Contratos, projetos, tarefas e arquivos de cada cliente vivem juntos. Daqui você volta ao painel quando quiser.</p></div>
+<div class="glass" data-admin><h4>Voltar ao KBOS</h4>
 <a class="dr-item" href="https://kbos.kayquebrito.com.br/admin"><span class="ico"><svg><use href="#i-kb"/></svg></span><span>Painel do KBOS<small>Hoje, clientes e financeiro</small></span></a>
 <a class="dr-item" href="https://kbos.kayquebrito.com.br/admin/projetos"><span class="ico"><svg><use href="#i-proj"/></svg></span><span>Projetos e entregas</span></a>
 <a class="dr-item" href="https://kbos.kayquebrito.com.br/admin/orcamentos"><span class="ico"><svg><use href="#i-doc"/></svg></span><span>Orçamentos e contratos</span></a>
 <a class="dr-item" href="https://kbos.kayquebrito.com.br/admin/tarefas"><span class="ico"><svg><use href="#i-task"/></svg></span><span>Tarefas e prazos</span></a></div>
-<div class="glass"><h4>Grupo VIP · atalhos do acervo</h4>
+<div class="glass" data-admin><h4>Grupo VIP · atalhos do acervo</h4>
 <button class="dr-item" data-vip="atalaia"><span class="ico"><svg><use href="#i-folder"/></svg></span><span>Todo o grupo<small>Hotel, lounge e praça</small></span></button>
 <button class="dr-item" data-vip="hotel"><span class="ico"><svg><use href="#i-folder"/></svg></span><span>Hotel</span></button>
 <button class="dr-item" data-vip="lounge"><span class="ico"><svg><use href="#i-folder"/></svg></span><span>Lounge</span></button>
@@ -178,7 +179,7 @@ dialog{max-width:100vw}
 <div class="glass"><h4>Lume</h4>
 <button class="dr-item" id="dr-voice"><span class="ico"><svg><use href="#i-mic"/></svg></span><span>Buscar por voz<small>Diga “Lume, chapa mista”</small></span></button>
 <button class="dr-item" id="dr-install"><span class="ico"><svg><use href="#i-install"/></svg></span><span>Instalar o app<small id="dr-install-sub">Tela inicial, sem barra do navegador</small></span></button>
-<a class="dr-item" href="https://kbos.kayquebrito.com.br/apresentacao"><span class="ico"><svg><use href="#i-stars"/></svg></span><span>Conheça o KBOS<small>Apresentação do sistema</small></span></a></div>
+<a class="dr-item" data-admin href="https://kbos.kayquebrito.com.br/apresentacao"><span class="ico"><svg><use href="#i-stars"/></svg></span><span>Conheça o KBOS<small>Apresentação do sistema</small></span></a></div>
 </div></aside>
 <div class="voice idle" id="voice" role="dialog" aria-modal="true" aria-label="Busca por voz" aria-hidden="true"><div class="fx" aria-hidden="true"><i class="v1"></i><i class="v2"></i></div>
 <div class="voice-box"><div class="voice-bars" id="voice-bars" aria-hidden="true"></div><h2 id="voice-title">Estou ouvindo</h2><div class="heard" id="voice-heard"></div><p class="hint" id="voice-hint">Diga, por exemplo: “Lume, chapa mista”.</p><div class="row"><button class="btn" id="voice-cancel" type="button">Cancelar</button><button class="btn primary" id="voice-stop" type="button">Pronto</button></div></div></div>

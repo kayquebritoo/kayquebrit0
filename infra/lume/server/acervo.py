@@ -43,6 +43,52 @@ def entrada_valida(e, s):
     return bool(SEGREDO) and time.time() < exp <= time.time() + 600 and hmac.compare_digest(_hm(f"entrar:{exp}"), s or "")
 
 
+# ── Cliente (portal): cookie próprio, preso a UMA pasta. Só leitura: sem feedback, sem /abrir, sem menu do KBOS.
+COOKIE_C = "lume_c"
+SESSAO_CLIENTE_SEG = 7 * 86400
+
+
+def _b64(txt):
+    import base64
+    return base64.urlsafe_b64encode(txt.encode()).decode().rstrip("=")
+
+
+def _unb64(v):
+    import base64
+    return base64.urlsafe_b64decode(v + "=" * (-len(v) % 4)).decode()
+
+
+def entrada_cliente_valida(e, esc, s):
+    """/entrar-cliente?e=<expira>&esc=<pasta>&s=<hmac de "cliente:<exp>:<pasta>">, vale 2 minutos."""
+    try:
+        exp = int(e)
+    except (TypeError, ValueError):
+        return False
+    esc = (esc or "").strip()
+    return bool(SEGREDO and esc) and len(esc) <= 80 and time.time() < exp <= time.time() + 600 and hmac.compare_digest(_hm(f"cliente:{exp}:{esc}"), s or "")
+
+
+def sessao_cliente(esc):
+    exp = int(time.time()) + SESSAO_CLIENTE_SEG
+    return f"{exp}.{_b64(esc)}.{_hm(f'cliente:{exp}:{esc}')}"
+
+
+def escopo_cliente(headers):
+    """Pasta a que o cookie de cliente dá acesso, ou None."""
+    for parte in headers.get("Cookie", "").split(";"):
+        k, _, v = parte.strip().partition("=")
+        if k != COOKIE_C:
+            continue
+        try:
+            exp, e64, ass = v.split(".", 2)
+            esc = _unb64(e64)
+            if SEGREDO and time.time() < int(exp) and hmac.compare_digest(_hm(f"cliente:{int(exp)}:{esc}"), ass):
+                return esc
+        except (ValueError, UnicodeDecodeError):
+            pass
+    return None
+
+
 def nova_sessao():
     exp = int(time.time()) + SESSAO_SEG
     return f"{exp}.{_hm(f'sessao:{exp}')}"
@@ -245,6 +291,22 @@ class Indice:
 
 
 
+def id_no_escopo(qid, esc):
+    pos = idx.pos.get(int(qid))
+    return pos is not None and normalizar(esc) in normalizar(idx.rows[pos][3])
+
+
+def dentro_do_escopo_req(caminho, qs, esc):
+    """Rotas que apontam para UM arquivo (mídia, miniatura, link do Drive) só abrem se ele estiver na pasta do cliente."""
+    try:
+        if caminho.startswith("/midia/"): return id_no_escopo(int(caminho.rsplit("/", 1)[-1]), esc)
+        if caminho.startswith("/thumb/"): return id_no_escopo(int(Path(caminho).stem), esc)
+        if caminho == "/drive": return id_no_escopo(int(qs.get("id", "")), esc)
+    except ValueError:
+        return False
+    return True
+
+
 def servir(porta):
     idx = Indice()
     print(f"{len(idx.rows)} quadros no índice.")
@@ -291,7 +353,7 @@ def servir(porta):
                 except (BrokenPipeError, ConnectionResetError):
                     pass
                 return
-            if not autenticado(self.headers): self._j({"erro": "Entre pelo KBOS."}, 401); return
+            if not autenticado(self.headers) and not (u.path == "/voz" and escopo_cliente(self.headers)): self._j({"erro": "Entre pelo KBOS."}, 401); return
             if u.path == "/voz":  # áudio -> KBOS (Whisper) -> texto
                 try:
                     n = int(self.headers.get("Content-Length", "0"))
@@ -339,6 +401,14 @@ def servir(porta):
                 else:
                     self._j({"erro": "Link de entrada inválido ou expirado. Abra o Lume pelo KBOS."}, 401)
                 return
+            if u.path == "/entrar-cliente":
+                esc = (qs.get("esc") or "").strip()
+                if entrada_cliente_valida(qs.get("e"), esc, qs.get("s")):
+                    self.send_response(302); self.send_header("Set-Cookie", f"{COOKIE_C}={sessao_cliente(esc)}; Path=/; Max-Age={SESSAO_CLIENTE_SEG}; HttpOnly; Secure; SameSite=Lax")
+                    self.send_header("Location", "/"); self.end_headers()
+                else:
+                    self._j({"erro": "Link de entrada inválido ou expirado. Abra pelo seu portal."}, 401)
+                return
             if u.path == "/manifest.webmanifest":
                 b = json.dumps(MANIFESTO, ensure_ascii=False).encode()
                 self.send_response(200); self.send_header("Content-Type", "application/manifest+json"); self.send_header("Cache-Control", "max-age=3600"); self.end_headers(); self.wfile.write(b); return
@@ -348,14 +418,23 @@ def servir(porta):
                 f = PWA_DIR / Path(u.path).name
                 if not f.is_file() or f.suffix != ".png": self.send_error(404); return
                 self.send_response(200); self.send_header("Content-Type", "image/png"); self.send_header("Cache-Control", "max-age=604800"); self.end_headers(); self.wfile.write(f.read_bytes()); return
+            esc = None
             if not autenticado(self.headers):
-                self._login(); return
+                esc = escopo_cliente(self.headers)
+                if not esc:
+                    self._login(); return
+                # Cliente: só leitura, só dentro da pasta dele.
+                if not (u.path in {"/", "/catalogo", "/buscar", "/parecidos", "/drive"} or u.path.startswith(("/midia/", "/thumb/"))):
+                    self.send_error(404); return
+                if not dentro_do_escopo_req(u.path, qs, esc):
+                    self.send_error(404); return
+                if "p" not in qs or normalizar(esc) not in normalizar(qs.get("p", "")): qs["p"] = esc
             de = ate = None
             if u.path in {'/buscar','/parecidos','/catalogo'}:
                 try: de,ate = intervalo(qs)
                 except ValueError as e: self._j({'erro':str(e)},400); return
             if u.path == "/":
-                b = (lambda d: (d/'interface.lume.html' if (d/'interface.lume.html').is_file() else d/'interface.html'))(Path(__file__).parent).read_text(encoding='utf-8').encode(); self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.end_headers(); self.wfile.write(b)
+                b = (lambda d: (d/'interface.lume.html' if (d/'interface.lume.html').is_file() else d/'interface.html'))(Path(__file__).parent).read_text(encoding='utf-8').replace('<html', '<html data-escopo="cliente"' if esc else '<html', 1).encode(); self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.end_headers(); self.wfile.write(b)
             elif u.path == '/info':
                 self._j({'arquivos':catalogo.total_indexados,'arquivos_navegaveis':len(catalogo.arquivos),'quadros':len(idx.rows),'modo':'nuvem' if NUVEM else 'local'})
             elif u.path == '/catalogo':
@@ -412,7 +491,7 @@ def servir(porta):
                     print(f"Falha na busca: {e}", file=sys.stderr, flush=True)
                     self._j({"erro": str(e)}, 500)
             elif u.path == "/parecidos":
-                ids = [int(x) for x in qs.get("ids", "").split(",") if x.isdigit() and int(x) in idx.pos]
+                ids = [int(x) for x in qs.get("ids", "").split(",") if x.isdigit() and int(x) in idx.pos and (not esc or id_no_escopo(int(x), esc))]
                 if not ids: self._j([]); return
                 vec = idx.m[[idx.pos[i] for i in ids]].mean(axis=0); vec /= np.linalg.norm(vec) or 1
                 self._j(catalogo.enriquecer(idx.buscar(vec, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate)))

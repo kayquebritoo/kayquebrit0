@@ -50,6 +50,13 @@ export function lumeEntryUrl(base: string, secret: string, nowSec = Math.floor(D
   return `${base.replace(/\/+$/, "")}/entrar?e=${exp}&s=${s}${dest ? `&ir=${encodeURIComponent(dest)}` : ""}`;
 }
 
+/** Entrada do CLIENTE (portal): mesma assinatura, mas presa a uma pasta (`cliente:<exp>:<pasta>`, igual ao Python). Só leitura. */
+export function lumeClientEntryUrl(base: string, secret: string, pasta: string, nowSec = Math.floor(Date.now() / 1000)): string {
+  const exp = nowSec + 120;
+  const s = createHmac("sha256", secret).update(`cliente:${exp}:${pasta}`).digest("hex");
+  return `${base.replace(/\/+$/, "")}/entrar-cliente?e=${exp}&esc=${encodeURIComponent(pasta)}&s=${s}`;
+}
+
 /** Página do Lume já filtrada por pasta/empresa (ex.: "Hotel"). */
 export const lumePastaPath = (pasta?: string | null) => (pasta ? `/?p=${encodeURIComponent(pasta)}` : "/");
 

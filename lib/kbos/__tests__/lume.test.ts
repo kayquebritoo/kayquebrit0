@@ -21,7 +21,7 @@ describe("endereço do Lume", () => {
 });
 
 import { createHmac } from "node:crypto";
-import { lumeEntryUrl, lumePairCode, lumePastaPath, safeLumePath } from "../lume";
+import { lumeClientEntryUrl, lumeEntryUrl, lumePairCode, lumePastaPath, safeLumePath } from "../lume";
 
 describe("link de entrada do Lume online", () => {
   it("assina expira+HMAC que o servidor Python reconhece", () => {
@@ -48,5 +48,17 @@ describe("destino e código do app", () => {
     expect(b.code).toBe(a.code);
     expect(c.code).not.toBe(a.code);
     expect(a.expiresAt).toBe(7200);
+  });
+});
+
+describe("entrada do cliente (portal)", () => {
+  it("assina presa à pasta, igual ao servidor Python", () => {
+    const u = lumeClientEntryUrl("https://lume.exemplo.com/", "segredo", "Atalaia", 1799999880);
+    expect(u).toBe("https://lume.exemplo.com/entrar-cliente?e=1800000000&esc=Atalaia&s=c5caf3fa7eafe72bf3792a1bde9900aa5ceb116f5af9c450ea27fc6536f159ad");
+  });
+  it("outra pasta gera outra assinatura", () => {
+    const a = lumeClientEntryUrl("https://x.com", "segredo", "Atalaia", 1000);
+    const b = lumeClientEntryUrl("https://x.com", "segredo", "Outro", 1000);
+    expect(a.split("&s=")[1]).not.toBe(b.split("&s=")[1]);
   });
 });

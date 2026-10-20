@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PIPELINE } from "@/lib/kbos/constants";
 import ApproveButtons from "@/components/kbos/ApproveButtons";
+import PortalLumeCard from "@/components/kbos/PortalLumeCard";
 
 type Project = { id: string; titulo: string; categoria: string; status: string; prazo?: string | null };
 type FileItem = { id: string; projectId: string; nome: string; url: string; status: string };
@@ -66,6 +67,7 @@ export default function PortalContent({ firstName }: { firstName?: string }) {
         <p className="text-lg font-light">Olá{name ? `, ${name}` : ""}.</p>
         <p className="kb-muted text-sm">{pending ? `Você tem ${pending} arquivo${pending > 1 ? "s" : ""} esperando sua aprovação.` : "Aqui você acompanha cada etapa e aprova as entregas."}</p>
       </div>
+      <PortalLumeCard />
       <div className="grid gap-4 md:grid-cols-2">
         {projects.map((p) => {
           const idx = Math.max(0, PIPELINE.findIndex((s) => s.id === p.status));
