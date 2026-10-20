@@ -14,7 +14,7 @@ describe("monitor do WhatsApp", () => {
     r = nextHealth(h, "close", T + 240_000); expect(r.action).toBe("none");
   });
   it("lembra a cada 30 min enquanto cair", () => {
-    let h = nextHealth(nextHealth(emptyHealth(), "close", T).next, "close", T + 1).next;
+    const h = nextHealth(nextHealth(emptyHealth(), "close", T).next, "close", T + 1).next;
     const r = nextHealth(h, "connecting", T + 1 + REMIND_MS);
     expect(r.action).toBe("remind");
   });
