@@ -163,6 +163,30 @@ export default function CrmBoard() {
     }
   }
 
+  async function mergeAll() {
+    const extra = dupes.reduce((a, g) => a + g.length - 1, 0);
+    if (!confirm(`Combinar ${extra} contato(s) repetido(s) em ${dupes.length} pessoa(s)? Em cada grupo fica o mais completo; os outros são arquivados e tudo deles (projetos, cobranças, conversas, orçamentos) vai para ele.`)) return;
+    setMerging(true);
+    setMergeMsg("");
+    let done = 0;
+    try {
+      for (const g of dupes) {
+        const [keep, ...rest] = g;
+        for (const r of rest) {
+          const res = await fetch("/api/admin/contacts/merge", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keepId: keep.id, removeId: r.id }) });
+          if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Não consegui juntar.");
+          done++;
+        }
+      }
+      setMergeMsg(`Pronto: ${done} contato(s) combinado(s).`);
+    } catch (e) {
+      setMergeMsg(`${e instanceof Error ? e.message : "Erro."} (${done} já combinado(s).)`);
+    } finally {
+      await load();
+      setMerging(false);
+    }
+  }
+
   const shown = useMemo(
     () => items.filter((c) => (filter === "all" ? c.status !== "archived" : c.status === filter)),
     [items, filter]
@@ -268,6 +292,9 @@ export default function CrmBoard() {
             aria-label="Buscar contatos"
           />
         </label>
+        <button type="button" onClick={() => setDupesOpen(true)} className="kb-btn-ghost min-h-11">
+          Combinar iguais{dupes.length > 0 ? ` (${dupes.reduce((a, g) => a + g.length - 1, 0)})` : ""}
+        </button>
         <button type="button" onClick={() => setImportOpen(true)} className="kb-btn-ghost min-h-11">Importar</button>
         <button type="button" onClick={openCreate} className="kb-btn">
           + Novo contato
@@ -287,7 +314,7 @@ export default function CrmBoard() {
         <button type="button" onClick={() => setDupesOpen(true)} className="kb-glass flex w-full items-center justify-between gap-3 rounded-2xl! px-4 py-3 text-left">
           <span className="text-sm">
             <b className="kb-ink">{dupes.reduce((a, g) => a + g.length - 1, 0)} contato(s) repetido(s)</b>
-            <span className="kb-muted block text-[12px]">Mesmo telefone em mais de um cadastro. Toque para juntar.</span>
+            <span className="kb-muted block text-[12px]">Mesmo telefone, e-mail ou @ em mais de um cadastro. Toque para juntar.</span>
           </span>
           <span className="kb-tag soon shrink-0">Revisar</span>
         </button>
@@ -347,6 +374,11 @@ export default function CrmBoard() {
             <p className="kb-muted text-sm">O primeiro de cada grupo (o mais completo) é o que fica. Os outros são arquivados e tudo deles vai para ele.</p>
             {mergeMsg && <p role="status" className="kb-tag w-full justify-start rounded-xl! px-3! py-2! text-sm">{mergeMsg}</p>}
             {dupes.length === 0 && <p className="kb-muted py-6 text-center text-sm">Nada repetido. Tudo certo.</p>}
+            {dupes.length > 1 && (
+              <button type="button" disabled={merging} onClick={mergeAll} className="kb-btn w-full">
+                {merging ? "Combinando…" : `Combinar todos (${dupes.length} grupos)`}
+              </button>
+            )}
             {dupes.map((g) => (
               <div key={g[0].id} className="kb-glass space-y-2 rounded-2xl! p-4">
                 {g.map((c, i) => (

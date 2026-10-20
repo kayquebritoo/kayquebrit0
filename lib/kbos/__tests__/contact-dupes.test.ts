@@ -28,4 +28,16 @@ describe("duplicateGroups", () => {
     const g = duplicateGroups([c("1", "Ana", "91 9999-1111"), c("2", "Ana B", "91 9999-1111", { status: "client" }), c("3", "Ana C", "91 9999-1111", { status: "archived" })]);
     expect(g[0].map((x) => x.id)).toEqual(["2", "1"]);
   });
+
+  it("agrupa por e-mail e instagram, encadeando (A-tel-B, B-email-C)", () => {
+    const g = duplicateGroups([
+      { id: "a", name: "Ana", phone: "+55 91 98888-1111", status: "lead" },
+      { id: "b", name: "Ana S", phone: "(91) 8888-1111", email: "Ana@x.com", status: "lead" },
+      { id: "c", name: "Ana Silva", phone: null, email: "ana@x.com", status: "lead" },
+      { id: "d", name: "Beto", phone: null, instagram: "@beto", status: "lead" },
+      { id: "e", name: "Beto R", phone: null, instagram: "beto", status: "lead" },
+      { id: "f", name: "Solo", phone: null, status: "lead" },
+    ]);
+    expect(g.map((x) => x.map((c) => c.id).sort())).toEqual([["a", "b", "c"], ["d", "e"]]);
+  });
 });
