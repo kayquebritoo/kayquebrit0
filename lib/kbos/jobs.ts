@@ -23,6 +23,7 @@ export const JOB_TYPES = [
   "campaign.dispatch",
   "campaign.send",
   "agenda.reminders",
+  "whatsapp.health",
 ] as const;
 export type JobType = (typeof JOB_TYPES)[number];
 

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import WaHealthBanner from "@/components/kbos/WaHealthBanner";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { ROLE_LABELS } from "@/lib/kbos/constants";
@@ -255,6 +256,7 @@ export function KbosShell({
           </div>
         </header>
         <main className="kb-page mx-auto max-w-6xl px-4 pb-[calc(96px+env(safe-area-inset-bottom))] pt-2 md:px-8 lg:pb-16">
+          <WaHealthBanner />
           {children}
         </main>
       </div>

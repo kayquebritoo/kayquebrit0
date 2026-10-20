@@ -26,6 +26,7 @@ import { handleMorningBriefing, morningCronPattern } from "../lib/kbos/morning-b
 import type { WhatsappPayload } from "../lib/kbos/whatsapp";
 import { jobAttempts } from "../lib/kbos/jobs";
 import { handleBillingReminders } from "../lib/kbos/billing-reminders";
+import { handleWhatsappHealth } from "../lib/kbos/wa-health";
 
 export const newConn = (url: string) =>
   new IORedis(url, { maxRetriesPerRequest: null });
@@ -57,6 +58,8 @@ export async function processJob(
         });
       case "agenda.reminders":
         return await handleAgendaReminders();
+      case "whatsapp.health":
+        return await handleWhatsappHealth();
       default:
         throw new UnrecoverableError(`Tipo de job desconhecido: ${String(tipo)}`);
     }
@@ -108,6 +111,10 @@ export async function ensureCrons(queue: Queue, everyMs: number) {
       { every: reminderPollMs() },
       { name: "agenda.reminders", data: {} }
     );
+  }
+  // Monitor do WhatsApp: confere a conexão a cada 2 min e avisa por e-mail/Telegram se cair.
+  if (!has("cron--whatsapp.health")) {
+    await queue.upsertJobScheduler("cron--whatsapp.health", { every: 120_000 }, { name: "whatsapp.health", data: {} });
   }
   // Briefing matinal: 1x/dia (padrão 08:00 America/Sao_Paulo via
   // BRIEFING_MORNING_CRON; o fuso do "hoje" vive em BRIEFING_TIMEZONE).

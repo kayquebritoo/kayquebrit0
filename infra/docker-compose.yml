@@ -158,6 +158,19 @@ services:
       REMINDER_WHATSAPP_TO: ${REMINDER_WHATSAPP_TO:-}
       REMINDER_POLL_MS: ${REMINDER_POLL_MS:-300000}
       REMINDER_CATCHUP_MIN: ${REMINDER_CATCHUP_MIN:-60}
+      # Monitor do WhatsApp (aviso de queda por e-mail e, opcional, Telegram).
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM: ${RESEND_FROM:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_SECURE: ${SMTP_SECURE:-}
+      ALERT_EMAIL: ${ALERT_EMAIL:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_ALERT_CHAT_ID: ${TELEGRAM_ALERT_CHAT_ID:-}
     depends_on:
       redis:
         condition: service_healthy
