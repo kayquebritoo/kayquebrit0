@@ -10,11 +10,11 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const denied = deny(await sessionUser(), "admin");
   if (denied) return denied;
+  const base = hostBaseFromRequest(req) ?? appUrlEnv();
   const id = (process.env.GOOGLE_CLIENT_ID || "").trim();
   if (!id || !(process.env.GOOGLE_CLIENT_SECRET || "").trim()) {
-    return NextResponse.redirect(new URL("/admin/crm?importar=erro&motivo=google-config", req.url));
+    return NextResponse.redirect(new URL("/admin/crm?importar=erro&motivo=google-config", base));
   }
-  const base = hostBaseFromRequest(req) ?? appUrlEnv();
   const state = randomBytes(16).toString("hex");
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   url.search = new URLSearchParams({
