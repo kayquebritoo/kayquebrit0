@@ -2,13 +2,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CLIENT_HUBS, lumeHref } from "@/lib/kbos/client-hubs";
 import { BRAND_LIST, brandColor } from "@/lib/kbos/brand-colors";
+import { effectivePostLimit } from "@/lib/kbos/plan-limit";
 
 type Post = {
   id: string; projectId: string | null; brand: string | null; title: string; format: string; scheduledAt: string | null;
   status: string; script: string | null; caption: string | null; mediaUrl: string | null; clientNote: string | null; copies: number; postedUrl: string | null;
   scriptBy: string | null; captureBy: string | null; editor: string | null; errorMessage: string | null;
 };
-type Project = { id: string; titulo: string; categoria?: string };
+type Project = { id: string; titulo: string; categoria?: string; postLimit?: number | null };
 
 // Etapas na ordem do fluxo (cor = o que a pessoa vê no calendário).
 const STATUS: { id: string; label: string; color: string }[] = [
@@ -69,7 +70,7 @@ export default function ContentBoard() {
       try {
         const r = await fetch("/api/projects", { cache: "no-store" });
         const d = await r.json();
-        const all: Project[] = (d.items || []).map((p: Project) => ({ id: p.id, titulo: p.titulo, categoria: p.categoria }));
+        const all: Project[] = (d.items || []).map((p: Project) => ({ id: p.id, titulo: p.titulo, categoria: p.categoria, postLimit: p.postLimit ?? null }));
         // só clientes recorrentes de redes sociais (categoria "social"); projetos pontuais (marca, site…) nunca entram
         const list = all.filter((p) => p.categoria === "social");
         setProjects(list);
@@ -198,7 +199,7 @@ export default function ContentBoard() {
                 <span className="kb-faint tabular-nums">{(items ?? []).filter((p) => p.brand === b).length}</span>
               </span>
             ))}
-            <span className="kb-faint ml-auto text-[12px] tabular-nums">{items.length} de 50 no mês</span>
+            <span className="kb-faint ml-auto text-[12px] tabular-nums">{(() => { const pr = projects.find((x) => x.id === projectId); const lim = pr ? effectivePostLimit(pr.categoria ?? "", pr.postLimit) : null; return lim === null ? `${items.length} no mês` : `${items.length} de ${lim} no mês`; })()}</span>
           </div>
           <div className="kb-glass overflow-hidden p-0!" role="grid" aria-label={`Calendário de ${monthName}`}>
             <div className="grid grid-cols-7 border-b border-white/10" role="row">

@@ -10,6 +10,7 @@ export type PanelProject = {
   categoria: string;
   status: string;
   valor: string | null;
+  postLimit?: number | null;
   prazo: string | null;
   description?: string | null;
   contactId?: string | null;
@@ -51,7 +52,7 @@ export default function ProjectPanel({ project, contacts, onClose, onChanged, on
   const [chatOpen, setChatOpen] = useState(false);
   const [f, setF] = useState({
     titulo: project.titulo, categoria: project.categoria, contactId: project.contactId ?? "", valor: project.valor ?? "",
-    prazo: asDate(project.prazo), description: project.description ?? "",
+    prazo: asDate(project.prazo), description: project.description ?? "", postLimit: project.postLimit == null ? "" : String(project.postLimit),
   });
   const [dirty, setDirty] = useState(false);
   const set = (k: keyof typeof f, v: string) => { setF((s) => ({ ...s, [k]: v })); setDirty(true); };
@@ -88,7 +89,7 @@ export default function ProjectPanel({ project, contacts, onClose, onChanged, on
     return run(async () => {
       await call(`/api/projects/${project.id}`, "PATCH", {
         titulo: f.titulo, categoria: f.categoria, contactId: f.contactId || null,
-        valor: f.valor.trim() ? f.valor.trim() : null, prazo: f.prazo || null, description: f.description.trim() || null,
+        valor: f.valor.trim() ? f.valor.trim() : null, postLimit: f.postLimit.trim() === "" ? null : Math.max(0, Math.min(1000, Math.round(Number(f.postLimit)) || 0)), prazo: f.prazo || null, description: f.description.trim() || null,
       });
       setDirty(false);
       await onChanged();
@@ -159,6 +160,7 @@ export default function ProjectPanel({ project, contacts, onClose, onChanged, on
             </label>
             <label className="kb-field">Valor (R$)<input className="kb-control min-h-11" inputMode="decimal" value={f.valor} onChange={(e) => set("valor", e.target.value)} /></label>
           </div>
+          <label className="kb-field">Posts por mês no plano<input className="kb-control min-h-11" inputMode="numeric" placeholder={f.categoria === "social" ? "Vazio = 50 (padrão)" : "Vazio = sem limite"} value={f.postLimit} onChange={(e) => set("postLimit", e.target.value.replace(/\D/g, ""))} /><span className="kb-faint text-xs">Carrossel, estático e vídeo somados. 0 = sem limite. Vale para o cadastro do cliente no portal.</span></label>
           <label className="kb-field">Prazo<input type="date" className="kb-control min-h-11" value={f.prazo} onChange={(e) => set("prazo", e.target.value)} /></label>
           <label className="kb-field">Anotações<textarea className="kb-control min-h-24" value={f.description} onChange={(e) => set("description", e.target.value)} /></label>
           <button type="submit" disabled={!dirty} className="kb-btn min-h-11">Salvar alterações</button>

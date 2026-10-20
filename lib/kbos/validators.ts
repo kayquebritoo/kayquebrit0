@@ -112,6 +112,7 @@ export const projectPatchSchema = nonEmpty(
     categoria: shortText(80).optional(),
     contactId: uuidField.nullable().optional(),
     valor: moneyField.nullable().optional(),
+    postLimit: z.number().int().min(0).max(1000).nullable().optional(),
     prazo: dateField.nullable().optional(),
     slug: z
       .string()

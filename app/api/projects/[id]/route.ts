@@ -49,6 +49,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.categoria !== undefined) patch.categoria = body.categoria;
     if (body.contactId !== undefined) patch.contactId = body.contactId || null;
     if (body.valor !== undefined) patch.valor = body.valor;
+    if (body.postLimit !== undefined) patch.postLimit = body.postLimit;
     if (body.prazo !== undefined) patch.prazo = body.prazo ? new Date(body.prazo) : null;
     // Fase 1 — vitrine / associação com curso.
     if (body.slug !== undefined) patch.slug = body.slug || null;

@@ -183,6 +183,13 @@
       "when": 1793800000000,
       "tag": "0025_conteudo_vinculo",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793900000000,
+      "tag": "0026_limite_posts",
+      "breakpoints": true
     }
   ]
 }

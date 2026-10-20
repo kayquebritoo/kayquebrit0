@@ -12,7 +12,7 @@ const dayKey = (iso: string) => new Date(iso).toLocaleDateString("sv-SE", { time
 const dayLong = (key: string) => new Date(`${key}T12:00:00-03:00`).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", timeZone: BELEM });
 const WEEK = ["D", "S", "T", "Q", "Q", "S", "S"];
 const BRANDS = BRAND_LIST;
-type Quota = { limit: number; used: number; byFormat: Record<string, number> };
+type Quota = { limit: number | null; used: number; byFormat: Record<string, number> };
 
 export default function PortalPosts() {
   const [items, setItems] = useState<Post[] | null>(null);
@@ -120,12 +120,14 @@ export default function PortalPosts() {
         <div className="kb-card gap-2" aria-label="Posts do mês">
           <div className="flex items-baseline justify-between gap-2">
             <span className="text-sm">Posts de {monthName}</span>
-            <b className="tabular-nums text-sm">{quota.used} de {quota.limit}</b>
+            <b className="tabular-nums text-sm">{quota.limit === null ? quota.used : `${quota.used} de ${quota.limit}`}</b>
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-valuemin={0} aria-valuemax={quota.limit} aria-valuenow={quota.used}>
-            <span className="block h-full rounded-full bg-gradient-to-r from-[#4F12C7] to-[#E80EFD]" style={{ width: `${Math.min(100, (quota.used / quota.limit) * 100)}%` }} />
-          </div>
-          <p className="kb-faint text-xs">{["carrossel", "estatico", "reels"].map((k) => `${quota.byFormat[k] ?? 0} ${k === "carrossel" ? "carrossel" : k === "estatico" ? "estático" : "vídeo"}`).join(" · ")}{quota.used >= quota.limit ? " · limite do mês atingido" : ""}</p>
+          {quota.limit !== null && (
+            <div className="h-1.5 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-valuemin={0} aria-valuemax={quota.limit} aria-valuenow={quota.used}>
+              <span className="block h-full rounded-full bg-gradient-to-r from-[#4F12C7] to-[#E80EFD]" style={{ width: `${Math.min(100, (quota.used / quota.limit) * 100)}%` }} />
+            </div>
+          )}
+          <p className="kb-faint text-xs">{["carrossel", "estatico", "reels"].map((k) => `${quota.byFormat[k] ?? 0} ${k === "carrossel" ? "carrossel" : k === "estatico" ? "estático" : "vídeo"}`).join(" · ")}{quota.limit !== null && quota.used >= quota.limit ? " · limite do mês atingido" : ""}</p>
         </div>
       )}
       <div className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Empresas">

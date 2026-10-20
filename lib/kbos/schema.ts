@@ -127,6 +127,8 @@ export const projects = pgTable("kbos_projects", {
   // 0011: cliente no CRM e orçamento de origem.
   contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
   budgetId: uuid("budget_id").references(() => budgets.id, { onDelete: "set null" }),
+  /** Posts por mês que o plano cobre (null = padrão da categoria; 0 = sem limite). */
+  postLimit: integer("post_limit"),
   createdAt: ts("created_at"),
   updatedAt: ts("updated_at"),
 });
