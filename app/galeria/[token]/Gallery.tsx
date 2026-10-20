@@ -3,11 +3,23 @@ import { useEffect, useMemo, useState } from "react";
 import PageBackdrop from "@/components/PageBackdrop";
 
 type Photo = { id: string; width: number | null; height: number | null };
-type View = { title: string; brand: string; eventDate: string | null; consentText: string; photos: Photo[]; authorized: string[] };
+type View = { title: string; brand: string; eventDate: string | null; consentText: string; photos: Photo[]; authorized: string[]; guest?: boolean };
 
 const PHONE_KEY = "kbos.galeria.phone";
 const read = (k: string) => { try { return localStorage.getItem(k) || ""; } catch { return ""; } };
 const write = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* sem armazenamento: segue sem lembrar */ } };
+/** Selfie reduzida no aparelho (JPEG ~640px): sai leve e não manda a foto original da câmera. */
+async function shrink(file: File): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error("img")); i.src = url; });
+    const k = Math.min(1, 640 / Math.max(img.width, img.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.8);
+  } finally { URL.revokeObjectURL(url); }
+}
 const fmt = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 
 export default function Gallery({ token }: { token: string }) {
@@ -19,6 +31,9 @@ export default function Gallery({ token }: { token: string }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [agree, setAgree] = useState(false);
+  const [minor, setMinor] = useState(false);
+  const [guardian, setGuardian] = useState("");
+  const [selfie, setSelfie] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
 
@@ -48,10 +63,10 @@ export default function Gallery({ token }: { token: string }) {
   async function authorize() {
     setBusy(true); setError("");
     try {
-      await call({ action: "authorize", name, phone, photoIds: pending });
+      await call({ action: "authorize", name, phone, photoIds: pending, minor, guardianName: minor ? guardian : undefined, selfie: selfie || undefined });
       write(PHONE_KEY, phone);
       setView(await call({ action: "mine", phone }));
-      setPicked(new Set()); setSheet(false); setAgree(false);
+      setPicked(new Set()); setSheet(false); setAgree(false); setSelfie("");
       setNotice("Pronto! Agora você já pode baixar as fotos autorizadas.");
     } catch (e) { setError(e instanceof Error ? e.message : "Não consegui registrar."); }
     finally { setBusy(false); }
@@ -139,6 +154,24 @@ export default function Gallery({ token }: { token: string }) {
             <p className="mt-2 text-sm leading-relaxed text-white/65">{view.consentText}</p>
             <label className="kb-field mt-4">Seu nome completo<input className="kb-control min-h-12 text-base" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></label>
             <label className="kb-field mt-3">WhatsApp com DDD<input className="kb-control min-h-12 text-base" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" placeholder="(91) 9 0000-0000" /></label>
+            {!view.guest && (
+              <>
+                <label className="mt-4 flex min-h-11 items-start gap-3 text-sm text-white/80">
+                  <input type="checkbox" checked={minor} onChange={(e) => setMinor(e.target.checked)} className="mt-1 h-5 w-5" />
+                  <span>Tenho menos de 18 anos (quem autoriza é meu responsável)</span>
+                </label>
+                {minor && <label className="kb-field mt-2">Nome completo do responsável<input className="kb-control min-h-12 text-base" value={guardian} onChange={(e) => setGuardian(e.target.value)} autoComplete="off" /></label>}
+                <div className="mt-4">
+                  <p className="text-sm text-white/80">Uma selfie rápida, só para provar que foi você quem autorizou.</p>
+                  <label className="kb-btn-ghost mt-2 inline-flex min-h-12 cursor-pointer items-center justify-center">
+                    {selfie ? "Trocar selfie" : "Tirar selfie"}
+                    <input type="file" accept="image/*" capture="user" className="sr-only" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { setSelfie(await shrink(f)); setError(""); } catch { setError("Não consegui ler a selfie. Tente de novo."); } }} />
+                  </label>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {selfie && <img src={selfie} alt="Sua selfie" className="mt-3 h-24 w-24 rounded-2xl object-cover" />}
+                </div>
+              </>
+            )}
             <label className="mt-4 flex min-h-11 items-start gap-3 text-sm text-white/80">
               <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-1 h-5 w-5" />
               <span>Li e autorizo o uso das {pending.length} foto(s) selecionada(s).</span>
@@ -146,7 +179,7 @@ export default function Gallery({ token }: { token: string }) {
             {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}
             <div className="mt-5 flex gap-3">
               <button type="button" className="kb-btn-ghost flex-1" onClick={() => setSheet(false)}>Voltar</button>
-              <button type="button" className="kb-btn flex-1" disabled={busy || !agree} onClick={() => void authorize()}>{busy ? "Enviando…" : "Autorizar"}</button>
+              <button type="button" className="kb-btn flex-1" disabled={busy || !agree || (!view.guest && !selfie) || (minor && guardian.trim().length < 3)} onClick={() => void authorize()}>{busy ? "Enviando…" : "Autorizar"}</button>
             </div>
           </div>
         </div>

@@ -4,7 +4,43 @@ import { useCallback, useEffect, useState } from "react";
 type Album = { id: string; title: string; brand: string; eventDate: string | null; status: string; expiresAt: string | null; photos: number; authorized: number; downloads: number };
 const STATUS: Record<string, string> = { draft: "Rascunho", published: "No ar", closed: "Encerrada" };
 
+type Guest = { id: string; name: string; phone: string; isMinor: boolean; guardianName: string | null; selfie: string | null; acceptedAt: string; revokedAt: string | null; consentVersion: string };
+
+function Guests({ album, onClose }: { album: Album; onClose: () => void }) {
+  const [list, setList] = useState<Guest[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/admin/gallery/albums/${album.id}/guests/`, { cache: "no-store" }).then((r) => r.json()).then((j) => { if (alive) setList(j.guests || []); }).catch(() => { if (alive) setList([]); });
+    return () => { alive = false; };
+  }, [album.id]);
+  return (
+    <div className="kb-modal-back" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="kb-modal space-y-3" role="dialog" aria-label="Autorizações">
+        <div className="flex items-start justify-between gap-3">
+          <div><h2 className="font-display kb-ink text-lg">Autorizações</h2><p className="kb-muted text-sm">{album.title}</p></div>
+          <button type="button" onClick={onClose} aria-label="Fechar" className="h-11 w-11 shrink-0 rounded-full text-2xl">×</button>
+        </div>
+        {!list && <div className="kb-skel h-24 w-full" />}
+        {list?.length === 0 && <p className="kb-muted py-6 text-center text-sm">Ninguém autorizou ainda.</p>}
+        {list?.map((g) => (
+          <div key={g.id} className="kb-row">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {g.selfie ? <img src={g.selfie} alt={`Selfie de ${g.name}`} className="h-14 w-14 shrink-0 rounded-xl object-cover" /> : <span className="h-14 w-14 shrink-0 rounded-xl bg-white/10" />}
+            <span className="min-w-0 flex-1">
+              <span className="kb-ink block truncate text-[14px]">{g.name}</span>
+              <span className="kb-faint block truncate text-[12px]">{g.phone} · {new Date(g.acceptedAt).toLocaleString("pt-BR", { timeZone: "America/Belem" })} · {g.consentVersion}</span>
+              {g.isMinor && <span className="kb-muted block truncate text-[12px]">Menor · responsável: {g.guardianName}</span>}
+            </span>
+            <span className={`kb-tag shrink-0 ${g.revokedAt ? "late" : ""}`}>{g.revokedAt ? "Retirada" : "Ativa"}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Galeria() {
+  const [guestsOf, setGuestsOf] = useState<Album | null>(null);
   const [albums, setAlbums] = useState<Album[] | null>(null);
   const [form, setForm] = useState(false);
   const [title, setTitle] = useState("");
@@ -81,6 +117,7 @@ export default function Galeria() {
             </div>
             <p className="kb-muted mt-3 text-sm">{a.photos} foto(s) · {a.authorized} autorizada(s) · {a.downloads} download(s)</p>
             <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" className="kb-btn-ghost flex-1" onClick={() => setGuestsOf(a)}>Autorizações</button>
               <button type="button" className="kb-btn-ghost flex-1" onClick={() => void navigator.clipboard.writeText(a.id).then(() => setMsg("Id do álbum copiado."), () => setMsg(`Id: ${a.id}`))}>Copiar id</button>
               {a.status !== "published" && <button type="button" className="kb-btn min-h-11 flex-1" onClick={() => void status(a.id, "published")}>Publicar</button>}
               {a.status === "published" && <button type="button" className="kb-btn-ghost flex-1" onClick={() => void status(a.id, "closed")}>Encerrar</button>}
@@ -88,6 +125,7 @@ export default function Galeria() {
           </div>
         ))}
       </div>
+      {guestsOf && <Guests album={guestsOf} onClose={() => setGuestsOf(null)} />}
     </div>
   );
 }

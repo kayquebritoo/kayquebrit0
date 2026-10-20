@@ -43,6 +43,21 @@ export const SCHEMA_STEPS: { id: string; sql: string }[] = [
   revoked_at timestamptz
 )` },
   { id: "gallery.4", sql: `CREATE INDEX IF NOT EXISTS kbos_album_auth_photo_idx ON kbos_album_authorizations(photo_id)` },
+  { id: "gallery.5", sql: `CREATE TABLE IF NOT EXISTS kbos_album_guests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  album_id uuid NOT NULL REFERENCES kbos_albums(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  phone text NOT NULL,
+  is_minor boolean NOT NULL DEFAULT false,
+  guardian_name text,
+  selfie text,
+  consent_version text NOT NULL,
+  accepted_at timestamptz NOT NULL DEFAULT now(),
+  ip_hash text,
+  user_agent text,
+  revoked_at timestamptz
+)` },
+  { id: "gallery.6", sql: `CREATE UNIQUE INDEX IF NOT EXISTS kbos_album_guests_active_uq ON kbos_album_guests(album_id, phone) WHERE revoked_at IS NULL` },
   { id: "contacts.optout.0", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS marketing_opt_out_at timestamptz` },
   { id: "sales.uploads.0", sql: `ALTER TABLE kbos_budgets ADD COLUMN IF NOT EXISTS upload_bytes integer NOT NULL DEFAULT 0` },
   { id: "sales.uploads.1", sql: `CREATE TABLE IF NOT EXISTS kbos_budget_uploads (

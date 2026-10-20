@@ -169,6 +169,13 @@
       "when": 1793600000000,
       "tag": "0023_conteudo_equipe",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793700000000,
+      "tag": "0024_galeria_pessoas",
+      "breakpoints": true
     }
   ]
 }

@@ -10,7 +10,7 @@ import * as schema from "../schema";
 const holder = vi.hoisted(() => ({ db: null as unknown }));
 vi.mock("../db", () => ({ db: () => holder.db }));
 process.env.GALLERY_DIR = mkdtempSync(join(tmpdir(), "galeria-"));
-import { addPhoto, authorizePhotos, createAlbum, listAlbums, readAlbum, readPhoto, revokePhotos, setAlbumStatus } from "../gallery";
+import { addPhoto, authorizePhotos, createAlbum, listAlbums, listGuests, readAlbum, readPhoto, revokePhotos, setAlbumStatus } from "../gallery";
 
 const pg = new PGlite();
 const d = drizzle(pg, { schema });
@@ -30,7 +30,8 @@ async function seed(publish = true) {
   if (publish) await setAlbumStatus(id, "published");
   return { id, token, p1, p2 };
 }
-const me = { name: "Maria Souza", phone: "(91) 98888-0000", ip: "1.2.3.4", userAgent: "t" };
+const selfie = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==";
+const me = { name: "Maria Souza", phone: "(91) 98888-0000", ip: "1.2.3.4", userAgent: "t", selfie };
 
 describe("galeria do cliente", () => {
   it("só abre depois de publicada e com o token certo", async () => {
@@ -70,7 +71,7 @@ describe("galeria do cliente", () => {
     await authorizePhotos(token, { ...me, photoIds: [p1] });
     const rows = await d.select().from(schema.albumAuthorizations);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ signerName: "Maria Souza", signerPhone: "91988880000", consentVersion: "galeria-v1" });
+    expect(rows[0]).toMatchObject({ signerName: "Maria Souza", signerPhone: "91988880000", consentVersion: "galeria-v2" });
     expect(rows[0].ipHash).not.toContain("1.2.3.4");
   });
 
@@ -90,6 +91,32 @@ describe("galeria do cliente", () => {
     expect((await revokePhotos(token, me.phone)).revoked).toBe(1);
     expect((await readAlbum(token, me.phone)).authorized).toEqual([]);
     await expect(readPhoto(token, p1, "download", me.phone)).rejects.toThrow(/Autorize/);
+  });
+
+  it("1ª autorização exige selfie; a pessoa fica cadastrada e a 2ª não pede de novo", async () => {
+    const { id, token, p1, p2 } = await seed();
+    await expect(authorizePhotos(token, { ...me, selfie: undefined, photoIds: [p1] })).rejects.toThrow(/selfie/i);
+    await expect(authorizePhotos(token, { ...me, selfie: "data:text/html;base64,AAAA", photoIds: [p1] })).rejects.toThrow(/selfie/i);
+    await authorizePhotos(token, { ...me, photoIds: [p1] });
+    await authorizePhotos(token, { ...me, selfie: undefined, photoIds: [p2] });
+    const g = await listGuests(id);
+    expect(g).toHaveLength(1);
+    expect(g[0]).toMatchObject({ name: "Maria Souza", phone: "91988880000", isMinor: false, consentVersion: "galeria-v2" });
+    expect((await readAlbum(token, me.phone)).guest).toBe(true);
+  });
+
+  it("menor de idade exige o responsável", async () => {
+    const { id, token, p1 } = await seed();
+    await expect(authorizePhotos(token, { ...me, minor: true, photoIds: [p1] })).rejects.toThrow(/responsável/);
+    await authorizePhotos(token, { ...me, minor: true, guardianName: "Ana Souza", photoIds: [p1] });
+    expect((await listGuests(id))[0]).toMatchObject({ isMinor: true, guardianName: "Ana Souza" });
+  });
+
+  it("retirar tudo também marca a pessoa como retirada", async () => {
+    const { id, token, p1 } = await seed();
+    await authorizePhotos(token, { ...me, photoIds: [p1] });
+    await revokePhotos(token, me.phone);
+    expect((await listGuests(id))[0].revokedAt).not.toBeNull();
   });
 
   it("álbum expirado não abre", async () => {

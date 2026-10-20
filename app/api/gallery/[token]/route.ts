@@ -14,7 +14,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
 const ids = z.array(z.string().uuid()).max(200);
 const schema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("mine"), phone: z.string().max(30) }),
-  z.object({ action: z.literal("authorize"), name: z.string().max(120), phone: z.string().max(30), photoIds: ids }),
+  z.object({ action: z.literal("authorize"), name: z.string().max(120), phone: z.string().max(30), photoIds: ids, minor: z.boolean().optional(), guardianName: z.string().max(120).optional(), selfie: z.string().max(300_000).optional() }),
   z.object({ action: z.literal("revoke"), phone: z.string().max(30), photoIds: ids.optional() }),
 ]);
 
@@ -30,7 +30,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   try {
     const b = parsed.data;
     if (b.action === "mine") return NextResponse.json(await readAlbum(token, b.phone), { headers });
-    if (b.action === "authorize") return NextResponse.json(await authorizePhotos(token, { name: b.name, phone: b.phone, photoIds: b.photoIds, ip: clientIp(req), userAgent: req.headers.get("user-agent") || "" }), { headers });
+    if (b.action === "authorize") return NextResponse.json(await authorizePhotos(token, { name: b.name, phone: b.phone, photoIds: b.photoIds, minor: b.minor, guardianName: b.guardianName, selfie: b.selfie, ip: clientIp(req), userAgent: req.headers.get("user-agent") || "" }), { headers });
     return NextResponse.json(await revokePhotos(token, b.phone, b.photoIds), { headers });
   } catch (e) { return serverError(e); }
 }

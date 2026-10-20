@@ -812,6 +812,22 @@ export const albumAuthorizations = pgTable("kbos_album_authorizations", {
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
 });
 
+/** Aceite por pessoa no álbum: libera todas as fotos dele. A selfie (JPEG pequeno em data URL) é só prova de quem aceitou. */
+export const albumGuests = pgTable("kbos_album_guests", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  albumId: uuid("album_id").notNull().references(() => albums.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  phone: text("phone").notNull(),
+  isMinor: boolean("is_minor").notNull().default(false),
+  guardianName: text("guardian_name"),
+  selfie: text("selfie"),
+  consentVersion: text("consent_version").notNull(),
+  acceptedAt: ts("accepted_at"),
+  ipHash: text("ip_hash"),
+  userAgent: text("user_agent"),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+});
+
 /** Chat do projeto: um grupo por projeto (cliente + equipe). Mensagens de texto simples. */
 export const chatMessages = pgTable("kbos_chat_messages", {
   id: uuid("id").primaryKey().defaultRandom(),
