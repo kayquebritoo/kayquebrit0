@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { hubFor, lumeHref } from "../client-hubs";
 
 describe("hub do cliente (Grupo VIP)", () => {
