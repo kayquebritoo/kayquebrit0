@@ -58,19 +58,24 @@ def _motivo(e):
 
 
 def baixar(chave, fid, destino, foto=False):
-    """API com chave; se o Google recusar (403), cai para os links públicos do Drive."""
+    """API com chave; se o Google recusar (403), cai para os links públicos do Drive.
+    Devolve True quando só deu para obter a miniatura (1 quadro) em vez do arquivo inteiro."""
     url = f"https://www.googleapis.com/drive/v3/files/{quote(fid)}?alt=media&supportsAllDrives=true&key={chave}"
     try:
-        return _gravar(url, destino)
+        _gravar(url, destino); return False
     except HTTPError as e:
         if e.code != 403: raise
-        motivo = _motivo(e)
-        try:
-            if foto: _gravar(f"https://drive.google.com/thumbnail?id={quote(fid)}&sz=w1200", destino)
-            else:    _gravar(f"https://drive.usercontent.google.com/download?id={quote(fid)}&export=download&confirm=t", destino)
-            print(f"  (403 na API: {motivo or 'sem motivo'} → usou o link público)", flush=True)
-        except Exception as e2:
-            raise RuntimeError(f"403 {motivo or 'sem motivo'}; link público também falhou ({e2})")
+        motivo = _motivo(e) or "sem motivo"
+    miniatura = f"https://drive.google.com/thumbnail?id={quote(fid)}&sz=w1200"
+    try:
+        if foto:
+            _gravar(miniatura, destino); print(f"  (403 na API: {motivo} → miniatura pública)", flush=True); return True
+        _gravar(f"https://drive.usercontent.google.com/download?id={quote(fid)}&export=download&confirm=t", destino)
+        if destino.read_bytes()[:64].lstrip().startswith(b"<"):  # veio uma página, não o vídeo
+            _gravar(miniatura, destino); print(f"  (403 na API: {motivo} → só 1 quadro do vídeo)", flush=True); return True
+        print(f"  (403 na API: {motivo} → link público)", flush=True); return False
+    except Exception as e2:
+        raise RuntimeError(f"403 {motivo}; link público também falhou ({e2})")
 
 
 def duracao(path):
@@ -125,9 +130,9 @@ def main():
         with tempfile.TemporaryDirectory() as tmp:
             dest = Path(tmp) / ("arq" + Path(f["name"]).suffix.lower())
             try:
-                baixar(chave, f["id"], dest, foto=dest.suffix in FOTO)
+                so_mini = baixar(chave, f["id"], dest, foto=dest.suffix in FOTO)
                 tipo = "video" if dest.suffix in VIDEO else "foto"
-                quadros = quadros_video(dest) if tipo == "video" else [(0, Image.open(dest).convert("RGB"))]
+                quadros = quadros_video(dest) if (tipo == "video" and not so_mini) else [(0, Image.open(dest).convert("RGB"))]
                 if not quadros: print(f"  (sem quadros) {f['name']}"); continue
                 vetores = acervo.embed_images([q[1] for q in quadros])
                 mod = datetime.fromisoformat(f["modifiedTime"].replace("Z", "+00:00")).timestamp()
