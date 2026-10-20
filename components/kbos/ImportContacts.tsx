@@ -31,7 +31,12 @@ export default function ImportContacts({ onClose, onDone, googleSession, startEr
       else if (j.notice) setMsg(j.notice);
     } catch (e) { setMsg(e instanceof Error ? e.message : "Erro."); } finally { setBusy(false); }
   }
-  useEffect(() => { if (googleSession) load("google", undefined, googleSession); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [googleSession]);
+  useEffect(() => {
+    if (!googleSession) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carrega a prévia uma vez quando volta do Google.
+    void load("google", undefined, googleSession);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [googleSession]);
 
   async function onFile(f: File | undefined) {
     if (!f) return;
