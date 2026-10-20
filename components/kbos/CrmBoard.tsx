@@ -134,9 +134,11 @@ export default function CrmBoard() {
     const sp = new URLSearchParams(window.location.search);
     const imp = sp.get("importar");
     if (!imp) return;
+    /* eslint-disable react-hooks/set-state-in-effect -- abre o importador uma vez, vindo do retorno do Google. */
     if (imp === "google" && sp.get("sessao")) setGSession(sp.get("sessao"));
     if (imp === "erro") setImportErr({ "google-config": "O Google ainda não está configurado para importar contatos (falta liberar no Google Cloud).", negado: "Você não autorizou o acesso aos contatos.", estado: "A conexão com o Google expirou. Tente de novo.", token: "O Google recusou a conexão. Tente de novo." }[sp.get("motivo") || ""] || "Não consegui buscar os contatos do Google.");
     setImportOpen(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
     window.history.replaceState(null, "", window.location.pathname);
   }, []);
 
