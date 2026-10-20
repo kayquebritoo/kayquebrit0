@@ -11,7 +11,8 @@ import json, os, shutil, sqlite3, subprocess, sys, tempfile, time
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote
-from urllib.request import urlopen
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
 
 import acervo
 import acervo_drive as drv
@@ -40,10 +41,36 @@ def listar_drive(chave):
     return out
 
 
-def baixar(chave, fid, destino):
-    url = f"https://www.googleapis.com/drive/v3/files/{quote(fid)}?alt=media&supportsAllDrives=true&key={chave}"
-    with urlopen(url, timeout=120) as r, open(destino, "wb") as f:
+def _gravar(url, destino):
+    req = Request(url, headers={"User-Agent": "Mozilla/5.0 (Lume indexador)"})
+    with urlopen(req, timeout=120) as r, open(destino, "wb") as f:
         shutil.copyfileobj(r, f, 1024 * 1024)
+
+
+def _motivo(e):
+    """Texto curto do porquê o Google recusou (reason/message do JSON)."""
+    try:
+        corpo = e.read().decode("utf-8", "replace")
+        d = json.loads(corpo)["error"]
+        return f"{d.get('errors', [{}])[0].get('reason', '')} {d.get('message', '')}".strip()[:160]
+    except Exception:
+        return ""
+
+
+def baixar(chave, fid, destino, foto=False):
+    """API com chave; se o Google recusar (403), cai para os links públicos do Drive."""
+    url = f"https://www.googleapis.com/drive/v3/files/{quote(fid)}?alt=media&supportsAllDrives=true&key={chave}"
+    try:
+        return _gravar(url, destino)
+    except HTTPError as e:
+        if e.code != 403: raise
+        motivo = _motivo(e)
+        try:
+            if foto: _gravar(f"https://drive.google.com/thumbnail?id={quote(fid)}&sz=w1200", destino)
+            else:    _gravar(f"https://drive.usercontent.google.com/download?id={quote(fid)}&export=download&confirm=t", destino)
+            print(f"  (403 na API: {motivo or 'sem motivo'} → usou o link público)", flush=True)
+        except Exception as e2:
+            raise RuntimeError(f"403 {motivo or 'sem motivo'}; link público também falhou ({e2})")
 
 
 def duracao(path):
@@ -98,7 +125,7 @@ def main():
         with tempfile.TemporaryDirectory() as tmp:
             dest = Path(tmp) / ("arq" + Path(f["name"]).suffix.lower())
             try:
-                baixar(chave, f["id"], dest)
+                baixar(chave, f["id"], dest, foto=dest.suffix in FOTO)
                 tipo = "video" if dest.suffix in VIDEO else "foto"
                 quadros = quadros_video(dest) if tipo == "video" else [(0, Image.open(dest).convert("RGB"))]
                 if not quadros: print(f"  (sem quadros) {f['name']}"); continue
