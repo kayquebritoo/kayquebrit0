@@ -103,6 +103,18 @@ export default function ContentBoard() {
     } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setSyncing(false); }
   }
 
+  async function cleanOld() {
+    if (!confirm("Dispensar tudo o que passou há mais de 7 dias e nunca foi postado? Nada é apagado.")) return;
+    setNotice(""); setError("");
+    try {
+      const r = await fetch("/api/admin/social/dismiss-old", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ projectId, olderThanDays: 7 }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "Não consegui limpar.");
+      setNotice(`${d.dismissed} item(ns) dispensado(s).`);
+      await load();
+    } catch (e) { setError(e instanceof Error ? e.message : "Erro."); }
+  }
+
   const shown = useMemo(() => (items ?? []).filter((p) => filter === "all" || p.status === filter), [items, filter]);
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: items?.length ?? 0 };
@@ -165,6 +177,7 @@ export default function ContentBoard() {
         </div>
         <button type="button" className="kb-btn min-h-11" disabled={!projectId || syncing} onClick={() => void syncMlabs()}>{syncing ? "Sincronizando…" : "Sincronizar mLabs"}</button>
         <button type="button" className="kb-btn-ghost min-h-11" disabled={!projectId} onClick={() => setImporting(true)}>Importar .ics</button>
+        <button type="button" className="kb-btn-ghost min-h-11" disabled={!projectId} onClick={() => void cleanOld()}>Limpar antigos</button>
       </div>
 
       <div className="flex items-center justify-between gap-2">
@@ -253,7 +266,7 @@ export default function ContentBoard() {
         </>
       )}
 
-      {open && <PostEditor post={open} names={names} onClose={() => setOpen(null)} onSaved={(p) => { setItems((cur) => (cur ?? []).map((x) => (x.id === p.id ? p : x))); setOpen(null); }} />}
+      {open && <PostEditor post={open} names={names} onClose={() => setOpen(null)} onSaved={(p) => { setItems((cur) => (cur ?? []).filter((x) => !(x.id === p.id && (p as Post & { __gone?: boolean }).__gone)).map((x) => (x.id === p.id ? p : x))); setOpen(null); void load(); }} />}
       {importing && <ImportIcs projectId={projectId} onClose={() => setImporting(false)} onDone={() => { setImporting(false); void load(); }} />}
     </div>
   );
@@ -286,6 +299,32 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
   const pasta = hub.empresas.find((e) => e.label === post.brand)?.pasta;
   const listId = `names-${post.id}`;
   const text = (v: string) => v.trim() || null;
+  const [sugg, setSugg] = useState<{ id: string; title: string; brand: string | null; format: string; status: string; scheduledAt: string | null; hasScript: boolean; scriptBy: string | null }[]>([]);
+  useEffect(() => {
+    if (post.status === "roteiro") return;
+    let alive = true;
+    fetch(`/api/admin/social/${post.id}/link`, { cache: "no-store" }).then((r) => r.json()).then((d) => { if (alive) setSugg(d.items || []); }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [post.id, post.status]);
+
+  async function link(scriptId: string) {
+    setBusy(true); setError("");
+    try {
+      const r = await fetch(`/api/admin/social/${post.id}/link`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ scriptId }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Não consegui vincular.");
+      onSaved(d.item);
+    } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setBusy(false); }
+  }
+  async function dismiss() {
+    setBusy(true); setError("");
+    try {
+      const r = await fetch(`/api/admin/social/${post.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ dismissed: true }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Não consegui dispensar.");
+      onSaved({ ...d.item, dismissedAt: d.item.dismissedAt, __gone: true } as Post);
+    } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setBusy(false); }
+  }
 
   async function save() {
     setBusy(true); setError("");
@@ -347,6 +386,21 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
           {(f.status === "postado" || f.status === "erro" || post.postedUrl) && <label className="kb-field"><span>Link do post publicado</span><input className="kb-control" inputMode="url" placeholder="https://…" value={f.postedUrl} onChange={(e) => setF({ ...f, postedUrl: e.target.value })} /></label>}
         </section>
 
+        {sugg.length > 0 && !f.script.trim() && (
+          <section className="space-y-2" aria-label="Roteiros possíveis">
+            <p className={h}>Roteiros que podem ser deste post</p>
+            {sugg.map((x) => (
+              <div key={x.id} className="kb-row">
+                <span className="min-w-0">
+                  <span className="kb-ink block truncate text-[14px]">{x.title}</span>
+                  <span className="kb-faint block truncate text-[12px]">{[x.scheduledAt ? new Date(x.scheduledAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: BELEM }) : null, x.brand, FORMAT[x.format] ?? "Post", x.scriptBy ? `por ${x.scriptBy}` : null].filter(Boolean).join(" · ")}</span>
+                </span>
+                <button type="button" className="kb-chip min-h-11 shrink-0" disabled={busy} onClick={() => void link(x.id)}>Vincular</button>
+              </div>
+            ))}
+          </section>
+        )}
+
         <section className="space-y-2" aria-label="Roteiro">
           <p className={h}>Roteiro</p>
           <textarea className="kb-control" style={{ padding: "10px 14px" }} rows={8} aria-label="Roteiro" value={f.script} onChange={(e) => setF({ ...f, script: e.target.value })} />
@@ -355,6 +409,7 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
         {error && <p className="kb-tag late w-full justify-start rounded-xl! px-3! py-2! text-sm">{error}</p>}
         <div className="flex flex-wrap gap-2">
           <button type="button" className="kb-btn min-h-12 flex-1" disabled={busy} onClick={() => void save()}>{busy ? "Salvando…" : "Salvar"}</button>
+          <button type="button" className="kb-btn-ghost min-h-12" disabled={busy} title="Tira da lista de atrasados sem apagar" onClick={() => void dismiss()}>Dispensar</button>
           <a className="kb-btn-ghost min-h-12 inline-flex items-center" href={lumeHref(pasta ?? hub.pasta)}>Achar takes no Lume</a>
         </div>
       </div>

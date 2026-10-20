@@ -23,6 +23,7 @@ const patch = z.object({
   captureBy: z.string().max(80).nullable().optional(),
   editor: z.string().max(80).nullable().optional(),
   errorMessage: z.string().max(500).nullable().optional(),
+  dismissed: z.boolean().optional(),
 });
 
 type Ctx = { params: Promise<{ id: string }> };

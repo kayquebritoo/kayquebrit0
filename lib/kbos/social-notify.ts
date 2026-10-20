@@ -26,3 +26,14 @@ export async function notifyDecision(post: Post, decision: "aprovar" | "ajustes"
     console.error("[KBOS social-notify]", e);
   }
 }
+
+/** Equipe: o cliente cadastrou um roteiro pelo portal (no máximo 1 aviso por projeto por dia). */
+export async function notifyClientRoteiro(post: Post) {
+  try {
+    const admins = await db().select({ phone: users.phone }).from(users).where(and(eq(users.role, "admin"), isNotNull(users.phone)));
+    const day = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Belem" });
+    for (const a of admins) if (a.phone) await queueWhatsApp(a.phone, `*KBOS — Conteúdo*\n📝 O cliente cadastrou um roteiro: *${post.title}*. Veja em Produção → Conteúdo e posts.`, `roteiro:${post.projectId}:${day}`);
+  } catch (e) {
+    console.error("[KBOS social-notify]", e);
+  }
+}

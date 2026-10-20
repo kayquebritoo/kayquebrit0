@@ -58,6 +58,9 @@ export const SCHEMA_STEPS: { id: string; sql: string }[] = [
   revoked_at timestamptz
 )` },
   { id: "gallery.6", sql: `CREATE UNIQUE INDEX IF NOT EXISTS kbos_album_guests_active_uq ON kbos_album_guests(album_id, phone) WHERE revoked_at IS NULL` },
+  { id: "conteudo.6", sql: `ALTER TABLE kbos_social_posts ADD COLUMN IF NOT EXISTS linked_to uuid` },
+  { id: "conteudo.7", sql: `ALTER TABLE kbos_social_posts ADD COLUMN IF NOT EXISTS dismissed_at timestamptz` },
+  { id: "conteudo.8", sql: `ALTER TABLE kbos_social_posts ADD COLUMN IF NOT EXISTS created_by uuid` },
   { id: "contacts.optout.0", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS marketing_opt_out_at timestamptz` },
   { id: "sales.uploads.0", sql: `ALTER TABLE kbos_budgets ADD COLUMN IF NOT EXISTS upload_bytes integer NOT NULL DEFAULT 0` },
   { id: "sales.uploads.1", sql: `CREATE TABLE IF NOT EXISTS kbos_budget_uploads (

@@ -8,7 +8,7 @@ import * as schema from "../schema";
 const holder = vi.hoisted(() => ({ db: null as unknown }));
 vi.mock("../db", () => ({ db: () => holder.db }));
 import { parseIcs, parseIcsDate, cleanTitle, detectFormat, detectBrand } from "../social-import";
-import { importPosts, previewImport, updatePost, portalPosts, decidePost, listPosts, PostError } from "../social-posts";
+import { importPosts, previewImport, updatePost, portalPosts, decidePost, listPosts, PostError, createClientRoteiro, suggestScripts, linkScript, dismissOld, overduePosts } from "../social-posts";
 
 const ICS = [
   "BEGIN:VCALENDAR", "VERSION:2.0",
@@ -138,5 +138,46 @@ describe("tradução da mLabs", () => {
     expect(brandOfProfile("Hotel Atalaia Vip")).toBe("Hotel");
     expect(brandOfProfile("Praça de Alimentação")).toBe("Praça");
     expect(brandOfProfile("Novo Perfil")).toBeNull();
+  });
+});
+
+describe("roteiro ↔ post, atrasados e roteiro do cliente", () => {
+  it("vincula o roteiro ao post de outro dia, limpa atrasados e protege o roteiro interno", async () => {
+    const [cli] = await d.insert(schema.users).values({ email: "t2@x.com", name: "Thalita Dois", role: "cliente" }).returning();
+    const [out] = await d.insert(schema.users).values({ email: "o2@x.com", name: "Outra Pessoa", role: "cliente" }).returning();
+    const [proj] = await d.insert(schema.projects).values({ titulo: "Atalaia 2", categoria: "social", clienteId: cli.id }).returning();
+
+    // a cliente cadastra o roteiro; só ela (dona do projeto) pode
+    await expect(createClientRoteiro(out.id, { projectId: proj.id, date: "2026-10-05", title: "Camarão", format: "reels" })).rejects.toBeInstanceOf(PostError);
+    const rot = await createClientRoteiro(cli.id, { projectId: proj.id, date: "2026-10-05", title: "Camarão na chapa", format: "reels", brand: "Lounge", script: "Cena 1: close do prato" });
+    expect(rot).toMatchObject({ status: "roteiro", createdBy: cli.id });
+
+    // o post real foi agendado dias depois (veio da mLabs)
+    const [post] = await d.insert(schema.socialPosts).values({ projectId: proj.id, title: "Camarão na chapa", format: "reels", brand: "Lounge", status: "agendado", scheduledAt: new Date("2026-10-09T18:00:00-03:00"), caption: "Legenda" }).returning();
+    const sug = await suggestScripts(post.id);
+    expect(sug[0].id).toBe(rot.id);
+
+    // antes de vincular, o roteiro velho conta como atrasado
+    const now = new Date("2026-10-12T12:00:00-03:00");
+    const admin = { id: "x", name: "Kayque", role: "admin" };
+    expect((await overduePosts(admin, now)).some((o) => o.id === rot.id)).toBe(true);
+
+    const linked = await linkScript(rot.id, post.id);
+    expect(linked.script).toBe("Cena 1: close do prato");
+    expect(linked.createdBy).toBe(cli.id);
+    expect((await overduePosts(admin, now)).some((o) => o.id === rot.id)).toBe(false);
+    expect((await listPosts({ projectId: proj.id })).some((p) => p.id === rot.id)).toBe(false);
+    await expect(linkScript(rot.id, post.id)).rejects.toBeInstanceOf(PostError);
+
+    // portal: a cliente vê o roteiro que ela escreveu no post; outra pessoa não vê nada
+    const mine = (await portalPosts(cli.id)).find((p) => p.id === post.id)!;
+    expect(mine.script).toBe("Cena 1: close do prato");
+    expect(mine.mine).toBe(true);
+    expect(await portalPosts(out.id)).toEqual([]);
+
+    // limpar antigos dispensa sem apagar e nunca toca em postado
+    await d.insert(schema.socialPosts).values({ projectId: proj.id, title: "Velho", format: "outro", status: "roteiro", scheduledAt: new Date("2026-08-01T00:00:00-03:00") });
+    await d.insert(schema.socialPosts).values({ projectId: proj.id, title: "Já foi", format: "outro", status: "postado", scheduledAt: new Date("2026-08-01T00:00:00-03:00") });
+    expect((await dismissOld(proj.id, 7)).dismissed).toBe(1);
   });
 });

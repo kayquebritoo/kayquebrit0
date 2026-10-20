@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { sessionUser } from "@/lib/kbos/rbac";
 import { serverError } from "@/lib/kbos/http";
-import { portalPosts } from "@/lib/kbos/social-posts";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
+import { db } from "@/lib/kbos/db";
+import { projects } from "@/lib/kbos/schema";
+import { readBody } from "@/lib/kbos/validators";
+import { PostError, createClientRoteiro, portalPosts } from "@/lib/kbos/social-posts";
+import { notifyClientRoteiro } from "@/lib/kbos/social-notify";
+import { POST_FORMATS } from "@/lib/kbos/social-import";
 
 export const dynamic = "force-dynamic";
 
@@ -10,8 +17,27 @@ export async function GET() {
   const user = await sessionUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   try {
-    return NextResponse.json({ items: await portalPosts(user.id) });
+    const mine = await db().select({ id: projects.id, titulo: projects.titulo }).from(projects).where(eq(projects.clienteId, user.id));
+    return NextResponse.json({ items: await portalPosts(user.id), projects: mine });
   } catch (e) {
+    return serverError(e);
+  }
+}
+
+const create = z.object({ projectId: z.string().uuid(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), title: z.string().min(2).max(200), format: z.enum(POST_FORMATS), brand: z.string().max(60).nullable().optional(), script: z.string().max(30000).nullable().optional() });
+
+// POST /api/portal/posts — o cliente cadastra um roteiro no calendário (só nos projetos dele).
+export async function POST(req: Request) {
+  const user = await sessionUser();
+  if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  try {
+    const parsed = await readBody(req, create);
+    if ("error" in parsed) return parsed.error;
+    const post = await createClientRoteiro(user.id, parsed.data);
+    await notifyClientRoteiro(post);
+    return NextResponse.json({ ok: true, id: post.id });
+  } catch (e) {
+    if (e instanceof PostError) return NextResponse.json({ error: e.message }, { status: 400 });
     return serverError(e);
   }
 }

@@ -868,6 +868,12 @@ export const socialPosts = pgTable("kbos_social_posts", {
   captureBy: text("capture_by"),
   editor: text("editor"),
   errorMessage: text("error_message"),
+  /** Roteiro que já virou post: aponta para o post que o realizou (some das listas e dos atrasados). */
+  linkedTo: uuid("linked_to"),
+  /** "Dispensar": tira da fila de atrasados sem apagar. */
+  dismissedAt: timestamp("dismissed_at", { withTimezone: true }),
+  /** Quem cadastrou (cliente, pelo portal). */
+  createdBy: uuid("created_by"),
   createdAt: ts("created_at"),
   updatedAt: ts("updated_at"),
 });
