@@ -80,13 +80,14 @@ def main():
     conhecidos = {(Path(p).name.casefold(), t) for p, t in c.execute("SELECT caminho, tamanho FROM arquivos")}
     print("Listando o Drive…", flush=True)
     todos = listar_drive(chave)
-    novos = [f for f in todos if Path(f["name"]).suffix.lower() in FOTO | VIDEO and f["id"] not in ligados and (f["name"].casefold(), f["size"]) not in conhecidos]
+    novos = [f for f in todos if not f["name"].startswith(".") and Path(f["name"]).suffix.lower() in FOTO | VIDEO and f["id"] not in ligados and (f["name"].casefold(), f["size"]) not in conhecidos]
     novos.sort(key=lambda f: f["size"])  # menores primeiro: mais resultado por minuto
     print(f"Drive: {len(todos)} arquivos. Novos para indexar: {len(novos)}.", flush=True)
     if "--listar" in sys.argv:
         for f in novos[:40]: print("  +", "/".join(f["pasta"] + [f["name"]]))
         return
     inicio, feitos = time.time(), 0
+    ultimo_aviso = inicio
     for n, f in enumerate(novos, 1):
         if time.time() - inicio > MAX_MIN * 60:
             print("Tempo da rodada esgotado; o resto fica para a próxima."); break
@@ -103,12 +104,16 @@ def main():
                 if not quadros: print(f"  (sem quadros) {f['name']}"); continue
                 vetores = acervo.embed_images([q[1] for q in quadros])
                 mod = datetime.fromisoformat(f["modifiedTime"].replace("Z", "+00:00")).timestamp()
+                if c.execute("SELECT 1 FROM arquivos WHERE caminho=?", (rel,)).fetchone():
+                    rel = f"{rel} [{f['id'][:6]}]"  # mesmo nome na mesma pasta: mantém os dois
                 cur = c.execute("INSERT INTO arquivos(caminho,tipo,tamanho,modificado,quadros) VALUES(?,?,?,?,?)", (rel, tipo, f["size"], mod, len(quadros)))
                 for (seg, img), vec in zip(quadros, vetores):
                     q = c.execute("INSERT INTO quadros(arquivo_id,segundo,vetor) VALUES(?,?,?)", (cur.lastrowid, seg, vec.tobytes()))
                     acervo.save_thumb(q.lastrowid, img)
                 c.execute("INSERT OR REPLACE INTO drive(arquivo_id,drive_id,drive_caminho,atualizado) VALUES(?,?,?,?)", (cur.lastrowid, f["id"], "/".join(f["pasta"]), time.time()))
                 c.commit(); feitos += 1
+                if time.time() - ultimo_aviso > 3600:
+                    (acervo.HOME / ".reload").touch(); ultimo_aviso = time.time()
                 print(f"[{n}/{len(novos)}] {rel} → {len(quadros)} quadro(s)", flush=True)
             except Exception as e:
                 c.rollback(); print(f"  ✗ {f['name']}: {e}", flush=True)
