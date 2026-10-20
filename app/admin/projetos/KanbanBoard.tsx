@@ -7,7 +7,7 @@ import ProjectPanel, { type PanelProject } from "./ProjectPanel";
 type Project = PanelProject & { tasksTotal?: number; tasksDone?: number };
 type Contact = { id: string; name: string; company: string | null };
 
-const CATS: [string, string][] = [["fotografia", "Fotografia"], ["video", "Vídeo"], ["sites", "Sites"], ["apps", "Apps"], ["lojas", "Lojas"], ["design", "Design"]];
+const CATS: [string, string][] = [["fotografia", "Fotografia"], ["video", "Vídeo"], ["sites", "Sites"], ["apps", "Apps"], ["lojas", "Lojas"], ["design", "Design"], ["social", "Redes sociais (recorrente)"]];
 const brl = (v: string | null) => (v && Number(v) ? Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }) : "");
 const day = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", timeZone: "America/Belem" });
 

@@ -8,7 +8,7 @@ import * as schema from "../schema";
 const holder = vi.hoisted(() => ({ db: null as unknown }));
 vi.mock("../db", () => ({ db: () => holder.db }));
 import { parseIcs, parseIcsDate, cleanTitle, detectFormat, detectBrand } from "../social-import";
-import { importPosts, previewImport, updatePost, portalPosts, decidePost, listPosts, PostError, createClientRoteiro, suggestScripts, linkScript, dismissOld, overduePosts } from "../social-posts";
+import { importPosts, previewImport, updatePost, portalPosts, decidePost, listPosts, PostError, createClientRoteiro, suggestScripts, linkScript, overduePosts } from "../social-posts";
 
 const ICS = [
   "BEGIN:VCALENDAR", "VERSION:2.0",
@@ -175,10 +175,28 @@ describe("roteiro ↔ post, atrasados e roteiro do cliente", () => {
     expect(mine.mine).toBe(true);
     expect(await portalPosts(out.id)).toEqual([]);
 
-    // limpar antigos dispensa sem apagar e nunca toca em postado
-    await d.insert(schema.socialPosts).values({ projectId: proj.id, title: "Velho", format: "outro", status: "roteiro", scheduledAt: new Date("2026-08-01T00:00:00-03:00") });
-    await d.insert(schema.socialPosts).values({ projectId: proj.id, title: "Já foi", format: "outro", status: "postado", scheduledAt: new Date("2026-08-01T00:00:00-03:00") });
-    // o "agendado" de 9/10 e o "Velho" saem da fila; o "postado" fica
-    expect((await dismissOld(proj.id, 7)).dismissed).toBe(2);
+  });
+});
+
+describe("lista de produção colada", () => {
+  it("lê dia, marca, formato e situação", async () => {
+    const { parseProduction } = await import("../social-production");
+    const { lines, postedBefore } = parseProduction([
+      "*PRODUÇÃO*",
+      "* 14 - LOUNGE - Reels Chapa Mista ✅🟡 _Editado / em aprovação (aguardando retorno da thalita)_",
+      "* 15 - COLA - dia do cliente 🟡 _Editando_",
+      "* 16 - PRAÇA - Carrosse ❌ _01 - Fila de Espera_",
+      "Todos os demais pra trás foram postados",
+      "* 06 - HOTEL - Carrossel Final de semana  ✅ Postado",
+      "* 10 - LOUNGE - Reels O Lounge pelo olhar 🟡 Falta Material",
+    ].join("\n"));
+    expect(postedBefore).toBe(true);
+    expect(lines.map((l) => [l.day, l.brand, l.format, l.status])).toEqual([
+      [14, "Lounge", "reels", "aprovacao"],
+      [15, null, null, "producao"],
+      [16, "Praça", "carrossel", "producao"],
+      [6, "Hotel", "carrossel", "postado"],
+      [10, "Lounge", "reels", "captacao"],
+    ]);
   });
 });

@@ -27,7 +27,7 @@ const fmt = (sec: number) => `${Math.floor(sec / 3600)}h ${Math.floor((sec % 360
 const NEXT: Record<string, string> = { todo: "doing", doing: "done", done: "todo" };
 const LABEL: Record<string, string> = { todo: "a fazer", doing: "fazendo", done: "feita" };
 const asDate = (iso: string | null) => (iso ? iso.slice(0, 10) : "");
-const CATS: [string, string][] = [["fotografia", "Fotografia"], ["video", "Vídeo"], ["sites", "Sites"], ["apps", "Apps"], ["lojas", "Lojas"], ["design", "Design"]];
+const CATS: [string, string][] = [["fotografia", "Fotografia"], ["video", "Vídeo"], ["sites", "Sites"], ["apps", "Apps"], ["lojas", "Lojas"], ["design", "Design"], ["social", "Redes sociais (recorrente)"]];
 
 async function call(url: string, method: string, body?: unknown) {
   const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });

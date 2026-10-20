@@ -129,16 +129,6 @@ export async function linkScript(scriptId: string, targetId: string) {
   return out;
 }
 
-/** Limpa a fila: dispensa o que passou há mais de N dias e nunca foi postado (reversível, nada é apagado). */
-export async function dismissOld(projectId: string, olderThanDays: number) {
-  const cutoff = new Date(Date.now() - olderThanDays * DAY_MS);
-  const rows = await db().select({ id: socialPosts.id, status: socialPosts.status, scheduledAt: socialPosts.scheduledAt }).from(socialPosts)
-    .where(and(eq(socialPosts.projectId, projectId), isNull(socialPosts.dismissedAt), isNull(socialPosts.linkedTo), lt(socialPosts.scheduledAt, cutoff)));
-  const ids = rows.filter((r) => r.status !== "postado").map((r) => r.id);
-  if (ids.length) await db().update(socialPosts).set({ dismissedAt: new Date(), updatedAt: new Date() }).where(inArray(socialPosts.id, ids));
-  return { dismissed: ids.length };
-}
-
 /** Decisão do cliente (só no post dele e só enquanto aguarda aprovação). */
 export async function decidePost(userId: string, id: string, decision: "aprovar" | "ajustes", note?: string | null) {
   const [row] = await db()
@@ -207,13 +197,4 @@ export async function overduePosts(user: { id: string; name: string; role: strin
     });
   }
   return out;
-}
-
-/** Move todos os posts de um projeto para outro (ex.: importou o calendário no projeto errado). Nada é apagado. */
-export async function movePosts(fromProjectId: string, toProjectId: string) {
-  if (fromProjectId === toProjectId) throw new PostError("Escolha outro projeto de destino.");
-  const [dest] = await db().select({ id: projects.id }).from(projects).where(eq(projects.id, toProjectId)).limit(1);
-  if (!dest) throw new PostError("Projeto de destino não encontrado.");
-  const res = await db().update(socialPosts).set({ projectId: toProjectId, updatedAt: new Date() }).where(eq(socialPosts.projectId, fromProjectId)).returning({ id: socialPosts.id });
-  return { moved: res.length };
 }

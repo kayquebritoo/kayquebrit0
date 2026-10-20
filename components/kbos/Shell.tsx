@@ -24,7 +24,7 @@ type Me = { name: string; email: string; role: keyof typeof ROLE_LABELS };
 // piscando a cada navegação (a sessão é revalidada em segundo plano).
 let cachedUser: Me | null = null;
 
-type NavLink = { href: string; label: string; adminOnly?: boolean; exact?: boolean };
+type NavLink = { href: string; label: string; adminOnly?: boolean; clientOnly?: boolean; exact?: boolean };
 type NavGroup = { id: string; label: string; icon: ReactNode; links: NavLink[] };
 
 const ico = (d: string) => (
@@ -33,13 +33,26 @@ const ico = (d: string) => (
   </svg>
 );
 
-// Navegação em 4 grupos + Ajustes (proposta aprovada em 17/out/2026).
+// Regra do menu (docs/MAPA-DO-SISTEMA.md): só vira item de menu o que o dia a dia exige em destaque.
+// O resto mora dentro de um item principal ou em Ajustes. Produção vem primeiro: é a maior dor.
 const GROUPS: NavGroup[] = [
   {
     id: "hoje",
     label: "Hoje",
     icon: ico("M12 3v2M12 19v2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M3 12h2M19 12h2M5.6 18.4 7 17M17 7l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"),
     links: [{ href: "/admin", label: "Hoje", adminOnly: true, exact: true }],
+  },
+  {
+    id: "producao",
+    label: "Produção",
+    icon: ico("M4 6h16M4 12h10M4 18h7M17 15l2 2 3-4"),
+    links: [
+      { href: "/admin/projetos", label: "Projetos e entregas" },
+      { href: "/admin/tarefas", label: "Tarefas e prazos", adminOnly: true },
+      { href: "/admin/conteudo", label: "Conteúdo e posts", adminOnly: true },
+      { href: "/admin/agenda", label: "Agenda", adminOnly: true },
+      { href: "/portal", label: "Portal do cliente", clientOnly: true },
+    ],
   },
   {
     id: "comercial",
@@ -49,28 +62,8 @@ const GROUPS: NavGroup[] = [
       { href: "/admin/inbox", label: "Inbox", adminOnly: true },
       { href: "/admin/kanban", label: "Funil de vendas", adminOnly: true },
       { href: "/admin/crm", label: "Contatos", adminOnly: true },
-      { href: "/admin/briefings", label: "Briefings", adminOnly: true },
       { href: "/admin/orcamentos", label: "Orçamentos e contratos", adminOnly: true },
-      { href: "/admin/servicos", label: "Serviços e valores", adminOnly: true },
-      { href: "/admin/cases", label: "Cases do portfólio", adminOnly: true },
       { href: "/admin/campaigns", label: "Campanhas", adminOnly: true },
-    ],
-  },
-  {
-    id: "producao",
-    label: "Produção",
-    icon: ico("M4 6h16M4 12h10M4 18h7M17 15l2 2 3-4"),
-    links: [
-      { href: "/admin/tarefas", label: "Tarefas e prazos", adminOnly: true },
-      { href: "/admin/projetos", label: "Projetos e entregas" },
-      { href: "/admin/conteudo", label: "Conteúdo e posts", adminOnly: true },
-      { href: "/admin/planejamentos", label: "Marcas e planejamentos", adminOnly: true },
-      { href: "/admin/agenda", label: "Agenda", adminOnly: true },
-      { href: "/admin/galeria", label: "Galeria do cliente", adminOnly: true },
-      { href: "/admin/lume", label: "Lume · acervo", adminOnly: true },
-      { href: "/apresentacao", label: "Apresentação do KBOS" },
-      { href: "/admin/cursos", label: "Cursos", adminOnly: true },
-      { href: "/portal", label: "Portal do cliente" },
     ],
   },
   {
@@ -87,9 +80,14 @@ const GROUPS: NavGroup[] = [
     label: "Mais",
     icon: ico("M5 12h.01M12 12h.01M19 12h.01"),
     links: [
-      { href: "/portal/conta", label: "Meu acesso" },
-      { href: "/admin/whatsapp", label: "Conexão do WhatsApp", adminOnly: true },
-      { href: "/portal/cursos", label: "Meus cursos" },
+      { href: "/admin/lume", label: "Lume · acervo", adminOnly: true },
+      { href: "/admin/galeria", label: "Galeria do cliente", adminOnly: true },
+      { href: "/admin/servicos", label: "Serviços e valores", adminOnly: true },
+      { href: "/admin/cases", label: "Cases do portfólio", adminOnly: true },
+      { href: "/admin/cursos", label: "Cursos", adminOnly: true },
+      { href: "/admin/ajustes", label: "Ajustes", adminOnly: true },
+      { href: "/portal/conta", label: "Meu acesso", clientOnly: true },
+      { href: "/portal/cursos", label: "Meus cursos", clientOnly: true },
     ],
   },
 ];
@@ -193,7 +191,7 @@ export function KbosShell({
   }
 
   const isAdmin = user.role === "admin";
-  const allowed = (l: NavLink) => !l.adminOnly || isAdmin;
+  const allowed = (l: NavLink) => (!l.adminOnly || isAdmin) && (!l.clientOnly || !isAdmin);
   const groups = GROUPS.map((g) => ({ ...g, links: g.links.filter(allowed) })).filter((g) => g.links.length);
   const isActive = (l: NavLink) =>
     l.exact ? pathname === l.href : pathname === l.href || pathname.startsWith(l.href + "/");

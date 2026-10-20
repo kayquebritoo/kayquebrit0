@@ -7,7 +7,7 @@ type Post = {
   status: string; script: string | null; caption: string | null; mediaUrl: string | null; clientNote: string | null; copies: number; postedUrl: string | null;
   scriptBy: string | null; captureBy: string | null; editor: string | null; errorMessage: string | null;
 };
-type Project = { id: string; titulo: string };
+type Project = { id: string; titulo: string; categoria?: string };
 
 // Etapas na ordem do fluxo (cor = o que a pessoa vê no calendário).
 const STATUS: { id: string; label: string; color: string }[] = [
@@ -60,8 +60,6 @@ export default function ContentBoard() {
   const [open, setOpen] = useState<Post | null>(null);
   const [importing, setImporting] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [moving, setMoving] = useState(false);
-  const [moveTo, setMoveTo] = useState("");
   const [notice, setNotice] = useState("");
   const [selected, setSelected] = useState<string>(() => new Date().toLocaleDateString("sv-SE", { timeZone: BELEM }));
 
@@ -70,7 +68,9 @@ export default function ContentBoard() {
       try {
         const r = await fetch("/api/projects", { cache: "no-store" });
         const d = await r.json();
-        const list: Project[] = (d.items || []).map((p: Project) => ({ id: p.id, titulo: p.titulo }));
+        const all: Project[] = (d.items || []).map((p: Project) => ({ id: p.id, titulo: p.titulo, categoria: p.categoria }));
+        // só clientes recorrentes de redes sociais; se nenhum projeto estiver marcado assim ainda, mostra todos
+        const list = all.some((p) => p.categoria === "social") ? all.filter((p) => p.categoria === "social") : all;
         setProjects(list);
         setProjectId((cur) => cur || list[0]?.id || "");
       } catch { setError("Não consegui carregar os projetos."); }
@@ -103,30 +103,6 @@ export default function ContentBoard() {
       setNotice(`mLabs sincronizada: ${d.created} novo(s), ${d.updated} atualizado(s) (${d.found} posts lidos).`);
       await load();
     } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setSyncing(false); }
-  }
-
-  async function cleanOld() {
-    if (!confirm("Dispensar tudo o que passou há mais de 7 dias e nunca foi postado? Nada é apagado.")) return;
-    setNotice(""); setError("");
-    try {
-      const r = await fetch("/api/admin/social/dismiss-old", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ projectId, olderThanDays: 7 }) });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(d.error || "Não consegui limpar.");
-      setNotice(`${d.dismissed} item(ns) dispensado(s).`);
-      await load();
-    } catch (e) { setError(e instanceof Error ? e.message : "Erro."); }
-  }
-
-  async function movePostsTo() {
-    if (!moveTo || !confirm(`Mover TODOS os posts deste projeto para "${projects.find((p) => p.id === moveTo)?.titulo}"? Nada é apagado.`)) return;
-    setNotice(""); setError("");
-    try {
-      const r = await fetch("/api/admin/social/move", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ fromProjectId: projectId, toProjectId: moveTo }) });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(d.error || "Não consegui mover.");
-      setMoving(false); setProjectId(moveTo); setMoveTo("");
-      setNotice(`${d.moved} post(s) movido(s).`);
-    } catch (e) { setError(e instanceof Error ? e.message : "Erro."); }
   }
 
   const shown = useMemo(() => (items ?? []).filter((p) => filter === "all" || p.status === filter), [items, filter]);
@@ -190,21 +166,8 @@ export default function ContentBoard() {
           ))}
         </div>
         <button type="button" className="kb-btn min-h-11" disabled={!projectId || syncing} onClick={() => void syncMlabs()}>{syncing ? "Sincronizando…" : "Sincronizar mLabs"}</button>
-        <button type="button" className="kb-btn-ghost min-h-11" disabled={!projectId} onClick={() => setImporting(true)}>Importar .ics</button>
-        <button type="button" className="kb-btn-ghost min-h-11" disabled={!projectId} onClick={() => void cleanOld()}>Limpar antigos</button>
-        <button type="button" className="kb-btn-ghost min-h-11" disabled={!projectId} onClick={() => setMoving((v) => !v)}>Mover posts</button>
+        <button type="button" className="kb-btn-ghost min-h-11" disabled={!projectId} onClick={() => setImporting(true)}>Importar / colar status</button>
       </div>
-
-      {moving && (
-        <div className="kb-card flex flex-wrap items-center gap-2 p-3">
-          <span className="kb-muted text-sm">Mover todos os posts deste projeto para:</span>
-          <select aria-label="Projeto de destino" className="kb-control min-h-11 flex-1" value={moveTo} onChange={(e) => setMoveTo(e.target.value)}>
-            <option value="">Escolha…</option>
-            {projects.filter((p) => p.id !== projectId).map((p) => <option key={p.id} value={p.id}>{p.titulo}</option>)}
-          </select>
-          <button type="button" className="kb-btn min-h-11" disabled={!moveTo} onClick={() => void movePostsTo()}>Mover</button>
-        </div>
-      )}
 
       <div className="flex items-center justify-between gap-2">
         <button type="button" aria-label="Mês anterior" className="kb-chip min-h-11 min-w-11" onClick={() => shift(-1)}>‹</button>
@@ -293,7 +256,7 @@ export default function ContentBoard() {
       )}
 
       {open && <PostEditor post={open} names={names} onClose={() => setOpen(null)} onSaved={(p) => { setItems((cur) => (cur ?? []).filter((x) => !(x.id === p.id && (p as Post & { __gone?: boolean }).__gone)).map((x) => (x.id === p.id ? p : x))); setOpen(null); void load(); }} />}
-      {importing && <ImportIcs projectId={projectId} onClose={() => setImporting(false)} onDone={() => { setImporting(false); void load(); }} />}
+      {importing && <ImportIcs projectId={projectId} month={month} onClose={() => setImporting(false)} onDone={() => { setImporting(false); void load(); }} />}
     </div>
   );
 }
@@ -443,12 +406,26 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
   );
 }
 
-function ImportIcs({ projectId, onClose, onDone }: { projectId: string; onClose: () => void; onDone: () => void }) {
+function ImportIcs({ projectId, month, onClose, onDone }: { projectId: string; month: string; onClose: () => void; onDone: () => void }) {
+  const [tab, setTab] = useState<"ics" | "status">("ics");
+  const [list, setList] = useState("");
+  const [res, setRes] = useState<{ matched: number; postedBefore: number; restored: number; unmatched: string[] } | null>(null);
   const [text, setText] = useState("");
   const [info, setInfo] = useState<{ total: number; fresh: number; existing: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const input = useRef<HTMLInputElement>(null);
+
+  async function statusRun(dryRun: boolean) {
+    setBusy(true); setError("");
+    try {
+      const r = await fetch("/api/admin/social/production", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ projectId, month, text: list, dryRun }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Não consegui ler a lista.");
+      setRes(d);
+      if (!dryRun) onDone();
+    } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setBusy(false); }
+  }
 
   async function pick(file: File | undefined) {
     if (!file) return;
@@ -476,14 +453,33 @@ function ImportIcs({ projectId, onClose, onDone }: { projectId: string; onClose:
       <div onClick={(e) => e.stopPropagation()} className="kb-modal space-y-3" role="dialog" aria-label="Importar calendário do mLabs">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-display kb-ink text-lg">Importar do mLabs</h2>
-            <p className="kb-muted text-sm">Exporte o calendário (.ics) no mLabs e envie aqui. Itens com horário viram &quot;Agendado&quot;; sem horário, &quot;Roteiro&quot;. Reimportar não apaga nem desfaz nada.</p>
+            <h2 className="font-display kb-ink text-lg">Importar e atualizar</h2>
+            <div className="kb-seg mt-2" role="group" aria-label="Tipo de importação">
+              <button type="button" aria-pressed={tab === "ics"} onClick={() => setTab("ics")}>Calendário .ics</button>
+              <button type="button" aria-pressed={tab === "status"} onClick={() => setTab("status")}>Colar status</button>
+            </div>
           </div>
           <button type="button" onClick={onClose} aria-label="Fechar" className="h-11 w-11 shrink-0 rounded-full text-2xl">×</button>
         </div>
         {error && <p className="kb-tag late w-full justify-start rounded-xl! px-3! py-2! text-sm">{error}</p>}
+        {tab === "status" && (
+          <div className="space-y-2">
+            <p className="kb-muted text-sm">Cole a lista da produção (dia, marca, formato e situação, como no seu bloco de notas). O KBOS acha cada post do mês e ajusta a etapa. Se escrever &quot;os demais pra trás foram postados&quot;, tudo antes da primeira linha vira Postado.</p>
+            <textarea className="kb-control text-base" style={{ padding: "10px 14px" }} rows={10} aria-label="Lista da produção" value={list} onChange={(e) => { setList(e.target.value); setRes(null); }} placeholder={"* 14 - LOUNGE - Reels Chapa Mista ✅🟡 Editado / em aprovação\n* 16 - PRAÇA - Carrossel ❌ Fila de espera"} />
+            {res && (
+              <div className="kb-card space-y-1 p-3 text-sm">
+                <p><b className="kb-ink">{res.matched}</b> posts encontrados{res.postedBefore ? ` · ${res.postedBefore} anteriores viram Postado` : ""}{res.restored ? ` · ${res.restored} restaurados da limpeza` : ""}.</p>
+                {res.unmatched.length > 0 && <p className="text-[var(--kb-late)]">Não achei: {res.unmatched.join(" · ")}</p>}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button type="button" className="kb-btn-ghost min-h-12 flex-1" disabled={busy || list.trim().length < 5} onClick={() => void statusRun(true)}>Conferir</button>
+              <button type="button" className="kb-btn min-h-12 flex-1" disabled={busy || !res || res.matched === 0} onClick={() => void statusRun(false)}>{busy ? "Aplicando…" : "Aplicar"}</button>
+            </div>
+          </div>
+        )}
         <input ref={input} type="file" accept=".ics,text/calendar" className="hidden" onChange={(e) => void pick(e.target.files?.[0])} />
-        {!info ? (
+        {tab === "ics" && (!info ? (
           <button type="button" className="kb-btn min-h-12 w-full" disabled={busy} onClick={() => input.current?.click()}>{busy ? "Lendo…" : "Escolher arquivo .ics"}</button>
         ) : (
           <>
@@ -493,7 +489,7 @@ function ImportIcs({ projectId, onClose, onDone }: { projectId: string; onClose:
               <button type="button" className="kb-btn-ghost min-h-12" onClick={() => { setInfo(null); setText(""); }}>Trocar arquivo</button>
             </div>
           </>
-        )}
+        ))}
       </div>
     </div>
   );
