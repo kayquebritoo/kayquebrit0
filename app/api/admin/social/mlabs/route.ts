@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const denied = deny(await sessionUser(), "admin");
   if (denied) return denied;
-  return NextResponse.json({ configured: mlabsConfigured() });
+  return NextResponse.json({ configured: mlabsConfigured(), tokenLength: (process.env.MLABS_MCP_TOKEN || "").length });
 }
 
 // POST { projectId } → espelha agenda da mLabs no calendário do projeto (somente leitura na mLabs).
