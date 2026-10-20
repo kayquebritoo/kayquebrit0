@@ -352,12 +352,15 @@ async function sendToOwner(owner: string, text: string): Promise<void> {
 
 /** Resposta em áudio (nota de voz) — usada quando o dono falou por áudio. */
 async function sendVoiceToOwner(owner: string, text: string): Promise<void> {
-  if (!ttsConfig().enabled && ttsProvider() !== "fish") return;
+  if (!ttsConfig().enabled && ttsProvider() !== "fish") {
+    await logHook({ event: "agente", result: "voz: desligada (sem OPENAI_API_KEY/TTS_* na VPS)" });
+    return;
+  }
   // Fala sem emojis/asteriscos e no máximo ~600 caracteres (áudio curto).
   const speakable = text.replace(/[*_~`]/g, "").replace(/\p{Extended_Pictographic}/gu, "").slice(0, 600);
-  const dataUri = await synthesizeSpeech(speakable);
+  const dataUri = await synthesizeSpeech(speakable).catch(() => null);
   if (!dataUri) {
-    await logHook({ event: "agente", result: "voz: falhou ao gerar o áudio" });
+    await logHook({ event: "agente", result: "voz: falhou ao gerar o áudio (TTS recusou ou fora do ar)" });
     return;
   }
   const { url, key, instance } = evoConfig();
@@ -483,7 +486,9 @@ export async function runAgentTurn(inb: InboundMessage): Promise<void> {
       if (isNo(text)) {
         await r.del(keys.pend);
         await remember(owner, text, "Cancelado.");
-        return sendToOwner(owner, "Beleza, cancelei. 👍");
+        await sendToOwner(owner, "Beleza, cancelei. 👍");
+        if (spoke) await sendVoiceToOwner(owner, "Beleza, cancelei.");
+        return;
       }
       await r.del(keys.pend); // mudou de assunto: descarta a pendência
     }
