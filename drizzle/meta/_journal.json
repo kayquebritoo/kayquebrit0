@@ -148,6 +148,13 @@
       "when": 1793300000000,
       "tag": "0020_contatos_importacao",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793400000000,
+      "tag": "0021_chat_projeto",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import ProjectChat from "@/components/kbos/ProjectChat";
 import ClientHubLinks from "@/components/kbos/ClientHubLinks";
 import { PIPELINE } from "@/lib/kbos/constants";
 
@@ -47,6 +48,7 @@ export default function ProjectPanel({ project, contacts, onClose, onChanged, on
   const [fileName, setFileName] = useState("");
   const [fileUrl, setFileUrl] = useState("");
   const [msg, setMsg] = useState("");
+  const [chatOpen, setChatOpen] = useState(false);
   const [f, setF] = useState({
     titulo: project.titulo, categoria: project.categoria, contactId: project.contactId ?? "", valor: project.valor ?? "",
     prazo: asDate(project.prazo), description: project.description ?? "",
@@ -135,6 +137,8 @@ export default function ProjectPanel({ project, contacts, onClose, onChanged, on
           ))}
         </div>
         {project.clienteId && <p className="kb-faint mt-2 text-xs">Mudar a etapa avisa o cliente no WhatsApp.</p>}
+        <button type="button" className="kb-btn-ghost mt-3 min-h-11" onClick={() => setChatOpen(true)}>Conversa do projeto</button>
+        {chatOpen && <ProjectChat projectId={project.id} title={project.titulo} onClose={() => setChatOpen(false)} />}
 
         <div className="mt-4"><ClientHubLinks name={project.contactName} company={project.contactCompany} /></div>
 

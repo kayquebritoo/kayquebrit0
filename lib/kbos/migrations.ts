@@ -218,6 +218,20 @@ export const SCHEMA_STEPS: { id: string; sql: string }[] = [
   { id: "contatos.import.2", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS extra_emails jsonb NOT NULL DEFAULT '[]'::jsonb` },
   { id: "contatos.import.3", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS former_phones jsonb NOT NULL DEFAULT '[]'::jsonb` },
   { id: "contatos.import.4", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS external_ids jsonb NOT NULL DEFAULT '{}'::jsonb` },
+  { id: "chat.0", sql: `CREATE TABLE IF NOT EXISTS kbos_chat_messages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id uuid NOT NULL REFERENCES kbos_projects(id) ON DELETE CASCADE,
+  author_id uuid NOT NULL REFERENCES kbos_users(id) ON DELETE CASCADE,
+  body text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+)` },
+  { id: "chat.1", sql: `CREATE INDEX IF NOT EXISTS kbos_chat_messages_project_idx ON kbos_chat_messages (project_id, created_at DESC)` },
+  { id: "chat.2", sql: `CREATE TABLE IF NOT EXISTS kbos_chat_reads (
+  project_id uuid NOT NULL REFERENCES kbos_projects(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES kbos_users(id) ON DELETE CASCADE,
+  last_read_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (project_id, user_id)
+)` },
 ];
 
 /**

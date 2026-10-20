@@ -811,3 +811,19 @@ export const albumAuthorizations = pgTable("kbos_album_authorizations", {
   userAgent: text("user_agent"),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
 });
+
+/** Chat do projeto: um grupo por projeto (cliente + equipe). Mensagens de texto simples. */
+export const chatMessages = pgTable("kbos_chat_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  authorId: uuid("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  createdAt: ts("created_at"),
+});
+
+/** Até onde cada pessoa leu o chat de um projeto (para o contador de não lidas). */
+export const chatReads = pgTable("kbos_chat_reads", {
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  lastReadAt: timestamp("last_read_at", { withTimezone: true }).defaultNow().notNull(),
+});
