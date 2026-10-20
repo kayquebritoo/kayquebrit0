@@ -827,3 +827,27 @@ export const chatReads = pgTable("kbos_chat_reads", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   lastReadAt: timestamp("last_read_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+/** Calendário de conteúdo (posts das redes do cliente): importado do mLabs, aprovado no portal. */
+export const socialPosts = pgTable("kbos_social_posts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+  contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
+  brand: text("brand"),
+  title: text("title").notNull(),
+  format: text("format").notNull().default("outro"),
+  networks: jsonb("networks").$type<string[]>().notNull().default([]),
+  scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
+  status: text("status").notNull().default("roteiro"),
+  script: text("script"),
+  caption: text("caption"),
+  mediaUrl: text("media_url"),
+  externalKey: text("external_key").unique(),
+  copies: integer("copies").notNull().default(1),
+  clientNote: text("client_note"),
+  decidedAt: timestamp("decided_at", { withTimezone: true }),
+  decidedBy: uuid("decided_by").references(() => users.id, { onDelete: "set null" }),
+  postedUrl: text("posted_url"),
+  createdAt: ts("created_at"),
+  updatedAt: ts("updated_at"),
+});

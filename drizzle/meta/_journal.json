@@ -155,6 +155,13 @@
       "when": 1793400000000,
       "tag": "0021_chat_projeto",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793500000000,
+      "tag": "0022_conteudo_posts",
+      "breakpoints": true
     }
   ]
 }

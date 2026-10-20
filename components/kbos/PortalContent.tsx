@@ -5,6 +5,7 @@ import { PIPELINE } from "@/lib/kbos/constants";
 import ApproveButtons from "@/components/kbos/ApproveButtons";
 import PortalLumeCard from "@/components/kbos/PortalLumeCard";
 import ProjectChat from "@/components/kbos/ProjectChat";
+import PortalPosts from "@/components/kbos/PortalPosts";
 
 type Project = { id: string; titulo: string; categoria: string; status: string; prazo?: string | null };
 type TaskItem = { id: string; projectId: string | null; titulo: string; status: string; dueAt: string | null };
@@ -86,6 +87,7 @@ export default function PortalContent({ firstName }: { firstName?: string }) {
           </div>
         </div>
       </header>
+      <PortalPosts />
       <PortalLumeCard />
       <div className="grid gap-4 md:grid-cols-2">
         {projects.map((p) => {

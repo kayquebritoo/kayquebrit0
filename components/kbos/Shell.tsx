@@ -63,6 +63,7 @@ const GROUPS: NavGroup[] = [
     links: [
       { href: "/admin/tarefas", label: "Tarefas e prazos", adminOnly: true },
       { href: "/admin/projetos", label: "Projetos e entregas" },
+      { href: "/admin/conteudo", label: "Conteúdo e posts", adminOnly: true },
       { href: "/admin/planejamentos", label: "Marcas e planejamentos", adminOnly: true },
       { href: "/admin/agenda", label: "Agenda", adminOnly: true },
       { href: "/admin/galeria", label: "Galeria do cliente", adminOnly: true },
