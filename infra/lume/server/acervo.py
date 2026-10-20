@@ -196,6 +196,9 @@ def model(nome):
     return _models[nome]
 
 
+LOCK_IMAGEM = threading.Lock()
+
+
 def embed_images(imgs):
     v = model("clip-ViT-B-32").encode(imgs, batch_size=16, convert_to_numpy=True, normalize_embeddings=True, show_progress_bar=False)
     return v.astype(np.float16)
@@ -366,6 +369,23 @@ def servir(porta):
                         self._j(json.loads(r.read().decode() or "{}"))
                 except Exception as e:
                     self._j({"erro": str(e)[:160] or "Não consegui transcrever."}, 502)
+                return
+            if u.path == "/buscar-imagem":  # print/foto → quadros e vídeos mais parecidos (mesmo CLIP do índice)
+                try:
+                    n = int(self.headers.get("Content-Length", "0"))
+                    if not 500 < n < 8_000_000: raise ValueError("Envie uma imagem de até 8 MB.")
+                    img = Image.open(io.BytesIO(self.rfile.read(n))); img.load()
+                    img = img.convert("RGB"); img.thumbnail((448, 448))
+                    with LOCK_IMAGEM:  # o modelo de imagem é carregado sob demanda e não é reentrante
+                        vec = np.asarray(embed_images([img])[0], dtype=np.float32)
+                    vec /= np.linalg.norm(vec) or 1
+                    qs = {k: v[0] for k, v in parse_qs(u.query).items()}
+                    self._j(catalogo.enriquecer(idx.buscar(vec, qs.get("t", ""), qs.get("p", ""))))
+                except (ValueError, OSError) as e:
+                    self._j({"erro": str(e)[:160] or "Não consegui ler essa imagem."}, 400)
+                except Exception as e:
+                    print(f"Falha na busca por imagem: {e}", file=sys.stderr, flush=True)
+                    self._j({"erro": "Não consegui buscar por essa imagem agora."}, 500)
                 return
             if u.path != "/feedback":
                 self.send_error(404); return
