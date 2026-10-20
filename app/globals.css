@@ -178,8 +178,14 @@ html.fullpage-locked body {
 }
 
 /* menu fullscreen — fundo OPACO: nada da página (hero, títulos gigantes, pontos, CTA)
-   pode aparecer por trás do menu. O degradê é só acabamento por cima do sólido. */
+   pode aparecer por trás do menu. O degradê é só acabamento por cima do sólido.
+   O contêiner NUNCA rola: o ::after abaixo tem inset negativo (-20%) e, com
+   overflow-y:auto aqui, o navegador força overflow-x:auto também e o menu inteiro
+   arrastava de lado no celular. A rolagem vertical fica na camada interna
+   (.glass-menu-scroll, em Header.tsx). `clip` impede até rolagem por foco/teclado. */
 .glass-menu {
+  overflow: hidden;
+  overflow: clip;
   background:
     radial-gradient(110% 70% at 50% -5%, rgba(79, 18, 199, 0.42), rgba(53, 12, 133, 0.16) 45%, transparent 72%),
     radial-gradient(90% 60% at 100% 100%, rgba(79, 18, 199, 0.3), rgba(232, 14, 253, 0.05) 70%, transparent),
@@ -217,6 +223,8 @@ html.fullpage-locked body {
 
 /* painel de vidro das utilidades do menu (área do cliente, redes, tema, idioma) */
 .menu-panel {
+  min-width: 0;
+  max-width: 100%;
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
   border: 1px solid rgba(237, 230, 236, 0.14);
   border-radius: 28px;
@@ -239,6 +247,9 @@ html.light .glass-menu::after { opacity: 0.55; }
   letter-spacing: -0.02em;
   line-height: 1.08;
   font-size: clamp(1.9rem, 8vw, 3rem);
+  /* nunca mais largo que a tela (rótulos longos em EN/ES quebram linha) */
+  max-width: 100%;
+  overflow-wrap: break-word;
 }
 @media (min-width: 768px) {
   .menu-big {
@@ -1337,7 +1348,7 @@ html.light .page-aurora { opacity: 0.45; }
 .page-waves { position: absolute; inset: 0; opacity: 0.7; mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%); -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%); }
 
 /* Ícones sociais discretos (menu e contato). */
-.soc-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+.soc-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 8px; width: 100%; min-width: 0; }
 .soc-btn {
   display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
   width: 38px; height: 38px; border-radius: 999px; color: rgba(237, 230, 236, 0.7);

@@ -152,11 +152,16 @@ export default function Header() {
       {/* menu fullscreen — vidro translúcido + big titles (100% CSS, sem GSAP) */}
       <div
         aria-hidden={!open}
-        className={`glass-menu fixed inset-0 z-[58] flex flex-col justify-between overflow-y-auto transition-[opacity,visibility] duration-500 ease-out ${
+        className={`glass-menu fixed inset-0 z-[58] transition-[opacity,visibility] duration-500 ease-out ${
           open ? "visible opacity-100" : "invisible opacity-0"
         }`}
       >
-        <div className="relative z-10 mx-auto flex min-h-full w-full max-w-6xl flex-col justify-between gap-10 px-6 pb-[max(1.75rem,env(safe-area-inset-bottom))] pt-[calc(7rem+env(safe-area-inset-top))] sm:px-10 md:flex-row md:items-end md:gap-16 md:px-[80px] md:pb-14 md:pt-36">
+        {/* A camada de fundo (::after com inset negativo) fica presa no contêiner
+            sem rolagem; só esta camada interna rola, e só na vertical. Antes o
+            próprio .glass-menu rolava e o degradê vazando 20% para os lados
+            deixava o menu arrastar na horizontal no celular. */}
+        <div className="glass-menu-scroll relative z-10 h-full overflow-y-auto overflow-x-hidden overscroll-contain">
+        <div className="relative mx-auto flex min-h-full w-full min-w-0 max-w-6xl flex-col justify-between gap-10 px-6 pb-[max(1.75rem,env(safe-area-inset-bottom))] pt-[calc(7rem+env(safe-area-inset-top))] sm:px-10 md:flex-row md:items-end md:gap-16 md:px-[80px] md:pb-14 md:pt-36">
           {/* navegação: alinhada à esquerda, com respiro */}
           <nav aria-label={t("menu.open")} className="flex flex-col items-start gap-1.5 md:gap-2">
             <MenuItem
@@ -233,7 +238,7 @@ export default function Header() {
                 </a>
               ))}
             </div>
-            <div className="flex w-full items-center justify-between gap-3 md:justify-end">
+            <div className="flex w-full flex-wrap items-center justify-between gap-3 md:justify-end">
               <button
                 type="button"
                 onClick={toggle}
@@ -280,6 +285,7 @@ export default function Header() {
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </>
