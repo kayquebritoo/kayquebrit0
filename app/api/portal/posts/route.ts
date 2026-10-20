@@ -6,19 +6,21 @@ import { z } from "zod";
 import { db } from "@/lib/kbos/db";
 import { projects } from "@/lib/kbos/schema";
 import { readBody } from "@/lib/kbos/validators";
-import { PostError, createClientRoteiro, portalPosts } from "@/lib/kbos/social-posts";
+import { PostError, createClientRoteiro, monthUsage, portalPosts } from "@/lib/kbos/social-posts";
 import { notifyClientRoteiro } from "@/lib/kbos/social-notify";
 import { POST_FORMATS } from "@/lib/kbos/social-import";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/portal/posts — posts dos projetos do cliente (a partir de "aguardando aprovação").
-export async function GET() {
+export async function GET(req: Request) {
   const user = await sessionUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   try {
     const mine = await db().select({ id: projects.id, titulo: projects.titulo }).from(projects).where(eq(projects.clienteId, user.id));
-    return NextResponse.json({ items: await portalPosts(user.id), projects: mine });
+    const month = new URL(req.url).searchParams.get("month") ?? "";
+    const quota = /^\d{4}-\d{2}$/.test(month) && mine[0] ? await monthUsage(mine[0].id, month) : null;
+    return NextResponse.json({ items: await portalPosts(user.id), projects: mine, quota });
   } catch (e) {
     return serverError(e);
   }

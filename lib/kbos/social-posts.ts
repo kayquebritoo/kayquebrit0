@@ -82,6 +82,21 @@ export async function portalPosts(userId: string) {
   return rows.map(({ createdBy, script, ...p }) => ({ ...p, script: createdBy === userId ? script : null, mine: createdBy === userId }));
 }
 
+/** Limite de posts por mês no calendário de cada cliente (carrossel + estático + vídeo somados). */
+export const MONTHLY_POST_LIMIT = 50;
+const monthRange = (month: string) => {
+  const [y, m] = month.split("-").map(Number);
+  return { from: new Date(`${month}-01T00:00:00-03:00`), to: new Date(`${m === 12 ? y + 1 : y}-${String(m === 12 ? 1 : m + 1).padStart(2, "0")}-01T00:00:00-03:00`) };
+};
+/** Quantos posts o projeto já tem no mês (roteiros já realizados e dispensados não contam em dobro). */
+export async function monthUsage(projectId: string, month: string) {
+  const { from, to } = monthRange(month);
+  const rows = await listPosts({ projectId, from, to });
+  const byFormat: Record<string, number> = {};
+  for (const r of rows) byFormat[r.format] = (byFormat[r.format] ?? 0) + 1;
+  return { limit: MONTHLY_POST_LIMIT, used: rows.length, byFormat };
+}
+
 /** O cliente cadastra o roteiro dele pelo portal (data + formato + ideia). Vira "roteiro" no calendário da equipe. */
 export async function createClientRoteiro(userId: string, input: { projectId: string; date: string; title: string; format: PostFormat; brand?: string | null; script?: string | null }) {
   const [proj] = await db().select({ id: projects.id }).from(projects).where(and(eq(projects.id, input.projectId), eq(projects.clienteId, userId))).limit(1);
@@ -90,6 +105,8 @@ export async function createClientRoteiro(userId: string, input: { projectId: st
   if (!(POST_FORMATS as readonly string[]).includes(input.format)) throw new PostError("Formato inválido.");
   const title = input.title.trim().slice(0, 200);
   if (title.length < 2) throw new PostError("Dê um título ao roteiro.");
+  const q = await monthUsage(proj.id, input.date.slice(0, 7));
+  if (q.used >= MONTHLY_POST_LIMIT) throw new PostError(`Esse mês já tem ${q.used} posts, que é o limite de ${MONTHLY_POST_LIMIT}. Escolha outro mês ou fale com o Kayque.`);
   const [row] = await db().insert(socialPosts).values({
     projectId: proj.id, brand: input.brand?.trim().slice(0, 60) || null, title, format: input.format, scheduledAt: new Date(`${input.date}T00:00:00-03:00`),
     status: "roteiro", script: input.script?.trim().slice(0, 30000) || null, createdBy: userId,

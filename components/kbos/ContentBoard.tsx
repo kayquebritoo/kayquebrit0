@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CLIENT_HUBS, lumeHref } from "@/lib/kbos/client-hubs";
+import { BRAND_LIST, brandColor } from "@/lib/kbos/brand-colors";
 
 type Post = {
   id: string; projectId: string | null; brand: string | null; title: string; format: string; scheduledAt: string | null;
@@ -145,7 +146,7 @@ export default function ContentBoard() {
     <button key={p.id} type="button" className="kb-row w-full text-left" onClick={() => setOpen(p)}>
       <span className="min-w-0">
         <span className="kb-ink block truncate text-[14px]">{p.title}</span>
-        <span className="kb-faint block truncate text-[12px]">{[p.scheduledAt && hhmm(p.scheduledAt) !== "00:00" ? hhmm(p.scheduledAt) : null, p.brand, FORMAT[p.format] ?? "Post", p.copies > 1 ? `${p.copies} redes` : null].filter(Boolean).join(" · ")}</span>
+        <span className="kb-faint flex items-center gap-1.5 truncate text-[12px]">{brandColor(p.brand) && <i aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: brandColor(p.brand) ?? undefined }} />}{[p.scheduledAt && hhmm(p.scheduledAt) !== "00:00" ? hhmm(p.scheduledAt) : null, p.brand, FORMAT[p.format] ?? "Post", p.copies > 1 ? `${p.copies} redes` : null].filter(Boolean).join(" · ")}</span>
         {people(p) && <span className="kb-muted block truncate text-[12px]">{people(p)}</span>}
         {p.status === "erro" && p.errorMessage && <span className="block truncate text-[12px] text-[var(--kb-late)]">{p.errorMessage}</span>}
       </span>
@@ -190,6 +191,15 @@ export default function ContentBoard() {
 
       {items && view === "calendario" && (
         <>
+          <div className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Empresas">
+            {BRAND_LIST.map((b) => (
+              <span key={b} className="kb-muted inline-flex items-center gap-1.5 text-[12px]">
+                <i aria-hidden className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: brandColor(b) ?? "#999" }} />{b}
+                <span className="kb-faint tabular-nums">{(items ?? []).filter((p) => p.brand === b).length}</span>
+              </span>
+            ))}
+            <span className="kb-faint ml-auto text-[12px] tabular-nums">{items.length} de 50 no mês</span>
+          </div>
           <div className="kb-glass overflow-hidden p-0!" role="grid" aria-label={`Calendário de ${monthName}`}>
             <div className="grid grid-cols-7 border-b border-white/10" role="row">
               {WEEK.map((w) => <div key={w} role="columnheader" className="kb-faint py-2 text-center text-[11px] uppercase tracking-wide">{w}</div>)}
@@ -212,12 +222,13 @@ export default function ContentBoard() {
                     <span className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[12px] tabular-nums ${c.key === today ? "bg-gradient-to-br from-[#4F12C7] to-[#E80EFD] font-semibold text-white" : "kb-muted"}`}>{c.n}</span>
                     {/* celular: só pontinhos coloridos */}
                     <div className="mt-1 flex flex-wrap gap-0.5 sm:hidden">
-                      {list.slice(0, 6).map((p) => <span key={p.id} aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: meta(p.status).color }} />)}
+                      {list.slice(0, 6).map((p) => <span key={p.id} aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: brandColor(p.brand) ?? meta(p.status).color }} />)}
                     </div>
                     {/* tela grande: etiquetas com título */}
                     <div className="mt-1 hidden flex-col gap-0.5 sm:flex">
                       {list.slice(0, 3).map((p) => (
-                        <button key={p.id} type="button" onClick={(e) => { e.stopPropagation(); setOpen(p); }} title={`${p.title} — ${meta(p.status).label}`} className="flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-left text-[11px] hover:bg-white/10" style={{ borderLeft: `3px solid ${meta(p.status).color}` }}>
+                        <button key={p.id} type="button" onClick={(e) => { e.stopPropagation(); setOpen(p); }} title={`${p.title} — ${meta(p.status).label}`} className="flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-left text-[11px] hover:bg-white/10" style={{ borderLeft: `3px solid ${brandColor(p.brand) ?? meta(p.status).color}`, background: brandColor(p.brand) ? `${brandColor(p.brand)}14` : undefined }}>
+                          <span aria-hidden className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: meta(p.status).color }} />
                           <b className="kb-faint shrink-0">{FORMAT_SHORT[p.format] ?? "P"}</b>
                           <span className="kb-ink truncate">{p.title}</span>
                         </button>

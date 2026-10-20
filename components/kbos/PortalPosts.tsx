@@ -1,16 +1,18 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { BRAND_LIST, brandColor } from "@/lib/kbos/brand-colors";
 
 type Post = { id: string; title: string; brand: string | null; format: string; scheduledAt: string | null; status: string; caption: string | null; mediaUrl: string | null; clientNote: string | null; script: string | null; mine: boolean };
 type Proj = { id: string; titulo: string };
-const FORMAT: Record<string, string> = { reels: "Reels", carrossel: "Carrossel", estatico: "Flyer", story: "Story", outro: "Post" };
+const FORMAT: Record<string, string> = { reels: "Vídeo (Reels)", carrossel: "Carrossel", estatico: "Post estático", story: "Story", outro: "Post" };
 const LABEL: Record<string, string> = { roteiro: "Roteiro enviado", captacao: "Em produção", producao: "Em produção", aprovacao: "Aguardando você", ajustes: "Ajustes pedidos", aprovado: "Aprovado", agendado: "Agendado", postado: "Postado" };
 const COLOR: Record<string, string> = { roteiro: "#9a93a8", captacao: "#4DA3FF", producao: "#8a6cf0", aprovacao: "#f5c46e", ajustes: "#ff9f5a", aprovado: "#3ecf8e", agendado: "#c08cff", postado: "#2fbf71" };
 const BELEM = "America/Belem";
 const dayKey = (iso: string) => new Date(iso).toLocaleDateString("sv-SE", { timeZone: BELEM });
 const dayLong = (key: string) => new Date(`${key}T12:00:00-03:00`).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", timeZone: BELEM });
 const WEEK = ["D", "S", "T", "Q", "Q", "S", "S"];
-const BRANDS = ["Hotel", "Lounge", "Praça"];
+const BRANDS = BRAND_LIST;
+type Quota = { limit: number; used: number; byFormat: Record<string, number> };
 
 export default function PortalPosts() {
   const [items, setItems] = useState<Post[] | null>(null);
@@ -22,16 +24,18 @@ export default function PortalPosts() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
+  const [quota, setQuota] = useState<Quota | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/portal/posts", { cache: "no-store" });
+      const r = await fetch(`/api/portal/posts?month=${month}`, { cache: "no-store" });
       if (!r.ok) { setItems([]); return; }
       const d = await r.json();
       setItems(d.items || []);
       setProjects(d.projects || []);
+      setQuota(d.quota ?? null);
     } catch { setItems([]); }
-  }, []);
+  }, [month]);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos posts
     void load();
@@ -112,6 +116,21 @@ export default function PortalPosts() {
         <p className="font-display text-base capitalize">{monthName}</p>
         <button type="button" aria-label="Próximo mês" className="kb-chip min-h-11 min-w-11" onClick={() => shift(1)}>›</button>
       </div>
+      {quota && (
+        <div className="kb-card gap-2" aria-label="Posts do mês">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-sm">Posts de {monthName}</span>
+            <b className="tabular-nums text-sm">{quota.used} de {quota.limit}</b>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-valuemin={0} aria-valuemax={quota.limit} aria-valuenow={quota.used}>
+            <span className="block h-full rounded-full bg-gradient-to-r from-[#4F12C7] to-[#E80EFD]" style={{ width: `${Math.min(100, (quota.used / quota.limit) * 100)}%` }} />
+          </div>
+          <p className="kb-faint text-xs">{["carrossel", "estatico", "reels"].map((k) => `${quota.byFormat[k] ?? 0} ${k === "carrossel" ? "carrossel" : k === "estatico" ? "estático" : "vídeo"}`).join(" · ")}{quota.used >= quota.limit ? " · limite do mês atingido" : ""}</p>
+        </div>
+      )}
+      <div className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Empresas">
+        {BRANDS.map((b) => <span key={b} className="kb-faint inline-flex items-center gap-1.5 text-xs"><i aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: brandColor(b) ?? "#999" }} />{b}</span>)}
+      </div>
       <div role="grid" aria-label={`Calendário de ${monthName}`}>
         <div className="grid grid-cols-7" role="row">{WEEK.map((w, i) => <div key={i} role="columnheader" className="kb-faint py-1 text-center text-[11px]">{w}</div>)}</div>
         <div className="grid grid-cols-7 gap-y-1">
@@ -122,7 +141,7 @@ export default function PortalPosts() {
               <button key={c.key} type="button" role="gridcell" aria-selected={sel} aria-label={`${c.n}, ${list.length} post${list.length === 1 ? "" : "s"}`} onClick={() => setSelected(c.key)}
                 className={`flex min-h-12 flex-col items-center gap-1 rounded-xl py-1 transition-colors ${c.inMonth ? "" : "opacity-35"} ${sel ? "bg-[var(--kb-chip-hover)]" : ""}`}>
                 <span className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full text-[13px] tabular-nums ${c.key === today ? "bg-gradient-to-br from-[#4F12C7] to-[#E80EFD] font-semibold text-white" : ""}`}>{c.n}</span>
-                <span className="flex gap-0.5">{list.slice(0, 4).map((p) => <i key={p.id} aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: COLOR[p.status] ?? "#9a93a8" }} />)}</span>
+                <span className="flex gap-0.5">{list.slice(0, 4).map((p) => <i key={p.id} aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: brandColor(p.brand) ?? COLOR[p.status] ?? "#9a93a8" }} />)}</span>
               </button>
             );
           })}
@@ -135,7 +154,7 @@ export default function PortalPosts() {
           <div key={p.id} className="kb-row">
             <span className="min-w-0">
               <span className="block truncate text-sm">{p.title}</span>
-              <span className="kb-faint block truncate text-xs">{[p.brand, FORMAT[p.format] ?? "Post"].filter(Boolean).join(" · ")}</span>
+              <span className="kb-faint flex items-center gap-1.5 truncate text-xs">{brandColor(p.brand) && <i aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: brandColor(p.brand) ?? undefined }} />}{[p.brand, FORMAT[p.format] ?? "Post"].filter(Boolean).join(" · ")}</span>
               {p.mine && p.script && <span className="kb-muted block whitespace-pre-wrap break-words pt-1 text-xs">{p.script}</span>}
             </span>
             <span className={`kb-tag shrink-0 gap-1.5 ${p.status === "ajustes" ? "late" : ""}`}><i aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: COLOR[p.status] ?? "#9a93a8" }} />{LABEL[p.status] ?? p.status}</span>
