@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { sessionUser } from "@/lib/kbos/rbac";
 import { serverError } from "@/lib/kbos/http";
+import { notifyChatMessage } from "@/lib/kbos/chat-notify";
 import { canAccessProject, cleanBody, listMessages, markRead, postMessage, CHAT_MAX_LEN } from "@/lib/kbos/project-chat";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -34,6 +35,7 @@ export async function POST(req: Request, ctx: Ctx) {
     const body = cleanBody(data.body);
     if (!body) return NextResponse.json({ error: `Escreva uma mensagem de até ${CHAT_MAX_LEN} caracteres.` }, { status: 400 });
     const row = await postMessage(g.user, g.id, body);
+    await notifyChatMessage(g.user, g.id);
     return NextResponse.json({ item: row }, { status: 201 });
   } catch (e) {
     return serverError(e);
