@@ -242,7 +242,7 @@ export function KbosShell({
 
       {/* ── Coluna principal ────────────────────────── */}
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-[40] bg-[var(--kb-glass-solid)] pt-[env(safe-area-inset-top)] backdrop-blur-xl lg:bg-transparent lg:backdrop-blur-none">
+        <header className="sticky top-0 z-[40] bg-[var(--kb-glass-solid)] pt-[env(safe-area-inset-top)] backdrop-blur-xl lg:static lg:bg-transparent lg:backdrop-blur-none">
           <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 md:px-8 lg:pt-6">
             <div className="min-w-0 flex-1">
               <h1 className="font-display truncate text-xl font-light lg:text-2xl">{title}</h1>

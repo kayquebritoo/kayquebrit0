@@ -1204,12 +1204,18 @@ input[type="date"].kb-control::-webkit-date-and-time-value { text-align: left; }
 
 /* KBOS: rolagem sempre livre no painel, mesmo se a trava do fullpage da
    home sobrar de uma navegação client-side. */
-html:has(.kbos),
-html:has(.kbos) body {
+html:has(.kbos) {
   height: auto;
   overflow-y: auto;
   overflow-x: clip;
   overscroll-behavior-y: none; /* sem elástico: sensação de app */
+}
+/* Só o html rola. O body NÃO pode virar contêiner de rolagem com overscroll "none":
+   foi isso que travou a roda/trackpad na tela Hoje (a rolagem não passava do body para a janela). */
+html:has(.kbos) body {
+  height: auto;
+  overflow: visible;
+  overscroll-behavior-y: auto;
 }
 
 /* O body não deve capturar o sticky sem ser o elemento que rola. */
