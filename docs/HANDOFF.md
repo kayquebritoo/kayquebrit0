@@ -116,6 +116,7 @@ Segundo cérebro no Obsidian: `Documents/Obsidian Vault` (CONTEXTO-IA,
 Voz-e-Tom, Marca, Servicos, KBOS - Visao, logs em `20-Projetos/KBOS/log/`).
 
 ## Diário (mais recente em cima)
+- 2026-10-20 · Claude · Relatório da manhã atualizado (itens 5–9). Fila restante depende do Kayque: chaves VAPID (push), token/pasta do Lume, aprovação do agent.ts, CSV real do PicPay, limpeza do crontab na VPS.
 - 2026-10-20 · Claude · Chat do projeto agora avisa por WhatsApp (`lib/kbos/chat-notify.ts`): cliente escreve → avisa admins com telefone; equipe escreve → avisa o cliente; no máximo 1 aviso a cada 30 min por projeto e pessoa (evento `chat:<projeto>:<pessoa>`). Nunca quebra o envio da mensagem. Teste PGlite com WhatsApp mockado.
 - 2026-10-20 · Claude · CRM: filtro "Sem nome" (leads só com número) + "Arquivar N sem nome" em 2 passos (`POST /api/admin/contacts/archive`, só leads, nunca apaga; clientes intactos). `lib/kbos/contact-archive.ts` + teste PGlite. O nome do Google já substitui nome-número na importação (`planImport`). Falta: avisos do chat por WhatsApp, extrato real, assistente/push (precisam de chaves).
 - 2026-10-20 · Claude · Relatório da manhã em `docs/RELATORIO-DA-MANHA.md` (o que está pronto, como testar, o que depende do Kayque). Próximo na fila: push (precisa VAPID), assistente + Lume (precisa token/pasta), app com cérebro do WhatsApp (aprovação).

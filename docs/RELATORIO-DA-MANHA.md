@@ -10,6 +10,14 @@ Tudo abaixo está na `main` com CI verde; a VPS publica sozinha em até ~5 min (
 3. **Lucro por cliente** (Relatórios): ranking por período (mês, mês passado, 12 meses, ano) — já estava pronto antes.
 4. Fotos do WhatsApp nos contatos e "Combinar iguais" — já estavam no ar.
 
+## Feito durante a madrugada (depois da primeira versão deste relatório)
+5. **CRM → filtro "Sem nome"** (leads só com número) e botão **Arquivar N sem nome** em 2 passos. Só arquiva leads; nada é apagado e clientes não são tocados. Os arquivados ficam no filtro "Arquivado".
+6. **Chat do projeto avisa por WhatsApp**: cliente escreve → avisa os admins com telefone; equipe escreve → avisa o cliente. No máximo 1 aviso a cada 30 min por projeto e pessoa.
+7. O nome vindo do Google já substitui nome que seja só número na importação (já estava no código; coberto por teste).
+8. A rota de saúde para o UptimeRobot já existe: `/api/health/live` (liveness) e `/api/health` (diagnóstico). Basta cadastrar no UptimeRobot.
+9. Não consegui abrir a produção a partir desta sessão (rede bloqueada); a confirmação de que o deploy subiu vem do GitHub Actions ("Deploy VPS" = success). Se algo parecer fora do ar, veja `/var/log/kbos-deploy.log` na VPS.
+Não fiz: limpeza do crontab (inofensiva por causa do lock; exige mexer na VPS) e o código preparado do push/assistente com Lume (sem as chaves não dá para testar de verdade).
+
 ## Depende de você (fila)
 - **Trocar a chave da OpenAI** que apareceu no terminal da VPS (recomendado).
 - **Notificação push** (iPhone/PWA): precisa gerar as chaves VAPID e colar no `.env` da VPS com `read -s` (eu não vejo a chave). No iPhone só funciona com o site instalado na Tela de Início (iOS 16.4+). Não comecei para não deixar código sem teste real.
