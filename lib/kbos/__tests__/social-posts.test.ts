@@ -100,3 +100,16 @@ describe("calendário de conteúdo no banco", () => {
     expect((await decidePost(cli.id, post.id, "aprovar")).status).toBe("aprovado");
   });
 });
+
+describe("posts atrasados", () => {
+  it("00:00 vence só no fim do dia; postado nunca atrasa", async () => {
+    const { isOverdue, isResponsible } = await import("../social-posts");
+    const day = new Date("2026-10-10T00:00:00-03:00");
+    expect(isOverdue({ scheduledAt: day, status: "roteiro" }, new Date("2026-10-10T20:00:00-03:00"))).toBe(false);
+    expect(isOverdue({ scheduledAt: day, status: "roteiro" }, new Date("2026-10-11T08:00:00-03:00"))).toBe(true);
+    expect(isOverdue({ scheduledAt: new Date("2026-10-10T18:00:00-03:00"), status: "agendado" }, new Date("2026-10-10T19:00:00-03:00"))).toBe(true);
+    expect(isOverdue({ scheduledAt: day, status: "postado" }, new Date("2026-11-01T00:00:00-03:00"))).toBe(false);
+    expect(isResponsible({ scriptBy: null, captureBy: "Léo Silva", editor: null }, "leo")).toBe(true);
+    expect(isResponsible({ scriptBy: "Ana", captureBy: null, editor: null }, "Léo")).toBe(false);
+  });
+});

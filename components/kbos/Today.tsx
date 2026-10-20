@@ -1,4 +1,5 @@
 "use client";
+import OverduePosts from "@/components/kbos/OverduePosts";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Demand, DemandKind, MonthCash } from "@/lib/kbos/today";
@@ -374,6 +375,8 @@ export default function Today() {
           <path key={y} d={`M0 ${y} C 260 ${y - 30}, 460 ${y + 40}, ${740 + i * 30} ${y + 4} S 1220 ${y - 30}, 1440 ${y + 14}`} stroke="var(--kb-wave)" strokeWidth="1" />
         ))}
       </svg>
+
+      <OverduePosts audience="admin" />
 
       {/* ── Saudação + alertas ── */}
       <section className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-end sm:justify-between">

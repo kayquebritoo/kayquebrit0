@@ -96,3 +96,53 @@ export async function decidePost(userId: string, id: string, decision: "aprovar"
   if (!out) throw new PostError("Esse post já foi decidido.");
   return out;
 }
+
+// ── Atrasados ──────────────────────────────────────────────────────────────────
+const DAY_MS = 86_400_000;
+const belemMidnight = (d: Date) => d.toLocaleTimeString("en-GB", { timeZone: "America/Belem", hour12: false }) === "00:00:00";
+
+/** Prazo real do post: horário 00:00 é só "o dia" (planejamento) e vence ao fim dele. */
+export function postDeadline(scheduledAt: Date) {
+  return belemMidnight(scheduledAt) ? new Date(scheduledAt.getTime() + DAY_MS) : scheduledAt;
+}
+
+export function isOverdue(p: { scheduledAt: Date | null; status: string }, now = new Date()) {
+  return !!p.scheduledAt && p.status !== "postado" && postDeadline(p.scheduledAt) < now;
+}
+
+const firstToken = (s: string) => s.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+/** A equipe é texto livre no post ("Léo"): casa com o primeiro nome do usuário. */
+export function isResponsible(p: { scriptBy: string | null; captureBy: string | null; editor: string | null }, userName: string) {
+  const me = norm(firstToken(userName));
+  if (me.length < 2) return false;
+  return [p.scriptBy, p.captureBy, p.editor].some((n) => n && norm(n).split(/\s+/).includes(me));
+}
+
+export type OverdueItem = { id: string; title: string; brand: string | null; status: string; scheduledAt: Date; daysLate: number; waitingClient: boolean; mine: boolean; people: string | null };
+
+/** Posts atrasados visíveis para quem está logado: cliente (só os dele), equipe (os seus) e admin (todos). */
+export async function overduePosts(user: { id: string; name: string; role: string }, now = new Date()): Promise<OverdueItem[]> {
+  const since = new Date(now.getTime() - 90 * DAY_MS);
+  const rows = await db().select().from(socialPosts).where(and(gte(socialPosts.scheduledAt, since), lt(socialPosts.scheduledAt, now))).orderBy(asc(socialPosts.scheduledAt)).limit(500);
+  let allowed: Set<string> | null = null;
+  if (user.role === "cliente") {
+    const mine = await db().select({ id: projects.id }).from(projects).where(eq(projects.clienteId, user.id));
+    allowed = new Set(mine.map((p) => p.id));
+  }
+  const out: OverdueItem[] = [];
+  for (const p of rows) {
+    if (!isOverdue(p, now) || !p.scheduledAt) continue;
+    const mine = isResponsible(p, user.name);
+    if (user.role === "cliente") {
+      if (!p.projectId || !allowed!.has(p.projectId) || !PORTAL_STATUS.includes(p.status as PostStatus)) continue;
+    } else if (user.role !== "admin" && !mine) continue;
+    out.push({
+      id: p.id, title: p.title, brand: p.brand, status: p.status, scheduledAt: p.scheduledAt,
+      daysLate: Math.max(0, Math.floor((now.getTime() - postDeadline(p.scheduledAt).getTime()) / DAY_MS)),
+      waitingClient: p.status === "aprovacao", mine,
+      people: user.role === "cliente" ? null : [p.scriptBy, p.captureBy, p.editor].filter(Boolean).join(" · ") || null,
+    });
+  }
+  return out;
+}
