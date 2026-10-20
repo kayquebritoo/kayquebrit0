@@ -7,7 +7,7 @@ import { socialPosts } from "./schema";
 import { PublicError } from "./http";
 import type { PostFormat, PostStatus } from "./social-import";
 
-const ENDPOINT = process.env.MLABS_MCP_URL || "https://mcp.mlabs.io";
+const ENDPOINT = process.env.MLABS_MCP_URL || "https://mcp.mlabs.io/mcp";
 export const mlabsConfigured = () => (process.env.MLABS_MCP_TOKEN || "").length >= 16;
 
 // ── cliente MCP mínimo (JSON-RPC sobre HTTP; aceita resposta JSON ou SSE) ──────────
