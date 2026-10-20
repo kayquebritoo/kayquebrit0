@@ -208,3 +208,12 @@ export async function overduePosts(user: { id: string; name: string; role: strin
   }
   return out;
 }
+
+/** Move todos os posts de um projeto para outro (ex.: importou o calendário no projeto errado). Nada é apagado. */
+export async function movePosts(fromProjectId: string, toProjectId: string) {
+  if (fromProjectId === toProjectId) throw new PostError("Escolha outro projeto de destino.");
+  const [dest] = await db().select({ id: projects.id }).from(projects).where(eq(projects.id, toProjectId)).limit(1);
+  if (!dest) throw new PostError("Projeto de destino não encontrado.");
+  const res = await db().update(socialPosts).set({ projectId: toProjectId, updatedAt: new Date() }).where(eq(socialPosts.projectId, fromProjectId)).returning({ id: socialPosts.id });
+  return { moved: res.length };
+}

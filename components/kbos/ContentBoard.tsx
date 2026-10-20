@@ -60,6 +60,8 @@ export default function ContentBoard() {
   const [open, setOpen] = useState<Post | null>(null);
   const [importing, setImporting] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [moving, setMoving] = useState(false);
+  const [moveTo, setMoveTo] = useState("");
   const [notice, setNotice] = useState("");
   const [selected, setSelected] = useState<string>(() => new Date().toLocaleDateString("sv-SE", { timeZone: BELEM }));
 
@@ -112,6 +114,18 @@ export default function ContentBoard() {
       if (!r.ok) throw new Error(d.error || "Não consegui limpar.");
       setNotice(`${d.dismissed} item(ns) dispensado(s).`);
       await load();
+    } catch (e) { setError(e instanceof Error ? e.message : "Erro."); }
+  }
+
+  async function movePostsTo() {
+    if (!moveTo || !confirm(`Mover TODOS os posts deste projeto para "${projects.find((p) => p.id === moveTo)?.titulo}"? Nada é apagado.`)) return;
+    setNotice(""); setError("");
+    try {
+      const r = await fetch("/api/admin/social/move", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ fromProjectId: projectId, toProjectId: moveTo }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "Não consegui mover.");
+      setMoving(false); setProjectId(moveTo); setMoveTo("");
+      setNotice(`${d.moved} post(s) movido(s).`);
     } catch (e) { setError(e instanceof Error ? e.message : "Erro."); }
   }
 
@@ -178,7 +192,19 @@ export default function ContentBoard() {
         <button type="button" className="kb-btn min-h-11" disabled={!projectId || syncing} onClick={() => void syncMlabs()}>{syncing ? "Sincronizando…" : "Sincronizar mLabs"}</button>
         <button type="button" className="kb-btn-ghost min-h-11" disabled={!projectId} onClick={() => setImporting(true)}>Importar .ics</button>
         <button type="button" className="kb-btn-ghost min-h-11" disabled={!projectId} onClick={() => void cleanOld()}>Limpar antigos</button>
+        <button type="button" className="kb-btn-ghost min-h-11" disabled={!projectId} onClick={() => setMoving((v) => !v)}>Mover posts</button>
       </div>
+
+      {moving && (
+        <div className="kb-card flex flex-wrap items-center gap-2 p-3">
+          <span className="kb-muted text-sm">Mover todos os posts deste projeto para:</span>
+          <select aria-label="Projeto de destino" className="kb-control min-h-11 flex-1" value={moveTo} onChange={(e) => setMoveTo(e.target.value)}>
+            <option value="">Escolha…</option>
+            {projects.filter((p) => p.id !== projectId).map((p) => <option key={p.id} value={p.id}>{p.titulo}</option>)}
+          </select>
+          <button type="button" className="kb-btn min-h-11" disabled={!moveTo} onClick={() => void movePostsTo()}>Mover</button>
+        </div>
+      )}
 
       <div className="flex items-center justify-between gap-2">
         <button type="button" aria-label="Mês anterior" className="kb-chip min-h-11 min-w-11" onClick={() => shift(-1)}>‹</button>
