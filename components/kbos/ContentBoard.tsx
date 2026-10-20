@@ -69,8 +69,8 @@ export default function ContentBoard() {
         const r = await fetch("/api/projects", { cache: "no-store" });
         const d = await r.json();
         const all: Project[] = (d.items || []).map((p: Project) => ({ id: p.id, titulo: p.titulo, categoria: p.categoria }));
-        // só clientes recorrentes de redes sociais; se nenhum projeto estiver marcado assim ainda, mostra todos
-        const list = all.some((p) => p.categoria === "social") ? all.filter((p) => p.categoria === "social") : all;
+        // só clientes recorrentes de redes sociais (categoria "social"); projetos pontuais (marca, site…) nunca entram
+        const list = all.filter((p) => p.categoria === "social");
         setProjects(list);
         setProjectId((cur) => cur || list[0]?.id || "");
       } catch { setError("Não consegui carregar os projetos."); }
