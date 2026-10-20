@@ -13,7 +13,8 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const user = await sessionUser();
   const denied = deny(user, "cliente", "admin");
-  if (denied || !user) return denied;
+  if (denied) return denied;
+  if (!user) return Response.json({ error: "Não autenticado." }, { status: 401 });
   const secret = (process.env.LUME_API_TOKEN || "").trim();
   const check = new URL(req.url).searchParams.get("check") === "1";
   let hub = null;

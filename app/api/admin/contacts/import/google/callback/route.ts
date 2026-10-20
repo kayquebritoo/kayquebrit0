@@ -12,7 +12,8 @@ export const maxDuration = 60;
 export async function GET(req: Request) {
   const user = await sessionUser();
   const denied = deny(user, "admin");
-  if (denied || !user) return denied;
+  if (denied) return denied;
+  if (!user) return Response.json({ error: "Não autenticado." }, { status: 401 });
   const url = new URL(req.url);
   const fail = (motivo: string) => NextResponse.redirect(new URL(`/admin/crm?importar=erro&motivo=${motivo}`, url));
   const cookie = req.headers.get("cookie")?.split(";").map((c) => c.trim()).find((c) => c.startsWith("kbos_gcontacts_state="))?.split("=")[1];

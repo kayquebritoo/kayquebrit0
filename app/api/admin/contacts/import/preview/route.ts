@@ -16,7 +16,8 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
   const user = await sessionUser();
   const denied = deny(user, "admin");
-  if (denied || !user) return denied;
+  if (denied) return denied;
+  if (!user) return Response.json({ error: "Não autenticado." }, { status: 401 });
   try {
     const parsed = await readBody(req, previewBody);
     if ("error" in parsed) return parsed.error;
