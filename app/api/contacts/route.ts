@@ -17,6 +17,8 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const status = url.searchParams.get("status");
     const q = (url.searchParams.get("q") || "").trim();
+    // Padrão 300; o CRM pede mais (até 5000) para não esconder clientes atrás de uma importação grande.
+    const limit = Math.min(5000, Math.max(1, Number(url.searchParams.get("limit")) || 300));
     const filters = [];
     if (status && ["lead", "client", "partner", "archived"].includes(status)) {
       filters.push(eq(contacts.status, status as "lead" | "client" | "partner" | "archived"));
@@ -39,7 +41,7 @@ export async function GET(req: Request) {
       .from(contacts)
       .where(filters.length ? and(...filters.filter(Boolean) as never[]) : undefined)
       .orderBy(desc(contacts.updatedAt))
-      .limit(300);
+      .limit(limit);
     return NextResponse.json({ items: rows });
   } catch (e) {
     return serverError(e);

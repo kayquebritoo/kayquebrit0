@@ -106,7 +106,7 @@ export default function CrmBoard() {
 
   const load = useCallback(async () => {
     try {
-      const params = new URLSearchParams();
+      const params = new URLSearchParams({ limit: "3000" });
       if (q.trim()) params.set("q", q.trim());
       const res = await fetch(`/api/contacts?${params.toString()}`);
       const data = await res.json();
