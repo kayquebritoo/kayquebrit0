@@ -52,6 +52,8 @@ services:
     environment:
       GALLERY_DIR: /data/gallery
       GALLERY_INGEST_TOKEN: ${GALLERY_INGEST_TOKEN:-}
+      # Token MCP da mLabs (somente servidor): sincroniza o calendário de Conteúdo.
+      MLABS_MCP_TOKEN: ${MLABS_MCP_TOKEN:-}
       HOSTNAME: "0.0.0.0"
       PORT: "3000"
       GIT_SHA: ${GIT_SHA:-local}

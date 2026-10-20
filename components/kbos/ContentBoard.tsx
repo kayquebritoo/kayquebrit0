@@ -59,6 +59,8 @@ export default function ContentBoard() {
   const [error, setError] = useState("");
   const [open, setOpen] = useState<Post | null>(null);
   const [importing, setImporting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [notice, setNotice] = useState("");
   const [selected, setSelected] = useState<string>(() => new Date().toLocaleDateString("sv-SE", { timeZone: BELEM }));
 
   useEffect(() => {
@@ -89,6 +91,17 @@ export default function ContentBoard() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carga do calendário ao trocar mês/projeto
     void load();
   }, [load]);
+
+  async function syncMlabs() {
+    setSyncing(true); setNotice(""); setError("");
+    try {
+      const r = await fetch("/api/admin/social/mlabs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ projectId }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "Não consegui sincronizar.");
+      setNotice(`mLabs sincronizada: ${d.created} novo(s), ${d.updated} atualizado(s) (${d.found} posts lidos).`);
+      await load();
+    } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setSyncing(false); }
+  }
 
   const shown = useMemo(() => (items ?? []).filter((p) => filter === "all" || p.status === filter), [items, filter]);
   const counts = useMemo(() => {
@@ -150,7 +163,8 @@ export default function ContentBoard() {
             <button key={id} type="button" aria-pressed={view === id} onClick={() => setView(id)}>{label}</button>
           ))}
         </div>
-        <button type="button" className="kb-btn min-h-11" disabled={!projectId} onClick={() => setImporting(true)}>Importar do mLabs</button>
+        <button type="button" className="kb-btn min-h-11" disabled={!projectId || syncing} onClick={() => void syncMlabs()}>{syncing ? "Sincronizando…" : "Sincronizar mLabs"}</button>
+        <button type="button" className="kb-btn-ghost min-h-11" disabled={!projectId} onClick={() => setImporting(true)}>Importar .ics</button>
       </div>
 
       <div className="flex items-center justify-between gap-2">
@@ -168,6 +182,7 @@ export default function ContentBoard() {
         ))}
       </div>
 
+      {notice && <p role="status" className="kb-tag w-full justify-start rounded-xl! px-3! py-2! text-sm">{notice}</p>}
       {error && <p className="kb-tag late w-full justify-start rounded-xl! px-3! py-2! text-sm">{error}</p>}
       {!items && !error && <div className="kb-skel h-64 w-full" />}
 

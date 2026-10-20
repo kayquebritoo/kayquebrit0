@@ -113,3 +113,30 @@ describe("posts atrasados", () => {
     expect(isResponsible({ scriptBy: "Ana", captureBy: null, editor: null }, "Léo")).toBe(false);
   });
 });
+
+describe("tradução da mLabs", () => {
+  it("agrupa redes do mesmo post e traduz estados", async () => {
+    const { groupSchedules, scheduleStatus, workflowStatus, brandOfProfile } = await import("../mlabs");
+    const at = "2026-10-14T15:41:35.000Z";
+    const g = groupSchedules(
+      [
+        { id: "a", content: "Quando a gente fala em sair…\nlinha 2", status: "published", scheduledAt: at, channelSourceKey: "tiktok_business", profileId: "p1" },
+        { id: "b", content: "Quando a gente fala em sair…\nlinha 2", status: "failed", scheduledAt: at, channelSourceKey: "pinterest", profileId: "p1" },
+        { id: "c", content: "Outro", status: "scheduled", scheduledAt: at, channelSourceKey: "instagram_reels", profileId: "p1" },
+        { id: "d", content: "Sem perfil", status: "scheduled", scheduledAt: at },
+      ],
+      { p1: "Atalaia Vip Lounge" },
+    );
+    expect(g).toHaveLength(2);
+    const first = g.find((x) => x.title.startsWith("Quando"))!;
+    expect(first).toMatchObject({ status: "erro", brand: "Lounge", format: "reels" });
+    expect(first.networks).toEqual(["tiktok_business", "pinterest"]);
+    expect(g.find((x) => x.title === "Outro")!.status).toBe("agendado");
+    expect(scheduleStatus("published")).toBe("postado");
+    expect(workflowStatus("waiting_external_approve")).toBe("aprovacao");
+    expect(workflowStatus("done")).toBe("postado");
+    expect(brandOfProfile("Hotel Atalaia Vip")).toBe("Hotel");
+    expect(brandOfProfile("Praça de Alimentação")).toBe("Praça");
+    expect(brandOfProfile("Novo Perfil")).toBeNull();
+  });
+});
