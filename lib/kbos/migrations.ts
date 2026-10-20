@@ -213,6 +213,11 @@ export const SCHEMA_STEPS: { id: string; sql: string }[] = [
 )` },
 
   { id: "cases.2", sql: `CREATE INDEX IF NOT EXISTS kbos_showcase_consents_showcase_idx ON kbos_showcase_consents (showcase_id, created_at DESC)` },
+  { id: "contatos.import.0", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS facebook text` },
+  { id: "contatos.import.1", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS photo_url text` },
+  { id: "contatos.import.2", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS extra_emails jsonb NOT NULL DEFAULT '[]'::jsonb` },
+  { id: "contatos.import.3", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS former_phones jsonb NOT NULL DEFAULT '[]'::jsonb` },
+  { id: "contatos.import.4", sql: `ALTER TABLE kbos_contacts ADD COLUMN IF NOT EXISTS external_ids jsonb NOT NULL DEFAULT '{}'::jsonb` },
 ];
 
 /**

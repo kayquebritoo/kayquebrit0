@@ -401,6 +401,13 @@ export const contacts = pgTable("kbos_contacts", {
   website: text("website"),
   instagram: text("instagram"),
   source: text("source"),
+  // 0020: importação de contatos (Google/WhatsApp/arquivo).
+  facebook: text("facebook"),
+  photoUrl: text("photo_url"),
+  extraEmails: jsonb("extra_emails").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  /** Números antigos: saem da ficha, mas ficam guardados só para reconhecer a mesma pessoa numa próxima importação. */
+  formerPhones: jsonb("former_phones").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  externalIds: jsonb("external_ids").$type<Record<string, string>>().notNull().default(sql`'{}'::jsonb`),
   // 0018: respondeu SAIR → não recebe campanhas (avisos de projeto/cobrança seguem).
   marketingOptOutAt: timestamp("marketing_opt_out_at", { withTimezone: true }),
   createdAt: ts("created_at"),

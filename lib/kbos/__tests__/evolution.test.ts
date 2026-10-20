@@ -2,6 +2,8 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import {
   buildWebhookUrl,
+  checkWhatsappNumbers,
+  listWhatsappContacts,
   ensureInstance,
   evoConfig,
   evoExplicitConfigured,
@@ -302,5 +304,34 @@ describe("extractPairingCode", () => {
     expect(extractPairingCode({ code: "iVBOR".repeat(20) })).toBeNull();
     expect(extractPairingCode({})).toBeNull();
     expect(extractPairingCode(null)).toBeNull();
+  });
+});
+
+describe("contatos do WhatsApp", () => {
+  it("lista só pessoas, sem duplicar, com foto http", async () => {
+    vi.stubEnv("EVOLUTION_API_URL", BASE_ENV.EVOLUTION_API_URL);
+    vi.stubEnv("EVOLUTION_API_KEY", BASE_ENV.EVOLUTION_API_KEY);
+    mockEvo((url) => url.includes("/chat/findContacts/")
+      ? { status: 200, body: [
+          { remoteJid: "5591988887777@s.whatsapp.net", pushName: "Thalita", profilePicUrl: "https://pps.whatsapp.net/a.jpg" },
+          { remoteJid: "5591988887777@s.whatsapp.net", pushName: "Dup" },
+          { remoteJid: "120363000000@g.us", pushName: "Grupo" },
+          { remoteJid: "999@lid", pushName: "Lid" },
+          { remoteJid: "5591977776666@s.whatsapp.net", pushName: "", profilePicUrl: "data:x" },
+        ] }
+      : { status: 404, body: {} });
+    const r = await listWhatsappContacts();
+    expect(r.contacts).toEqual([
+      { number: "5591988887777", name: "Thalita", photoUrl: "https://pps.whatsapp.net/a.jpg" },
+      { number: "5591977776666", name: "", photoUrl: null },
+    ]);
+  });
+  it("verifica quais números têm WhatsApp e tolera falha", async () => {
+    vi.stubEnv("EVOLUTION_API_URL", BASE_ENV.EVOLUTION_API_URL);
+    vi.stubEnv("EVOLUTION_API_KEY", BASE_ENV.EVOLUTION_API_KEY);
+    mockEvo(() => ({ status: 200, body: [{ exists: true, number: "5591988887777" }, { exists: false, number: "5591977776666" }] }));
+    expect(await checkWhatsappNumbers(["5591988887777", "5591977776666", "5591900000000"])).toEqual({ "5591988887777": true, "5591977776666": false, "5591900000000": null });
+    mockEvo(() => ({ status: 500, body: {} }));
+    expect(await checkWhatsappNumbers(["5591988887777"])).toEqual({ "5591988887777": null });
   });
 });

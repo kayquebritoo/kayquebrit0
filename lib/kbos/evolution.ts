@@ -366,3 +366,48 @@ export function isEvolutionWebhookAuthorized(req: Request): boolean {
   const b = Buffer.from(token);
   return a.length === b.length && timingSafeEqual(a, b);
 }
+
+// ── contatos do WhatsApp conectado (importação no CRM) ───────────────────────
+const jidNumber = (jid: unknown): string | null => {
+  const m = /^(\d{8,15})@s\.whatsapp\.net$/.exec(typeof jid === "string" ? jid : "");
+  return m ? m[1] : null;
+};
+
+/** Quais números têm WhatsApp ativo (`true`/`false`); `null` quando a Evolution não respondeu. */
+export async function checkWhatsappNumbers(numbers: string[]): Promise<Record<string, boolean | null>> {
+  const out: Record<string, boolean | null> = Object.fromEntries(numbers.map((n) => [n, null]));
+  if (!numbers.length) return out;
+  try {
+    const r = await evoFetch(`/chat/whatsappNumbers/${encodeURIComponent(waInstance())}`, { method: "POST", body: JSON.stringify({ numbers }) });
+    const list = Array.isArray(r.json) ? (r.json as unknown[]) : [];
+    if (!r.ok) return out;
+    for (const it of list as { exists?: boolean; number?: string; jid?: string }[]) {
+      const n = String(it.number || jidNumber(it.jid) || "").replace(/\D/g, "");
+      const hit = numbers.find((x) => x === n || (n && (x.endsWith(n) || n.endsWith(x))));
+      if (hit) out[hit] = it.exists === true;
+    }
+  } catch { /* sem resposta: segue sem verificação */ }
+  return out;
+}
+
+export type WaContact = { number: string; name: string; photoUrl: string | null };
+
+/** Contatos que a Evolution conhece (agenda sincronizada + conversas). Só pessoas (sem grupos/listas). */
+export async function listWhatsappContacts(): Promise<{ contacts: WaContact[]; detail?: string }> {
+  try {
+    const r = await evoFetch(`/chat/findContacts/${encodeURIComponent(waInstance())}`, { method: "POST", body: JSON.stringify({ where: {} }) });
+    if (!r.ok) return { contacts: [], detail: `Evolution respondeu ${r.status}. Confira se o WhatsApp está conectado.` };
+    const list = Array.isArray(r.json) ? (r.json as { remoteJid?: string; id?: string; pushName?: string; profilePicUrl?: string | null }[]) : [];
+    const seen = new Set<string>();
+    const contacts: WaContact[] = [];
+    for (const it of list) {
+      const number = jidNumber(it.remoteJid || it.id);
+      if (!number || seen.has(number)) continue;
+      seen.add(number);
+      contacts.push({ number, name: (it.pushName || "").trim(), photoUrl: /^https?:\/\//.test(it.profilePicUrl || "") ? (it.profilePicUrl as string) : null });
+    }
+    return { contacts };
+  } catch (e) {
+    return { contacts: [], detail: e instanceof Error ? e.message : "Falha de rede." };
+  }
+}
