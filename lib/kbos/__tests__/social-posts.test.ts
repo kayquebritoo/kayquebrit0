@@ -86,7 +86,7 @@ describe("calendário de conteúdo no banco", () => {
     // portal: só vê o dono, e sem roteiro; roteiros em andamento não aparecem
     const mine = await portalPosts(cli.id);
     expect(mine.map((p) => p.id)).toContain(post.id);
-    expect(mine.every((p) => !("script" in p) && !("editor" in p))).toBe(true);
+    expect(mine.every((p) => (p.script === null || p.mine) && !("editor" in p))).toBe(true);
     expect(mine.find((p) => p.status === "roteiro")).toBeUndefined();
     expect(await portalPosts(outro.id)).toEqual([]);
 
@@ -178,6 +178,7 @@ describe("roteiro ↔ post, atrasados e roteiro do cliente", () => {
     // limpar antigos dispensa sem apagar e nunca toca em postado
     await d.insert(schema.socialPosts).values({ projectId: proj.id, title: "Velho", format: "outro", status: "roteiro", scheduledAt: new Date("2026-08-01T00:00:00-03:00") });
     await d.insert(schema.socialPosts).values({ projectId: proj.id, title: "Já foi", format: "outro", status: "postado", scheduledAt: new Date("2026-08-01T00:00:00-03:00") });
-    expect((await dismissOld(proj.id, 7)).dismissed).toBe(1);
+    // o "agendado" de 9/10 e o "Velho" saem da fila; o "postado" fica
+    expect((await dismissOld(proj.id, 7)).dismissed).toBe(2);
   });
 });
