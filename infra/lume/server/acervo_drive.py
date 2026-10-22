@@ -4,7 +4,7 @@
   python acervo_drive.py sincronizar     # lista a pasta do Drive e casa por nome + tamanho
   python acervo_drive.py status          # quantos arquivos têm link do Drive
 
-Só LÊ o Drive (chave de API de leitura; a pasta é pública). Não baixa nada, não altera o SSD nem o Drive.
+Só LÊ o Drive (chave de API de leitura; as pastas precisam estar com "qualquer pessoa com o link: leitor"). Não baixa nada, não altera o SSD nem o Drive.
 A chave fica num arquivo, nunca no código: Acervo-app/drive-key.txt (ou ~/.lume/drive-key.txt, ou a variável LUME_DRIVE_KEY).
 """
 import json, os, re, sqlite3, sys, time
@@ -13,7 +13,24 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
-PASTA_DRIVE = os.environ.get("LUME_DRIVE_PASTA", "1qDZsMT7I1EklpnKFSS1y_I3dsadfhVei")
+# Fontes do Drive (cada uma com a sua origem). Hotel = pasta compartilhada do Grupo VIP (dono: conta do hotel).
+# Pessoal = pasta do próprio Kayque (LUME_DRIVE_PASTA), quando existir e for diferente da do hotel.
+HOTEL_DRIVE = os.environ.get("LUME_DRIVE_HOTEL", "1qDZsMT7I1EklpnKFSS1y_I3dsadfhVei").strip()
+PESSOAL_DRIVE = os.environ.get("LUME_DRIVE_PASTA", "").strip()
+
+
+def fontes():
+    """[(origem, id_da_pasta)] — Pessoal primeiro (se configurada), depois Hotel. Sem duplicar o mesmo id."""
+    out = []
+    if PESSOAL_DRIVE and PESSOAL_DRIVE != HOTEL_DRIVE:
+        out.append(("Pessoal", PESSOAL_DRIVE))
+    out.append(("Hotel", HOTEL_DRIVE))
+    return out
+
+
+def prefixo(origem):
+    """Prefixo do caminho no índice. Hotel mantém "Drive/" (compatível com o que já está indexado)."""
+    return "Drive" if origem == "Hotel" else "Drive-Pessoal"
 HOME = Path(os.environ.get("ACERVO_DIR", Path.home() / "Acervo"))
 DB = HOME / "acervo.db"
 PASTA_APP = HOME.parent
@@ -118,15 +135,17 @@ def conn():
 
 def sincronizar():
     chave = ler_chave()
-    print("Listando a pasta pública do Drive (só leitura)…")
-    drive = listar(chave, PASTA_DRIVE)
+    print("Listando as pastas do Drive (só leitura)…")
+    drive = []
+    for origem, pasta in fontes():
+        drive += listar(chave, pasta)
     c = conn()
-    # arquivos que o próprio indexador do servidor trouxe do Drive (caminho "Drive/...") já têm link: não mexer neles
-    locais = [(i, p, t) for i, p, t in c.execute("SELECT id, caminho, tamanho FROM arquivos WHERE caminho NOT LIKE 'Drive/%'")]
+    # arquivos que o próprio indexador do servidor trouxe do Drive ("Drive/..." ou "Drive-Pessoal/...") já têm link: não mexer neles
+    locais = [(i, p, t) for i, p, t in c.execute("SELECT id, caminho, tamanho FROM arquivos WHERE caminho NOT LIKE 'Drive/%' AND caminho NOT LIKE 'Drive-Pessoal/%'")]
     achados, ambiguos = casar(locais, drive)
     agora = time.time()
     with c:
-        c.execute("DELETE FROM drive WHERE arquivo_id IN (SELECT id FROM arquivos WHERE caminho NOT LIKE 'Drive/%')")
+        c.execute("DELETE FROM drive WHERE arquivo_id IN (SELECT id FROM arquivos WHERE caminho NOT LIKE 'Drive/%' AND caminho NOT LIKE 'Drive-Pessoal/%')")
         c.executemany("INSERT INTO drive(arquivo_id, drive_id, drive_caminho, atualizado) VALUES(?,?,?,?)", [(a, d, p, agora) for a, (d, p) in achados.items()])
     conhecidos = {(Path(p).name.casefold(), t) for _, p, t in locais}
     novos = [(n, p) for _, n, t, p in drive if (n.casefold(), t) not in conhecidos]

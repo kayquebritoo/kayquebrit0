@@ -25,7 +25,17 @@ FOLGA_GB = float(os.environ.get("LUME_FOLGA_GB", "3"))       # espaço livre a m
 
 
 def listar_drive(chave):
-    out, fila = [], [(drv.PASTA_DRIVE, [])]
+    out = []
+    for origem, raiz in drv.fontes():
+        try:
+            out += listar_fonte(chave, origem, raiz)
+        except SystemExit as e:  # uma fonte fora do ar não derruba a outra
+            print(f"Fonte {origem} não listada: {e}", flush=True)
+    return out
+
+
+def listar_fonte(chave, origem, raiz):
+    out, fila = [], [(raiz, [])]
     while fila:
         pasta, caminho = fila.pop(); token = None
         while True:
@@ -35,7 +45,7 @@ def listar_drive(chave):
             r = drv.chamar(chave, params)
             for f in r.get("files", []):
                 if f["mimeType"] == drv.FOLDER: fila.append((f["id"], caminho + [f["name"]]))
-                elif f.get("size"): out.append({**f, "pasta": caminho, "size": int(f["size"])})
+                elif f.get("size"): out.append({**f, "pasta": caminho, "size": int(f["size"]), "origem": origem})
             token = r.get("nextPageToken")
             if not token: break
     return out
@@ -126,7 +136,7 @@ def main():
         livre = shutil.disk_usage(tempfile.gettempdir()).free / 1e9
         if f["size"] / 1e9 + FOLGA_GB > livre:
             print(f"  (pulado, sem espaço) {f['name']}"); continue
-        rel = "/".join(["Drive"] + f["pasta"] + [f["name"]])
+        rel = "/".join([drv.prefixo(f["origem"])] + f["pasta"] + [f["name"]])
         with tempfile.TemporaryDirectory() as tmp:
             dest = Path(tmp) / ("arq" + Path(f["name"]).suffix.lower())
             try:
@@ -138,7 +148,7 @@ def main():
                 mod = datetime.fromisoformat(f["modifiedTime"].replace("Z", "+00:00")).timestamp()
                 if c.execute("SELECT 1 FROM arquivos WHERE caminho=?", (rel,)).fetchone():
                     rel = f"{rel} [{f['id'][:6]}]"  # mesmo nome na mesma pasta: mantém os dois
-                cur = c.execute("INSERT INTO arquivos(caminho,tipo,tamanho,modificado,quadros) VALUES(?,?,?,?,?)", (rel, tipo, f["size"], mod, len(quadros)))
+                cur = c.execute("INSERT INTO arquivos(caminho,tipo,tamanho,modificado,quadros,origem) VALUES(?,?,?,?,?,?)", (rel, tipo, f["size"], mod, len(quadros), f["origem"]))
                 for (seg, img), vec in zip(quadros, vetores):
                     q = c.execute("INSERT INTO quadros(arquivo_id,segundo,vetor) VALUES(?,?,?)", (cur.lastrowid, seg, vec.tobytes()))
                     acervo.save_thumb(q.lastrowid, img)

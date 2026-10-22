@@ -175,7 +175,21 @@ def conn():
     c.execute("""CREATE TABLE IF NOT EXISTS quadros (
         id INTEGER PRIMARY KEY, arquivo_id INTEGER REFERENCES arquivos(id) ON DELETE CASCADE, segundo REAL, vetor BLOB)""")
     c.execute("CREATE INDEX IF NOT EXISTS q_arq ON quadros(arquivo_id)")
+    migrar_origem(c)
     return c
+
+
+ORIGENS = ("Pessoal", "Hotel")
+
+
+def migrar_origem(c):
+    """Coluna `origem` (Pessoal | Hotel). Idempotente e sem reindexar: só rotula o que já existe.
+    Arquivos que o indexador trouxe do Drive do hotel ("Drive/...") = Hotel; o resto (índice do SSD) = Pessoal."""
+    cols = {r[1] for r in c.execute("PRAGMA table_info(arquivos)")}
+    if "origem" not in cols:
+        c.execute("ALTER TABLE arquivos ADD COLUMN origem TEXT")
+    c.execute("UPDATE arquivos SET origem=CASE WHEN caminho LIKE 'Drive/%' THEN 'Hotel' ELSE 'Pessoal' END WHERE origem IS NULL")
+    c.commit()
 
 
 _models = {}
@@ -265,23 +279,30 @@ class Indice:
         c = conn()
         rows = c.execute("SELECT q.id, q.arquivo_id, q.segundo, q.vetor, a.caminho, a.tipo, a.modificado FROM quadros q JOIN arquivos a ON a.id=q.arquivo_id").fetchall()
         self.tamanhos = dict(c.execute("SELECT id,tamanho FROM arquivos").fetchall())
+        self.origem = dict(c.execute("SELECT id,origem FROM arquivos").fetchall())
         c.close()
         self.rows = [(r[0], r[1], r[2], r[4], r[5], r[6]) for r in rows]
         self.m = np.frombuffer(b"".join(r[3] for r in rows), dtype=np.float16).reshape(len(rows), -1).astype(np.float32) if rows else np.zeros((0, 512), np.float32)
         self.pos = {r[0]: i for i, r in enumerate(self.rows)}
+        self.mods = np.array([r[5] or 0 for r in self.rows], dtype=np.float64)
         self.originais = {identidade(r[3]) for r in self.rows if r[4]=="video" and not eh_proxy(r[3])}
 
-    def buscar(self, vec, tipo="", pasta="", limite=60, de=None, ate=None, ajuste=None):
+    def ordenar(self, s):
+        """Relevância primeiro (nota arredondada a 3 casas, a mesma que o usuário vê); empate → arquivo mais recente."""
+        return np.lexsort((-self.mods, -np.round(s, 3)))
+
+    def buscar(self, vec, tipo="", pasta="", limite=60, de=None, ate=None, ajuste=None, origem=""):
         if not len(self.rows):
             return []
         s = self.m @ vec
         if ajuste is not None: s = s + ajuste
-        ordem = np.argsort(-s)
+        ordem = self.ordenar(s)
         vistos, out = set(), []
         for i in ordem:
             qid, aid, seg, caminho, t, mod = self.rows[i]
             if tipo and t != tipo: continue
             if pasta and normalizar(pasta) not in normalizar(caminho): continue
+            if origem and self.origem.get(aid) != origem: continue
             if de is not None and mod < de: continue
             if ate is not None and mod > ate: continue
             if t=="video" and eh_proxy(caminho) and identidade(caminho) in self.originais: continue
@@ -380,7 +401,8 @@ def servir(porta):
                         vec = np.asarray(embed_images([img])[0], dtype=np.float32)
                     vec /= np.linalg.norm(vec) or 1
                     qs = {k: v[0] for k, v in parse_qs(u.query).items()}
-                    self._j(catalogo.enriquecer(idx.buscar(vec, qs.get("t", ""), qs.get("p", ""))))
+                    o = qs.get("o", "")
+                    self._j(catalogo.enriquecer(idx.buscar(vec, qs.get("t", ""), qs.get("p", ""), origem=o if o in ORIGENS else "")))
                 except (ValueError, OSError) as e:
                     self._j({"erro": str(e)[:160] or "Não consegui ler essa imagem."}, 400)
                 except Exception as e:
@@ -450,17 +472,19 @@ def servir(porta):
                     self.send_error(404); return
                 if "p" not in qs or normalizar(esc) not in normalizar(qs.get("p", "")): qs["p"] = esc
             de = ate = None
+            origem = qs.get("o", "")
+            if origem not in ("",) + ORIGENS: origem = ""
             if u.path in {'/buscar','/parecidos','/catalogo'}:
                 try: de,ate = intervalo(qs)
                 except ValueError as e: self._j({'erro':str(e)},400); return
             if u.path == "/":
                 b = (lambda d: (d/'interface.lume.html' if (d/'interface.lume.html').is_file() else d/'interface.html'))(Path(__file__).parent).read_text(encoding='utf-8').replace('<html', '<html data-escopo="cliente"' if esc else '<html', 1).encode(); self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.end_headers(); self.wfile.write(b)
             elif u.path == '/info':
-                self._j({'arquivos':catalogo.total_indexados,'arquivos_navegaveis':len(catalogo.arquivos),'quadros':len(idx.rows),'modo':'nuvem' if NUVEM else 'local'})
+                self._j({'origens':{o:sum(1 for v in idx.origem.values() if v==o) for o in ORIGENS},'arquivos':catalogo.total_indexados,'arquivos_navegaveis':len(catalogo.arquivos),'quadros':len(idx.rows),'modo':'nuvem' if NUVEM else 'local'})
             elif u.path == '/catalogo':
                 try: offset=max(0,int(qs.get('offset','0')))
                 except ValueError: self._j({'erro':'Página inválida.'},400); return
-                self._j(catalogo.buscar(qs.get('t',''),qs.get('p',''),de,ate,offset))
+                self._j(catalogo.buscar(qs.get('t',''),qs.get('p',''),de,ate,offset,origem=origem))
             elif u.path.startswith('/midia/'):
                 qid=u.path.rsplit('/',1)[-1]
                 if not qid.isdigit():self.send_error(404);return
@@ -491,7 +515,7 @@ def servir(porta):
                     termo = chave(texto, perfil)
                     ajuste = feedback.ajuste(idx, termo)
                     if perfil:
-                        resposta = conceitos.buscar(idx, perfil, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste)
+                        resposta = conceitos.buscar(idx, perfil, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem)
                         print(f"Conceito {perfil['id']}: {len(resposta['resultados'])} sugestões em {time.monotonic()-inicio:.3f}s.", flush=True)
                         resposta["resultados"] = feedback.marcar(catalogo.enriquecer(resposta["resultados"]), termo)
                         resposta["exemplos"] = feedback.resumo(termo)
@@ -499,7 +523,7 @@ def servir(porta):
                     vec = np.asarray(motor.buscar(texto), dtype=np.float32)
                     if vec.shape != (512,) or not np.isfinite(vec).all():
                         raise ValueError("O motor retornou um vetor inválido.")
-                    resultados = idx.buscar(vec, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste)
+                    resultados = idx.buscar(vec, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem)
                     print(f"Busca concluída em {time.monotonic()-inicio:.2f}s; {len(resultados)} sugestões.", flush=True)
                     self._j({"resultados": feedback.marcar(catalogo.enriquecer(resultados), termo), "exemplos": feedback.resumo(termo)})
                 except BuscaOcupada as e:
@@ -514,7 +538,7 @@ def servir(porta):
                 ids = [int(x) for x in qs.get("ids", "").split(",") if x.isdigit() and int(x) in idx.pos and (not esc or id_no_escopo(int(x), esc))]
                 if not ids: self._j([]); return
                 vec = idx.m[[idx.pos[i] for i in ids]].mean(axis=0); vec /= np.linalg.norm(vec) or 1
-                self._j(catalogo.enriquecer(idx.buscar(vec, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate)))
+                self._j(catalogo.enriquecer(idx.buscar(vec, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, origem=origem)))
             elif u.path == "/drive":
                 # Link do mesmo arquivo na pasta pública do Drive (se já sincronizado com acervo_drive.py).
                 try:

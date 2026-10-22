@@ -41,3 +41,10 @@ VPS do Lume (177.7.48.110, `/opt/lume`): cron a cada 5 min roda `infra/lume/depl
 Instalar (uma vez, no terminal web da Hostinger da VPS do Lume):
 `cd /opt/lume/src && git fetch -q origin +refs/heads/main:refs/remotes/origin/main && git reset -q --hard origin/main && bash infra/lume/deploy.sh --install`
 Forçar agora: `bash /opt/lume/src/infra/lume/deploy.sh`. O script nunca lê nem imprime o `.env`.
+
+## Origem dos arquivos (21/10/2026)
+Cada arquivo tem `origem`: **Pessoal** (índice do SSD e a pasta própria do Kayque) ou **Hotel** (pasta compartilhada do Grupo VIP, dono atalaiavip2023@gmail.com). O indexador noturno lê as duas fontes (`acervo_drive.fontes()`):
+- Hotel: `LUME_DRIVE_HOTEL` (padrão = a pasta `1qDZsMT7I1EklpnKFSS1y_I3dsadfhVei` que já era indexada), caminhos `Drive/...`.
+- Pessoal: `LUME_DRIVE_PASTA` (vazio = sem fonte pessoal), caminhos `Drive-Pessoal/...`.
+O Lume lê o Drive com **chave de API + "qualquer pessoa com o link: leitor"** — não existe conta/e-mail do Lume para compartilhar. Se a pasta for restrita, a API dá 403 e cai para miniatura pública.
+Busca: filtro `?o=Pessoal|Hotel`; ordem = nota e, em empate, mais recente. Início: tela só com busca/voz.
