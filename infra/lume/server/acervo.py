@@ -15,6 +15,7 @@ import numpy as np
 from acervo_midias import Catalogo, intervalo, normalizar, servir_arquivo
 from acervo_conceitos import identidade, eh_proxy
 from acervo_feedback import Feedback, chave
+from acervo_referencias import Referencias
 from PIL import Image
 
 HOME = Path(os.environ.get("ACERVO_DIR", Path.home() / "Acervo"))
@@ -291,10 +292,11 @@ class Indice:
         """Relevância primeiro (nota arredondada a 3 casas, a mesma que o usuário vê); empate → arquivo mais recente."""
         return np.lexsort((-self.mods, -np.round(s, 3)))
 
-    def buscar(self, vec, tipo="", pasta="", limite=60, de=None, ate=None, ajuste=None, origem=""):
+    def buscar(self, vec, tipo="", pasta="", limite=60, de=None, ate=None, ajuste=None, origem="", notas=None):
+        """`notas` (opcional) substitui a semelhança com `vec`, ex.: semelhança com imagens de referência."""
         if not len(self.rows):
             return []
-        s = self.m @ vec
+        s = self.m @ vec if notas is None else notas
         if ajuste is not None: s = s + ajuste
         ordem = self.ordenar(s)
         vistos, out = set(), []
@@ -340,6 +342,23 @@ def servir(porta):
     conceitos = Conceitos(Path(__file__).parent)
     catalogo = Catalogo(idx)
     feedback = Feedback(DB)
+    referencias = Referencias(DB)
+
+    def ler_imagem(h, limite=8_000_000):
+        """Corpo do POST (foto/print) → (vetor CLIP normalizado, imagem reduzida)."""
+        n = int(h.headers.get("Content-Length", "0"))
+        if not 500 < n < limite: raise ValueError("Envie uma imagem de até 8 MB.")
+        img = Image.open(io.BytesIO(h.rfile.read(n))); img.load()
+        img = img.convert("RGB"); img.thumbnail((448, 448))
+        with LOCK_IMAGEM:  # o modelo de imagem é carregado sob demanda e não é reentrante
+            vec = np.asarray(embed_images([img])[0], dtype=np.float32)
+        vec /= np.linalg.norm(vec) or 1
+        return vec, img
+
+    def ler_json(h):
+        if "application/json" not in h.headers.get("Content-Type", ""): raise ValueError("Envie JSON.")
+        n = int(h.headers.get("Content-Length", "0"))
+        return json.loads(h.rfile.read(min(max(n, 0), 5000)) or b"{}")
 
     class H(BaseHTTPRequestHandler):
         def log_message(self, *a): pass
@@ -377,7 +396,12 @@ def servir(porta):
                 except (BrokenPipeError, ConnectionResetError):
                     pass
                 return
-            if not autenticado(self.headers) and not (u.path == "/voz" and escopo_cliente(self.headers)): self._j({"erro": "Entre pelo KBOS."}, 401); return
+            esc = None
+            if not autenticado(self.headers):
+                esc = escopo_cliente(self.headers)
+                # Cliente: voz, busca por imagem e ensinar (só vale na pasta dele até o Kayque aprovar).
+                if not esc or u.path not in {"/voz", "/buscar-imagem", "/ensinar", "/referencias/remover"}:
+                    self._j({"erro": "Entre pelo KBOS."}, 401); return
             if u.path == "/voz":  # áudio -> KBOS (Whisper) -> texto
                 try:
                     n = int(self.headers.get("Content-Length", "0"))
@@ -393,21 +417,44 @@ def servir(porta):
                 return
             if u.path == "/buscar-imagem":  # print/foto → quadros e vídeos mais parecidos (mesmo CLIP do índice)
                 try:
-                    n = int(self.headers.get("Content-Length", "0"))
-                    if not 500 < n < 8_000_000: raise ValueError("Envie uma imagem de até 8 MB.")
-                    img = Image.open(io.BytesIO(self.rfile.read(n))); img.load()
-                    img = img.convert("RGB"); img.thumbnail((448, 448))
-                    with LOCK_IMAGEM:  # o modelo de imagem é carregado sob demanda e não é reentrante
-                        vec = np.asarray(embed_images([img])[0], dtype=np.float32)
-                    vec /= np.linalg.norm(vec) or 1
+                    vec, _ = ler_imagem(self)
                     qs = {k: v[0] for k, v in parse_qs(u.query).items()}
                     o = qs.get("o", "")
+                    if esc and normalizar(esc) not in normalizar(qs.get("p", "")): qs["p"] = esc
                     self._j(catalogo.enriquecer(idx.buscar(vec, qs.get("t", ""), qs.get("p", ""), origem=o if o in ORIGENS else "")))
                 except (ValueError, OSError) as e:
                     self._j({"erro": str(e)[:160] or "Não consegui ler essa imagem."}, 400)
                 except Exception as e:
                     print(f"Falha na busca por imagem: {e}", file=sys.stderr, flush=True)
                     self._j({"erro": "Não consegui buscar por essa imagem agora."}, 500)
+                return
+            if u.path == "/ensinar":  # foto do que a palavra significa → referência do termo
+                try:
+                    qs = {k: v[0] for k, v in parse_qs(u.query).items()}
+                    texto = qs.get("q", "").strip()[:80]
+                    if not texto: raise ValueError("Diga qual palavra essa imagem representa.")
+                    termo = chave(texto, conceitos.identificar(texto))
+                    vec, img = ler_imagem(self)
+                    rid = referencias.adicionar(termo, vec, esc or "", img)
+                    total = len(referencias.listar(termo, esc if esc else ""))
+                    self._j({"ok": True, "id": rid, "termo": termo, "referencias": total, "pendente": bool(esc)})
+                except (ValueError, OSError) as e:
+                    self._j({"erro": str(e)[:160] or "Não consegui ler essa imagem."}, 400)
+                except Exception as e:
+                    print(f"Falha ao ensinar: {e}", file=sys.stderr, flush=True)
+                    self._j({"erro": "Não consegui guardar essa imagem agora."}, 500)
+                return
+            if u.path in {"/referencias/remover", "/referencias/aprovar"}:
+                try:
+                    rid = int(ler_json(self)["id"])
+                    if u.path.endswith("aprovar"):
+                        if esc: self._j({"erro": "Só o Kayque aprova."}, 403); return
+                        ok = referencias.aprovar(rid)
+                    else:
+                        ok = referencias.remover(rid, esc)
+                    self._j({"ok": ok}, 200 if ok else 404)
+                except (ValueError, KeyError, TypeError) as e:
+                    self._j({"erro": str(e) or "Pedido inválido."}, 400)
                 return
             if u.path != "/feedback":
                 self.send_error(404); return
@@ -466,7 +513,7 @@ def servir(porta):
                 if not esc:
                     self._login(); return
                 # Cliente: só leitura, só dentro da pasta dele.
-                if not (u.path in {"/", "/catalogo", "/buscar", "/parecidos", "/drive"} or u.path.startswith(("/midia/", "/thumb/"))):
+                if not (u.path in {"/", "/catalogo", "/buscar", "/parecidos", "/drive", "/referencias"} or u.path.startswith(("/midia/", "/thumb/", "/referencia/"))):
                     self.send_error(404); return
                 if not dentro_do_escopo_req(u.path, qs, esc):
                     self.send_error(404); return
@@ -514,18 +561,28 @@ def servir(porta):
                     perfil = conceitos.identificar(texto)
                     termo = chave(texto, perfil)
                     ajuste = feedback.ajuste(idx, termo)
+                    refs = referencias.vetores(termo, esc or "")
+                    if refs is not None:  # alguém já ensinou com imagens: imagem↔imagem, sem o motor de texto
+                        notas = Referencias.notas(idx, refs)
+                        resultados = idx.buscar(None, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem, notas=notas)
+                        print(f"Referências {termo}: {len(refs)} imagem(ns), {len(resultados)} sugestões em {time.monotonic()-inicio:.3f}s.", flush=True)
+                        self._j({"resultados": feedback.marcar(catalogo.enriquecer(resultados), termo), "exemplos": feedback.resumo(termo),
+                                 "modo": "referencias", "referencias": len(refs),
+                                 "interpretacao": f"parecido com {len(refs)} imagem(ns) que ensinaram ao Lume como “{texto}”"})
+                        return
                     if perfil:
                         resposta = conceitos.buscar(idx, perfil, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem)
                         print(f"Conceito {perfil['id']}: {len(resposta['resultados'])} sugestões em {time.monotonic()-inicio:.3f}s.", flush=True)
                         resposta["resultados"] = feedback.marcar(catalogo.enriquecer(resposta["resultados"]), termo)
                         resposta["exemplos"] = feedback.resumo(termo)
+                        resposta["referencias"] = 0
                         self._j(resposta); return
                     vec = np.asarray(motor.buscar(texto), dtype=np.float32)
                     if vec.shape != (512,) or not np.isfinite(vec).all():
                         raise ValueError("O motor retornou um vetor inválido.")
                     resultados = idx.buscar(vec, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem)
                     print(f"Busca concluída em {time.monotonic()-inicio:.2f}s; {len(resultados)} sugestões.", flush=True)
-                    self._j({"resultados": feedback.marcar(catalogo.enriquecer(resultados), termo), "exemplos": feedback.resumo(termo)})
+                    self._j({"resultados": feedback.marcar(catalogo.enriquecer(resultados), termo), "exemplos": feedback.resumo(termo), "referencias": 0})
                 except BuscaOcupada as e:
                     self._j({"erro": str(e)}, 503)
                 except TimeoutError as e:
@@ -551,6 +608,15 @@ def servir(porta):
                     self._j({"drive": ({"ver": f"https://drive.google.com/file/d/{row[0]}/view", "baixar": f"https://drive.google.com/uc?export=download&id={row[0]}"} if row else None)})
                 except ValueError:
                     self._j({"erro": "Arquivo inválido."}, 400)
+            elif u.path == "/referencias":  # o que o Lume já aprendeu (admin vê também as pendentes dos clientes)
+                q = qs.get("q", "").strip()
+                termo = chave(q, conceitos.identificar(q)) if q else None
+                self._j(referencias.listar(termo, esc))
+            elif u.path.startswith("/referencia/"):
+                rid = Path(u.path).stem
+                b = referencias.miniatura(int(rid), esc) if rid.isdigit() else None
+                if not b: self.send_error(404); return
+                self.send_response(200); self.send_header("Content-Type", "image/jpeg"); self.send_header("Cache-Control", "private, max-age=86400"); self.end_headers(); self.wfile.write(b)
             elif u.path == "/abrir":
                 c = qs.get("c", "")
                 if any(r[3] == c for r in idx.rows) and sys.platform == "darwin": subprocess.run(["open", "-R", c])
