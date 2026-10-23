@@ -16,6 +16,7 @@ from acervo_midias import Catalogo, intervalo, normalizar, servir_arquivo
 from acervo_conceitos import identidade, eh_proxy
 from acervo_feedback import Feedback, chave
 from acervo_referencias import Referencias
+import acervo_entregas
 from PIL import Image
 
 HOME = Path(os.environ.get("ACERVO_DIR", Path.home() / "Acervo"))
@@ -343,6 +344,7 @@ def servir(porta):
     catalogo = Catalogo(idx)
     feedback = Feedback(DB)
     referencias = Referencias(DB)
+    entregas = acervo_entregas.Entregas(HOME, SEGREDO)
 
     def ler_imagem(h, limite=8_000_000):
         """Corpo do POST (foto/print) → (vetor CLIP normalizado, imagem reduzida)."""
@@ -381,6 +383,8 @@ def servir(porta):
             self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Cache-Control", "no-store"); self.end_headers(); self.wfile.write(b)
         def do_POST(self):
             u = urlparse(self.path)
+            if u.path.startswith("/e/"):  # entrega: aceite do termo (público, o token do link é a chave)
+                acervo_entregas.publico_post(entregas, self, u.path); return
             if u.path == "/acesso":  # entrada do app instalado: código gerado no KBOS
                 try:
                     n = int(self.headers.get("Content-Length", "0"))
@@ -456,6 +460,8 @@ def servir(porta):
                 except (ValueError, KeyError, TypeError) as e:
                     self._j({"erro": str(e) or "Pedido inválido."}, 400)
                 return
+            if u.path == "/entregas" or u.path.startswith("/entregas/"):  # só admin (cliente do portal já foi barrado acima)
+                acervo_entregas.admin_post(entregas, self, u.path, {k: v[0] for k, v in parse_qs(u.query).items()}); return
             if u.path != "/feedback":
                 self.send_error(404); return
             # Servidor local: só aceita pedidos feitos pela própria página (mesmo computador, JSON).
@@ -498,6 +504,8 @@ def servir(porta):
                 else:
                     self._j({"erro": "Link de entrada inválido ou expirado. Abra pelo seu portal."}, 401)
                 return
+            if u.path.startswith("/e/"):  # entrega para o cliente baixar (público)
+                acervo_entregas.publico_get(entregas, self, u.path); return
             if u.path == "/manifest.webmanifest":
                 b = json.dumps(MANIFESTO, ensure_ascii=False).encode()
                 self.send_response(200); self.send_header("Content-Type", "application/manifest+json"); self.send_header("Cache-Control", "max-age=3600"); self.end_headers(); self.wfile.write(b); return
@@ -550,6 +558,8 @@ def servir(porta):
                 f = THUMBS / Path(u.path).name
                 if not f.is_file(): self.send_error(404); return
                 self.send_response(200); self.send_header("Content-Type", "image/jpeg"); self.send_header("Cache-Control", "max-age=86400"); self.end_headers(); self.wfile.write(f.read_bytes())
+            elif u.path == "/entregas" or u.path.startswith("/entregas/"):
+                acervo_entregas.admin_get(entregas, self, u.path)
             elif u.path == "/estado":
                 self._j(motor.estado())
             elif u.path == "/buscar":

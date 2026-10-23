@@ -48,3 +48,9 @@ Cada arquivo tem `origem`: **Pessoal** (índice do SSD e a pasta própria do Kay
 - Pessoal: `LUME_DRIVE_PASTA` (vazio = sem fonte pessoal), caminhos `Drive-Pessoal/...`.
 O Lume lê o Drive com **chave de API + "qualquer pessoa com o link: leitor"** — não existe conta/e-mail do Lume para compartilhar. Se a pasta for restrita, a API dá 403 e cai para miniatura pública.
 Busca: filtro `?o=Pessoal|Hotel`; ordem = nota e, em empate, mais recente. Início: tela só com busca/voz.
+
+## Entregas com aceite do termo (23/10/2026)
+`acervo_entregas.py`. Admin abre `lume.kayquebrito.com.br/entregas` (já logado no Lume): cria a entrega (cliente + título), envia as fotos editadas (até 200 MB cada) e copia o link `/e/<token>`.
+O cliente abre o link, lê o termo de uso de imagem (`TERMO`, versão `TERMO_VERSAO`), digita o nome completo, marca "concordo" e só então vê e baixa as fotos (uma a uma ou `tudo.zip`).
+Cada aceite grava nome, data/hora, IP, navegador, versão e hash SHA-256 do texto aceito (`entrega_aceites` no `acervo.db`); exportar em `/entregas/aceites.csv`. Várias pessoas podem aceitar pelo mesmo link.
+Arquivos em `/data/indice/entregas/<id>/` (volume da VPS). Desativar a entrega derruba o link. Ao mudar o texto do termo, suba `TERMO_VERSAO`.
