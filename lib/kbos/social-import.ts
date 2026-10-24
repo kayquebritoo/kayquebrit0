@@ -63,7 +63,9 @@ export function cleanTitle(summary: string): string {
 }
 
 function unfold(text: string) {
-  return text.replace(/\r?\n[ \t]/g, "").replace(/\r/g, "");
+  // PostgreSQL text não aceita U+0000, mesmo quando o arquivo passa no parser ICS.
+  // Remover antes de formar títulos/chaves e corpos mantém prévia e gravação iguais.
+  return text.replace(/\u0000/g, "").replace(/\r?\n[ \t]/g, "").replace(/\r/g, "");
 }
 
 export function parseIcs(text: string, projectKey = ""): ParsedPost[] {

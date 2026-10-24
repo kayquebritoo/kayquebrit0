@@ -25,15 +25,21 @@ export async function importPosts(projectId: string, icsText: string) {
   const [proj] = await db().select({ id: projects.id, contactId: projects.contactId }).from(projects).where(eq(projects.id, projectId)).limit(1);
   if (!proj) throw new Error("Projeto não encontrado.");
   const { fresh, parsed } = await previewImport(projectId, icsText);
-  for (let i = 0; i < fresh.length; i += 100) {
-    await db().insert(socialPosts).values(
-      fresh.slice(i, i + 100).map((p) => ({
-        projectId, contactId: proj.contactId, brand: p.brand, title: p.title, format: p.format,
-        scheduledAt: p.scheduledAt, status: p.status, script: p.script, caption: p.caption, copies: p.copies, externalKey: p.key,
-      })),
-    ).onConflictDoNothing({ target: socialPosts.externalKey });
-  }
-  return { total: parsed.length, imported: fresh.length, skipped: parsed.length - fresh.length };
+  const database = db();
+  const insertBatch = (posts: typeof fresh) => database.insert(socialPosts).values(
+    posts.map((p) => ({
+      projectId, contactId: proj.contactId, brand: p.brand, title: p.title, format: p.format,
+      scheduledAt: p.scheduledAt, status: p.status, script: p.script, caption: p.caption, copies: p.copies, externalKey: p.key,
+    })),
+  ).onConflictDoNothing({ target: socialPosts.externalKey }).returning({ id: socialPosts.id });
+  const batches: ReturnType<typeof insertBatch>[] = [];
+  for (let i = 0; i < fresh.length; i += 100) batches.push(insertBatch(fresh.slice(i, i + 100)));
+  const [first, ...rest] = batches;
+  // Neon HTTP não suporta transaction(callback). batch executa tudo na mesma
+  // transação: se um lote falhar, nenhum novo post desta tentativa fica gravado.
+  const results = first ? await database.batch([first, ...rest]) : [];
+  const imported = results.reduce((sum, rows) => sum + rows.length, 0);
+  return { total: parsed.length, imported, skipped: parsed.length - imported };
 }
 
 export async function listPosts(opts: { projectId?: string; from?: Date; to?: Date; status?: string; includeHidden?: boolean } = {}) {

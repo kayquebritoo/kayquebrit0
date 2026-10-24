@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
+import { eq } from "drizzle-orm";
 import * as schema from "../schema";
 
 const holder = vi.hoisted(() => ({ db: null as unknown }));
@@ -49,7 +50,17 @@ describe("ICS do mLabs", () => {
 const pg = new PGlite();
 const d = drizzle(pg, { schema });
 beforeAll(async () => {
-  holder.db = d;
+  // Adapter de batch Neon HTTP sobre uma transação PostgreSQL descartável.
+  holder.db = Object.assign(d, {
+    batch: (queries: { toSQL(): { sql: string; params: unknown[] } }[]) => pg.transaction(async tx => {
+      const results = [];
+      for (const query of queries) {
+        const { sql, params } = query.toSQL();
+        results.push((await tx.query(sql, params)).rows);
+      }
+      return results;
+    }),
+  });
   for (const name of readdirSync(join(process.cwd(), "drizzle")).filter((n) => /^\d.*\.sql$/.test(n)).sort()) {
     await pg.exec(readFileSync(join(process.cwd(), "drizzle", name), "utf8"));
   }
@@ -199,4 +210,82 @@ describe("lista de produção colada", () => {
       [10, "Lounge", "reels", "captacao"],
     ]);
   });
+});
+
+// Arquivo privado opcional: não copiar o calendário do cliente para o repositório.
+const realIcsPath = process.env.KBOS_TEST_ICS;
+it.skipIf(!realIcsPath)("importa o ICS consolidado real em banco descartável", async () => {
+  const text = readFileSync(realIcsPath!, "utf8");
+  expect((text.match(/BEGIN:VEVENT/g) ?? []).length).toBe(707);
+  const [proj] = await d.insert(schema.projects).values({ titulo: "ICS real descartável", categoria: "social" }).returning();
+  const parsed = parseIcs(text, proj.id);
+  expect(parsed).toHaveLength(271);
+  await d.insert(schema.socialPosts).values(parsed.slice(0, 100).map(p => ({ projectId: proj.id, title: p.title, externalKey: p.key })));
+  const preview = await previewImport(proj.id, text);
+  expect([preview.parsed.length, preview.fresh.length, preview.existing]).toEqual([271, 171, 100]);
+  let result;
+  try { result = await importPosts(proj.id, text); }
+  catch (error) {
+    // Não imprimir query/params com o conteúdo privado do calendário.
+    const cause = (error as { cause?: { code?: string; message?: string } }).cause;
+    throw new Error(`Importação real falhou: ${cause?.code ?? "sem código"}; ${cause?.message ?? "sem detalhe"}`);
+  }
+  expect(result).toEqual({ total: 271, imported: 171, skipped: 100 });
+  expect(await importPosts(proj.id, text)).toEqual({ total: 271, imported: 0, skipped: 271 });
+});
+
+function consolidatedIcs() {
+  const events = Array.from({ length: 271 }, (_, i) => [
+    "BEGIN:VEVENT", "DTSTART:20261003T180000", `SUMMARY:HOTEL - Reels Conteúdo ${i}`,
+    `DESCRIPTION:Antes${i === 105 ? "\u0000" : ""} e depois`, "END:VEVENT",
+  ].join("\r\n"));
+  return ["BEGIN:VCALENDAR", ...events, ...events, ...events.slice(0, 165), "END:VCALENDAR"].join("\r\n");
+}
+
+it("importa 707 eventos/271 posts, remove NUL e preserva registros existentes por inteiro", async () => {
+  const text = consolidatedIcs();
+  const [proj] = await d.insert(schema.projects).values({ titulo: "Consolidado", categoria: "social" }).returning();
+  const parsed = parseIcs(text, proj.id);
+  expect(parsed).toHaveLength(271);
+  expect(parsed.reduce((n, p) => n + p.copies, 0)).toBe(707);
+  expect(parsed).toEqual(parseIcs(text.replace(/\u0000/g, ""), proj.id));
+  const existing = await d.insert(schema.socialPosts).values(parsed.slice(0, 100).map(p => ({
+    projectId: proj.id, title: "Edição manual", externalKey: p.key, status: "postado",
+    caption: "Legenda revisada", scriptBy: "Kayque", mediaUrl: "https://example.com/video",
+    linkedTo: proj.id, dismissedAt: new Date("2026-10-01T12:00:00Z"),
+  }))).returning();
+  expect((await previewImport(proj.id, text)).existing).toBe(100);
+  expect(await importPosts(proj.id, text)).toEqual({ total: 271, imported: 171, skipped: 100 });
+  const rows = await d.select().from(schema.socialPosts).where(eq(schema.socialPosts.projectId, proj.id));
+  for (const old of existing) expect(rows.find(p => p.id === old.id)).toEqual(old);
+  expect(rows.find(p => p.externalKey === parsed[105].key)?.caption).toBe("Antes e depois");
+  expect(await importPosts(proj.id, text)).toEqual({ total: 271, imported: 0, skipped: 271 });
+});
+
+it("reverte todos os lotes se a gravação falhar depois dos primeiros 100", async () => {
+  const [proj] = await d.insert(schema.projects).values({ titulo: "Rollback", categoria: "social" }).returning();
+  await pg.exec(`ALTER TABLE kbos_social_posts ADD CONSTRAINT test_import_failure CHECK (title <> 'Conteúdo 105') NOT VALID`);
+  try {
+    await expect(importPosts(proj.id, consolidatedIcs())).rejects.toBeDefined();
+    expect((await d.select().from(schema.socialPosts).where(eq(schema.socialPosts.projectId, proj.id))).length).toBe(0);
+  } finally {
+    await pg.exec("ALTER TABLE kbos_social_posts DROP CONSTRAINT test_import_failure");
+  }
+  expect(await importPosts(proj.id, consolidatedIcs())).toEqual({ total: 271, imported: 271, skipped: 0 });
+});
+
+it("conta apenas inserts confirmados quando outra importação grava a mesma chave", async () => {
+  const [proj] = await d.insert(schema.projects).values({ titulo: "Concorrência", categoria: "social" }).returning();
+  const key = parseIcs(ICS, proj.id)[0].key;
+  const database = holder.db as typeof d & { batch: (queries: { toSQL(): { sql: string; params: unknown[] } }[]) => Promise<unknown[][]> };
+  const original = database.batch;
+  const spy = vi.spyOn(database, "batch").mockImplementationOnce(async queries => {
+    await d.insert(schema.socialPosts).values({ projectId: proj.id, title: "Outra importação", externalKey: key, status: "postado" });
+    return original(queries);
+  });
+  try {
+    expect(await importPosts(proj.id, ICS)).toEqual({ total: 3, imported: 2, skipped: 1 });
+  } finally {
+    spy.mockRestore();
+  }
 });
