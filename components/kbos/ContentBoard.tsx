@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CLIENT_HUBS, lumeHref } from "@/lib/kbos/client-hubs";
 import { BRAND_LIST, brandColor } from "@/lib/kbos/brand-colors";
@@ -36,6 +37,18 @@ const dayLabel = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { we
 const hhmm = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: BELEM });
 const toLocalInput = (iso: string | null) => (iso ? new Date(iso).toLocaleString("sv-SE", { timeZone: BELEM }).replace(" ", "T").slice(0, 16) : "");
 const WEEK = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+const BRAND_LOGOS: Record<string, string> = {
+  Hotel: "/brands/atalaia/hotel.png",
+  Lounge: "/brands/atalaia/lounge.png",
+  Praça: "/brands/atalaia/praca.png",
+};
+
+function BrandLogo({ brand, size = 20 }: { brand: string | null; size?: number }) {
+  const src = brand ? BRAND_LOGOS[brand] : undefined;
+  if (!src) return null;
+  return <Image src={src} alt="" title={brand ?? undefined} width={size} height={size} sizes={`${size}px`} className="shrink-0 rounded-sm bg-white object-contain p-px" style={{ width: size, height: size }} />;
+}
 
 function people(p: Post) {
   return [p.scriptBy && `Roteiro: ${p.scriptBy}`, p.captureBy && `Capta: ${p.captureBy}`, p.editor && `Edita: ${p.editor}`].filter(Boolean).join(" · ");
@@ -147,7 +160,7 @@ export default function ContentBoard() {
     <button key={p.id} type="button" className="kb-row w-full text-left" onClick={() => setOpen(p)}>
       <span className="min-w-0">
         <span className="kb-ink block truncate text-[14px]">{p.title}</span>
-        <span className="kb-faint flex items-center gap-1.5 truncate text-[12px]">{brandColor(p.brand) && <i aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: brandColor(p.brand) ?? undefined }} />}{[p.scheduledAt && hhmm(p.scheduledAt) !== "00:00" ? hhmm(p.scheduledAt) : null, p.brand, FORMAT[p.format] ?? "Post", p.copies > 1 ? `${p.copies} redes` : null].filter(Boolean).join(" · ")}</span>
+        <span className="kb-faint flex items-center gap-1.5 truncate text-[12px]"><BrandLogo brand={p.brand} />{[p.scheduledAt && hhmm(p.scheduledAt) !== "00:00" ? hhmm(p.scheduledAt) : null, p.brand, FORMAT[p.format] ?? "Post", p.copies > 1 ? `${p.copies} redes` : null].filter(Boolean).join(" · ")}</span>
         {people(p) && <span className="kb-muted block truncate text-[12px]">{people(p)}</span>}
         {p.status === "erro" && p.errorMessage && <span className="block truncate text-[12px] text-[var(--kb-late)]">{p.errorMessage}</span>}
       </span>
@@ -195,7 +208,7 @@ export default function ContentBoard() {
           <div className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Empresas">
             {BRAND_LIST.map((b) => (
               <span key={b} className="kb-muted inline-flex items-center gap-1.5 text-[12px]">
-                <i aria-hidden className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: brandColor(b) ?? "#999" }} />{b}
+                <BrandLogo brand={b} size={24} />{b}
                 <span className="kb-faint tabular-nums">{(items ?? []).filter((p) => p.brand === b).length}</span>
               </span>
             ))}
@@ -221,15 +234,16 @@ export default function ContentBoard() {
                     className={`min-h-[58px] cursor-pointer border-b border-r border-white/5 p-1 text-left transition-colors sm:min-h-[118px] sm:p-1.5 ${c.inMonth ? "" : "opacity-40"} ${sel ? "bg-[var(--kb-chip-hover)]" : "hover:bg-[var(--kb-chip)]"}`}
                   >
                     <span className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[12px] tabular-nums ${c.key === today ? "bg-gradient-to-br from-[#4F12C7] to-[#E80EFD] font-semibold text-white" : "kb-muted"}`}>{c.n}</span>
-                    {/* celular: só pontinhos coloridos */}
+                    {/* celular: logos compactos identificam cada empresa */}
                     <div className="mt-1 flex flex-wrap gap-0.5 sm:hidden">
-                      {list.slice(0, 6).map((p) => <span key={p.id} aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: brandColor(p.brand) ?? meta(p.status).color }} />)}
+                      {list.slice(0, 6).map((p) => <span key={p.id} aria-label={p.brand ?? meta(p.status).label}>{p.brand && BRAND_LOGOS[p.brand] ? <BrandLogo brand={p.brand} size={12} /> : <span aria-hidden className="block h-1.5 w-1.5 rounded-full" style={{ background: meta(p.status).color }} />}</span>)}
                     </div>
                     {/* tela grande: etiquetas com título */}
                     <div className="mt-1 hidden flex-col gap-0.5 sm:flex">
                       {list.slice(0, 3).map((p) => (
                         <button key={p.id} type="button" onClick={(e) => { e.stopPropagation(); setOpen(p); }} title={`${p.title} — ${meta(p.status).label}`} className="flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-left text-[11px] hover:bg-white/10" style={{ borderLeft: `3px solid ${brandColor(p.brand) ?? meta(p.status).color}`, background: brandColor(p.brand) ? `${brandColor(p.brand)}14` : undefined }}>
                           <span aria-hidden className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: meta(p.status).color }} />
+                          <BrandLogo brand={p.brand} size={18} />
                           <b className="kb-faint shrink-0">{FORMAT_SHORT[p.format] ?? "P"}</b>
                           <span className="kb-ink truncate">{p.title}</span>
                         </button>
