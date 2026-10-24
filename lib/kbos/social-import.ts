@@ -11,6 +11,8 @@ export type PostStatus = (typeof POST_STATUS)[number];
 
 export type ParsedPost = {
   key: string;
+  /** Chave anterior, preservada apenas para reconhecer importações existentes. */
+  legacyKey: string;
   title: string;
   brand: string | null;
   format: PostFormat;
@@ -37,11 +39,15 @@ export function parseIcsDate(raw: string): { date: Date; hasTime: boolean } | nu
 }
 
 export function detectBrand(summary: string, description: string): string | null {
-  const text = `${summary} ${description.slice(0, 200)}`;
-  if (/\bhotel\b/i.test(text)) return "Hotel";
-  if (/\blounge\b/i.test(text)) return "Lounge";
-  if (/\bpra[cç]a\b/i.test(text)) return "Praça";
-  return null;
+  const brands = (text: string) => [
+    /\bhotel\b/i.test(text) ? "Hotel" : null,
+    /\blounge\b/i.test(text) ? "Lounge" : null,
+    /\bpra[cç]a\b/i.test(text) ? "Praça" : null,
+  ].filter((brand): brand is string => brand !== null);
+  const explicit = brands(summary);
+  if (explicit.length) return explicit.length === 1 ? explicit[0] : null;
+  const inferred = brands(description.slice(0, 200));
+  return inferred.length === 1 ? inferred[0] : null;
 }
 
 export function detectFormat(summary: string, description: string): PostFormat {
@@ -87,13 +93,16 @@ export function parseIcs(text: string, projectKey = ""): ParsedPost[] {
     const title = cleanTitle(summary);
     const format = detectFormat(summary, desc);
     const day = f.DTSTART.slice(0, 8);
-    const key = createHash("sha1").update(`${projectKey}|${day}|${strip(title)}|${format}`).digest("hex").slice(0, 32);
+    const brand = detectBrand(summary, desc);
+    const legacyKey = createHash("sha1").update(`${projectKey}|${day}|${strip(title)}|${format}`).digest("hex").slice(0, 32);
+    const key = `ics2:${createHash("sha256").update(JSON.stringify([projectKey, day, brand, strip(title), format])).digest("hex").slice(0, 32)}`;
     const prev = byKey.get(key);
     if (prev) { prev.copies += 1; continue; }
     byKey.set(key, {
       key,
+      legacyKey,
       title: title.slice(0, 200),
-      brand: detectBrand(summary, desc),
+      brand,
       format,
       scheduledAt: when.date,
       hasTime: when.hasTime,

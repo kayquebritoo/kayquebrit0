@@ -2,6 +2,7 @@
 import { and, asc, eq, gte, inArray, isNull, lt, or } from "drizzle-orm";
 import { db } from "./db";
 import { projects, socialPosts } from "./schema";
+import { indexImportedPosts } from "./social-identity";
 import { effectivePostLimit } from "./plan-limit";
 import { POST_FORMATS, POST_STATUS, parseIcs, type PostFormat, type PostStatus } from "./social-import";
 
@@ -12,12 +13,14 @@ const PORTAL_STATUS: PostStatus[] = ["aprovacao", "ajustes", "aprovado", "agenda
 
 export async function previewImport(projectId: string, icsText: string) {
   const parsed = parseIcs(icsText, projectId);
-  const have = new Set<string>();
-  for (let i = 0; i < parsed.length; i += 500) {
-    const rows = await db().select({ k: socialPosts.externalKey }).from(socialPosts).where(inArray(socialPosts.externalKey, parsed.slice(i, i + 500).map((p) => p.key)));
-    for (const r of rows) if (r.k) have.add(r.k);
-  }
-  return { parsed, fresh: parsed.filter((p) => !have.has(p.key)), existing: parsed.length - parsed.filter((p) => !have.has(p.key)).length };
+  // Busca também chaves antigas ou trazidas de outro projeto; chaves v2 novas
+  // não podem fazer uma simples reimportação duplicar o calendário já editado.
+  const rows = await db().select({ id: socialPosts.id, projectId: socialPosts.projectId, externalKey: socialPosts.externalKey, brand: socialPosts.brand, title: socialPosts.title, format: socialPosts.format, scheduledAt: socialPosts.scheduledAt, caption: socialPosts.caption }).from(socialPosts).where(eq(socialPosts.projectId, projectId));
+  const hasImported = indexImportedPosts(rows);
+  const legacyCounts = new Map<string, number>();
+  for (const post of parsed) legacyCounts.set(post.legacyKey, (legacyCounts.get(post.legacyKey) ?? 0) + 1);
+  const fresh = parsed.filter(post => !hasImported(post, (legacyCounts.get(post.legacyKey) ?? 0) > 1));
+  return { parsed, fresh, existing: parsed.length - fresh.length };
 }
 
 /** Cria só o que ainda não existe (chave estável); nunca sobrescreve edição nem status. */

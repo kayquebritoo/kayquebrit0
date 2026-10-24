@@ -219,10 +219,10 @@ it.skipIf(!realIcsPath)("importa o ICS consolidado real em banco descartável", 
   expect((text.match(/BEGIN:VEVENT/g) ?? []).length).toBe(707);
   const [proj] = await d.insert(schema.projects).values({ titulo: "ICS real descartável", categoria: "social" }).returning();
   const parsed = parseIcs(text, proj.id);
-  expect(parsed).toHaveLength(271);
+  expect(parsed).toHaveLength(275);
   await d.insert(schema.socialPosts).values(parsed.slice(0, 100).map(p => ({ projectId: proj.id, title: p.title, externalKey: p.key })));
   const preview = await previewImport(proj.id, text);
-  expect([preview.parsed.length, preview.fresh.length, preview.existing]).toEqual([271, 171, 100]);
+  expect([preview.parsed.length, preview.fresh.length, preview.existing]).toEqual([275, 175, 100]);
   let result;
   try { result = await importPosts(proj.id, text); }
   catch (error) {
@@ -230,8 +230,8 @@ it.skipIf(!realIcsPath)("importa o ICS consolidado real em banco descartável", 
     const cause = (error as { cause?: { code?: string; message?: string } }).cause;
     throw new Error(`Importação real falhou: ${cause?.code ?? "sem código"}; ${cause?.message ?? "sem detalhe"}`);
   }
-  expect(result).toEqual({ total: 271, imported: 171, skipped: 100 });
-  expect(await importPosts(proj.id, text)).toEqual({ total: 271, imported: 0, skipped: 271 });
+  expect(result).toEqual({ total: 275, imported: 175, skipped: 100 });
+  expect(await importPosts(proj.id, text)).toEqual({ total: 275, imported: 0, skipped: 275 });
 });
 
 function consolidatedIcs() {
@@ -287,5 +287,68 @@ it("conta apenas inserts confirmados quando outra importação grava a mesma cha
     expect(await importPosts(proj.id, ICS)).toEqual({ total: 3, imported: 2, skipped: 1 });
   } finally {
     spy.mockRestore();
+  }
+});
+
+function brandCollisionIcs() {
+  return ["BEGIN:VCALENDAR", ...["HOTEL", "LOUNGE"].flatMap(brand => [
+    "BEGIN:VEVENT", "DTSTART:20261024T180000", `SUMMARY:${brand} - Reels Evento`, "DESCRIPTION:Legenda comum", "END:VEVENT",
+  ]), "END:VCALENDAR"].join("\n");
+}
+
+it("separa empresas e prioriza a empresa explícita no título", () => {
+  const parsed = parseIcs(brandCollisionIcs(), "project");
+  expect(parsed).toHaveLength(2);
+  expect(new Set(parsed.map(post => post.key)).size).toBe(2);
+  expect(parsed[0].legacyKey).toBe(parsed[1].legacyKey);
+  expect(detectBrand("LOUNGE - Reels Evento", "O Hotel recebe os convidados")).toBe("Lounge");
+  expect(detectBrand("HOTEL E LOUNGE - Reels Evento", "")).toBeNull();
+});
+
+it("reconhece chaves antigas editadas sem ocultar o conteúdo da outra empresa", async () => {
+  const [proj] = await d.insert(schema.projects).values({ titulo: "Compatibilidade", categoria: "social" }).returning();
+  const parsed = parseIcs(brandCollisionIcs(), proj.id);
+  const [old] = await d.insert(schema.socialPosts).values({ projectId: proj.id, brand: "Hotel", title: "Título editado", externalKey: parsed[0].legacyKey, status: "postado", linkedTo: proj.id }).returning();
+  expect(await importPosts(proj.id, brandCollisionIcs())).toEqual({ total: 2, imported: 1, skipped: 1 });
+  expect(await importPosts(proj.id, brandCollisionIcs())).toEqual({ total: 2, imported: 0, skipped: 2 });
+  expect((await d.select().from(schema.socialPosts).where(eq(schema.socialPosts.id, old.id)))[0]).toEqual(old);
+});
+
+it("reconhece posts movidos de projeto sem reescrever chaves nem status", async () => {
+  const [proj] = await d.insert(schema.projects).values({ titulo: "Movidos", categoria: "social" }).returning();
+  const parsed = parseIcs(ICS, "projeto-antigo");
+  const before = await d.insert(schema.socialPosts).values(parsed.map(post => ({ projectId: proj.id, brand: post.brand, title: post.title, format: post.format, scheduledAt: post.scheduledAt, externalKey: post.legacyKey, status: "postado" }))).returning();
+  expect(await importPosts(proj.id, ICS)).toEqual({ total: 3, imported: 0, skipped: 3 });
+  const after = await d.select().from(schema.socialPosts).where(eq(schema.socialPosts.projectId, proj.id));
+  for (const old of before) expect(after.find(row => row.id === old.id)).toEqual(old);
+});
+
+it("sincroniza mLabs sem cruzar empresas, escolher duplicados ou regredir postado", async () => {
+  const { MlabsClient, syncFromMlabs } = await import("../mlabs");
+  const [proj] = await d.insert(schema.projects).values({ titulo: "mLabs protegida", categoria: "social" }).returning();
+  const at = new Date("2026-10-24T15:00:00Z");
+  const before = await d.insert(schema.socialPosts).values([
+    { projectId: proj.id, brand: "Hotel", title: "Hotel", caption: "Legenda igual", scheduledAt: at, status: "postado" },
+    { projectId: proj.id, brand: "Lounge", title: "Lounge", caption: "Legenda igual", scheduledAt: at, status: "roteiro" },
+    { projectId: proj.id, brand: "Praça", title: "Praça A", caption: "Legenda igual", scheduledAt: at, status: "roteiro" },
+    { projectId: proj.id, brand: "Praça", title: "Praça B", caption: "Legenda igual", scheduledAt: at, status: "roteiro" },
+  ]).returning();
+  const previous = process.env.MLABS_MCP_TOKEN;
+  process.env.MLABS_MCP_TOKEN = "local-test-not-a-real-token";
+  const init = vi.spyOn(MlabsClient.prototype, "init").mockResolvedValue(undefined);
+  const call = vi.spyOn(MlabsClient.prototype, "call").mockImplementation(async <T>(name: string, args: Record<string, unknown>): Promise<T> => {
+    if (name === "list_profiles") return { items: ["Hotel", "Lounge", "Praça"].map(brand => ({ id: brand, name: brand })) } as T;
+    return { schedules: [{ id: `schedule-${args.profileId}`, profileId: args.profileId, scheduledAt: at.toISOString(), content: "Legenda igual", status: "scheduled", channelSourceKey: "instagram_reels" }] } as T;
+  });
+  try {
+    expect(await syncFromMlabs(proj.id)).toMatchObject({ found: 3, created: 0, updated: 1, ambiguous: 1 });
+    const rows = await d.select().from(schema.socialPosts).where(eq(schema.socialPosts.projectId, proj.id));
+    expect(rows).toHaveLength(4);
+    expect(rows.find(row => row.id === before[0].id)).toEqual(before[0]);
+    expect(rows.find(row => row.id === before[1].id)?.status).toBe("agendado");
+    expect(rows.find(row => row.id === before[2].id)).toEqual(before[2]);
+  } finally {
+    if (previous === undefined) delete process.env.MLABS_MCP_TOKEN; else process.env.MLABS_MCP_TOKEN = previous;
+    init.mockRestore(); call.mockRestore();
   }
 });

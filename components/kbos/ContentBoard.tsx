@@ -1,5 +1,6 @@
 "use client";
 import Image from "next/image";
+import ContentReview from "./ContentReview";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CLIENT_HUBS, lumeHref } from "@/lib/kbos/client-hubs";
 import { BRAND_LIST, brandColor } from "@/lib/kbos/brand-colors";
@@ -8,7 +9,7 @@ import { effectivePostLimit } from "@/lib/kbos/plan-limit";
 type Post = {
   id: string; projectId: string | null; brand: string | null; title: string; format: string; scheduledAt: string | null;
   status: string; script: string | null; caption: string | null; mediaUrl: string | null; clientNote: string | null; copies: number; postedUrl: string | null;
-  scriptBy: string | null; captureBy: string | null; editor: string | null; errorMessage: string | null;
+  networks?: string[]; scriptBy: string | null; captureBy: string | null; editor: string | null; errorMessage: string | null;
 };
 type Project = { id: string; titulo: string; categoria?: string; postLimit?: number | null };
 
@@ -115,7 +116,7 @@ export default function ContentBoard() {
       const r = await fetch("/api/admin/social/mlabs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ projectId }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error || "Não consegui sincronizar.");
-      setNotice(`mLabs sincronizada: ${d.created} novo(s), ${d.updated} atualizado(s) (${d.found} posts lidos).`);
+      setNotice(`mLabs sincronizada: ${d.created} novo(s), ${d.updated} atualizado(s) (${d.found} posts lidos).${d.ambiguous ? ` ${d.ambiguous} correspondência(s) precisam de revisão em Conferir possíveis repetidos.` : ""}`);
       await load();
     } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setSyncing(false); }
   }
@@ -160,7 +161,7 @@ export default function ContentBoard() {
     <button key={p.id} type="button" className="kb-row w-full text-left" onClick={() => setOpen(p)}>
       <span className="min-w-0">
         <span className="kb-ink block truncate text-[14px]">{p.title}</span>
-        <span className="kb-faint flex items-center gap-1.5 truncate text-[12px]"><BrandLogo brand={p.brand} />{[p.scheduledAt && hhmm(p.scheduledAt) !== "00:00" ? hhmm(p.scheduledAt) : null, p.brand, FORMAT[p.format] ?? "Post", p.copies > 1 ? `${p.copies} redes` : null].filter(Boolean).join(" · ")}</span>
+        <span className="kb-faint flex items-center gap-1.5 truncate text-[12px]"><BrandLogo brand={p.brand} />{[p.scheduledAt && hhmm(p.scheduledAt) !== "00:00" ? hhmm(p.scheduledAt) : null, p.brand, FORMAT[p.format] ?? "Post", p.networks?.length ? `${p.networks.length} ${p.networks.length === 1 ? "rede" : "redes"}` : p.copies > 1 ? `${p.copies} cópias na origem` : null].filter(Boolean).join(" · ")}</span>
         {people(p) && <span className="kb-muted block truncate text-[12px]">{people(p)}</span>}
         {p.status === "erro" && p.errorMessage && <span className="block truncate text-[12px] text-[var(--kb-late)]">{p.errorMessage}</span>}
       </span>
@@ -202,6 +203,8 @@ export default function ContentBoard() {
       {notice && <p role="status" className="kb-tag w-full justify-start rounded-xl! px-3! py-2! text-sm">{notice}</p>}
       {error && <p className="kb-tag late w-full justify-start rounded-xl! px-3! py-2! text-sm">{error}</p>}
       {!items && !error && <div className="kb-skel h-64 w-full" />}
+
+      {items && projectId && <ContentReview key={`${projectId}:${month}`} projectId={projectId} month={month} onOpenPost={(id) => { const post = items.find(item => item.id === id); if (post) setOpen(post); }} />}
 
       {items && view === "calendario" && (
         <>

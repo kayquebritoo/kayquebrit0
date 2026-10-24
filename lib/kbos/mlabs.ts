@@ -1,9 +1,10 @@
 // Ponte com a mLabs via MCP (https://mcp.mlabs.io). SOMENTE LEITURA: lê agenda e demandas e espelha no calendário do Conteúdo.
 // O token fica só no servidor (MLABS_MCP_TOKEN). Nada aqui cria, edita ou apaga coisas na mLabs.
 import { createHash } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "./db";
 import { socialPosts } from "./schema";
+import { matchingPublication, publicationUpdateAllowed } from "./social-identity";
 import { PublicError } from "./http";
 import type { PostFormat, PostStatus } from "./social-import";
 
@@ -142,21 +143,24 @@ export async function syncFromMlabs(projectId: string) {
   const drafts = groupSchedules(all, names);
 
   const existing = await db().select().from(socialPosts).where(eq(socialPosts.projectId, projectId));
-  const byKey = new Map(existing.filter((e) => e.externalKey).map((e) => [e.externalKey as string, e]));
-  const dayOf = (d: Date | null) => (d ? d.toLocaleDateString("sv-SE", { timeZone: "America/Belem" }) : "");
-  // post que veio do .ics (mesma legenda no mesmo dia) conta como o mesmo: só atualiza a etapa
-  const byCaption = new Map(existing.filter((e) => e.caption).map((e) => [`${(e.caption as string).trim()}|${dayOf(e.scheduledAt)}`, e]));
 
-  let created = 0, updated = 0;
+  let created = 0, updated = 0, ambiguous = 0;
   for (const d of drafts) {
-    const row = byKey.get(d.externalKey) ?? byCaption.get(`${d.caption}|${dayOf(d.scheduledAt)}`);
+    const resolution = matchingPublication(existing, d);
+    if (resolution.ambiguous) { ambiguous++; continue; }
+    const row = resolution.match;
+    // O item oculto/vinculado continua preservado e não reaparece na sincronização.
+    if (row?.linkedTo || row?.dismissedAt) continue;
     if (!row) {
-      await db().insert(socialPosts).values({ projectId, brand: d.brand, title: d.title, format: d.format, networks: d.networks, scheduledAt: d.scheduledAt, status: d.status, caption: d.caption, externalKey: d.externalKey, copies: Math.max(1, d.networks.length) });
-      created++;
-    } else if (["postado", "erro", "agendado"].includes(d.status) && row.status !== d.status) {
-      await db().update(socialPosts).set({ status: d.status, networks: d.networks, updatedAt: new Date() }).where(and(eq(socialPosts.id, row.id), eq(socialPosts.projectId, projectId)));
-      updated++;
+      const inserted = await db().insert(socialPosts).values({ projectId, brand: d.brand, title: d.title, format: d.format, networks: d.networks, scheduledAt: d.scheduledAt, status: d.status, caption: d.caption, externalKey: d.externalKey, copies: Math.max(1, d.networks.length) }).onConflictDoNothing({ target: socialPosts.externalKey }).returning();
+      existing.push(...inserted);
+      created += inserted.length;
+    } else if (publicationUpdateAllowed(row.status, d.status)) {
+      const changed = await db().update(socialPosts).set({ status: d.status, networks: d.networks, updatedAt: new Date() })
+        .where(and(eq(socialPosts.id, row.id), eq(socialPosts.projectId, projectId), eq(socialPosts.status, row.status), sql`date_trunc('milliseconds', ${socialPosts.updatedAt}) = ${row.updatedAt.toISOString()}::timestamptz`, isNull(socialPosts.linkedTo), isNull(socialPosts.dismissedAt)))
+        .returning({ id: socialPosts.id });
+      if (changed.length) updated++; else ambiguous++;
     }
   }
-  return { profiles: wanted.length, found: drafts.length, created, updated };
+  return { profiles: wanted.length, found: drafts.length, created, updated, ambiguous };
 }
