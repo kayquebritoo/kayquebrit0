@@ -2,7 +2,7 @@
 
 ## Estado
 
-Implementação isolada, sem ativação na VPS, cron, alterações de containers, segredos ou escrita no MCP. A sincronização pontual do ZIP do Mac para as 25 notas da VPS foi concluída separadamente em 24/10/2026, com backup e conferência SHA-256. Ela não é uma conexão contínua com o Mac.
+Motor de aprovação validado em ambiente isolado. Coleta periódica autorizada em 24/10/2026, limitada a propostas fora do vault; nenhuma escrita MCP habilitada. A sincronização pontual do ZIP do Mac para as 25 notas da VPS foi concluída separadamente em 24/10/2026, com backup e conferência SHA-256. Ela não é uma conexão contínua com o Mac.
 
 ## Escopo da primeira versão
 
@@ -44,11 +44,21 @@ Se houver interrupção, o recibo `applying`/`reverting` identifica operação i
 
 Falha após uma gravação tenta restaurar apenas arquivos modificados por esta operação; edição posterior é preservada e registrada como `failed_needs_review`. A fila contém histórico privado local; isso não substitui backup externo/restauração testada. O diretório de estado e o vault não podem ser compartilhados com usuários não confiáveis.
 
-## Próxima implantação
+## Etapas de implantação e evolução
 
 1. Validar o coletor com SELECT real em uma cópia ou execução de leitura autorizada; conferir contagens sem imprimir dados.
 2. Gerar e revisar a primeira proposta real fora do vault.
 3. Usar ambiente de testes para validar o ciclo completo com os mesmos dados e restringir o usuário do serviço às pastas necessárias.
-4. Preparar agendamento que apenas colete e proponha. Aprovação continua por lote explícito; não programar `approve`.
+4. Coleta periódica aprovada: agendamento apenas coleta e propõe. Aprovação continua por lote explícito; não programar `approve`.
 5. Ativar em produção após conferir armazenamento, backup externo e política de acesso. Esta branch não altera compose, worker, banco nem crontab.
 6. Conectar o Mac separadamente quando houver acesso local e mecanismo escolhido; a VPS permanece fonte central. O ZIP é um retrato, não um canal de sincronização.
+
+## Coleta periódica autorizada em 24/10/2026
+
+Kayque aprovou explicitamente coleta a cada cinco minutos, limitada a propostas fora do vault. O runner `run-proposals.py` usa o ambiente já existente do worker para SELECT, sem imprimir credenciais. A conversão roda em container temporário sem rede, sem capabilities, filesystem da imagem somente leitura, CPU limitada a 0,5 e memória a 256 MiB. O vault ativo é montado **somente leitura**. O runner chama apenas `propose`, nunca `approve` ou `rollback`.
+
+Implantação independente do deploy do app: `/opt/kbos-brain-proposals/releases/da7d29e` contém o engine/CLI validados nessa revisão e o runner com manifesto SHA-256 próprio. O coletor adaptado para avaliação usa o mesmo SELECT da versão TypeScript, recebendo ambiente somente dentro do worker. Estado privado em `/var/lib/kbos-brain-proposals`: propostas, `status.json` e auditoria limitada a dois arquivos de aproximadamente 1 MiB. Snapshots temporários são removidos após cada execução.
+
+Agendamento instalado pelo operador após a aprovação: `/etc/cron.d/kbos-brain-proposals`, `*/5 * * * * root /usr/bin/python3 /opt/kbos-brain-proposals/releases/da7d29e/run-proposals.py`. A disponibilidade deve ser confirmada por `status.json` e execução originada do cron. O sucesso de um disparo manual, sozinho, não comprova que o cron disparou.
+
+Reversão da rotina: remover exclusivamente esse arquivo de cron depois de preservar sua cópia; manter estado e propostas para auditoria. O código não altera o crontab existente, os serviços web/worker, compose, banco ou MCP. O aceite das notas continua separado.
