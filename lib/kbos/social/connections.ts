@@ -73,11 +73,11 @@ async function markExpired(connId: string, message: string) {
   await db().update(socialAccounts).set({ status: "expirado", lastError: message.slice(0, 500), updatedAt: new Date() }).where(eq(socialAccounts.connectionId, connId));
 }
 
-/** Token de acesso válido da conexão; renova antes de vencer quando a rede tem refresh. */
-export async function connectionToken(conn: ConnRow, now = new Date(), f?: Fetch) {
+/** Token de acesso válido da conexão; renova antes de vencer quando a rede tem refresh (`force` = renova já). */
+export async function connectionToken(conn: ConnRow, now = new Date(), f?: Fetch, force = false) {
   const provider = providerById(conn.provider);
   if (!provider) throw new SocialError("Rede desconhecida.");
-  const fresh = !conn.expiresAt || conn.expiresAt.getTime() - SKEW_MS > now.getTime();
+  const fresh = !force && (!conn.expiresAt || conn.expiresAt.getTime() - SKEW_MS > now.getTime());
   if (fresh) return unseal(conn.tokenEnc);
   if (!conn.refreshEnc || !provider.refresh) {
     await markExpired(conn.id, "O acesso venceu. Reconecte a rede.");
@@ -113,7 +113,7 @@ export async function refreshDueConnections(now = new Date(), f?: Fetch) {
     .where(and(eq(socialConnections.status, "ativo"), isNotNull(socialConnections.refreshEnc), lt(socialConnections.expiresAt, new Date(now.getTime() + 30 * 60_000)))).limit(10);
   let ok = 0;
   for (const c of due) {
-    try { await connectionToken(c, new Date(now.getTime() + SKEW_MS * 2), f); ok++; } catch (e) { console.error("[social] renovar", c.provider, e instanceof Error ? e.message : e); }
+    try { await connectionToken(c, now, f, true); ok++; } catch (e) { console.error("[social] renovar", c.provider, e instanceof Error ? e.message : e); }
   }
   return ok;
 }
