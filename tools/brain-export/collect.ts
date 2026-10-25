@@ -9,7 +9,7 @@ async function main() {
   const output = process.argv[2];
   if (!output) throw new Error("Informe arquivo privado de destino");
   const result = await db().batch([
-    db().select({ id: contacts.id, name: contacts.name, company: contacts.company, status: contacts.status, updatedAt: contacts.updatedAt }).from(contacts).where(eq(contacts.status, "cliente")),
+    db().select({ id: contacts.id, name: contacts.name, company: contacts.company, status: contacts.status, updatedAt: contacts.updatedAt }).from(contacts).where(eq(contacts.status, "client")),
     db().select({ id: projects.id, titulo: projects.titulo, categoria: projects.categoria, status: projects.status, prazo: projects.prazo, contactId: projects.contactId, updatedAt: projects.updatedAt }).from(projects),
     db().select({ id: tasks.id, titulo: tasks.titulo, status: tasks.status, dueAt: tasks.dueAt, projectId: tasks.projectId, priority: tasks.priority, updatedAt: tasks.updatedAt }).from(tasks),
     db().select({ id: clientPlans.id, projectId: clientPlans.projectId, version: clientPlans.version, status: clientPlans.status, approvedAt: clientPlans.approvedAt, updatedAt: clientPlans.updatedAt }).from(clientPlans).where(and(gt(clientPlans.version, 0), ne(clientPlans.status, "draft"))),

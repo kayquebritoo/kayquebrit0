@@ -62,7 +62,7 @@ export function renderSnapshot(snapshot) {
     notes[key] = note(folder, row, fields);
   };
   for (const row of snapshot.contacts ?? []) {
-    if (row.status !== 'cliente') continue;
+    if (row.status !== 'client') continue;
     add('clientes', row, [['Nome', row.name], ['Empresa', row.company], ['Situação', row.status]]);
   }
   for (const row of snapshot.projects ?? []) add('projetos', row, [
