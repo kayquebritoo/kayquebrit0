@@ -6,7 +6,7 @@ import path from 'node:path';
 import { renderSnapshot, propose, decide, rollback } from './engine.mjs';
 
 const id = '11111111-1111-4111-8111-111111111111';
-const snapshot = (title = 'Projeto de teste') => ({ version: 1, contacts: [{ id, name: 'Cliente exemplo', status: 'cliente', phone: 'SEGREDO', document: 'SEGREDO' }], projects: [{ id, titulo: title, status: 'producao', categoria: 'social', prazo: null }] });
+const snapshot = (title = 'Projeto de teste') => ({ version: 1, contacts: [{ id, name: 'Cliente exemplo', status: 'client', phone: 'SEGREDO', document: 'SEGREDO' }], projects: [{ id, titulo: title, status: 'producao', categoria: 'social', prazo: null }] });
 const target = `40-KBOS-Automatico/projetos/${id}.md`;
 async function setup(t) {
   const root = await mkdtemp(path.join(tmpdir(), 'brain-export-'));
