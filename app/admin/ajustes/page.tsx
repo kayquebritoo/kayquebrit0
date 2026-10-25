@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { KbosShell } from "@/components/kbos/Shell";
 import InboxChannels from "@/components/kbos/InboxChannels";
+import SocialAccounts from "@/components/kbos/SocialAccounts";
 
 export const metadata = { title: "Ajustes — KBOS" };
 
@@ -13,7 +14,7 @@ export default function AjustesPage() {
         <section aria-labelledby="aj-con" className="flex flex-col gap-3">
           <h2 id="aj-con" className="kb-faint text-[11px] uppercase tracking-[0.2em]">Conexões com apps externos</h2>
           <InboxChannels />
-          <p className="kb-muted text-sm">WhatsApp e Telegram. Instagram, Facebook e mLabs entram aqui quando forem conectados.</p>
+          <SocialAccounts />
         </section>
 
         <section aria-labelledby="aj-eu" className="flex flex-col gap-3">

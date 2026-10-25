@@ -19,6 +19,7 @@
 //      retornam 401 em vez de 500 para valores inesperados.
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   customType,
   integer,
@@ -916,11 +917,53 @@ export const postPublications = pgTable(
     url: text("url"),
     externalId: text("external_id"),
     error: text("error"),
+    /** 0029: conta da rede que publica, tentativas e início do envio (trava contra envio duplo). */
+    accountId: uuid("account_id"),
+    attempts: integer("attempts").notNull().default(0),
+    sendingAt: timestamp("sending_at", { withTimezone: true }),
     createdAt: ts("created_at"),
     updatedAt: ts("updated_at"),
   },
   (t) => [uniqueIndex("kbos_post_publications_uq").on(t.postId, t.network)],
 );
+
+/** 0029: conta de rede social conectada (Instagram/Facebook via Meta). Token só criptografado (`social-crypto.ts`). */
+export const socialAccounts = pgTable(
+  "kbos_social_accounts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+    network: text("network").notNull(),
+    externalId: text("external_id").notNull(),
+    pageId: text("page_id"),
+    name: text("name").notNull(),
+    username: text("username"),
+    pictureUrl: text("picture_url"),
+    tokenEnc: text("token_enc").notNull(),
+    tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
+    status: text("status").notNull().default("ativo"),
+    lastError: text("last_error"),
+    connectedBy: uuid("connected_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: ts("created_at"),
+    updatedAt: ts("updated_at"),
+  },
+  (t) => [uniqueIndex("kbos_social_accounts_uq").on(t.network, t.externalId)],
+);
+
+/** 0029: arquivo final do post (imagem/vídeo) no volume da VPS; a rede baixa pelo link público com token. */
+export const postMedia = pgTable("kbos_post_media", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  postId: uuid("post_id").notNull().references(() => socialPosts.id, { onDelete: "cascade" }),
+  position: integer("position").notNull().default(0),
+  kind: text("kind").notNull(),
+  mime: text("mime").notNull(),
+  name: text("name").notNull(),
+  size: bigint("size", { mode: "number" }).notNull().default(0),
+  expectedSize: bigint("expected_size", { mode: "number" }).notNull().default(0),
+  publicToken: text("public_token").notNull(),
+  status: text("status").notNull().default("enviando"),
+  createdAt: ts("created_at"),
+});
 
 /** 0028: registro de movimentações de dados feitas pelo admin (com o que é preciso para desfazer). */
 export const dataMoves = pgTable("kbos_data_moves", {

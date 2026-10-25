@@ -54,6 +54,10 @@ services:
       GALLERY_INGEST_TOKEN: ${GALLERY_INGEST_TOKEN:-}
       # Token MCP da mLabs (somente servidor): sincroniza o calendário de Conteúdo.
       MLABS_MCP_TOKEN: ${MLABS_MCP_TOKEN:-}
+      # Publicar no Instagram/Facebook (fase 3 do Conteúdo): app da Meta. Vazio = recurso desligado.
+      META_APP_ID: ${META_APP_ID:-}
+      META_APP_SECRET: ${META_APP_SECRET:-}
+      META_GRAPH_VERSION: ${META_GRAPH_VERSION:-v23.0}
       HOSTNAME: "0.0.0.0"
       PORT: "3000"
       GIT_SHA: ${GIT_SHA:-local}
@@ -173,6 +177,10 @@ services:
       ALERT_EMAIL: ${ALERT_EMAIL:-}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_ALERT_CHAT_ID: ${TELEGRAM_ALERT_CHAT_ID:-}
+      # Publicar no Instagram/Facebook (fase 3 do Conteúdo): app da Meta. Vazio = recurso desligado.
+      META_APP_ID: ${META_APP_ID:-}
+      META_APP_SECRET: ${META_APP_SECRET:-}
+      META_GRAPH_VERSION: ${META_GRAPH_VERSION:-v23.0}
     depends_on:
       redis:
         condition: service_healthy

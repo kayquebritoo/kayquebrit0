@@ -24,6 +24,7 @@ export const JOB_TYPES = [
   "campaign.send",
   "agenda.reminders",
   "whatsapp.health",
+  "social.tick",
 ] as const;
 export type JobType = (typeof JOB_TYPES)[number];
 

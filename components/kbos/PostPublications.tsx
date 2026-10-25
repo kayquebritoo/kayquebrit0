@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { NETWORKS, NETWORK_LABEL } from "@/lib/kbos/content-model";
 
-type Pub = { network: string; status: string; url: string | null; error: string | null; publishedAt: string | null };
+type Pub = { network: string; status: string; url: string | null; error: string | null; publishedAt: string | null; scheduledAt: string | null; accountId?: string | null };
 const PUB_LABEL: Record<string, string> = { pendente: "Pendente", agendado: "Agendado", publicado: "Publicado", erro: "Erro", cancelado: "Fora" };
 const PUB_COLOR: Record<string, string> = { pendente: "#9a93a8", agendado: "#c08cff", publicado: "#2fbf71", erro: "#ff6b6b", cancelado: "#5a5566" };
 
@@ -40,7 +40,8 @@ export default function PostPublications({ postId, onPostStatus }: { postId: str
         {NETWORKS.slice(0, 6).map((n) => <button key={n} type="button" className="kb-chip min-h-10" aria-pressed={active.includes(n)} disabled={busy} onClick={() => toggle(n)}>{NETWORK_LABEL[n]}</button>)}
       </div>
       {items.filter((p) => p.status !== "cancelado").map((p) => (
-        <div key={p.network} className="kb-row gap-2">
+        <div key={p.network} className="grid gap-1">
+        <div className="kb-row gap-2">
           <span className="flex min-w-0 items-center gap-2 text-sm"><i aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: PUB_COLOR[p.status] }} />{NETWORK_LABEL[p.network] ?? p.network}</span>
           <span className="flex shrink-0 items-center gap-1.5">
             <input className="kb-control min-h-10 w-36 text-xs" inputMode="url" placeholder="link publicado" defaultValue={p.url ?? ""} aria-label={`Link no ${NETWORK_LABEL[p.network] ?? p.network}`}
@@ -49,6 +50,10 @@ export default function PostPublications({ postId, onPostStatus }: { postId: str
               {["pendente", "agendado", "publicado", "erro"].map((s) => <option key={s} value={s}>{PUB_LABEL[s]}</option>)}
             </select>
           </span>
+        </div>
+        {p.status === "agendado" && p.scheduledAt && <p className="kb-faint pl-4 text-xs">{p.accountId ? "O KBOS publica" : "Agendado"} em {new Date(p.scheduledAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Belem" })}</p>}
+        {p.status === "erro" && p.error && <p className="pl-4 text-xs text-[#ff9f5a]">{p.error}</p>}
+        {p.status === "publicado" && p.url && <a className="kb-faint pl-4 text-xs underline" href={p.url} target="_blank" rel="noopener noreferrer">Ver publicação ↗</a>}
         </div>
       ))}
       {msg && <p role="status" className="kb-faint text-xs">{msg}</p>}

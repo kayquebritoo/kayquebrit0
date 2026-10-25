@@ -64,7 +64,7 @@ e **Conteúdo → Revisar duplicidades** (já existia).
 - Testes: `lib/kbos/__tests__/content-cycle.test.ts` (fase derivada, 1 conteúdo = 1 entrega, ciclos, consolidado,
   gestão no portal, takes, separação e desfazer, cookie do Lume no formato do Python).
 
-### Fase 2 — Migrar o Grupo VIP (precisa da sua aprovação)
+### Fase 2 — Migrar o Grupo VIP ✅ (25/out/2026)
 1. Publicar a Fase 1 (merge em `main` → deploy automático; a migração 0028 roda no boot).
 2. No painel, abrir Grupo VIP → Separar por operação → conferir o plano (posts por empresa e meses).
 3. Mapa confirmado pelo Kayque (25/out): o restaurante é do Hotel (fica dentro da operação Hotel); não há operação
@@ -75,17 +75,51 @@ e **Conteúdo → Revisar duplicidades** (já existia).
 6. Rollback: botão "Desfazer separação" (devolve os posts e apaga só operações criadas que ficaram vazias).
    Backup antes: snapshot/branch do Neon (Console → Branches) ou `pg_dump` de `kbos_social_posts` e `kbos_projects`.
 
-### Fase 3 — Publicar nas redes pelo KBOS (substitui o agendador da mLabs)
-- Instagram e Facebook: Meta Graph API (Content Publishing: imagem, carrossel, Reels; Páginas do Facebook). Exige app
-  Meta com revisão (`instagram_content_publish`, `pages_manage_posts`), contas Business e token de longa duração.
+Resultado (25/out): backup de 382 posts (id/projeto) antes; `applySplit` com o código testado → 3 operações criadas,
+307 posts movidos (Hotel 117, Lounge 96, Praça 94), 75 sem empresa ficaram no Grupo; total 382 preservado.
+Desfazer: `kbos_data_moves` id `3a977ebc-b0be-4bec-8dfd-5b6c4bba4b05` (botão no painel do Grupo).
+Plano: Grupo = 48/mês, cada operação 16; a gestão remaneja no portal (+/−) sem passar de 48.
+Antes da separação, mLabs/ICS/lista de produção/conciliação passaram a procurar na família inteira e a gravar post
+novo com empresa direto na operação (`lib/kbos/project-family.ts`), para nada voltar duplicado.
+
+### Fase 3 — Publicar nas redes pelo KBOS (substitui o agendador da mLabs) — Instagram e Facebook prontos ⏳ falta o app da Meta
+Feito (migração 0029, aditiva):
+- `kbos_social_accounts` (token da Página criptografado AES-256-GCM, `social-crypto.ts`), `kbos_post_media`
+  (arquivo final no volume `/data/gallery/social`, upload em pedaços de 8 MB, até 1 GB de vídeo), colunas de envio
+  em `kbos_post_publications` (`account_id`, `attempts`, `sending_at`).
+- Login da Meta: `GET /api/admin/social/meta/connect` → `callback` (state assinado + cookie), guarda Páginas e o
+  Instagram profissional ligado a cada uma. Ajustes → Redes sociais: liga cada conta a uma operação (a do principal
+  vale para as operações que não têm conta própria).
+- Publicar: `lib/kbos/meta.ts` (Instagram: imagem, carrossel até 10, Reels, Story; Facebook: foto, várias fotos, vídeo).
+  Editor do post → "Arquivo final · publicar pelo KBOS": enviar JPG/MP4, ordenar, **Agendar no KBOS** (data do post)
+  ou **Publicar agora**. Verificador `social.tick` no worker a cada minuto; trava por publicação (nunca posta 2x),
+  erro de rede tenta até 3x, erro da Meta para e mostra o motivo, token vencido marca a conta para reconectar.
+  Quando todas as redes saem, o post vira "postado" e guarda o link.
+- Link público do arquivo (a Meta baixa daqui): `/api/public/social-media/<token>/arquivo.ext` (token de 32 bytes, Range).
+- Testes: `lib/kbos/__tests__/social-publish.test.ts` (Meta simulada, pedaços, agendar, trava, novas tentativas).
+
+**O que o Kayque precisa fazer (uma vez, ~15 min):**
+1. https://developers.facebook.com/apps → Criar app → tipo **Empresa** (ou "Outro" → Empresa), ligado ao portfólio
+   empresarial que administra as Páginas do Grupo VIP.
+2. No app, adicionar o caso de uso/produto **Login do Facebook** (e "Instagram Graph API" / "Gerenciar conteúdo no
+   Instagram" se aparecer). Em Login do Facebook → Configurações → URIs de redirecionamento do OAuth válidos:
+   `https://kbos.kayquebrito.com.br/api/admin/social/meta/callback/`
+3. Configurações do app → Básico: copiar **ID do app** e **Chave secreta**; preencher URL da política de privacidade
+   (`https://kbos.kayquebrito.com.br/` serve enquanto não houver página própria).
+4. Na VPS: `bash /opt/kbos/scripts/kbos-config.sh` → opção **9** → colar ID e chave (a chave não aparece na tela).
+5. KBOS → Ajustes → Redes sociais → **Conectar com a Meta** → marcar as 3 Páginas (Hotel, Lounge, Praça) e os
+   Instagram ligados → voltar e escolher a empresa de cada conta.
+6. Teste: um post do Hotel com arquivo final → **Publicar agora** → em até 1 minuto aparece "Publicado" com o link.
+Em modo de desenvolvimento o app já publica nas Páginas que **você** administra (você é o dono do app); não precisa
+da revisão da Meta para o Grupo VIP. A revisão (Advanced Access) só será necessária para clientes cujas Páginas você
+não administra. Os Instagram precisam ser **profissionais** (Empresa/Criador) e ligados à Página do Facebook.
+
+Ainda nesta fase (depois do teste com a Meta):
 - TikTok: Content Posting API (exige app aprovado; "direct post" depois de auditoria).
 - YouTube Shorts: YouTube Data API (upload), cota diária.
 - LinkedIn (opcional): Posts API.
-- Fila BullMQ que já existe (`worker/`): job `social.publish` por **publicação** (por rede), com nova tentativa,
-  e o status volta para `kbos_post_publications` (o post vira "postado" sozinho pela regra da Fase 1).
-- Mídia: arquivo final do Drive/Lume baixado no worker; legenda por rede (opcional), primeiro comentário, horário.
-- Segredos só no `/opt/kbos/.env` pelo menu de configuração. **Precisa de você:** criar os apps (Meta, TikTok, Google)
-  e autorizar as contas do Grupo VIP.
+- Legenda por rede, primeiro comentário, marcar pessoas/local; Reels também no Facebook como Reel (hoje sai como vídeo).
+- Segredos só no `/opt/kbos/.env` pelo menu de configuração.
 
 ### Fase 4 — Relatórios para o cliente
 - Métricas por publicação (alcance, impressões, curtidas, comentários, salvamentos, compartilhamentos, views de Reels)

@@ -58,6 +58,7 @@ while true; do
   echo " 6) Ligar o assistente no WhatsApp (protege o webhook com senha)"
   echo " 7) Ativar login com Google"
   echo " 8) Minha voz no assistente (Fish Audio, 24 h no ar)"
+  echo " 9) Publicar no Instagram/Facebook (app da Meta)"
   echo " 0) Sair"
   read -r -p "Escolha: " opt
   case "$opt" in
@@ -118,7 +119,7 @@ while true; do
         if [ ${#v} -lt 4 ]; then s="não configurada"; elif [ "$v" = "kbos-dev-key" ]; then s="PADRÃO (troque: opção 3)"; else s="configurada (…${v: -4})"; fi
         printf ' %-22s %s\n' "$k" "$s"
       done
-      for k in GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET; do
+      for k in GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET META_APP_ID META_APP_SECRET; do
         v=$(getvar "$k"); v=${v//\"/}
         if [ -n "$v" ]; then s="configurado"; else s="não configurado"; fi
         printf ' %-22s %s\n' "$k" "$s"
@@ -180,6 +181,27 @@ while true; do
       unset fkey
       apply
       echo "Pronto. No WhatsApp mande um áudio: 'Fala Kayque, o que tenho hoje?' — a resposta vem na sua voz."
+      ;;
+    9)
+      echo
+      echo "Em https://developers.facebook.com/apps crie um app (tipo Empresa) e, em Login do Facebook > Configurações,"
+      echo "cole em 'URIs de redirecionamento do OAuth válidos' (exatamente):"
+      echo "https://kbos.kayquebrito.com.br/api/admin/social/meta/callback/"
+      echo "O ID e a Chave Secreta ficam em Configurações do app > Básico."
+      echo
+      read -r -p "ID do app da Meta: " meta_id
+      meta_id=$(printf '%s' "$meta_id" | tr -cd '0-9')
+      if [ ${#meta_id} -lt 8 ]; then echo "O ID do app é só número (uns 15 dígitos). Nada foi alterado."; continue; fi
+      meta_secret=$(ask_secret "Chave secreta do app (não aparece na tela): ")
+      meta_secret=$(printf '%s' "$meta_secret" | tr -d '[:space:]"')
+      if [[ ! "$meta_secret" =~ ^[a-f0-9]{32}$ ]]; then echo "A chave secreta tem 32 letras/números (0-9, a-f). Nada foi alterado."; unset meta_secret; continue; fi
+      setvar META_APP_ID "$meta_id"
+      setvar META_APP_SECRET "$meta_secret"
+      setvar APP_URL "https://kbos.kayquebrito.com.br"
+      echo "Chave recebida (termina em …${meta_secret: -4})."
+      unset meta_secret
+      apply
+      echo "Agora abra https://kbos.kayquebrito.com.br/admin/ajustes/ e toque em 'Conectar com a Meta'."
       ;;
     0) exit 0 ;;
     *) echo "Opção inválida." ;;

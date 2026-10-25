@@ -2,6 +2,7 @@
 import Image from "next/image";
 import ContentReview from "./ContentReview";
 import PostPublications from "./PostPublications";
+import PostPublishing from "./PostPublishing";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CLIENT_HUBS, lumeHref } from "@/lib/kbos/client-hubs";
 import { BRAND_LIST, brandColor } from "@/lib/kbos/brand-colors";
@@ -316,6 +317,7 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [pubKey, setPubKey] = useState(0);
   const hub = CLIENT_HUBS[0];
   const pasta = hub.empresas.find((e) => e.label === post.brand)?.pasta;
   const listId = `names-${post.id}`;
@@ -407,7 +409,8 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
           {(f.status === "postado" || f.status === "erro" || post.postedUrl) && <label className="kb-field"><span>Link do post publicado</span><input className="kb-control" inputMode="url" placeholder="https://…" value={f.postedUrl} onChange={(e) => setF({ ...f, postedUrl: e.target.value })} /></label>}
         </section>
 
-        <PostPublications postId={post.id} onPostStatus={(status) => setF((x) => ({ ...x, status }))} />
+        <PostPublications key={pubKey} postId={post.id} onPostStatus={(status) => setF((x) => ({ ...x, status }))} />
+        <PostPublishing postId={post.id} scheduledAt={post.scheduledAt} onChanged={() => setPubKey((k) => k + 1)} />
 
         {(post.takes?.length ?? 0) > 0 && (
           <section className="space-y-2" aria-label="Takes escolhidos">
