@@ -67,8 +67,9 @@ e **Conteúdo → Revisar duplicidades** (já existia).
 ### Fase 2 — Migrar o Grupo VIP (precisa da sua aprovação)
 1. Publicar a Fase 1 (merge em `main` → deploy automático; a migração 0028 roda no boot).
 2. No painel, abrir Grupo VIP → Separar por operação → conferir o plano (posts por empresa e meses).
-3. Confirmar o mapa empresa → operação. **Dúvida aberta:** "Praça" é o Restaurante Atalaia VIP? Até você confirmar,
-   não movo nada.
+3. Mapa confirmado pelo Kayque (25/out): o restaurante é do Hotel (fica dentro da operação Hotel); não há operação
+   "Restaurante". Operações: **Hotel → Hotel Atalaia VIP**, **Lounge → Atalaia VIP Lounge** (receptivo de praia do hotel),
+   **Praça → Praça de Alimentação Atalaia VIP**. Conferir o plano no painel antes de aplicar.
 4. Dar à Thalita o nível "Gestão de conteúdo" no Grupo VIP (vale para as 3 operações).
 5. Definir posts por mês de cada operação (campo "Posts por mês no plano").
 6. Rollback: botão "Desfazer separação" (devolve os posts e apaga só operações criadas que ficaram vazias).
