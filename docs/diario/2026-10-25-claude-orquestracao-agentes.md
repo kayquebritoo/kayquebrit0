@@ -12,3 +12,4 @@
 - Etapa 0 (quando a pasta `APP/` estiver livre): commitar/resgatar as mudanças sem dono em `codex/cadastro-portal-cerebro`; versionar `.claude/agents` e `.codex/agents` (corrigir `Codex/` → `codex/` no executor); tirar `kbos-ics-fix/` e `lib/kbos/team.ts.bak` da árvore; consertar o worktree do Codex (`~/.codex/worktrees/551c`, caminho antigo).
 - Cofre em git privado `kbos-cerebro` + PR #5 (exportador) apontando para ele; VPS precisa de acesso.
 - Decidir se o repo do app deve ficar privado (hoje é público).
+- Ajuste: modelo grátis padrão do OpenCode trocado para `openrouter/cohere/north-mini-code:free` (os `opencode/*-free` esgotaram o limite diário em 25/10; o padrão do usuário é pago e está sem crédito).

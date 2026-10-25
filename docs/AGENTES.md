@@ -8,8 +8,8 @@ Cada pedido vira uma issue com **briefing autocontido**: objetivo, arquivos envo
 | Label | Quem executa | Modelo | Exemplos |
 |---|---|---|---|
 | `tipo:plano` | **ChatGPT** (assinatura) | — | quebrar pedido em issues, escrever briefing, revisar PR, pesquisar |
-| `nivel:mapa` | **OpenCode** (grátis), agente `explorador` | `opencode/deepseek-v4.1-flash-free` | achar arquivos/rotas e anexar `arquivo:linha` na issue |
-| `nivel:simples` | **OpenCode** (grátis), agente `executor` | `opencode/mimo-v2.6-flash-free` | texto, CSS, docs, renomear, lint, diário |
+| `nivel:mapa` | **OpenCode** (grátis), agente `explorador` | `openrouter/cohere/north-mini-code:free` | achar arquivos/rotas e anexar `arquivo:linha` na issue |
+| `nivel:simples` | **OpenCode** (grátis), agente `executor` | `openrouter/cohere/north-mini-code:free` | texto, CSS, docs, renomear, lint, diário |
 | `nivel:medio` | **Codex** | padrão do Codex | tela, rota, feature comum, teste |
 | `nivel:complexo` | **Claude Code** | Opus decide; subagentes Sonnet executam | arquitetura, bug difícil, integração |
 | `area:sensivel` | **Claude Code** | Opus | `agent.ts`, `inbox.ts`, webhook Evolution, `migrations.ts`, docker, `deploy.sh` |
@@ -26,7 +26,7 @@ Revisão antes do merge: **outro** agente que não o autor (Claude revisa Codex 
 5. **Uma tarefa = um worktree = uma sessão:** terminou, feche a sessão e remova o worktree.
 
 ## Como rodar cada um
-- **OpenCode:** `opencode` na pasta do worktree (lê `AGENTS.md` e `opencode.json`). Sem argumento usa o modelo grátis padrão; `@explorador` / `@executor` chamam os subagentes. Modelos `muse-spark` do OpenRouter **não** são `:free`: confira o preço antes.
+- **OpenCode:** `opencode` na pasta do worktree (lê `AGENTS.md` e `opencode.json`). Sem argumento usa o modelo grátis padrão; `@explorador` / `@executor` chamam os subagentes. Grátis tem limite diário: em 25/10 os `opencode/*-free` (mimo, deepseek) esgotaram e o `nemotron-3-super:free` falhou; o `north-mini-code:free` respondeu. Se o padrão travar, troque com `opencode -m <outro modelo :free>` (lista: `opencode models | grep free`). O padrão do usuário (`openrouter/anthropic/claude-sonnet-5.5`) é pago e está sem crédito: o `opencode.json` do projeto evita cair nele. Modelos `muse-spark` **não** são `:free`.
 - **Codex:** `codex` no worktree; subagentes em `.codex/agents/`.
 - **Claude Code:** `claude` no worktree; subagentes em `.claude/agents/`.
 - **ChatGPT:** lê o repo pelo conector do GitHub e as notas/status pelo MCP `https://mcp.kayquebrito.com.br/mcp` (só leitura). Não faz commit: escreve issues e revisões.

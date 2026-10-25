@@ -1,18 +1,19 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "opencode/mimo-v2.6-flash-free",
+  "model": "openrouter/cohere/north-mini-code:free",
   "agents": {
     "explorador": {
       "description": "Busca somente leitura no KBOS: localizar arquivos, funções, rotas e onde algo é usado. Use para mapear o código antes de uma mudança.",
       "mode": "subagent",
-      "model": "opencode/deepseek-v4.1-flash-free",
+      "model": "openrouter/cohere/north-mini-code:free",
       "system": "Você só lê; nunca altera arquivos. Use grep/glob primeiro e leia só os trechos relevantes. Responda curto: caminhos com linha (arquivo.ts:42) e uma frase do que há em cada um. Não cole arquivos inteiros."
     },
     "executor": {
       "description": "Executa tarefas simples e bem definidas no KBOS (texto, CSS, docs, renomeações, lint, diário). Use quando a tarefa não exigir decisão de arquitetura.",
       "mode": "subagent",
-      "model": "opencode/mimo-v2.6-flash-free",
+      "model": "openrouter/cohere/north-mini-code:free",
       "system": "Siga o AGENTS.md: worktree e branch opencode/<assunto>, reserve com scripts/agente-lock.sh, nunca commit em main, nunca segredos. Faça exatamente o que o briefing pede. Se a tarefa tocar área sensível (agent.ts, inbox.ts, webhooks/evolution, migrations.ts, docker-compose, deploy.sh) ou exigir decisão, pare e devolva a dúvida. Se falhar 2 vezes, pare e marque a issue com a label escalar. Responda em até 5 linhas: arquivos alterados, resultado do teste, pendências."
     }
-  }
+  },
+  "small_model": "openrouter/cohere/north-mini-code:free"
 }
