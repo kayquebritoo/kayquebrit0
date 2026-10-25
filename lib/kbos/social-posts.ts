@@ -1,11 +1,12 @@
 // Calendário de conteúdo no banco: importar, listar, editar (equipe) e aprovar (cliente no portal).
 import { and, asc, eq, gte, inArray, isNull, lt, or } from "drizzle-orm";
 import { db } from "./db";
-import { projects, socialPosts } from "./schema";
+import { projects, socialPosts, type PostTake } from "./schema";
 import { indexImportedPosts } from "./social-identity";
 import { effectivePostLimit } from "./plan-limit";
 import { POST_FORMATS, POST_STATUS, parseIcs, type PostFormat, type PostStatus } from "./social-import";
-import { clientProjectIds, clientProjects } from "./project-members";
+import { clientProjectIds, clientProjects, managedProjectIds } from "./project-members";
+import { syncPublications } from "./content-cycle";
 
 export type Post = typeof socialPosts.$inferSelect;
 
@@ -78,36 +79,97 @@ export async function updatePost(id: string, patch: PostPatch) {
   return { post: row, sentToApproval: patch.status === "aprovacao" && cur.status !== "aprovacao" };
 }
 
-/** O que o cliente enxerga: posts dos projetos dele, a partir de "aguardando aprovação". Sem roteiro interno. */
+/**
+ * O que o cliente enxerga. Quem só acompanha: a partir de "aguardando aprovação", sem roteiro interno
+ * (só o que ele mesmo escreveu volta para ele). Quem faz a gestão do conteúdo (gerente de marketing):
+ * o calendário inteiro do projeto, com roteiro, responsáveis e takes, porque é quem planeja e roteiriza.
+ */
 export async function portalPosts(userId: string) {
   const ids = await clientProjectIds(userId);
   if (!ids.length) return [];
+  const managed = new Set(await managedProjectIds(userId));
+  const visible = [inArray(socialPosts.status, PORTAL_STATUS), eq(socialPosts.createdBy, userId)];
+  if (managed.size) visible.push(inArray(socialPosts.projectId, [...managed]));
   const rows = await db()
-    .select({ id: socialPosts.id, title: socialPosts.title, brand: socialPosts.brand, format: socialPosts.format, networks: socialPosts.networks, scheduledAt: socialPosts.scheduledAt, status: socialPosts.status, caption: socialPosts.caption, mediaUrl: socialPosts.mediaUrl, clientNote: socialPosts.clientNote, script: socialPosts.script, createdBy: socialPosts.createdBy })
+    .select({ id: socialPosts.id, projectId: socialPosts.projectId, title: socialPosts.title, brand: socialPosts.brand, format: socialPosts.format, networks: socialPosts.networks, scheduledAt: socialPosts.scheduledAt, status: socialPosts.status, caption: socialPosts.caption, mediaUrl: socialPosts.mediaUrl, clientNote: socialPosts.clientNote, script: socialPosts.script, createdBy: socialPosts.createdBy, scriptBy: socialPosts.scriptBy, captureBy: socialPosts.captureBy, editor: socialPosts.editor, takes: socialPosts.takes, postedUrl: socialPosts.postedUrl })
     .from(socialPosts)
-    .where(and(inArray(socialPosts.projectId, ids), isNull(socialPosts.linkedTo), isNull(socialPosts.dismissedAt), or(inArray(socialPosts.status, PORTAL_STATUS), eq(socialPosts.createdBy, userId))))
+    .where(and(inArray(socialPosts.projectId, ids), isNull(socialPosts.linkedTo), isNull(socialPosts.dismissedAt), or(...visible)))
     .orderBy(asc(socialPosts.scheduledAt))
-    .limit(300);
-  // o roteiro interno nunca sai; só o que o próprio cliente escreveu volta para ele
-  return rows.map(({ createdBy, script, ...p }) => ({ ...p, script: createdBy === userId ? script : null, mine: createdBy === userId }));
+    .limit(500);
+  return rows.map(({ createdBy, script, scriptBy, captureBy, editor, takes, ...p }) => {
+    const manage = !!p.projectId && managed.has(p.projectId);
+    const mine = createdBy === userId;
+    return { ...p, script: manage || mine ? script : null, mine, manage, takes: manage || mine ? takes : [], people: manage ? { scriptBy, captureBy, editor } : null };
+  });
+}
+
+/** Campos que o cliente pode mexer. Status: só planejar (roteiro) ou cancelar; produção e publicação são da equipe. */
+export type ClientPostPatch = Partial<{ title: string; brand: string | null; format: PostFormat; date: string; networks: string[]; script: string | null; caption: string | null; status: "roteiro" | "cancelado" }>;
+
+async function clientEditable(userId: string, id: string) {
+  const [row] = await db().select({ post: socialPosts }).from(socialPosts).innerJoin(projects, eq(projects.id, socialPosts.projectId)).where(and(eq(socialPosts.id, id), clientProjects(userId))).limit(1);
+  if (!row) throw new PostError("Post não encontrado.");
+  const manage = (await managedProjectIds(userId)).includes(row.post.projectId!);
+  const own = row.post.createdBy === userId && row.post.status === "roteiro";
+  if (!manage && !own) throw new PostError("Só a gestão de conteúdo do projeto pode editar esse post.");
+  if (row.post.status === "postado") throw new PostError("Esse post já foi publicado.");
+  return { post: row.post, manage };
+}
+
+/** Edição pelo portal: a gestão edita qualquer conteúdo do projeto; quem só acompanha, o roteiro que ele mesmo criou. */
+export async function updateClientPost(userId: string, id: string, patch: ClientPostPatch) {
+  const { post, manage } = await clientEditable(userId, id);
+  const set: Partial<typeof socialPosts.$inferInsert> = { updatedAt: new Date() };
+  if (patch.title !== undefined) { const t = patch.title.trim().slice(0, 200); if (t.length < 2) throw new PostError("Dê um título ao conteúdo."); set.title = t; }
+  if (patch.brand !== undefined) set.brand = patch.brand?.trim().slice(0, 60) || null;
+  if (patch.format !== undefined) { if (!(POST_FORMATS as readonly string[]).includes(patch.format)) throw new PostError("Formato inválido."); set.format = patch.format; }
+  if (patch.date !== undefined) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(patch.date)) throw new PostError("Escolha o dia do post.");
+    // mantém o horário que a equipe já marcou; só troca o dia
+    const time = post.scheduledAt ? post.scheduledAt.toLocaleTimeString("en-GB", { timeZone: "America/Belem", hour12: false }) : "00:00:00";
+    set.scheduledAt = new Date(`${patch.date}T${time}-03:00`);
+  }
+  if (patch.script !== undefined) set.script = patch.script?.trim().slice(0, 30000) || null;
+  if (patch.caption !== undefined) { if (!manage) throw new PostError("A legenda é da gestão de conteúdo."); set.caption = patch.caption?.trim().slice(0, 5000) || null; }
+  if (patch.status !== undefined) {
+    if (patch.status !== "roteiro" && patch.status !== "cancelado") throw new PostError("Status inválido.");
+    if (patch.status === "roteiro" && post.status !== "cancelado") throw new PostError("Esse conteúdo já está em produção.");
+    set.status = patch.status;
+  }
+  const [row] = await db().update(socialPosts).set(set).where(eq(socialPosts.id, id)).returning();
+  if (patch.networks !== undefined) { if (!manage) throw new PostError("As redes são da gestão de conteúdo."); await syncPublications(id, patch.networks); }
+  return row;
+}
+
+/** Takes do Lume escolhidos para o conteúdo (gestão, dono do roteiro ou equipe). Substitui a lista inteira. */
+export async function setPostTakes(id: string, takes: PostTake[], by: { userId: string; name: string; admin?: boolean }) {
+  if (!by.admin) await clientEditable(by.userId, id);
+  const clean = takes.slice(0, 40).filter((t) => Number.isInteger(t.id) && t.id > 0).map((t) => ({
+    id: t.id, nome: String(t.nome || "").slice(0, 200), thumb: t.thumb && /^https:\/\//i.test(t.thumb) ? t.thumb.slice(0, 500) : null,
+    t: typeof t.t === "number" && Number.isFinite(t.t) ? Math.max(0, t.t) : null, by: t.by ?? by.name, at: t.at || new Date().toISOString(),
+  }));
+  const [row] = await db().update(socialPosts).set({ takes: clean, updatedAt: new Date() }).where(eq(socialPosts.id, id)).returning();
+  if (!row) throw new PostError("Post não encontrado.");
+  return row;
 }
 
 const monthRange = (month: string) => {
   const [y, m] = month.split("-").map(Number);
   return { from: new Date(`${month}-01T00:00:00-03:00`), to: new Date(`${m === 12 ? y + 1 : y}-${String(m === 12 ? 1 : m + 1).padStart(2, "0")}-01T00:00:00-03:00`) };
 };
-/** Quantos posts o projeto já tem no mês e o limite do plano (null = sem limite). Roteiros já realizados e dispensados não contam em dobro. */
+/** Quantos posts o projeto já tem no mês e o limite do plano (null = sem limite). Roteiros já realizados, dispensados e cancelados não contam. */
 export async function monthUsage(projectId: string, month: string) {
   const { from, to } = monthRange(month);
   const [proj] = await db().select({ categoria: projects.categoria, postLimit: projects.postLimit }).from(projects).where(eq(projects.id, projectId)).limit(1);
-  const rows = await listPosts({ projectId, from, to });
+  // cancelado não ocupa vaga do plano
+  const rows = (await listPosts({ projectId, from, to })).filter((r) => r.status !== "cancelado");
   const byFormat: Record<string, number> = {};
   for (const r of rows) byFormat[r.format] = (byFormat[r.format] ?? 0) + 1;
   return { limit: proj ? effectivePostLimit(proj.categoria, proj.postLimit) : null, used: rows.length, byFormat };
 }
 
 /** O cliente cadastra o roteiro dele pelo portal (data + formato + ideia). Vira "roteiro" no calendário da equipe. */
-export async function createClientRoteiro(userId: string, input: { projectId: string; date: string; title: string; format: PostFormat; brand?: string | null; script?: string | null }) {
+export async function createClientRoteiro(userId: string, input: { projectId: string; date: string; title: string; format: PostFormat; brand?: string | null; script?: string | null; caption?: string | null; networks?: string[] }) {
   const [proj] = await db().select({ id: projects.id }).from(projects).where(and(eq(projects.id, input.projectId), clientProjects(userId))).limit(1);
   if (!proj) throw new PostError("Projeto não encontrado.");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) throw new PostError("Escolha o dia do post.");
@@ -119,7 +181,9 @@ export async function createClientRoteiro(userId: string, input: { projectId: st
   const [row] = await db().insert(socialPosts).values({
     projectId: proj.id, brand: input.brand?.trim().slice(0, 60) || null, title, format: input.format, scheduledAt: new Date(`${input.date}T00:00:00-03:00`),
     status: "roteiro", script: input.script?.trim().slice(0, 30000) || null, createdBy: userId,
+    caption: input.caption?.trim().slice(0, 5000) || null,
   }).returning();
+  if (input.networks?.length) await syncPublications(row.id, input.networks);
   return row;
 }
 
@@ -185,7 +249,7 @@ export function postDeadline(scheduledAt: Date) {
 }
 
 export function isOverdue(p: { scheduledAt: Date | null; status: string }, now = new Date()) {
-  return !!p.scheduledAt && p.status !== "postado" && postDeadline(p.scheduledAt) < now;
+  return !!p.scheduledAt && p.status !== "postado" && p.status !== "cancelado" && postDeadline(p.scheduledAt) < now;
 }
 
 const firstToken = (s: string) => s.trim().split(/\s+/)[0]?.toLowerCase() ?? "";

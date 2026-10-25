@@ -51,6 +51,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.contactId !== undefined) patch.contactId = body.contactId || null;
     if (body.valor !== undefined) patch.valor = body.valor;
     if (body.postLimit !== undefined) patch.postLimit = body.postLimit;
+    if (body.recurring !== undefined) patch.recurring = body.recurring;
+    if (body.parentId !== undefined) {
+      // operação dentro de um cliente maior: um nível só (o pai não pode ser filho de ninguém, nem ele mesmo)
+      if (body.parentId === id) return NextResponse.json({ error: "O projeto não pode ser operação dele mesmo." }, { status: 400 });
+      if (body.parentId) {
+        const [parent] = await db().select({ parentId: projects.parentId }).from(projects).where(eq(projects.id, body.parentId)).limit(1);
+        if (!parent) return NextResponse.json({ error: "Projeto principal não encontrado." }, { status: 400 });
+        if (parent.parentId) return NextResponse.json({ error: "Esse projeto já é uma operação; escolha o projeto principal." }, { status: 400 });
+        const [kid] = await db().select({ id: projects.id }).from(projects).where(eq(projects.parentId, id)).limit(1);
+        if (kid) return NextResponse.json({ error: "Este projeto já tem operações; ele é o principal." }, { status: 400 });
+      }
+      patch.parentId = body.parentId || null;
+    }
     if (body.prazo !== undefined) patch.prazo = body.prazo ? new Date(body.prazo) : null;
     // Fase 1 — vitrine / associação com curso.
     if (body.slug !== undefined) patch.slug = body.slug || null;

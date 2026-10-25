@@ -8,7 +8,7 @@ import { readBody } from "@/lib/kbos/validators";
 import { PostError, createClientRoteiro, monthUsage, portalPosts } from "@/lib/kbos/social-posts";
 import { notifyClientRoteiro } from "@/lib/kbos/social-notify";
 import { POST_FORMATS } from "@/lib/kbos/social-import";
-import { clientProjects } from "@/lib/kbos/project-members";
+import { clientProjects, managedProjectIds } from "@/lib/kbos/project-members";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,8 @@ export async function GET(req: Request) {
   const user = await sessionUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   try {
-    const mine = await db().select({ id: projects.id, titulo: projects.titulo }).from(projects).where(clientProjects(user.id));
+    const managed = new Set(await managedProjectIds(user.id));
+    const mine = (await db().select({ id: projects.id, titulo: projects.titulo }).from(projects).where(clientProjects(user.id))).map((p) => ({ ...p, manage: managed.has(p.id) }));
     const month = new URL(req.url).searchParams.get("month") ?? "";
     const quota = /^\d{4}-\d{2}$/.test(month) && mine[0] ? await monthUsage(mine[0].id, month) : null;
     return NextResponse.json({ items: await portalPosts(user.id), projects: mine, quota });
@@ -26,7 +27,7 @@ export async function GET(req: Request) {
   }
 }
 
-const create = z.object({ projectId: z.string().uuid(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), title: z.string().min(2).max(200), format: z.enum(POST_FORMATS), brand: z.string().max(60).nullable().optional(), script: z.string().max(30000).nullable().optional() });
+const create = z.object({ projectId: z.string().uuid(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), title: z.string().min(2).max(200), format: z.enum(POST_FORMATS), brand: z.string().max(60).nullable().optional(), script: z.string().max(30000).nullable().optional(), caption: z.string().max(5000).nullable().optional(), networks: z.array(z.string().max(30)).max(10).optional() });
 
 // POST /api/portal/posts — o cliente cadastra um roteiro no calendário (só nos projetos dele).
 export async function POST(req: Request) {

@@ -4,6 +4,7 @@ import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { readBody } from "@/lib/kbos/validators";
 import { serverError } from "@/lib/kbos/http";
 import { PostError, updatePost } from "@/lib/kbos/social-posts";
+import { syncPublications } from "@/lib/kbos/content-cycle";
 import { notifyApprovalNeeded } from "@/lib/kbos/social-notify";
 import { POST_FORMATS, POST_STATUS } from "@/lib/kbos/social-import";
 
@@ -39,6 +40,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if ("error" in parsed) return parsed.error;
     const { scheduledAt, ...rest } = parsed.data;
     const r = await updatePost(id, { ...rest, ...(scheduledAt !== undefined ? { scheduledAt: scheduledAt ? new Date(scheduledAt) : null } : {}) });
+    if (rest.networks !== undefined) await syncPublications(id, rest.networks);
     if (r.sentToApproval) await notifyApprovalNeeded(r.post);
     return NextResponse.json({ item: r.post });
   } catch (e) {

@@ -286,6 +286,37 @@ export const SCHEMA_STEPS: { id: string; sql: string }[] = [
 )` },
   { id: "projects.members.1", sql: `CREATE UNIQUE INDEX IF NOT EXISTS kbos_project_members_uq ON kbos_project_members(project_id, user_id)` },
   { id: "projects.members.2", sql: `CREATE INDEX IF NOT EXISTS kbos_project_members_user_idx ON kbos_project_members(user_id)` },
+  { id: "conteudo.ciclos.0", sql: `ALTER TABLE kbos_project_members ADD COLUMN IF NOT EXISTS access text NOT NULL DEFAULT 'acompanhar'` },
+  { id: "conteudo.ciclos.1", sql: `ALTER TABLE kbos_projects ADD COLUMN IF NOT EXISTS recurring boolean NOT NULL DEFAULT false` },
+  { id: "conteudo.ciclos.2", sql: `ALTER TABLE kbos_projects ADD COLUMN IF NOT EXISTS parent_id uuid REFERENCES kbos_projects(id) ON DELETE SET NULL` },
+  { id: "conteudo.ciclos.3", sql: `CREATE INDEX IF NOT EXISTS kbos_projects_parent_idx ON kbos_projects(parent_id)` },
+  { id: "conteudo.ciclos.4", sql: `ALTER TABLE kbos_social_posts ADD COLUMN IF NOT EXISTS takes jsonb NOT NULL DEFAULT '[]'::jsonb` },
+  { id: "conteudo.ciclos.5", sql: `CREATE TABLE IF NOT EXISTS kbos_post_publications (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ post_id uuid NOT NULL REFERENCES kbos_social_posts(id) ON DELETE CASCADE,
+ network text NOT NULL,
+ status text NOT NULL DEFAULT 'pendente',
+ scheduled_at timestamptz,
+ published_at timestamptz,
+ url text,
+ external_id text,
+ error text,
+ created_at timestamptz NOT NULL DEFAULT now(),
+ updated_at timestamptz NOT NULL DEFAULT now()
+)` },
+  { id: "conteudo.ciclos.6", sql: `CREATE UNIQUE INDEX IF NOT EXISTS kbos_post_publications_uq ON kbos_post_publications(post_id, network)` },
+  { id: "conteudo.ciclos.7", sql: `CREATE TABLE IF NOT EXISTS kbos_project_cycles (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ project_id uuid NOT NULL REFERENCES kbos_projects(id) ON DELETE CASCADE,
+ month text NOT NULL,
+ status text NOT NULL DEFAULT 'aberto',
+ summary jsonb,
+ note text,
+ closed_at timestamptz,
+ closed_by uuid REFERENCES kbos_users(id) ON DELETE SET NULL,
+ created_at timestamptz NOT NULL DEFAULT now()
+)` },
+  { id: "conteudo.ciclos.8", sql: `CREATE UNIQUE INDEX IF NOT EXISTS kbos_project_cycles_uq ON kbos_project_cycles(project_id, month)` },
 ];
 
 /**

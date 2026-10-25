@@ -69,3 +69,32 @@ export function lumePairCode(secret: string, nowSec = Math.floor(Date.now() / 10
   const code = Array.from(d.subarray(0, 8), (b) => ALFA[b % ALFA.length]).join("");
   return { code, expiresAt: (j + 2) * 600 };
 }
+
+// ── Takes para o calendário: o KBOS fala com o Lume COMO o cliente ─────────────────────────────
+// Mesmo cookie que o Lume cria em /entrar-cliente (`sessao_cliente` no Python): `<exp>.<b64url(pasta)>.<hmac("cliente:<exp>:<pasta>")>`.
+// Assim o próprio Lume força a pasta da empresa; o KBOS nunca usa a chave de admin em nome do cliente.
+export function lumeClientCookie(secret: string, pasta: string, nowSec = Math.floor(Date.now() / 1000)): string {
+  const exp = nowSec + 300;
+  const b64 = Buffer.from(pasta, "utf8").toString("base64url");
+  return `lume_c=${exp}.${b64}.${createHmac("sha256", secret).update(`cliente:${exp}:${pasta}`).digest("hex")}`;
+}
+
+export type LumeTake = { id: number; nome: string; tipo: string; segundo: number | null; data: string | null; caminho?: string };
+
+/** Resultado do Lume (`/buscar` ou `/catalogo`) → takes. O caminho serve só para filtrar no servidor; não vai para o navegador. */
+export function toTakes(json: unknown): LumeTake[] {
+  const list = (json && typeof json === "object" && Array.isArray((json as { resultados?: unknown[] }).resultados) ? (json as { resultados: unknown[] }).resultados : []) as Record<string, unknown>[];
+  const seen = new Set<string>();
+  const out: LumeTake[] = [];
+  for (const r of list) {
+    const id = Number(r.id);
+    if (!Number.isInteger(id) || id <= 0) continue;
+    const nome = String(r.nome || String(r.caminho || "").split("/").pop() || `Take ${id}`).slice(0, 200);
+    const segundo = typeof r.segundo === "number" && Number.isFinite(r.segundo) ? r.segundo : null;
+    const key = `${nome}:${segundo === null ? "" : Math.round(segundo)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ id, nome, tipo: String(r.tipo || ""), segundo, data: typeof r.data === "string" ? r.data : null, caminho: String(r.caminho || "") });
+  }
+  return out.slice(0, 60);
+}

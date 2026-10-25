@@ -113,6 +113,8 @@ export const projectPatchSchema = nonEmpty(
     contactId: uuidField.nullable().optional(),
     valor: moneyField.nullable().optional(),
     postLimit: z.number().int().min(0).max(1000).nullable().optional(),
+    recurring: z.boolean().optional(),
+    parentId: uuidField.nullable().optional(),
     prazo: dateField.nullable().optional(),
     slug: z
       .string()

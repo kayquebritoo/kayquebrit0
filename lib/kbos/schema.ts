@@ -129,6 +129,10 @@ export const projects = pgTable("kbos_projects", {
   budgetId: uuid("budget_id").references(() => budgets.id, { onDelete: "set null" }),
   /** Posts por mês que o plano cobre (null = padrão da categoria; 0 = sem limite). */
   postLimit: integer("post_limit"),
+  /** 0028: contrato recorrente (fica ativo; cada mês é um ciclo em `kbos_project_cycles`). */
+  recurring: boolean("recurring").notNull().default(false),
+  /** 0028: operação de um cliente maior (ex.: Hotel → Grupo VIP). Contrato e financeiro ficam no pai. */
+  parentId: uuid("parent_id"),
   createdAt: ts("created_at"),
   updatedAt: ts("updated_at"),
 });
@@ -140,6 +144,8 @@ export const projectMembers = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
     userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    /** 0028: "acompanhar" (vê e aprova) ou "gestao" (gerente de marketing: planeja, roteiriza e edita todo o conteúdo). */
+    access: text("access").notNull().default("acompanhar"),
     createdAt: ts("created_at"),
   },
   (t) => [uniqueIndex("kbos_project_members_uq").on(t.projectId, t.userId)],
@@ -888,6 +894,47 @@ export const socialPosts = pgTable("kbos_social_posts", {
   dismissedAt: timestamp("dismissed_at", { withTimezone: true }),
   /** Quem cadastrou (cliente, pelo portal). */
   createdBy: uuid("created_by"),
+  /** 0028: takes escolhidos no Lume para este conteúdo. */
+  takes: jsonb("takes").$type<PostTake[]>().notNull().default([]),
   createdAt: ts("created_at"),
   updatedAt: ts("updated_at"),
 });
+
+export type PostTake = { id: number; nome: string; thumb: string | null; t: number | null; by: string | null; at: string };
+
+/** 0028: uma linha por rede em que o conteúdo sai. O conteúdo é a entrega; a publicação é a distribuição. */
+export const postPublications = pgTable(
+  "kbos_post_publications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    postId: uuid("post_id").notNull().references(() => socialPosts.id, { onDelete: "cascade" }),
+    network: text("network").notNull(),
+    /** pendente · agendado · publicado · erro · cancelado */
+    status: text("status").notNull().default("pendente"),
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    url: text("url"),
+    externalId: text("external_id"),
+    error: text("error"),
+    createdAt: ts("created_at"),
+    updatedAt: ts("updated_at"),
+  },
+  (t) => [uniqueIndex("kbos_post_publications_uq").on(t.postId, t.network)],
+);
+
+/** 0028: ciclo mensal de um projeto recorrente. Fechar o mês guarda o retrato dos indicadores; o projeto segue ativo. */
+export const projectCycles = pgTable(
+  "kbos_project_cycles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    month: text("month").notNull(),
+    status: text("status").notNull().default("aberto"),
+    summary: jsonb("summary").$type<Record<string, unknown>>(),
+    note: text("note"),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    closedBy: uuid("closed_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: ts("created_at"),
+  },
+  (t) => [uniqueIndex("kbos_project_cycles_uq").on(t.projectId, t.month)],
+);

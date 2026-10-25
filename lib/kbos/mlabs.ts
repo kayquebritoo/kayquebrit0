@@ -92,7 +92,7 @@ export function formatOfChannels(keys: string[]): PostFormat {
   return "outro";
 }
 
-const RANK: Record<PostStatus, number> = { erro: 5, postado: 4, agendado: 3, aprovado: 2, aprovacao: 1, ajustes: 1, producao: 0, captacao: 0, roteiro: 0 };
+const RANK: Record<PostStatus, number> = { erro: 5, postado: 4, agendado: 3, aprovado: 2, aprovacao: 1, ajustes: 1, producao: 0, captacao: 0, roteiro: 0, cancelado: 0 };
 const titleOf = (c: string) => (c.split(/\n/)[0] || "").replace(/\s+/g, " ").trim().slice(0, 90) || "Sem título";
 
 /** Uma arte publicada em várias redes vira um só post (mesma legenda, mesmo horário, mesmo perfil). */
