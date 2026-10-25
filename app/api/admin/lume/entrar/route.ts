@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
+import { appUrlEnv } from "@/lib/kbos/email";
 import { LUME_ONLINE_DEFAULT, lumeEntryUrl, lumePastaPath, safeLumePath } from "@/lib/kbos/lume";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,7 @@ export async function GET(req: Request) {
   const denied = deny(await sessionUser(), "admin");
   if (denied) return denied;
   const secret = (process.env.LUME_API_TOKEN || "").trim();
-  if (!secret) return NextResponse.redirect(new URL("/admin/lume?erro=config", req.url));
+  if (!secret) return NextResponse.redirect(new URL("/admin/lume?erro=config", appUrlEnv()));
   const base = (process.env.LUME_URL || LUME_ONLINE_DEFAULT).trim();
   const sp = new URL(req.url).searchParams;
   const pasta = (sp.get("pasta") || "").trim().slice(0, 80);

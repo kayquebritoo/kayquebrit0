@@ -4,9 +4,11 @@ import { cookies } from "next/headers";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { exchangeCode, listMetaAccounts, MetaError, metaRedirectUri, metaStateSig } from "@/lib/kbos/meta";
 import { saveMetaAccounts } from "@/lib/kbos/social-publish";
+import { appUrlEnv } from "@/lib/kbos/email";
 
 export const dynamic = "force-dynamic";
-const back = (req: Request, q: string) => NextResponse.redirect(new URL(`/admin/ajustes/?${q}`, req.url));
+// Atrás do Caddy o req.url traz o host interno (0.0.0.0:3000): volta sempre pela URL pública.
+const back = (_req: Request, q: string) => NextResponse.redirect(new URL(`/admin/ajustes/?${q}`, appUrlEnv()));
 
 // GET — volta do login da Meta: troca o código, lista Páginas + Instagram e guarda os tokens criptografados.
 export async function GET(req: Request) {

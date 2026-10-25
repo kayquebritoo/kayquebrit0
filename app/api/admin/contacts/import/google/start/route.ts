@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
-import { hostBaseFromRequest, appUrlEnv } from "@/lib/kbos/email";
+import { appUrlEnv } from "@/lib/kbos/email";
 import { GOOGLE_CONTACTS_SCOPE } from "@/lib/kbos/google-contacts";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/admin/contacts/import/google/start — leva o admin ao consentimento do Google (só leitura de contatos).
-export async function GET(req: Request) {
+export async function GET() {
   const denied = deny(await sessionUser(), "admin");
   if (denied) return denied;
-  const base = hostBaseFromRequest(req) ?? appUrlEnv();
+  // redirect_uri e voltas sempre pela URL pública (atrás do Caddy o host do request pode ser o interno).
+  const base = appUrlEnv();
   const id = (process.env.GOOGLE_CLIENT_ID || "").trim();
   if (!id || !(process.env.GOOGLE_CLIENT_SECRET || "").trim()) {
     return NextResponse.redirect(new URL("/admin/crm?importar=erro&motivo=google-config", base));

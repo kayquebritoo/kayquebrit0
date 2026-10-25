@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
-import { hostBaseFromRequest, appUrlEnv } from "@/lib/kbos/email";
+import { appUrlEnv } from "@/lib/kbos/email";
 import { ensureRedis, getRedis } from "@/lib/kbos/jobs";
 import { fetchGoogleContacts } from "@/lib/kbos/google-contacts";
 
@@ -15,7 +15,8 @@ export async function GET(req: Request) {
   if (denied) return denied;
   if (!user) return Response.json({ error: "Não autenticado." }, { status: 401 });
   const url = new URL(req.url);
-  const base = hostBaseFromRequest(req) ?? appUrlEnv();
+  // redirect_uri e voltas sempre pela URL pública (atrás do Caddy o host do request pode ser o interno).
+  const base = appUrlEnv();
   const fail = (motivo: string) => NextResponse.redirect(new URL(`/admin/crm?importar=erro&motivo=${motivo}`, base));
   const cookie = req.headers.get("cookie")?.split(";").map((c) => c.trim()).find((c) => c.startsWith("kbos_gcontacts_state="))?.split("=")[1];
   if (url.searchParams.get("error")) return fail("negado");
