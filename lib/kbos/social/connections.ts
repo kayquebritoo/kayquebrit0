@@ -16,6 +16,8 @@ const SYSTEM: Actor = { kind: "sistema", userId: null };
 /** Redes para os botões: sem chave no servidor = "Em breve" (desligado, sem erro). */
 export const providerStatus = () =>
   PROVIDERS.map((p) => ({ id: p.id, label: p.label, networks: p.networks, scopes: p.scopes, canPublish: p.canPublish, configured: socialCryptoReady() && p.configured() }));
+/** O mesmo, sem a lista de escopos (para o portal e o link público). */
+export const publicProviderStatus = () => providerStatus().map((p) => ({ id: p.id, label: p.label, networks: p.networks, canPublish: p.canPublish, configured: p.configured }));
 
 // ── auditoria ──────────────────────────────────────────────────────────────────
 export async function logAudit(action: string, actor: Actor, e: { provider?: string | null; projectId?: string | null; connectionId?: string | null; scopes?: string[] | string | null; detail?: Record<string, unknown> } = {}) {

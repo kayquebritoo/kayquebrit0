@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { PIPELINE } from "@/lib/kbos/constants";
 import ApproveButtons from "@/components/kbos/ApproveButtons";
 import PortalLumeCard from "@/components/kbos/PortalLumeCard";
+import SocialConnectPanel from "@/components/kbos/social/SocialConnectPanel";
 import ProjectChat from "@/components/kbos/ProjectChat";
 import PortalPosts from "@/components/kbos/PortalPosts";
 import OverduePosts from "@/components/kbos/OverduePosts";
@@ -157,6 +158,7 @@ export default function PortalContent({ firstName }: { firstName?: string }) {
         })}
       </div>
       <PortalLumeCard />
+      <SocialConnectPanel />
       {invoices.length > 0 && (
         <section className="kb-glass p-5" aria-label="Pagamentos">
           <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">Pagamentos</p>

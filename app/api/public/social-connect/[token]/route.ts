@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withRateLimit, clientIp } from "@/lib/kbos/rate-limit";
 import { serverError } from "@/lib/kbos/http";
-import { disconnectAccount, linkAccounts, providerStatus, resolveConnectLink } from "@/lib/kbos/social/connections";
+import { disconnectAccount, linkAccounts, publicProviderStatus, resolveConnectLink } from "@/lib/kbos/social/connections";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ token: string }> };
@@ -15,7 +15,7 @@ export async function GET(req: Request, { params }: Ctx) {
   try {
     const link = await resolveConnectLink((await params).token);
     if (!link) return NextResponse.json({ error: "Link vencido ou cancelado. Peça um novo ao Kayque." }, { status: 404, headers: noStore });
-    return NextResponse.json({ project: link.project, expiresAt: link.expiresAt, providers: providerStatus().map(({ scopes: _s, ...p }) => p), items: await linkAccounts(link.id) }, { headers: noStore });
+    return NextResponse.json({ project: link.project, expiresAt: link.expiresAt, providers: publicProviderStatus(), items: await linkAccounts(link.id) }, { headers: noStore });
   } catch (e) { return serverError(e); }
 }
 

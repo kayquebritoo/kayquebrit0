@@ -5,6 +5,7 @@ import ClientHubLinks from "@/components/kbos/ClientHubLinks";
 import ProjectMembers from "@/components/kbos/ProjectMembers";
 import CycleCard from "@/components/kbos/CycleCard";
 import SplitOperations from "@/components/kbos/SplitOperations";
+import ProjectSocial from "@/components/kbos/social/ProjectSocial";
 import { PIPELINE } from "@/lib/kbos/constants";
 
 export type PanelProject = {
@@ -151,6 +152,7 @@ export default function ProjectPanel({ project, contacts, projects = [], onClose
         <div className="mt-4"><ClientHubLinks name={project.contactName} company={project.contactCompany} /></div>
         <ProjectMembers projectId={project.id} />
         <CycleCard key={project.id} projectId={project.id} mode="admin" />
+        <ProjectSocial key={`redes-${project.id}`} projectId={project.id} projectName={project.titulo} />
         <SplitOperations projectId={project.id} onDone={onChanged} />
 
         <form onSubmit={save} className="kb-glass mt-5 grid gap-3 p-4">

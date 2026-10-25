@@ -1,75 +1,156 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import ConnectLinkButton from "@/components/kbos/social/ConnectLinkButton";
+import { NETS, NetMark, connectHref, netInfo, returnMessage, type ProviderInfo, type SocialAccount } from "@/components/kbos/social/networks";
 
-type Account = { id: string; projectId: string | null; network: string; name: string; username: string | null; pictureUrl: string | null; status: string; lastError: string | null };
 type Project = { id: string; titulo: string; parentId?: string | null; categoria?: string };
-const NET: Record<string, string> = { instagram: "Instagram", facebook: "Facebook" };
-const MSG: Record<string, string> = {
-  ok: "Conectado. Agora diga de qual empresa é cada conta.",
-  cancelado: "Login da Meta cancelado.",
-  estado: "O login expirou ou veio de outra aba. Tente de novo.",
-  config: "Falta configurar o app da Meta na VPS (META_APP_ID e META_APP_SECRET).",
-};
+type Audit = { id: string; action: string; provider: string | null; project: string | null; actorKind: string; actor: string | null; ip: string | null; scopes: string | null; detail: Record<string, unknown> | null; createdAt: string };
+const PERSONAL = "Kayque Brito (pessoal)";
+const ACTION: Record<string, string> = { conectar: "conectou", desconectar: "desconectou", "ligar-projeto": "mudou de cliente", "link-criado": "criou link", "link-cancelado": "cancelou link", "renovar-falhou": "renovação falhou", "cliente-pessoal": "criou cliente pessoal" };
+const WHO: Record<string, string> = { admin: "Admin", cliente: "Cliente (portal)", link: "Cliente (link)", sistema: "KBOS" };
+const OPTION: Record<string, string> = { meta: "9", youtube: "10", google: "10", tiktok: "11", pinterest: "12", linkedin: "13" };
 
-/** Ajustes → Redes sociais: conecta Páginas do Facebook e Instagram profissional (Meta) e liga cada conta a uma operação. */
+/** Ajustes → Redes sociais: contas conectadas de todos os clientes, conectar por cliente, link de conexão e auditoria. */
 export default function SocialAccounts() {
-  const [items, setItems] = useState<Account[] | null>(null);
-  const [configured, setConfigured] = useState(true);
+  const [items, setItems] = useState<SocialAccount[] | null>(null);
+  const [providers, setProviders] = useState<ProviderInfo[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [audit, setAudit] = useState<Audit[] | null>(null);
+  const [target, setTarget] = useState("");
   const [msg, setMsg] = useState("");
+
   const load = useCallback(async () => {
-    const [a, p] = await Promise.all([fetch("/api/admin/social/accounts/", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null), fetch("/api/projects", { cache: "no-store" }).then((r) => (r.ok ? r.json() : { items: [] })).catch(() => ({ items: [] }))]);
-    setItems(a?.items ?? []); setConfigured(a?.configured ?? false);
-    setProjects((p.items ?? []).filter((x: Project) => x.categoria === "social" || x.parentId));
+    const [a, p] = await Promise.all([
+      fetch("/api/admin/social/accounts/", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch("/api/projects", { cache: "no-store" }).then((r) => (r.ok ? r.json() : { items: [] })).catch(() => ({ items: [] })),
+    ]);
+    setItems(a?.items ?? []); setProviders(a?.providers ?? []);
+    setProjects((p.items ?? []).filter((x: Project) => x.categoria === "social" || x.parentId || x.titulo === PERSONAL));
   }, []);
   useEffect(() => {
-    const sp = new URLSearchParams(window.location.search);
-    const r = sp.get("redes");
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- mensagem da volta do login da Meta
-    if (r) setMsg(r === "erro" ? `A Meta recusou: ${sp.get("msg") || "erro"}` : r === "ok" ? `${MSG.ok} (${sp.get("contas") ?? 0} contas)` : MSG[r] ?? "");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mensagem da volta do login da rede
+    setMsg(returnMessage(new URLSearchParams(window.location.search)));
     void load();
   }, [load]);
 
-  async function assign(a: Account, projectId: string) {
+  const personal = projects.find((p) => p.titulo === PERSONAL);
+  const groups = useMemo(() => {
+    const m = new Map<string, { title: string; items: SocialAccount[] }>();
+    for (const a of items ?? []) {
+      const k = a.projectId ?? "";
+      if (!m.has(k)) m.set(k, { title: a.project ?? "Sem cliente (não publica)", items: [] });
+      m.get(k)!.items.push(a);
+    }
+    return [...m.entries()].sort(([a], [b]) => (a === "" ? 1 : b === "" ? -1 : 0));
+  }, [items]);
+  const targetName = projects.find((p) => p.id === target)?.titulo;
+
+  async function assign(a: SocialAccount, projectId: string) {
     const r = await fetch("/api/admin/social/accounts/", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: a.id, projectId: projectId || null }) });
     setMsg(r.ok ? "Salvo." : "Não consegui salvar."); await load();
   }
-  async function remove(a: Account) {
-    if (!confirm(`Desconectar ${a.name} (${NET[a.network]})? Agendamentos dessa conta param.`)) return;
-    await fetch(`/api/admin/social/accounts/?id=${a.id}`, { method: "DELETE" }); await load();
+  async function remove(a: SocialAccount) {
+    if (!confirm(`Desconectar ${a.name} (${netInfo(a.network).label})? Agendamentos dessa conta param e o acesso é revogado na rede.`)) return;
+    const r = await fetch(`/api/admin/social/accounts/?id=${a.id}`, { method: "DELETE" });
+    const j = await r.json().catch(() => ({}));
+    setMsg(r.ok ? (j.revoked === true ? "Desconectado e revogado na rede." : j.revoked === "manual" ? "Desconectado. No Pinterest, o cliente remove o app em Configurações → Apps." : "Desconectado (as outras contas do mesmo login seguem ativas).") : j.error || "Não consegui desconectar.");
+    await load();
+  }
+  async function createPersonal() {
+    const r = await fetch("/api/admin/social/personal/", { method: "POST" });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok) { setTarget(j.id); setMsg(`Cliente "${PERSONAL}" pronto. Conecte suas contas pessoais nele.`); }
+    await load();
+  }
+  async function loadAudit() {
+    const r = await fetch("/api/admin/social/audit/", { cache: "no-store" }).catch(() => null);
+    setAudit(r?.ok ? (await r.json()).items : []);
   }
 
+  const providerList = providers.length ? providers : [];
+
   return (
-    <div className="kb-glass grid gap-3 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-medium">Redes sociais (publicar pelo KBOS)</p>
-          <p className="kb-muted text-sm">Instagram e Facebook pela Meta. O KBOS publica no horário do post; cada empresa com a própria conta.</p>
-        </div>
-        {/* o login da Meta é uma navegação completa (redirect do servidor), não uma rota do app */}
-        <form action="/api/admin/social/meta/connect/" method="get"><button className="kb-btn min-h-11">{items?.length ? "Reconectar / adicionar" : "Conectar com a Meta"}</button></form>
+    <div className="kb-glass grid gap-4 p-4 sm:p-5">
+      <div className="min-w-0">
+        <p className="font-medium">Redes sociais (publicar pelo KBOS)</p>
+        <p className="kb-muted text-sm">Cada cliente conecta as próprias contas pelo login oficial da rede. O KBOS publica no horário do post, na conta do cliente do post.</p>
       </div>
-      {!configured && <p className="kb-tag late w-full justify-start rounded-xl! px-3! py-2! text-sm">{MSG.config} Veja o passo a passo em docs/PLANO-CONTEUDO.md.</p>}
       {msg && <p role="status" className="text-sm">{msg}</p>}
-      {items?.map((a) => (
-        <div key={a.id} className="kb-row flex-wrap gap-2">
-          <span className="flex min-w-0 items-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element -- foto de perfil vinda da Meta */}
-            {a.pictureUrl ? <img src={a.pictureUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" /> : <span className="h-8 w-8 shrink-0 rounded-full bg-white/10" />}
-            <span className="min-w-0">
-              <span className="block truncate text-sm">{a.name}{a.username ? ` · @${a.username}` : ""}</span>
-              <span className={`block text-xs ${a.status === "ativo" ? "kb-faint" : "text-[#ff9f5a]"}`}>{NET[a.network] ?? a.network}{a.status !== "ativo" ? " · conexão expirada, reconecte" : ""}</span>
-            </span>
-          </span>
-          <span className="flex shrink-0 gap-2">
-            <select className="kb-control min-h-11" aria-label={`Empresa de ${a.name}`} value={a.projectId ?? ""} onChange={(e) => void assign(a, e.target.value)}>
-              <option value="">— não publicar —</option>
-              {projects.map((p) => <option key={p.id} value={p.id}>{p.titulo}</option>)}
-            </select>
-            <button type="button" className="kb-chip min-h-11" onClick={() => void remove(a)}>×</button>
-          </span>
+
+      <div className="kb-card gap-3">
+        <label className="kb-field">
+          <span className="kb-faint text-xs">Conectar para qual cliente?</span>
+          <select className="kb-control" value={target} onChange={(e) => setTarget(e.target.value)}>
+            <option value="">Escolho depois (a conta entra sem cliente)</option>
+            {projects.map((p) => <option key={p.id} value={p.id}>{p.titulo}</option>)}
+          </select>
+        </label>
+        {!personal && <button type="button" className="kb-chip min-h-11 justify-self-start px-3 text-sm" onClick={() => void createPersonal()}>+ Criar meu cliente “{PERSONAL}”</button>}
+        <div className="grid gap-2 sm:grid-cols-2">
+          {providerList.map((p) => (
+            <a key={p.id} href={p.configured ? connectHref(p.id, { project: target || null, back: "/admin/ajustes/" }) : undefined} aria-disabled={!p.configured}
+              className={`flex min-h-14 items-center gap-3 rounded-2xl border p-2.5 ${p.configured ? "border-[var(--kb-line-strong)] bg-[var(--kb-chip)] hover:bg-[var(--kb-chip-hover)]" : "pointer-events-none border-[var(--kb-line)] opacity-55"}`}>
+              <span className="flex -space-x-2">{p.networks.map((n) => <NetMark key={n} network={n} size={34} />)}</span>
+              <span className="min-w-0">
+                <b className="block truncate text-sm">{p.label}</b>
+                <small className="kb-faint block text-xs">{p.configured ? "Conectar" : `Em breve · configure na VPS (opção ${OPTION[p.id] ?? "?"})`}</small>
+              </span>
+            </a>
+          ))}
+        </div>
+        {target && <ConnectLinkButton key={target} projectId={target} projectName={targetName} />}
+        {!target && <p className="kb-faint text-xs">Escolha um cliente para mandar a ele um link de conexão (vale 7 dias, sem senha do KBOS).</p>}
+      </div>
+
+      {items === null && <div className="kb-skel h-24" />}
+      {items?.length === 0 && <p className="kb-muted text-sm">Nenhuma conta conectada ainda.</p>}
+      {groups.map(([pid, g]) => (
+        <div key={pid || "none"} className="flex flex-col">
+          <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">{g.title}</p>
+          {g.items.map((a) => (
+            <div key={a.id} className="kb-row flex-wrap gap-2">
+              <span className="flex min-w-0 flex-1 items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element -- foto de perfil vinda da rede */}
+                {a.pictureUrl ? <img src={a.pictureUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" /> : <NetMark network={a.network} size={32} />}
+                <span className="min-w-0">
+                  <span className="block truncate text-sm">{a.name}{a.username ? ` · @${a.username}` : ""}</span>
+                  <span className={`block text-xs ${a.status === "ativo" ? "kb-faint" : "text-[var(--kb-soon)]"}`}>
+                    {netInfo(a.network).label}{a.status !== "ativo" ? " · expirou, reconecte" : ""}{a.via === "link" ? " · pelo link" : a.via === "portal" ? " · pelo portal" : ""}
+                  </span>
+                </span>
+              </span>
+              <span className="flex shrink-0 gap-2">
+                <select className="kb-control min-h-11 max-w-48" aria-label={`Cliente de ${a.name}`} value={a.projectId ?? ""} onChange={(e) => void assign(a, e.target.value)}>
+                  <option value="">— não publicar —</option>
+                  {projects.map((p) => <option key={p.id} value={p.id}>{p.titulo}</option>)}
+                </select>
+                <button type="button" className="kb-chip min-h-11 px-3 text-sm" onClick={() => void remove(a)} aria-label={`Desconectar ${a.name}`}>Desconectar</button>
+              </span>
+            </div>
+          ))}
         </div>
       ))}
+
+      <details className="kb-card" onToggle={(e) => { if ((e.currentTarget as HTMLDetailsElement).open && !audit) void loadAudit(); }}>
+        <summary className="min-h-11 cursor-pointer content-center text-sm font-medium">Registro de conexões (auditoria)</summary>
+        {audit === null && <div className="kb-skel mt-2 h-16" />}
+        {audit?.length === 0 && <p className="kb-muted text-sm">Nada registrado ainda.</p>}
+        <ul className="mt-1 flex flex-col">
+          {audit?.map((x) => (
+            <li key={x.id} className="kb-row flex-col items-start gap-0.5 text-xs">
+              <span className="text-sm">
+                <b>{x.actor || WHO[x.actorKind] || x.actorKind}</b> {ACTION[x.action] ?? x.action}
+                {x.provider ? ` · ${NETS.find((n) => n.provider === x.provider)?.label ?? x.provider}` : ""}{x.project ? ` · ${x.project}` : ""}
+              </span>
+              <span className="kb-faint">
+                {new Date(x.createdAt).toLocaleString("pt-BR")} · {WHO[x.actorKind] ?? x.actorKind}{x.ip ? ` · IP ${x.ip}` : ""}
+                {Array.isArray(x.detail?.contas) ? ` · ${(x.detail!.contas as string[]).join(", ")}` : ""}
+              </span>
+              {x.scopes && <span className="kb-faint break-all">Escopos: {x.scopes}</span>}
+            </li>
+          ))}
+        </ul>
+      </details>
     </div>
   );
 }

@@ -37,6 +37,32 @@ ask_secret() {
   printf '%s' "$val"
 }
 
+# Garante a chave que cifra os tokens das redes sociais (nunca é impressa).
+ensure_social_key() {
+  local cur
+  cur=$(getvar SOCIAL_TOKEN_KEY); cur=${cur//\"/}
+  if [ ${#cur} -lt 32 ]; then
+    setvar SOCIAL_TOKEN_KEY "$(openssl rand -hex 32)"
+    echo "Chave de criptografia dos tokens gerada e guardada (não precisa anotar)."
+  fi
+}
+
+# Testa o par ID/segredo do app da Meta. O segredo vai pelo stdin (não aparece no ps)
+# e a resposta (que traz um token) nunca é impressa. Retorno 0 = válido.
+meta_secret_ok() {
+  local id="$1" secret="$2" resp msg
+  resp=$(printf 'client_id=%s&client_secret=%s&grant_type=client_credentials' "$id" "$secret" \
+    | curl -s -m 15 -X POST --data @- https://graph.facebook.com/oauth/access_token 2>/dev/null) || resp=""
+  if printf '%s' "$resp" | grep -q '"access_token"'; then
+    echo "válido"
+    return 0
+  fi
+  echo "INVÁLIDO"
+  msg=$(printf '%s' "$resp" | sed -n 's/.*"message" *: *"\([^"]*\)".*/\1/p' | head -1)
+  if [ -n "$msg" ]; then echo "  Meta respondeu: $msg"; elif [ -z "$resp" ]; then echo "  (sem resposta da Meta: confira a internet da VPS)"; fi
+  return 1
+}
+
 profiles=(--profile evolution)
 [ "$(getvar STT_BASE_URL)" = "http://whisper:8000/v1" ] && profiles+=(--profile voz)
 
@@ -59,6 +85,10 @@ while true; do
   echo " 7) Ativar login com Google"
   echo " 8) Minha voz no assistente (Fish Audio, 24 h no ar)"
   echo " 9) Publicar no Instagram/Facebook (app da Meta)"
+ echo "10) YouTube e Perfil da Empresa no Google"
+ echo "11) TikTok"
+ echo "12) Pinterest"
+ echo "13) LinkedIn"
   echo " 0) Sair"
   read -r -p "Escolha: " opt
   case "$opt" in
@@ -124,6 +154,18 @@ while true; do
         if [ -n "$v" ]; then s="configurado"; else s="não configurado"; fi
         printf ' %-22s %s\n' "$k" "$s"
       done
+      for k in SOCIAL_TOKEN_KEY GOOGLE_SOCIAL_CLIENT_ID GOOGLE_SOCIAL_CLIENT_SECRET TIKTOK_CLIENT_KEY TIKTOK_CLIENT_SECRET PINTEREST_APP_ID PINTEREST_APP_SECRET LINKEDIN_CLIENT_ID LINKEDIN_CLIENT_SECRET; do
+        v=$(getvar "$k"); v=${v//\"/}
+        if [ -n "$v" ]; then s="configurado"; else s="não configurado"; fi
+        printf ' %-28s %s\n' "$k" "$s"
+      done
+      printf ' %-28s %s\n' "TIKTOK_AUDITED" "$(getvar TIKTOK_AUDITED | sed 's/^$/0/')"
+      mid=$(getvar META_APP_ID); mid=${mid//\"/}; msec=$(getvar META_APP_SECRET); msec=${msec//\"/}
+      if [ -n "$mid" ] && [ -n "$msec" ]; then
+        printf ' %-28s ' "Meta (ID + segredo)"
+        meta_secret_ok "$mid" "$msec" | head -1 || true
+      fi
+      unset mid msec
       ;;
     6)
       cur=$(getvar EVOLUTION_WEBHOOK_TOKEN); cur=${cur//\"/}
@@ -186,22 +228,148 @@ while true; do
       echo
       echo "Em https://developers.facebook.com/apps crie um app (tipo Empresa) e, em Login do Facebook > Configurações,"
       echo "cole em 'URIs de redirecionamento do OAuth válidos' (exatamente):"
-      echo "https://kbos.kayquebrito.com.br/api/admin/social/meta/callback/"
+      echo "https://kbos.kayquebrito.com.br/api/social/meta/callback/"
+      echo "(a URI antiga .../api/admin/social/meta/callback/ pode continuar lá, ainda funciona)"
       echo "O ID e a Chave Secreta ficam em Configurações do app > Básico."
       echo
+      cur_id=$(getvar META_APP_ID); cur_id=${cur_id//\"/}
+      cur_sec=$(getvar META_APP_SECRET); cur_sec=${cur_sec//\"/}
+      if [ -n "$cur_id" ] && [ -n "$cur_sec" ]; then
+        printf 'Testando o par gravado na Meta… '
+        if meta_secret_ok "$cur_id" "$cur_sec"; then
+          echo "O par gravado está válido. Você pode colar de novo só se quiser trocar."
+        else
+          echo ">> O segredo gravado está INVÁLIDO: cole de novo."
+        fi
+      fi
+      unset cur_sec
       read -r -p "ID do app da Meta: " meta_id
       meta_id=$(printf '%s' "$meta_id" | tr -cd '0-9')
       if [ ${#meta_id} -lt 8 ]; then echo "O ID do app é só número (uns 15 dígitos). Nada foi alterado."; continue; fi
       meta_secret=$(ask_secret "Chave secreta do app (não aparece na tela): ")
       meta_secret=$(printf '%s' "$meta_secret" | tr -d '[:space:]"')
       if [[ ! "$meta_secret" =~ ^[a-f0-9]{32}$ ]]; then echo "A chave secreta tem 32 letras/números (0-9, a-f). Nada foi alterado."; unset meta_secret; continue; fi
+      printf 'Validando o novo par na Meta… '
+      if ! meta_secret_ok "$meta_id" "$meta_secret"; then
+        echo "!!! ATENÇÃO: a Meta recusou esse ID/segredo. Confira se copiou o ID e a chave do MESMO app (Configurações > Básico)."
+        read -r -p "Gravar mesmo assim? [s/N] " force
+        if [[ ! "${force:-n}" =~ ^[sSyY]$ ]]; then echo "Nada foi alterado."; unset meta_secret; continue; fi
+      fi
       setvar META_APP_ID "$meta_id"
       setvar META_APP_SECRET "$meta_secret"
       setvar APP_URL "https://kbos.kayquebrito.com.br"
+      ensure_social_key
       echo "Chave recebida (termina em …${meta_secret: -4})."
       unset meta_secret
       apply
       echo "Agora abra https://kbos.kayquebrito.com.br/admin/ajustes/ e toque em 'Conectar com a Meta'."
+      ;;
+    10)
+      echo
+      echo "No Google Cloud (console.cloud.google.com > APIs e serviços > Credenciais), crie um cliente OAuth"
+      echo "do tipo Aplicativo da Web e cadastre as DUAS URIs de redirecionamento (exatamente):"
+      echo "https://kbos.kayquebrito.com.br/api/social/youtube/callback/"
+      echo "https://kbos.kayquebrito.com.br/api/social/google/callback/"
+      echo "Ative também as APIs: YouTube Data API v3 e as do Perfil da Empresa (Business Profile)."
+      echo
+      g_id=""; g_secret=""
+      lid=$(getvar GOOGLE_CLIENT_ID); lid=${lid//\"/}; lsec=$(getvar GOOGLE_CLIENT_SECRET); lsec=${lsec//\"/}
+      if [ -n "$lid" ] && [ -n "$lsec" ]; then
+        read -r -p "Reaproveitar o cliente do login com Google? (precisa ter as 2 URIs acima) [s/N] " reuse
+        if [[ "${reuse:-n}" =~ ^[sSyY]$ ]]; then g_id="$lid"; g_secret="$lsec"; fi
+      fi
+      unset lsec
+      if [ -z "$g_id" ]; then
+        read -r -p "ID do cliente Google: " g_id
+        g_id=$(printf '%s' "$g_id" | tr -d '[:space:]\"')
+        if [[ ! "$g_id" =~ ^[A-Za-z0-9._-]+\.apps\.googleusercontent\.com$ ]]; then
+          echo "O ID não parece ser de um cliente OAuth Google. Nada foi alterado."
+          continue
+        fi
+        g_secret=$(ask_secret "Segredo do cliente (não aparece na tela): ")
+        g_secret=$(printf '%s' "$g_secret" | tr -d '[:space:]\"')
+        if [[ ! "$g_secret" =~ ^[A-Za-z0-9._-]{10,}$ ]]; then
+          echo "Segredo vazio ou em formato inesperado. Nada foi alterado."
+          unset g_secret
+          continue
+        fi
+      fi
+      setvar GOOGLE_SOCIAL_CLIENT_ID "$g_id"
+      setvar GOOGLE_SOCIAL_CLIENT_SECRET "$g_secret"
+      setvar APP_URL "https://kbos.kayquebrito.com.br"
+      ensure_social_key
+      unset g_secret
+      apply
+      echo "Salvo. Conecte o cliente pelo portal ou por 'Enviar link de conexão'."
+      echo "Dica: YouTube pede verificação do app (escopo youtube.upload) e o Perfil da Empresa pede liberação de acesso. Veja docs/CONEXOES-REDES.md."
+      ;;
+    11)
+      echo
+      echo "Em https://developers.tiktok.com crie um app, adicione os produtos Login Kit e Content Posting API"
+      echo "e cadastre a URI de redirecionamento (exatamente):"
+      echo "https://kbos.kayquebrito.com.br/api/social/tiktok/callback/"
+      echo "Verifique também o prefixo de URL https://kbos.kayquebrito.com.br/api/public/social-media/ (necessário para postar por link)."
+      echo "Client key e Client secret ficam na página do app."
+      echo
+      read -r -p "Client key do TikTok: " tt_key
+      tt_key=$(printf '%s' "$tt_key" | tr -d '[:space:]"')
+      if [[ ! "$tt_key" =~ ^[A-Za-z0-9]{8,}$ ]]; then echo "Client key vazia ou em formato inesperado. Nada foi alterado."; continue; fi
+      tt_secret=$(ask_secret "Client secret (não aparece na tela): ")
+      tt_secret=$(printf '%s' "$tt_secret" | tr -d '[:space:]"')
+      if [[ ! "$tt_secret" =~ ^[A-Za-z0-9]{16,}$ ]]; then echo "Client secret vazio ou em formato inesperado. Nada foi alterado."; unset tt_secret; continue; fi
+      read -r -p "O app já passou na auditoria de publicação direta do TikTok? [s/N] " tt_aud
+      if [[ "${tt_aud:-n}" =~ ^[sSyY]$ ]]; then aud=1; else aud=0; echo "Sem auditoria os posts saem privados ('Só eu')."; fi
+      setvar TIKTOK_CLIENT_KEY "$tt_key"
+      setvar TIKTOK_CLIENT_SECRET "$tt_secret"
+      setvar TIKTOK_AUDITED "$aud"
+      setvar APP_URL "https://kbos.kayquebrito.com.br"
+      ensure_social_key
+      echo "Secret recebido (termina em …${tt_secret: -4})."
+      unset tt_secret
+      apply
+      ;;
+    12)
+      echo
+      echo "Em https://developers.pinterest.com/apps crie um app e cadastre a URI de redirecionamento (exatamente):"
+      echo "https://kbos.kayquebrito.com.br/api/social/pinterest/callback/"
+      echo "App ID e App secret ficam na página do app."
+      echo
+      read -r -p "App ID do Pinterest: " pin_id
+      pin_id=$(printf '%s' "$pin_id" | tr -cd '0-9')
+      if [ ${#pin_id} -lt 5 ]; then echo "O App ID é só número. Nada foi alterado."; continue; fi
+      pin_secret=$(ask_secret "App secret (não aparece na tela): ")
+      pin_secret=$(printf '%s' "$pin_secret" | tr -d '[:space:]"')
+      if [[ ! "$pin_secret" =~ ^[A-Za-z0-9]{16,}$ ]]; then echo "App secret vazio ou em formato inesperado. Nada foi alterado."; unset pin_secret; continue; fi
+      setvar PINTEREST_APP_ID "$pin_id"
+      setvar PINTEREST_APP_SECRET "$pin_secret"
+      setvar APP_URL "https://kbos.kayquebrito.com.br"
+      ensure_social_key
+      echo "Secret recebido (termina em …${pin_secret: -4})."
+      unset pin_secret
+      apply
+      echo "Em modo Trial os pins só aparecem para você; para postar em público peça acesso Standard."
+      ;;
+    13)
+      echo
+      echo "Em https://www.linkedin.com/developers/apps crie um app, ative os produtos"
+      echo "'Share on LinkedIn' e 'Sign In with OpenID Connect' e, em Auth, cadastre a URL de redirecionamento (exatamente):"
+      echo "https://kbos.kayquebrito.com.br/api/social/linkedin/callback/"
+      echo "Client ID e Primary Client Secret ficam na aba Auth."
+      echo
+      read -r -p "Client ID do LinkedIn: " li_id
+      li_id=$(printf '%s' "$li_id" | tr -d '[:space:]"')
+      if [[ ! "$li_id" =~ ^[A-Za-z0-9]{8,}$ ]]; then echo "Client ID vazio ou em formato inesperado. Nada foi alterado."; continue; fi
+      li_secret=$(ask_secret "Client secret (não aparece na tela): ")
+      li_secret=$(printf '%s' "$li_secret" | tr -d '[:space:]"')
+      if [[ ! "$li_secret" =~ ^[A-Za-z0-9=_-]{8,}$ ]]; then echo "Client secret vazio ou em formato inesperado. Nada foi alterado."; unset li_secret; continue; fi
+      setvar LINKEDIN_CLIENT_ID "$li_id"
+      setvar LINKEDIN_CLIENT_SECRET "$li_secret"
+      setvar APP_URL "https://kbos.kayquebrito.com.br"
+      ensure_social_key
+      echo "Secret recebido (termina em …${li_secret: -4})."
+      unset li_secret
+      apply
+      echo "Postar como Página da empresa exige aprovação da Community Management API; perfil pessoal funciona direto."
       ;;
     0) exit 0 ;;
     *) echo "Opção inválida." ;;
