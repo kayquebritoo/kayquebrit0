@@ -6,6 +6,7 @@ type Member = { userId: string; name: string; email: string };
 /** Painel do projeto: outras pessoas do cliente que veem o projeto, as tarefas e o calendário no portal. */
 export default function ProjectMembers({ projectId }: { projectId: string }) {
   const [items, setItems] = useState<Member[]>([]);
+  const [suggestions, setSuggestions] = useState<Member[]>([]);
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -13,14 +14,17 @@ export default function ProjectMembers({ projectId }: { projectId: string }) {
 
   const load = useCallback(async () => {
     const r = await fetch(base);
-    if (r.ok) setItems((await r.json()).items ?? []);
+    if (!r.ok) return;
+    const j = await r.json();
+    setItems(j.items ?? []);
+    setSuggestions(j.suggestions ?? []);
   }, [base]);
   useEffect(() => { const t = setTimeout(load, 0); return () => clearTimeout(t); }, [load]);
 
-  async function add(ev: React.FormEvent) {
-    ev.preventDefault(); setBusy(true); setMsg("");
+  async function add(ev: React.FormEvent | null, to = email) {
+    ev?.preventDefault(); setBusy(true); setMsg("");
     try {
-      const r = await fetch(base, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email }) });
+      const r = await fetch(base, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: to }) });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "Não consegui dar o acesso.");
       setEmail(""); setMsg(`${j.name} agora vê este projeto no portal.`); await load();
@@ -51,6 +55,14 @@ export default function ProjectMembers({ projectId }: { projectId: string }) {
             </li>
           ))}
         </ul>
+      )}
+      {suggestions.length > 0 && (
+        <div className="grid gap-2">
+          <p className="kb-faint text-xs">Da mesma empresa, já com conta no portal:</p>
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((m) => <button key={m.userId} type="button" className="kb-chip min-h-11" disabled={busy} onClick={() => void add(null, m.email)}>+ {m.name}</button>)}
+          </div>
+        </div>
       )}
       <form onSubmit={add} className="flex flex-wrap gap-2">
         <input className="kb-control min-w-0 flex-1" type="email" inputMode="email" required placeholder="E-mail da conta do portal" value={email} onChange={(e) => setEmail(e.target.value)} />

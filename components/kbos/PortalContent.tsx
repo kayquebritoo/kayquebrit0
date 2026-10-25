@@ -26,6 +26,7 @@ export default function PortalContent({ firstName }: { firstName?: string }) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [unread, setUnread] = useState<Record<string, number>>({});
   const [chat, setChat] = useState<Project | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let alive = true;
@@ -67,13 +68,14 @@ export default function PortalContent({ firstName }: { firstName?: string }) {
   if (projects.length === 0) {
     return (
       <div className="kb-glass p-8 text-center">
-        <p className="text-lg font-semibold">Nenhum projeto por aqui ainda</p>
-        <p className="kb-muted mt-2 text-sm">Quando o Kayque abrir o seu projeto, ele aparece aqui com as etapas e os arquivos para você aprovar. Para começar, preencha um <Link href="/briefing" className="underline">briefing</Link>.</p>
+        <p className="text-lg font-semibold">{name ? `${name}, seu acesso está criado` : "Seu acesso está criado"}</p>
+        <p className="kb-muted mt-2 text-sm">Falta só ligar você ao projeto da sua empresa. Assim que o Kayque fizer isso, aparecem aqui o calendário de conteúdo para aprovar, as tarefas e os arquivos. Se ainda não houver projeto, comece por um <Link href="/briefing" className="underline">briefing</Link>.</p>
       </div>
     );
   }
 
   const pending = files.filter((f) => f.status === "enviado").length;
+  const open = tasks.filter((t) => t.status !== "done");
   return (
     <div className="kb-stagger flex flex-col gap-5">
       <header className="relative overflow-hidden rounded-3xl">
@@ -84,17 +86,19 @@ export default function PortalContent({ firstName }: { firstName?: string }) {
           <span aria-hidden className="-mt-10 flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-4 border-[#11101E] bg-[var(--kb-accent-soft)] text-2xl font-semibold uppercase">{(name || "?").slice(0, 1)}</span>
           <div className="min-w-0">
             <p className="font-display truncate text-xl">Olá{name ? `, ${name}` : ""}.</p>
-            <p className="kb-muted text-sm">{pending ? `Você tem ${pending} arquivo${pending > 1 ? "s" : ""} esperando sua aprovação.` : "Aqui você acompanha cada etapa e aprova as entregas."}</p>
+            <p className="kb-muted text-sm">{pending ? `Você tem ${pending} arquivo${pending > 1 ? "s" : ""} esperando sua aprovação.` : open.length ? `${open.length} tarefa${open.length > 1 ? "s" : ""} em andamento no seu projeto.` : "Aqui você acompanha cada etapa e aprova as entregas."}</p>
           </div>
         </div>
       </header>
       <OverduePosts audience="cliente" />
       <PortalPosts />
-      <PortalLumeCard />
       <div className="grid gap-4 md:grid-cols-2">
         {projects.map((p) => {
           const idx = Math.max(0, PIPELINE.findIndex((s) => s.id === p.status));
           const mine = files.filter((f) => f.projectId === p.id);
+          const all = tasks.filter((t) => t.projectId === p.id);
+          const done = all.filter((t) => t.status === "done").length;
+          const todo = all.filter((t) => t.status !== "done").sort((a, b) => (a.status === b.status ? 0 : a.status === "doing" ? -1 : 1));
           return (
             <article key={p.id} className="kb-glass flex flex-col gap-4 p-5">
               <div>
@@ -113,6 +117,27 @@ export default function PortalContent({ firstName }: { firstName?: string }) {
                   </li>
                 ))}
               </ol>
+              {all.length > 0 && (
+                <div className="border-t border-white/10 pt-4" aria-label="Tarefas do projeto">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">Tarefas</p>
+                    <span className="kb-faint text-xs tabular-nums">{done} de {all.length} concluídas</span>
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-valuemin={0} aria-valuemax={all.length} aria-valuenow={done}>
+                    <span className="block h-full rounded-full bg-gradient-to-r from-[#4F12C7] to-[#E80EFD]" style={{ width: `${(done / all.length) * 100}%` }} />
+                  </div>
+                  <div className="mt-2 flex flex-col">
+                    {todo.slice(0, expanded[p.id] ? todo.length : 5).map((t) => (
+                      <div key={t.id} className="kb-row">
+                        <span className="min-w-0 truncate text-sm">{t.titulo}</span>
+                        <span className="kb-faint shrink-0 text-xs">{t.status === "doing" ? "Em produção" : "Na fila"}{t.dueAt ? ` · ${day(t.dueAt)}` : ""}</span>
+                      </div>
+                    ))}
+                    {todo.length === 0 && <p className="kb-faint py-2 text-sm">Tudo concluído por aqui.</p>}
+                  </div>
+                  {todo.length > 5 && <button type="button" className="kb-btn-ghost mt-2 min-h-11 w-full" onClick={() => setExpanded((x) => ({ ...x, [p.id]: !x[p.id] }))}>{expanded[p.id] ? "Mostrar menos" : `Ver todas (${todo.length})`}</button>}
+                </div>
+              )}
               <div className="border-t border-white/10 pt-4">
                 <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">Arquivos para aprovação</p>
                 <div className="mt-3 flex flex-col gap-3">
@@ -129,41 +154,25 @@ export default function PortalContent({ firstName }: { firstName?: string }) {
           );
         })}
       </div>
-      {(tasks.some((t) => t.status !== "done") || invoices.length > 0) && (
-        <div className="grid gap-4 md:grid-cols-2">
-          {tasks.some((t) => t.status !== "done") && (
-            <section className="kb-glass p-5" aria-label="Próximas tarefas">
-              <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">O que está em andamento</p>
-              <div className="mt-3 flex flex-col">
-                {tasks.filter((t) => t.status !== "done").slice(0, 8).map((t) => (
-                  <div key={t.id} className="kb-row">
-                    <span className="min-w-0 truncate text-sm">{t.titulo}</span>
-                    <span className="kb-faint shrink-0 text-xs">{t.status === "doing" ? "Em produção" : "Na fila"}{t.dueAt ? ` · ${day(t.dueAt)}` : ""}</span>
-                  </div>
-                ))}
+      <PortalLumeCard />
+      {invoices.length > 0 && (
+        <section className="kb-glass p-5" aria-label="Pagamentos">
+          <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">Pagamentos</p>
+          <div className="mt-3 flex flex-col">
+            {invoices.slice(0, 8).map((i) => (
+              <div key={i.id} className="kb-row">
+                <span className="min-w-0">
+                  <span className="block truncate text-sm">{i.descricao}</span>
+                  <span className="kb-faint block text-xs">{i.vencimento ? day(i.vencimento) : "Sem data"}</span>
+                </span>
+                <span className="flex shrink-0 flex-col items-end gap-1">
+                  <span className="tabular-nums text-sm">{brl(i.valor)}</span>
+                  <span className={`kb-tag ${i.status === "vencido" ? "late" : ""}`}>{STATUS_INV[i.status] ?? i.status}</span>
+                </span>
               </div>
-            </section>
-          )}
-          {invoices.length > 0 && (
-            <section className="kb-glass p-5" aria-label="Pagamentos">
-              <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">Pagamentos</p>
-              <div className="mt-3 flex flex-col">
-                {invoices.slice(0, 8).map((i) => (
-                  <div key={i.id} className="kb-row">
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm">{i.descricao}</span>
-                      <span className="kb-faint block text-xs">{i.vencimento ? day(i.vencimento) : "Sem data"}</span>
-                    </span>
-                    <span className="flex shrink-0 flex-col items-end gap-1">
-                      <span className="tabular-nums text-sm">{brl(i.valor)}</span>
-                      <span className={`kb-tag ${i.status === "vencido" ? "late" : ""}`}>{STATUS_INV[i.status] ?? i.status}</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
+            ))}
+          </div>
+        </section>
       )}
       {chat && <ProjectChat projectId={chat.id} title={chat.titulo} onClose={() => { setUnread((u) => ({ ...u, [chat.id]: 0 })); setChat(null); }} />}
     </div>

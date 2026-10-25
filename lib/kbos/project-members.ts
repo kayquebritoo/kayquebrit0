@@ -2,7 +2,7 @@
 // (`kbos_project_members`, ex.: a equipe de marketing do cliente). Toda checagem de cliente passa por aqui.
 import { and, asc, eq, or, sql } from "drizzle-orm";
 import { db } from "./db";
-import { projectMembers, projects, users } from "./schema";
+import { contacts, projectMembers, projects, users } from "./schema";
 
 /** Condição SQL: projetos que o cliente pode ver. */
 export function clientProjects(userId: string) {
@@ -38,6 +38,30 @@ export async function listProjectMembers(projectId: string) {
     .innerJoin(users, eq(users.id, projectMembers.userId))
     .where(eq(projectMembers.projectId, projectId))
     .orderBy(asc(projectMembers.createdAt));
+}
+
+/** Contas de cliente da mesma empresa do projeto (pelo contato ou pelo título) que ainda não veem o projeto. */
+export async function suggestProjectMembers(projectId: string) {
+  const [p] = await db()
+    .select({ clienteId: projects.clienteId, titulo: projects.titulo, company: contacts.company })
+    .from(projects)
+    .leftJoin(contacts, eq(contacts.id, projects.contactId))
+    .where(eq(projects.id, projectId))
+    .limit(1);
+  if (!p) return [];
+  const names = [p.company, p.titulo].map((x) => (x || "").trim().toLowerCase()).filter(Boolean);
+  if (!names.length) return [];
+  return db()
+    .selectDistinct({ userId: users.id, name: users.name, email: users.email })
+    .from(users)
+    .innerJoin(contacts, sql`lower(${contacts.email}) = lower(${users.email})`)
+    .where(and(
+      eq(users.role, "cliente"),
+      sql`lower(trim(${contacts.company})) IN (${sql.join(names.map((n) => sql`${n}`), sql`, `)})`,
+      sql`${users.id} IS DISTINCT FROM ${p.clienteId}`,
+      sql`${users.id} NOT IN (SELECT ${projectMembers.userId} FROM ${projectMembers} WHERE ${projectMembers.projectId} = ${projectId})`,
+    ))
+    .limit(10);
 }
 
 export type MemberResult = { ok: true; userId: string; name: string; email: string } | { ok: false; error: string };

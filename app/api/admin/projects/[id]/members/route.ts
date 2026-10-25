@@ -3,7 +3,7 @@ import { z } from "zod";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { checkId, readBody } from "@/lib/kbos/validators";
 import { serverError } from "@/lib/kbos/http";
-import { addProjectMember, listProjectMembers, removeProjectMember } from "@/lib/kbos/project-members";
+import { addProjectMember, listProjectMembers, removeProjectMember, suggestProjectMembers } from "@/lib/kbos/project-members";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
@@ -16,7 +16,8 @@ export async function GET(_req: Request, { params }: Ctx) {
   const bad = checkId(id);
   if (bad) return bad;
   try {
-    return NextResponse.json({ items: await listProjectMembers(id) });
+    const [items, suggestions] = await Promise.all([listProjectMembers(id), suggestProjectMembers(id)]);
+    return NextResponse.json({ items, suggestions });
   } catch (e) {
     return serverError(e);
   }

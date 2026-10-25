@@ -53,6 +53,26 @@ describe("acesso ao portal", () => {
     expect(again.ok && !again.created && again.linked).toBe(0);
     expect(await d.select().from(schema.users)).toHaveLength(1);
   });
+  it("liga como acesso compartilhado os projetos da mesma empresa, sem virar titular", async () => {
+    const [dona] = await d.insert(schema.users).values({ email: "dona@example.com", name: "Dona", role: "cliente" }).returning();
+    const [outro] = await d.insert(schema.contacts).values({ name: "Dona", email: "dona@example.com", company: " atalaia VIP " }).returning();
+    const [hotel] = await d.insert(schema.projects).values({ titulo: "Social", categoria: "social", contactId: outro.id, clienteId: dona.id }).returning();
+    const [porTitulo] = await d.insert(schema.projects).values({ titulo: "Atalaia Vip", categoria: "social" }).returning();
+    await d.insert(schema.projects).values({ titulo: "Alheio", categoria: "design" });
+    const r = await grantPortalAccess({ contactId });
+    expect(r.ok && r.linked).toBe(4);
+    expect(r.ok && [...r.projects].sort()).toEqual(["Atalaia Vip", "Hotel", "Lounge", "Social"]);
+    const members = await d.select().from(schema.projectMembers);
+    expect(members.map((m) => m.projectId).sort()).toEqual([hotel.id, porTitulo.id].sort());
+    expect((await d.select().from(schema.projects).where(eq(schema.projects.id, hotel.id)))[0].clienteId).toBe(dona.id);
+    const again = await grantPortalAccess({ contactId });
+    expect(again.ok && again.linked).toBe(0);
+    expect(await d.select().from(schema.projectMembers)).toHaveLength(2);
+    const { suggestProjectMembers } = await import("../project-members");
+    expect(await suggestProjectMembers(hotel.id)).toEqual([]);
+    await d.delete(schema.projectMembers);
+    expect((await suggestProjectMembers(hotel.id)).map((u) => u.email)).toEqual(["thalita@example.com"]);
+  });
   it("recusa e-mail de administrador e e-mail inválido", async () => {
     await d.insert(schema.users).values({ email: "dono@example.com", name: "Dono", role: "admin" });
     expect((await grantPortalAccess({ contactId, email: "dono@example.com" })).ok).toBe(false);

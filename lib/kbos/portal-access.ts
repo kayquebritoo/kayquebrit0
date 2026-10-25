@@ -1,7 +1,10 @@
 // Acesso do cliente ao portal: cria (ou reaproveita) a conta e liga os projetos do contato a ela.
-import { and, eq, isNull, sql } from "drizzle-orm";
+// Projetos da mesma empresa (ou do contato, mas já com outro titular) entram como acesso compartilhado:
+// a equipe de marketing do cliente vê o projeto sem virar titular (cobrança segue só com o titular).
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { db } from "./db";
-import { contacts, projects, users } from "./schema";
+import { contacts, projectMembers, projects, users } from "./schema";
+import { clientProjects } from "./project-members";
 
 /** Telefone BR → só dígitos com DDI 55 (o login por WhatsApp exige 12–15 dígitos). */
 export function normalizePhone(raw: string | null | undefined): string | null {
@@ -12,7 +15,7 @@ export function normalizePhone(raw: string | null | undefined): string | null {
 }
 
 export type AccessResult =
-  | { ok: true; userId: string; email: string; phone: string | null; created: boolean; linked: number }
+  | { ok: true; userId: string; email: string; phone: string | null; created: boolean; linked: number; projects: string[] }
   | { ok: false; error: string };
 
 export async function grantPortalAccess(input: { contactId: string; email?: string | null; phone?: string | null; name?: string | null }): Promise<AccessResult> {
@@ -33,10 +36,20 @@ export async function grantPortalAccess(input: { contactId: string; email?: stri
     await d.update(users).set({ phone }).where(eq(users.id, user.id));
     user = { ...user, phone };
   }
-  const linked = await d
+  const owned = await d
     .update(projects)
     .set({ clienteId: user.id })
     .where(and(eq(projects.contactId, c.id), isNull(projects.clienteId)))
     .returning({ id: projects.id });
-  return { ok: true, userId: user.id, email, phone: user.phone ?? phone, created, linked: linked.length };
+  const company = (c.company || "").trim().toLowerCase();
+  const sameCompany = company
+    ? sql`${projects.contactId} IN (SELECT ${contacts.id} FROM ${contacts} WHERE lower(trim(${contacts.company})) = ${company}) OR lower(trim(${projects.titulo})) = ${company}`
+    : sql`false`;
+  const shared = await d
+    .select({ id: projects.id })
+    .from(projects)
+    .where(and(or(eq(projects.contactId, c.id), sameCompany), sql`${projects.clienteId} IS DISTINCT FROM ${user.id}`, sql`${projects.id} NOT IN (SELECT ${projectMembers.projectId} FROM ${projectMembers} WHERE ${projectMembers.userId} = ${user.id})`));
+  if (shared.length) await d.insert(projectMembers).values(shared.map((p) => ({ projectId: p.id, userId: user.id }))).onConflictDoNothing();
+  const visible = await d.select({ titulo: projects.titulo }).from(projects).where(clientProjects(user.id));
+  return { ok: true, userId: user.id, email, phone: user.phone ?? phone, created, linked: owned.length + shared.length, projects: visible.map((p) => p.titulo) };
 }

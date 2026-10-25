@@ -18,7 +18,10 @@ export default function PortalAccess({ contactId, email, phone, name }: { contac
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "Não consegui criar o acesso.");
       setOk({ url: j.loginUrl, phone: j.phone });
-      setMsg(`${j.created ? "Acesso criado" : "Acesso já existia"} para ${j.email}. ${j.linked} projeto${j.linked === 1 ? "" : "s"} ligado${j.linked === 1 ? "" : "s"} a ele.`);
+      const seen: string[] = j.projects ?? [];
+      setMsg(`${j.created ? "Acesso criado" : "Acesso já existia"} para ${j.email}. ${seen.length
+        ? `No portal, vê: ${seen.join(", ")}.`
+        : "Ainda não vê nenhum projeto: preencha a empresa no contato igual à do projeto, ou abra o projeto → Acesso compartilhado."}`);
     } catch (x) { setMsg(x instanceof Error ? x.message : "Erro."); } finally { setBusy(false); }
   }
   // Quando o código não chega: link de uso único (24 h) para enviar pelo WhatsApp do Kayque.
