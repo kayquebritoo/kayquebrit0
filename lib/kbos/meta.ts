@@ -2,6 +2,7 @@
 // Só servidor. Toda chamada leva appsecret_proof. `f` é injetável para os testes não tocarem a rede.
 import { createHmac } from "node:crypto";
 import { appUrlEnv } from "./email";
+import { SocialError, type Media, type PublishInput, type PublishResult } from "./social/types";
 
 export const GRAPH_VERSION = () => process.env.META_GRAPH_VERSION || "v23.0";
 export const metaConfigured = () => (process.env.META_APP_ID || "").length > 4 && (process.env.META_APP_SECRET || "").length >= 16;
@@ -13,20 +14,20 @@ export const META_SCOPES = [
   "instagram_basic", "instagram_content_publish", "instagram_manage_insights", "business_management",
 ];
 
-export class MetaError extends Error {
-  constructor(message: string, public code?: number, public expired = false) { super(message); }
+export class MetaError extends SocialError {
+  constructor(message: string, code?: number, expired = false) { super(message, code, expired); }
 }
 
 type Fetch = typeof fetch;
 const proof = (token: string, secret = process.env.META_APP_SECRET || "") => createHmac("sha256", secret).update(token).digest("hex");
 
-async function graph<T>(f: Fetch, method: "GET" | "POST", path: string, token: string | null, params: Record<string, string | number | boolean | undefined> = {}): Promise<T> {
+async function graph<T>(f: Fetch, method: "GET" | "POST" | "DELETE", path: string, token: string | null, params: Record<string, string | number | boolean | undefined> = {}): Promise<T> {
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) if (v !== undefined) qs.set(k, String(v));
   if (token) { qs.set("access_token", token); qs.set("appsecret_proof", proof(token)); }
   const url = `${GRAPH()}${path}`;
-  const res = method === "GET"
-    ? await f(`${url}?${qs}`, { signal: AbortSignal.timeout(30_000) })
+  const res = method !== "POST"
+    ? await f(`${url}?${qs}`, { method, signal: AbortSignal.timeout(30_000) })
     : await f(url, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: qs, signal: AbortSignal.timeout(60_000) });
   const json = (await res.json().catch(() => ({}))) as T & { error?: { message?: string; code?: number; error_user_msg?: string } };
   if (!res.ok || json.error) {
@@ -37,9 +38,7 @@ async function graph<T>(f: Fetch, method: "GET" | "POST", path: string, token: s
 }
 
 // ── login ──────────────────────────────────────────────────────────────────────
-export const metaRedirectUri = () => `${appUrlEnv()}/api/admin/social/meta/callback/`;
-/** Assinatura do `state` do login (contra CSRF): o nonce também fica num cookie de 10 min. */
-export const metaStateSig = (nonce: string) => createHmac("sha256", process.env.META_APP_SECRET || "").update(`meta-state:${nonce}`).digest("base64url");
+export const metaRedirectUri = () => `${appUrlEnv()}/api/social/meta/callback/`;
 
 export function metaLoginUrl(redirectUri: string, state: string) {
   const qs = new URLSearchParams({ client_id: process.env.META_APP_ID || "", redirect_uri: redirectUri, state, response_type: "code", scope: META_SCOPES.join(",") });
@@ -76,10 +75,14 @@ export async function listMetaAccounts(userToken: string, f: Fetch = fetch): Pro
   return out;
 }
 
+/** Tira a permissão do app na conta da pessoa (o login inteiro deixa de valer). */
+export async function revokeMeta(userToken: string, f: Fetch = fetch) {
+  await graph<{ success?: boolean }>(f, "DELETE", "/me/permissions", userToken);
+  return true;
+}
+
 // ── publicar ───────────────────────────────────────────────────────────────────
-export type Media = { kind: "image" | "video"; url: string };
-export type PublishInput = { format: string; caption: string; media: Media[] };
-export type PublishResult = { externalId: string; url: string | null };
+export type { Media, PublishInput, PublishResult };
 type Wait = (ms: number) => Promise<void>;
 const sleep: Wait = (ms) => new Promise((r) => setTimeout(r, ms));
 

@@ -1,21 +1,24 @@
-// Publicar pelo KBOS (fase 3): contas conectadas, agendar por rede e o verificador (`social.tick`, 1 min) que publica
+// Publicar pelo KBOS (fase 3, todas as redes via lib/kbos/social/providers): contas conectadas, agendar por rede e o verificador (`social.tick`, 1 min) que publica
 // o que venceu. Cada publicação é travada (`sending_at`) antes do envio: dois verificadores nunca postam o mesmo.
 import { and, asc, eq, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { db } from "./db";
-import { postPublications, projects, socialAccounts, socialPosts } from "./schema";
-import { seal, unseal } from "./social-crypto";
-import { MetaError, publishFacebook, publishInstagram, type MetaAccount, type PublishInput, type PublishResult } from "./meta";
+import { postPublications, projects, socialAccounts, socialConnections, socialPosts } from "./schema";
+import { seal } from "./social-crypto";
+import type { MetaAccount } from "./meta";
+import { SocialError, type PublishInput, type PublishResult } from "./social/types";
+import { providerForNetwork, PUBLISH_NETWORKS } from "./social/providers";
+import { disconnectAccount, publishTokenFor, refreshDueConnections } from "./social/connections";
 import { listMedia, publicMediaUrl } from "./social-media";
 import { updatePublication } from "./content-cycle";
 
-export const PUBLISHABLE = ["instagram", "facebook"] as const;
+export const PUBLISHABLE = PUBLISH_NETWORKS;
 export class PublishError extends Error {}
 
 // ── contas ─────────────────────────────────────────────────────────────────────
 /** Guarda (ou renova) as contas que vieram do login da Meta. Não mexe no projeto já escolhido. */
 export async function saveMetaAccounts(accounts: MetaAccount[], userId: string | null) {
   for (const a of accounts) {
-    const values = { network: a.network, externalId: a.externalId, pageId: a.pageId, name: a.name, username: a.username, pictureUrl: a.pictureUrl, tokenEnc: seal(a.token), status: "ativo", lastError: null, connectedBy: userId, updatedAt: new Date() };
+    const values = { network: a.network, externalId: a.externalId, pageId: a.pageId, name: a.name, username: a.username, pictureUrl: a.pictureUrl, tokenEnc: seal(a.token), status: "ativo", lastError: null, connectedBy: userId, provider: "meta", updatedAt: new Date() };
     await db().insert(socialAccounts).values(values).onConflictDoUpdate({ target: [socialAccounts.network, socialAccounts.externalId], set: values });
   }
   return accounts.length;
@@ -31,9 +34,9 @@ export async function assignAccount(id: string, projectId: string | null) {
   return !!row;
 }
 
-export async function removeAccount(id: string) {
-  await db().update(postPublications).set({ accountId: null }).where(eq(postPublications.accountId, id));
-  await db().delete(socialAccounts).where(eq(socialAccounts.id, id));
+/** Desconecta (revoga na rede quando é a última conta do login) e apaga o token daqui. */
+export async function removeAccount(id: string, userId: string | null = null) {
+  return disconnectAccount(id, { kind: "admin", userId });
 }
 
 /** Conta da rede para o projeto: a da operação; se ela não tiver, a do principal. */
@@ -56,15 +59,15 @@ export async function schedulePost(postId: string, opts: { at: Date; networks?: 
   const media = (await listMedia(postId)).filter((m) => m.status === "pronto");
   if (!media.length) throw new PublishError("Envie o arquivo final (JPG ou MP4) antes de agendar.");
   const pubs = await db().select().from(postPublications).where(eq(postPublications.postId, postId));
-  const targets = pubs.filter((p) => (PUBLISHABLE as readonly string[]).includes(p.network) && p.status !== "publicado" && p.status !== "cancelado" && (!opts.networks || opts.networks.includes(p.network)));
-  if (!targets.length) throw new PublishError("Marque Instagram e/ou Facebook nas redes do post.");
+  const targets = pubs.filter((p) => PUBLISHABLE.includes(p.network) && p.status !== "publicado" && p.status !== "cancelado" && (!opts.networks || opts.networks.includes(p.network)));
+  if (!targets.length) throw new PublishError("Marque uma rede que o KBOS publica (Instagram, Facebook, YouTube, TikTok, Pinterest, LinkedIn ou Google) nas redes do post.");
   const missing: string[] = [];
   for (const p of targets) {
     const acc = await accountFor(post.projectId, p.network);
     if (!acc) { missing.push(p.network); continue; }
     await db().update(postPublications).set({ status: "agendado", scheduledAt: opts.at, accountId: acc.id, error: null, attempts: 0, sendingAt: null, updatedAt: new Date() }).where(eq(postPublications.id, p.id));
   }
-  if (missing.length) throw new PublishError(`Falta ligar a conta de ${missing.join(" e ")} a este projeto (Ajustes → Redes sociais).`);
+  if (missing.length) throw new PublishError(`Falta ligar a conta de ${missing.join(" e ")} a este cliente (Ajustes → Redes sociais ou link de conexão).`);
   if (["roteiro", "captacao", "producao", "aprovacao", "ajustes", "aprovado"].includes(post.status)) {
     await db().update(socialPosts).set({ status: "agendado", updatedAt: new Date() }).where(eq(socialPosts.id, postId));
   }
@@ -82,10 +85,15 @@ export async function unschedulePost(postId: string) {
 const LOCK_MS = 20 * 60_000;
 const MAX_ATTEMPTS = 3;
 type Publisher = (network: string, account: { externalId: string; pageId: string | null; token: string }, input: PublishInput) => Promise<PublishResult>;
-const metaPublisher: Publisher = (network, acc, input) => (network === "instagram" ? publishInstagram(acc.externalId, acc.token, input) : publishFacebook(acc.pageId ?? acc.externalId, acc.token, input));
+/** Publica pelo provedor da rede (instagram/facebook → Meta, youtube → Google, tiktok, pinterest, linkedin…). */
+const networkPublisher: Publisher = (network, acc, input) => {
+  const p = providerForNetwork(network);
+  if (!p?.publish) throw new SocialError(`O KBOS ainda não publica em ${network}.`);
+  return p.publish(network, acc, input);
+};
 
 /** Trava e publica uma publicação. Devolve o que aconteceu (para o diário do worker e os testes). */
-export async function sendPublication(pubId: string, now = new Date(), publish: Publisher = metaPublisher) {
+export async function sendPublication(pubId: string, now = new Date(), publish: Publisher = networkPublisher) {
   const [claimed] = await db().update(postPublications)
     .set({ sendingAt: now, attempts: sql`${postPublications.attempts} + 1`, updatedAt: now })
     .where(and(eq(postPublications.id, pubId), eq(postPublications.status, "agendado"), or(isNull(postPublications.sendingAt), lt(postPublications.sendingAt, new Date(now.getTime() - LOCK_MS)))))
@@ -102,16 +110,20 @@ export async function sendPublication(pubId: string, now = new Date(), publish: 
     const [acc] = claimed.accountId ? await db().select().from(socialAccounts).where(eq(socialAccounts.id, claimed.accountId)).limit(1) : [];
     if (!acc) return await fail("Conta da rede não está mais ligada. Reconecte em Ajustes → Redes sociais.", true);
     if (acc.status !== "ativo") return await fail("A conexão com a rede expirou. Reconecte em Ajustes → Redes sociais.", true);
+    const token = await publishTokenFor(acc, now);
     const media = (await listMedia(post.id)).filter((m) => m.status === "pronto").map((m) => ({ kind: m.kind as "image" | "video", url: publicMediaUrl(m.publicToken, m.name) }));
-    const out = await publish(claimed.network, { externalId: acc.externalId, pageId: acc.pageId, token: unseal(acc.tokenEnc) }, { format: post.format, caption: post.caption ?? "", media });
+    const out = await publish(claimed.network, { externalId: acc.externalId, pageId: acc.pageId, token }, { format: post.format, caption: post.caption ?? "", media });
     await updatePublication(post.id, claimed.network, { status: "publicado", url: out.url });
     await db().update(postPublications).set({ externalId: out.externalId, sendingAt: null, error: null }).where(eq(postPublications.id, pubId));
     if (out.url && !post.postedUrl) await db().update(socialPosts).set({ postedUrl: out.url }).where(eq(socialPosts.id, post.id));
     return { id: pubId, result: "publicado" as const, url: out.url };
   } catch (e) {
-    if (e instanceof MetaError) {
-      if (e.expired && claimed.accountId) await db().update(socialAccounts).set({ status: "expirado", lastError: e.message.slice(0, 500), updatedAt: new Date() }).where(eq(socialAccounts.id, claimed.accountId));
-      // erro de conteúdo/permissão não melhora tentando de novo
+    if (e instanceof SocialError) {
+      if (e.expired && claimed.accountId) {
+        const [acc] = await db().update(socialAccounts).set({ status: "expirado", lastError: e.message.slice(0, 500), updatedAt: new Date() }).where(eq(socialAccounts.id, claimed.accountId)).returning({ connectionId: socialAccounts.connectionId });
+        if (acc?.connectionId) await db().update(socialConnections).set({ status: "expirado", lastError: e.message.slice(0, 500), updatedAt: new Date() }).where(eq(socialConnections.id, acc.connectionId));
+      }
+      // erro de conteúdo/permissão da rede não melhora tentando de novo
       return await fail(e.message, true);
     }
     const msg = e instanceof Error ? e.message : String(e);
@@ -121,6 +133,8 @@ export async function sendPublication(pubId: string, now = new Date(), publish: 
 
 /** Verificador (1 min): publica o que já venceu. Poucas por vez; o resto fica para o próximo minuto. */
 export async function handleSocialTick(now = new Date(), publish?: Publisher) {
+  // renova antes os logins que vencem logo (Google, TikTok, Pinterest, LinkedIn); falha aqui não trava a fila
+  if (!publish) await refreshDueConnections(now).catch((e) => console.error("[social] renovação", e instanceof Error ? e.message : e));
   const due = await db().select({ id: postPublications.id }).from(postPublications)
     .where(and(eq(postPublications.status, "agendado"), lte(postPublications.scheduledAt, now), or(isNull(postPublications.sendingAt), lt(postPublications.sendingAt, new Date(now.getTime() - LOCK_MS)))))
     .orderBy(asc(postPublications.scheduledAt)).limit(5);

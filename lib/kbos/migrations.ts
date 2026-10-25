@@ -361,6 +361,57 @@ export const SCHEMA_STEPS: { id: string; sql: string }[] = [
   { id: "redes.publicar.5", sql: `ALTER TABLE kbos_post_publications ADD COLUMN IF NOT EXISTS account_id uuid REFERENCES kbos_social_accounts(id) ON DELETE SET NULL` },
   { id: "redes.publicar.6", sql: `ALTER TABLE kbos_post_publications ADD COLUMN IF NOT EXISTS attempts integer NOT NULL DEFAULT 0` },
   { id: "redes.publicar.7", sql: `ALTER TABLE kbos_post_publications ADD COLUMN IF NOT EXISTS sending_at timestamptz` },
+  // 0030: conexões por cliente (OAuth de cada rede), link de conexão e auditoria. Só acrescenta.
+  { id: "redes.conexoes.0", sql: `CREATE TABLE IF NOT EXISTS kbos_social_connections (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ provider text NOT NULL,
+ project_id uuid REFERENCES kbos_projects(id) ON DELETE SET NULL,
+ external_user_id text,
+ name text,
+ token_enc text NOT NULL,
+ refresh_enc text,
+ expires_at timestamptz,
+ refresh_expires_at timestamptz,
+ scopes text,
+ status text NOT NULL DEFAULT 'ativo',
+ last_error text,
+ via text NOT NULL DEFAULT 'admin',
+ link_id uuid,
+ connected_by uuid REFERENCES kbos_users(id) ON DELETE SET NULL,
+ created_at timestamptz NOT NULL DEFAULT now(),
+ updated_at timestamptz NOT NULL DEFAULT now()
+)` },
+  { id: "redes.conexoes.1", sql: `CREATE INDEX IF NOT EXISTS kbos_social_connections_project_idx ON kbos_social_connections(project_id)` },
+  { id: "redes.conexoes.2", sql: `CREATE TABLE IF NOT EXISTS kbos_social_connect_links (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ token_hash text NOT NULL,
+ project_id uuid NOT NULL REFERENCES kbos_projects(id) ON DELETE CASCADE,
+ created_by uuid REFERENCES kbos_users(id) ON DELETE SET NULL,
+ expires_at timestamptz NOT NULL,
+ revoked_at timestamptz,
+ last_used_at timestamptz,
+ uses integer NOT NULL DEFAULT 0,
+ created_at timestamptz NOT NULL DEFAULT now()
+)` },
+  { id: "redes.conexoes.3", sql: `CREATE UNIQUE INDEX IF NOT EXISTS kbos_social_connect_links_uq ON kbos_social_connect_links(token_hash)` },
+  { id: "redes.conexoes.4", sql: `CREATE TABLE IF NOT EXISTS kbos_social_audit (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ action text NOT NULL,
+ provider text,
+ project_id uuid REFERENCES kbos_projects(id) ON DELETE SET NULL,
+ connection_id uuid,
+ actor_id uuid REFERENCES kbos_users(id) ON DELETE SET NULL,
+ actor_kind text NOT NULL DEFAULT 'admin',
+ ip text,
+ user_agent text,
+ scopes text,
+ detail jsonb,
+ created_at timestamptz NOT NULL DEFAULT now()
+)` },
+  { id: "redes.conexoes.5", sql: `CREATE INDEX IF NOT EXISTS kbos_social_audit_created_idx ON kbos_social_audit(created_at)` },
+  { id: "redes.conexoes.6", sql: `ALTER TABLE kbos_social_accounts ADD COLUMN IF NOT EXISTS provider text` },
+  { id: "redes.conexoes.7", sql: `ALTER TABLE kbos_social_accounts ADD COLUMN IF NOT EXISTS connection_id uuid REFERENCES kbos_social_connections(id) ON DELETE SET NULL` },
+  { id: "redes.conexoes.8", sql: `ALTER TABLE kbos_social_accounts ALTER COLUMN token_enc DROP NOT NULL` },
 ];
 
 /**

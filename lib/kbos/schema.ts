@@ -939,16 +939,75 @@ export const socialAccounts = pgTable(
     name: text("name").notNull(),
     username: text("username"),
     pictureUrl: text("picture_url"),
-    tokenEnc: text("token_enc").notNull(),
+    /** Token próprio da conta (Página da Meta). Nas outras redes o token fica na conexão (0030). */
+    tokenEnc: text("token_enc"),
     tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
     status: text("status").notNull().default("ativo"),
     lastError: text("last_error"),
     connectedBy: uuid("connected_by").references(() => users.id, { onDelete: "set null" }),
+    /** 0030: provedor do login (meta, youtube, google, tiktok, pinterest, linkedin) e a conexão de origem. */
+    provider: text("provider"),
+    connectionId: uuid("connection_id").references(() => socialConnections.id, { onDelete: "set null" }),
     createdAt: ts("created_at"),
     updatedAt: ts("updated_at"),
   },
   (t) => [uniqueIndex("kbos_social_accounts_uq").on(t.network, t.externalId)],
 );
+
+/** 0030: um login OAuth numa rede (token + refresh criptografados). Uma conexão traz uma ou mais contas. */
+export const socialConnections = pgTable("kbos_social_connections", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  provider: text("provider").notNull(),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+  externalUserId: text("external_user_id"),
+  name: text("name"),
+  tokenEnc: text("token_enc").notNull(),
+  refreshEnc: text("refresh_enc"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  refreshExpiresAt: timestamp("refresh_expires_at", { withTimezone: true }),
+  scopes: text("scopes"),
+  status: text("status").notNull().default("ativo"),
+  lastError: text("last_error"),
+  /** admin | portal | link */
+  via: text("via").notNull().default("admin"),
+  linkId: uuid("link_id"),
+  connectedBy: uuid("connected_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: ts("created_at"),
+  updatedAt: ts("updated_at"),
+});
+
+/** 0030: link de conexão mandado ao cliente (só o hash do token fica no banco; vale 7 dias, um projeto). */
+export const socialConnectLinks = pgTable(
+  "kbos_social_connect_links",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tokenHash: text("token_hash").notNull(),
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    uses: integer("uses").notNull().default(0),
+    createdAt: ts("created_at"),
+  },
+  (t) => [uniqueIndex("kbos_social_connect_links_uq").on(t.tokenHash)],
+);
+
+/** 0030: quem conectou/desconectou o quê, quando, com quais escopos e de qual IP. */
+export const socialAudit = pgTable("kbos_social_audit", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  action: text("action").notNull(),
+  provider: text("provider"),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+  connectionId: uuid("connection_id"),
+  actorId: uuid("actor_id").references(() => users.id, { onDelete: "set null" }),
+  actorKind: text("actor_kind").notNull().default("admin"),
+  ip: text("ip"),
+  userAgent: text("user_agent"),
+  scopes: text("scopes"),
+  detail: jsonb("detail").$type<Record<string, unknown>>(),
+  createdAt: ts("created_at"),
+});
 
 /** 0029: arquivo final do post (imagem/vídeo) no volume da VPS; a rede baixa pelo link público com token. */
 export const postMedia = pgTable("kbos_post_media", {
