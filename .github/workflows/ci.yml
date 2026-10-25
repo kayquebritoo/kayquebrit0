@@ -24,6 +24,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
+      - name: Memória controlada (filesystem isolado)
+        run: node --test tools/brain-export/engine.checks.mjs
       - name: Tipos (tsc)
         run: npx tsc --noEmit
       - name: Lint
@@ -31,3 +33,4 @@ jobs:
       - name: Testes
         # github-actions: falhas viram anotações (legíveis sem baixar o log)
         run: npx vitest run --reporter=default --reporter=github-actions
+
