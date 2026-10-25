@@ -26,6 +26,8 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Memória controlada (filesystem isolado)
         run: node --test tools/brain-export/engine.checks.mjs
+      - name: Coleta periódica (sem acesso ao banco)
+        run: python3 tools/brain-export/run-proposals-checks.py
       - name: Tipos (tsc)
         run: npx tsc --noEmit
       - name: Lint
