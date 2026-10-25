@@ -116,13 +116,34 @@ export async function createAdminSession(emailRaw: string, bypass: string | null
   return { sessionId: sess.id, user };
 }
 
+/**
+ * Link de acesso gerado pelo admin para enviar à mão (ex.: WhatsApp do Kayque)
+ * quando o código não chega. Mesmo armazenamento do Magic Link (só o hash),
+ * uso único, validade maior porque o envio é manual.
+ */
+export const ACCESS_LINK_HOURS = 24;
+export async function createAccessLink(emailRaw: string, hours = ACCESS_LINK_HOURS) {
+  const email = emailRaw.trim().toLowerCase();
+  if (isAdminEmail(email)) throw new PublicError("Link de acesso não é emitido para administrador.");
+  const user = (await db().select().from(users).where(sql`lower(${users.email}) = ${email}`).limit(1))[0];
+  if (!user || user.role === "admin") throw new PublicError("Conta do portal não encontrada.");
+  const token = randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + hours * 3_600_000);
+  await db().insert(loginTokens).values({ email: user.email, tokenHash: hashToken(token), expiresAt });
+  return { token, expiresAt };
+}
+
 export async function consumeMagicLink(token: string) {
   const d = db();
+  // Marca como usado e lê na mesma instrução: dois cliques simultâneos não geram duas sessões.
   const row = (
-    await d.select().from(loginTokens).where(eq(loginTokens.tokenHash, hashToken(token))).limit(1)
+    await d
+      .update(loginTokens)
+      .set({ consumed: true })
+      .where(sql`${loginTokens.tokenHash} = ${hashToken(token)} AND ${loginTokens.consumed} = false AND ${loginTokens.expiresAt} > now()`)
+      .returning()
   )[0];
-  if (!row || row.consumed || row.expiresAt.getTime() < Date.now()) return null;
-  await d.update(loginTokens).set({ consumed: true }).where(eq(loginTokens.id, row.id));
+  if (!row) return null;
   const user = (await d.select().from(users).where(eq(users.email, row.email)).limit(1))[0];
   if (!user) return null;
   const sess = (

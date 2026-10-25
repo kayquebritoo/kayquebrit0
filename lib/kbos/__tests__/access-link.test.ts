@@ -1,0 +1,20 @@
+import { beforeAll,beforeEach,afterAll,describe,it,expect,vi } from 'vitest';
+import { PGlite } from '@electric-sql/pglite';
+import { drizzle } from 'drizzle-orm/pglite';
+import { readFileSync,readdirSync } from 'node:fs';
+import * as schema from '../schema';
+const holder=vi.hoisted(()=>({db:null as unknown}));
+vi.mock('../db',()=>({db:()=>holder.db}));
+vi.mock('../email',()=>({sendEmail:vi.fn().mockResolvedValue({sent:true}),appUrl:()=>'',appUrlEnv:()=>'https://kbos.example.com',buildMagicLinkEmail:()=>({subject:'',html:''})}));
+import { createAccessLink,consumeMagicLink,ADMIN_EMAIL } from '../auth';
+const pg=new PGlite(),d=drizzle(pg,{schema});
+let id:string;
+beforeAll(async()=>{holder.db=d;for(const file of readdirSync('drizzle').filter(f=>/^\d.*\.sql$/.test(f)).sort())await pg.exec(readFileSync(`drizzle/${file}`,'utf8'));},30000);
+beforeEach(async()=>{await pg.exec('TRUNCATE kbos_users, kbos_login_tokens CASCADE');const [u]=await d.insert(schema.users).values({name:'Thalita',email:'Thalita@Example.com',role:'cliente'}).returning();id=u.id;});
+afterAll(()=>pg.close());
+describe('link de acesso emitido pelo admin',()=>{
+ it('guarda só o hash, vale 24 h e entra uma única vez',async()=>{const {token,expiresAt}=await createAccessLink('thalita@example.com');const [row]=await d.select().from(schema.loginTokens);expect(row.tokenHash).not.toBe(token);expect(expiresAt.getTime()-Date.now()).toBeGreaterThan(23*3_600_000);const s=await consumeMagicLink(token);expect(s?.user.id).toBe(id);expect(await consumeMagicLink(token)).toBeNull();expect(await d.select().from(schema.sessions)).toHaveLength(1);});
+ it('cliques simultâneos geram uma só sessão',async()=>{const {token}=await createAccessLink('thalita@example.com');const r=await Promise.all([consumeMagicLink(token),consumeMagicLink(token)]);expect(r.filter(Boolean)).toHaveLength(1);expect(await d.select().from(schema.sessions)).toHaveLength(1);});
+ it('link expirado não entra',async()=>{const {token}=await createAccessLink('thalita@example.com');await d.update(schema.loginTokens).set({expiresAt:new Date(0)});expect(await consumeMagicLink(token)).toBeNull();});
+ it('não emite para admin nem para conta inexistente',async()=>{await expect(createAccessLink(ADMIN_EMAIL)).rejects.toThrow();await expect(createAccessLink('ninguem@example.com')).rejects.toThrow();await d.insert(schema.users).values({name:'Equipe',email:'equipe@example.com',role:'admin'});await expect(createAccessLink('equipe@example.com')).rejects.toThrow();});
+});
