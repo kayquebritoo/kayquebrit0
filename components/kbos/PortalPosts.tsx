@@ -9,7 +9,11 @@ type Post = {
   caption: string | null; mediaUrl: string | null; clientNote: string | null; script: string | null; mine: boolean; manage: boolean; takes: Take[];
   people: { scriptBy: string | null; captureBy: string | null; editor: string | null } | null; postedUrl: string | null;
 };
-type Proj = { id: string; titulo: string; manage?: boolean };
+type Proj = { id: string; titulo: string; manage?: boolean; parentId?: string | null };
+type Pool = { rootId: string; titulo: string; limit: number | null; used: number; manage: boolean; ops: { id: string; titulo: string; limit: number | null; used: number }[] };
+const plain = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+/** Empresa de uma operação pelo título ("Hotel Atalaia VIP" → Hotel). */
+const brandOf = (titulo: string) => BRAND_LIST.find((b) => plain(titulo).includes(plain(b))) ?? null;
 const FORMAT: Record<string, string> = { reels: "Vídeo (Reels)", carrossel: "Carrossel", estatico: "Post estático", story: "Story", outro: "Post" };
 const LABEL: Record<string, string> = { roteiro: "Planejado", captacao: "Em captação", producao: "Em edição", aprovacao: "Aguardando você", ajustes: "Ajustes pedidos", aprovado: "Aprovado", agendado: "Agendado", postado: "Publicado", erro: "Agendado", cancelado: "Cancelado" };
 const COLOR: Record<string, string> = { roteiro: "#9a93a8", captacao: "#4DA3FF", producao: "#8a6cf0", aprovacao: "#f5c46e", ajustes: "#ff9f5a", aprovado: "#3ecf8e", agendado: "#c08cff", postado: "#2fbf71", erro: "#c08cff", cancelado: "#5a5566" };
@@ -41,6 +45,7 @@ export default function PortalPosts() {
   const [editing, setEditing] = useState<Post | "new" | null>(null);
   const [picking, setPicking] = useState<Post | null>(null);
   const [quota, setQuota] = useState<Quota | null>(null);
+  const [pools, setPools] = useState<Pool[]>([]);
   const [brand, setBrand] = useState("");
 
   const load = useCallback(async () => {
@@ -51,6 +56,7 @@ export default function PortalPosts() {
       setItems(d.items || []);
       setProjects(d.projects || []);
       setQuota(d.quota ?? null);
+      setPools(d.pools ?? []);
     } catch { setItems([]); }
   }, [month]);
   useEffect(() => {
@@ -136,6 +142,7 @@ export default function PortalPosts() {
         <p className="font-display text-base capitalize">{monthName}</p>
         <button type="button" aria-label="Próximo mês" className="kb-chip min-h-11 min-w-11" onClick={() => shift(1)}>›</button>
       </div>
+      {pools.map((pl) => <PoolCard key={pl.rootId} pool={pl} monthName={monthName} onChanged={() => void load()} />)}
       {quota && (
         <div className="kb-card gap-2" aria-label="Posts do mês">
           <div className="flex items-baseline justify-between gap-2">
@@ -206,9 +213,11 @@ export default function PortalPosts() {
 }
 
 function ContentEditor({ post, projects, date, onClose, onDone, onPickTakes }: { post: Post | null; projects: Proj[]; date: string; onClose: () => void; onDone: () => void; onPickTakes: (p: Post) => void }) {
-  const firstManaged = projects.find((p) => p.manage) ?? projects[0];
+  // com operações (Hotel, Lounge, Praça), o conteúdo nasce na operação; o principal fica para o que é de todas
+  const ops = projects.filter((p) => p.parentId);
+  const firstManaged = ops.find((p) => p.manage) ?? projects.find((p) => p.manage) ?? projects[0];
   const [f, setF] = useState(() => ({
-    projectId: post?.projectId ?? firstManaged?.id ?? "", date: post?.scheduledAt ? dayKey(post.scheduledAt) : date, brand: post?.brand ?? "", format: post?.format ?? "reels",
+    projectId: post?.projectId ?? firstManaged?.id ?? "", date: post?.scheduledAt ? dayKey(post.scheduledAt) : date, brand: post?.brand ?? (firstManaged ? brandOf(firstManaged.titulo) ?? "" : ""), format: post?.format ?? "reels",
     title: post?.title ?? "", script: post?.script ?? "", caption: post?.caption ?? "", networks: post?.networks?.length ? post.networks : ["instagram"],
   }));
   const [busy, setBusy] = useState(false);
@@ -246,7 +255,7 @@ function ContentEditor({ post, projects, date, onClose, onDone, onPickTakes }: {
           </div>
           <button type="button" onClick={onClose} aria-label="Fechar" className="h-11 w-11 shrink-0 rounded-full text-2xl">×</button>
         </div>
-        {!post && projects.length > 1 && <label className="kb-field"><span>Projeto</span><select className="kb-control min-h-12" value={f.projectId} onChange={(e) => setF({ ...f, projectId: e.target.value })}>{projects.map((p) => <option key={p.id} value={p.id}>{p.titulo}</option>)}</select></label>}
+        {!post && projects.length > 1 && <label className="kb-field"><span>{ops.length ? "Empresa / operação" : "Projeto"}</span><select className="kb-control min-h-12" value={f.projectId} onChange={(e) => { const pr = projects.find((p) => p.id === e.target.value); setF({ ...f, projectId: e.target.value, brand: (pr && brandOf(pr.titulo)) || f.brand }); }}>{projects.map((p) => <option key={p.id} value={p.id}>{p.parentId ? p.titulo : ops.length ? `${p.titulo} (todas)` : p.titulo}</option>)}</select></label>}
         <div className="grid grid-cols-2 gap-2">
           <label className="kb-field"><span>Dia</span><input className="kb-control min-h-12 text-base" type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></label>
           <label className="kb-field"><span>Formato</span><select className="kb-control min-h-12" value={f.format} onChange={(e) => setF({ ...f, format: e.target.value })}>{Object.entries(FORMAT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
@@ -347,6 +356,45 @@ function TakesPicker({ post, onClose, onDone }: { post: Post; onClose: () => voi
         </div>
         <button type="button" className="kb-btn min-h-12 w-full" disabled={busy} onClick={() => void save()}>Salvar {chosen.length} take{chosen.length === 1 ? "" : "s"}</button>
       </div>
+    </div>
+  );
+}
+
+/** Plano do mês dividido entre as empresas. A gestão remaneja: aumentar uma exige sobrar no total (ou diminuir outra). */
+function PoolCard({ pool, monthName, onChanged }: { pool: Pool; monthName: string; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const shares = pool.ops.reduce((s, o) => s + (o.limit ?? 0), 0);
+  const free = pool.limit === null ? Infinity : pool.limit - shares;
+  async function bump(id: string, delta: number) {
+    const op = pool.ops.find((o) => o.id === id)!;
+    const next = (op.limit ?? 0) + delta;
+    if (delta > 0 && free <= 0) { setMsg("O plano já está todo distribuído: diminua de outra empresa primeiro."); return; }
+    if (next < Math.max(1, op.used)) { setMsg(next < 1 ? "Cada empresa precisa de pelo menos 1 post." : `${op.titulo} já tem ${op.used} posts neste mês.`); return; }
+    setBusy(true); setMsg("");
+    try { await send("/api/portal/plan/", "PUT", { rootId: pool.rootId, limits: { [id]: next } }); onChanged(); } catch (e) { setMsg(e instanceof Error ? e.message : "Erro."); } finally { setBusy(false); }
+  }
+  return (
+    <div className="kb-card gap-3" aria-label="Plano do mês por empresa">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-sm">Plano de {monthName}</span>
+        <b className="tabular-nums text-sm">{pool.limit === null ? pool.used : `${pool.used} de ${pool.limit}`}</b>
+      </div>
+      {pool.ops.map((o) => (
+        <div key={o.id} className="grid gap-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex min-w-0 items-center gap-1.5 truncate text-sm"><i aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: brandColor(brandOf(o.titulo)) ?? "#999" }} />{o.titulo}</span>
+            <span className="flex shrink-0 items-center gap-1.5">
+              {pool.manage && <button type="button" className="kb-chip min-h-9 min-w-9" aria-label={`Menos um post para ${o.titulo}`} disabled={busy} onClick={() => void bump(o.id, -1)}>−</button>}
+              <span className="w-14 text-center text-sm tabular-nums">{o.used}/{o.limit ?? "∞"}</span>
+              {pool.manage && <button type="button" className="kb-chip min-h-9 min-w-9" aria-label={`Mais um post para ${o.titulo}`} disabled={busy} onClick={() => void bump(o.id, 1)}>+</button>}
+            </span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-white/10"><span className="block h-full rounded-full" style={{ width: `${o.limit ? Math.min(100, (o.used / o.limit) * 100) : 0}%`, background: brandColor(brandOf(o.titulo)) ?? "#8a6cf0" }} /></div>
+        </div>
+      ))}
+      {pool.manage && <p className="kb-faint text-xs">{free > 0 && free !== Infinity ? `${free} post${free > 1 ? "s" : ""} sem empresa definida. ` : ""}Para dar mais a uma empresa, tire de outra: o total do plano não muda.</p>}
+      {msg && <p role="status" className="text-sm">{msg}</p>}
     </div>
   );
 }

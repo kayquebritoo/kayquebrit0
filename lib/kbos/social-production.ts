@@ -1,5 +1,6 @@
 // "Colar status da produção": o Kayque mantém uma lista (dia - marca - formato - situação) e o KBOS aplica no calendário.
-import { and, eq, gte, isNotNull, lt } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, lt } from "drizzle-orm";
+import { projectFamily } from "./project-family";
 import { db } from "./db";
 import { socialPosts } from "./schema";
 import type { PostFormat, PostStatus } from "./social-import";
@@ -60,10 +61,11 @@ export type ProdResult = { matched: number; postedBefore: number; restored: numb
 
 export async function applyProduction(projectId: string, month: string, text: string, dryRun: boolean): Promise<ProdResult> {
   const { lines, postedBefore } = parseProduction(text);
+  const fam = await projectFamily(projectId);
   const [y, m] = month.split("-").map(Number);
   const from = new Date(`${month}-01T00:00:00-03:00`);
   const to = new Date(`${m === 12 ? y + 1 : y}-${String(m === 12 ? 1 : m + 1).padStart(2, "0")}-01T00:00:00-03:00`);
-  const rows = await db().select().from(socialPosts).where(and(eq(socialPosts.projectId, projectId), isNotNull(socialPosts.scheduledAt), gte(socialPosts.scheduledAt, from), lt(socialPosts.scheduledAt, to)));
+  const rows = await db().select().from(socialPosts).where(and(inArray(socialPosts.projectId, fam.ids), isNotNull(socialPosts.scheduledAt), gte(socialPosts.scheduledAt, from), lt(socialPosts.scheduledAt, to)));
   const dayOf = (d: Date) => Number(d.toLocaleDateString("sv-SE", { timeZone: "America/Belem" }).slice(8, 10));
   const used = new Set<string>();
   const updates = new Map<string, PostStatus>();
@@ -84,11 +86,11 @@ export async function applyProduction(projectId: string, month: string, text: st
     const anchor = lines[0].day;
     for (const r of rows) if (r.scheduledAt && dayOf(r.scheduledAt) < anchor && !updates.has(r.id) && r.status !== "postado") { updates.set(r.id, "postado"); before++; }
   }
-  const dismissed = await db().select({ id: socialPosts.id, d: socialPosts.dismissedAt }).from(socialPosts).where(and(eq(socialPosts.projectId, projectId), isNotNull(socialPosts.dismissedAt)));
+  const dismissed = await db().select({ id: socialPosts.id, d: socialPosts.dismissedAt }).from(socialPosts).where(and(inArray(socialPosts.projectId, fam.ids), isNotNull(socialPosts.dismissedAt)));
   const result: ProdResult = { matched: used.size, postedBefore: before, restored: dismissed.length, unmatched };
   if (dryRun) return result;
 
   for (const [id, status] of updates) await db().update(socialPosts).set({ status, updatedAt: new Date() }).where(eq(socialPosts.id, id));
-  if (dismissed.length) await db().update(socialPosts).set({ dismissedAt: null }).where(and(eq(socialPosts.projectId, projectId), isNotNull(socialPosts.dismissedAt)));
+  if (dismissed.length) await db().update(socialPosts).set({ dismissedAt: null }).where(and(inArray(socialPosts.projectId, fam.ids), isNotNull(socialPosts.dismissedAt)));
   return result;
 }

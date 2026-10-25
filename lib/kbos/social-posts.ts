@@ -7,6 +7,8 @@ import { effectivePostLimit } from "./plan-limit";
 import { POST_FORMATS, POST_STATUS, parseIcs, type PostFormat, type PostStatus } from "./social-import";
 import { clientProjectIds, clientProjects, managedProjectIds } from "./project-members";
 import { syncPublications } from "./content-cycle";
+import { projectFamily, rootOf } from "./project-family";
+import { PoolError, assertRoom } from "./plan-pool";
 
 export type Post = typeof socialPosts.$inferSelect;
 
@@ -17,7 +19,7 @@ export async function previewImport(projectId: string, icsText: string) {
   const parsed = parseIcs(icsText, projectId);
   // Busca também chaves antigas ou trazidas de outro projeto; chaves v2 novas
   // não podem fazer uma simples reimportação duplicar o calendário já editado.
-  const rows = await db().select({ id: socialPosts.id, projectId: socialPosts.projectId, externalKey: socialPosts.externalKey, brand: socialPosts.brand, title: socialPosts.title, format: socialPosts.format, scheduledAt: socialPosts.scheduledAt, caption: socialPosts.caption }).from(socialPosts).where(eq(socialPosts.projectId, projectId));
+  const rows = await db().select({ id: socialPosts.id, projectId: socialPosts.projectId, externalKey: socialPosts.externalKey, brand: socialPosts.brand, title: socialPosts.title, format: socialPosts.format, scheduledAt: socialPosts.scheduledAt, caption: socialPosts.caption }).from(socialPosts).where(inArray(socialPosts.projectId, (await projectFamily(projectId)).ids));
   const hasImported = indexImportedPosts(rows);
   const legacyCounts = new Map<string, number>();
   for (const post of parsed) legacyCounts.set(post.legacyKey, (legacyCounts.get(post.legacyKey) ?? 0) + 1);
@@ -30,10 +32,11 @@ export async function importPosts(projectId: string, icsText: string) {
   const [proj] = await db().select({ id: projects.id, contactId: projects.contactId }).from(projects).where(eq(projects.id, projectId)).limit(1);
   if (!proj) throw new Error("Projeto não encontrado.");
   const { fresh, parsed } = await previewImport(projectId, icsText);
+  const fam = await projectFamily(projectId);
   const database = db();
   const insertBatch = (posts: typeof fresh) => database.insert(socialPosts).values(
     posts.map((p) => ({
-      projectId, contactId: proj.contactId, brand: p.brand, title: p.title, format: p.format,
+      projectId: fam.route(p.brand), contactId: proj.contactId, brand: p.brand, title: p.title, format: p.format,
       scheduledAt: p.scheduledAt, status: p.status, script: p.script, caption: p.caption, copies: p.copies, externalKey: p.key,
     })),
   ).onConflictDoNothing({ target: socialPosts.externalKey }).returning({ id: socialPosts.id });
@@ -50,7 +53,8 @@ export async function importPosts(projectId: string, icsText: string) {
 export async function listPosts(opts: { projectId?: string; from?: Date; to?: Date; status?: string; includeHidden?: boolean } = {}) {
   const conds = [];
   if (!opts.includeHidden) conds.push(isNull(socialPosts.linkedTo), isNull(socialPosts.dismissedAt));
-  if (opts.projectId) conds.push(eq(socialPosts.projectId, opts.projectId));
+  // principal com operações: o calendário dele mostra a família inteira
+  if (opts.projectId) conds.push(inArray(socialPosts.projectId, (await projectFamily(opts.projectId)).ids));
   if (opts.status && (POST_STATUS as readonly string[]).includes(opts.status)) conds.push(eq(socialPosts.status, opts.status));
   if (opts.from) conds.push(gte(socialPosts.scheduledAt, opts.from));
   if (opts.to) conds.push(lt(socialPosts.scheduledAt, opts.to));
@@ -176,8 +180,7 @@ export async function createClientRoteiro(userId: string, input: { projectId: st
   if (!(POST_FORMATS as readonly string[]).includes(input.format)) throw new PostError("Formato inválido.");
   const title = input.title.trim().slice(0, 200);
   if (title.length < 2) throw new PostError("Dê um título ao roteiro.");
-  const q = await monthUsage(proj.id, input.date.slice(0, 7));
-  if (q.limit !== null && q.used >= q.limit) throw new PostError(`Esse mês já tem ${q.used} posts, que é o limite do seu plano (${q.limit}). Escolha outro mês ou fale com o Kayque.`);
+  try { await assertRoom(proj.id, input.date.slice(0, 7)); } catch (e) { if (e instanceof PoolError) throw new PostError(e.message); throw e; }
   const [row] = await db().insert(socialPosts).values({
     projectId: proj.id, brand: input.brand?.trim().slice(0, 60) || null, title, format: input.format, scheduledAt: new Date(`${input.date}T00:00:00-03:00`),
     status: "roteiro", script: input.script?.trim().slice(0, 30000) || null, createdBy: userId,
@@ -195,7 +198,7 @@ export async function suggestScripts(postId: string) {
   const [post] = await db().select().from(socialPosts).where(eq(socialPosts.id, postId)).limit(1);
   if (!post || !post.projectId) return [];
   const center = post.scheduledAt?.getTime() ?? Date.now();
-  const rows = await db().select().from(socialPosts).where(and(eq(socialPosts.projectId, post.projectId), isNull(socialPosts.linkedTo), isNull(socialPosts.dismissedAt), inArray(socialPosts.status, SCRIPT_STAGES))).limit(1000);
+  const rows = await db().select().from(socialPosts).where(and(inArray(socialPosts.projectId, (await projectFamily(await rootOf(post.projectId))).ids), isNull(socialPosts.linkedTo), isNull(socialPosts.dismissedAt), inArray(socialPosts.status, SCRIPT_STAGES))).limit(1000);
   return rows
     .filter((r) => r.id !== post.id && r.scheduledAt && Math.abs(r.scheduledAt.getTime() - center) <= 21 * DAY_MS)
     .map((r) => ({ r, score: (r.brand && post.brand && r.brand === post.brand ? 3 : r.brand && post.brand ? -3 : 0) + (r.format === post.format ? 2 : 0) + (r.script ? 1 : 0) - Math.abs(r.scheduledAt!.getTime() - center) / DAY_MS / 7 }))

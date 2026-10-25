@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { and, eq, gte, lt } from "drizzle-orm";
+import { and, gte, inArray, lt } from "drizzle-orm";
+import { projectFamily } from "@/lib/kbos/project-family";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { db } from "@/lib/kbos/db";
 import { socialPosts } from "@/lib/kbos/schema";
@@ -22,7 +23,7 @@ export async function GET(req: Request) {
   const from = new Date(`${month}-01T00:00:00-03:00`);
   const to = new Date(`${number === 12 ? year + 1 : year}-${String(number === 12 ? 1 : number + 1).padStart(2, "0")}-01T00:00:00-03:00`);
   try {
-    const rows = await db().select().from(socialPosts).where(and(eq(socialPosts.projectId, projectId), gte(socialPosts.scheduledAt, from), lt(socialPosts.scheduledAt, to)));
+    const rows = await db().select().from(socialPosts).where(and(inArray(socialPosts.projectId, (await projectFamily(projectId)).ids), gte(socialPosts.scheduledAt, from), lt(socialPosts.scheduledAt, to)));
     return NextResponse.json(reviewContent(rows), { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return serverError(error);

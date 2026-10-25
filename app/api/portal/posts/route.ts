@@ -9,6 +9,7 @@ import { PostError, createClientRoteiro, monthUsage, portalPosts } from "@/lib/k
 import { notifyClientRoteiro } from "@/lib/kbos/social-notify";
 import { POST_FORMATS } from "@/lib/kbos/social-import";
 import { clientProjects, managedProjectIds } from "@/lib/kbos/project-members";
+import { planPool } from "@/lib/kbos/plan-pool";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +19,14 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   try {
     const managed = new Set(await managedProjectIds(user.id));
-    const mine = (await db().select({ id: projects.id, titulo: projects.titulo }).from(projects).where(clientProjects(user.id))).map((p) => ({ ...p, manage: managed.has(p.id) }));
+    const mine = (await db().select({ id: projects.id, titulo: projects.titulo, parentId: projects.parentId }).from(projects).where(clientProjects(user.id))).map((p) => ({ ...p, manage: managed.has(p.id) }));
     const month = new URL(req.url).searchParams.get("month") ?? "";
-    const quota = /^\d{4}-\d{2}$/.test(month) && mine[0] ? await monthUsage(mine[0].id, month) : null;
-    return NextResponse.json({ items: await portalPosts(user.id), projects: mine, quota });
+    const valid = /^\d{4}-\d{2}$/.test(month);
+    const roots = [...new Set(mine.map((p) => p.parentId ?? p.id))];
+    // cliente com operações: o plano é do principal, dividido entre as empresas
+    const pools = valid ? (await Promise.all(roots.map((r) => planPool(r, month)))).filter((p) => p && p.ops.length).map((p) => ({ ...p!, manage: managed.has(p!.rootId) })) : [];
+    const quota = valid && mine[0] && !pools.length ? await monthUsage(mine[0].id, month) : null;
+    return NextResponse.json({ items: await portalPosts(user.id), projects: mine, quota, pools });
   } catch (e) {
     return serverError(e);
   }

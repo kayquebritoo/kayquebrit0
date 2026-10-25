@@ -212,3 +212,38 @@ describe("separar o Grupo VIP por operação (reversível)", () => {
     await expect(revertSplit(r.moveId)).rejects.toThrow();
   });
 });
+
+describe("família principal + operações e plano compartilhado", () => {
+  it("post novo com empresa vai para a operação; calendário do principal mostra a família", async () => {
+    const { projectFamily, operationFor } = await import("../project-family");
+    const { listPosts } = await import("../social-posts");
+    const [praca] = await d.insert(schema.projects).values({ titulo: "Praça de Alimentação Atalaia VIP", categoria: "social", parentId: grupo }).returning();
+    const fam = await projectFamily(grupo);
+    expect(fam.route("Hotel")).toBe(hotel);
+    expect(fam.route("Praça")).toBe(praca.id);
+    expect(fam.route("Lounge")).toBe(lounge);
+    expect(fam.route(null)).toBe(grupo);
+    expect(operationFor([{ id: "a", titulo: "Hotel A" }, { id: "b", titulo: "Hotel B" }], "Hotel")).toBeNull(); // ambíguo fica no principal
+    await d.insert(schema.socialPosts).values([{ projectId: hotel, title: "H", format: "reels", status: "roteiro", scheduledAt: NOW }, { projectId: grupo, title: "G", format: "reels", status: "roteiro", scheduledAt: NOW }]);
+    expect((await listPosts({ projectId: grupo })).map((p) => p.title).sort()).toEqual(["G", "H"]);
+    expect((await listPosts({ projectId: hotel })).map((p) => p.title)).toEqual(["H"]);
+  });
+  it("16 por empresa dentro de 48: remanejar exige tirar de outra; parte cheia barra novo conteúdo", async () => {
+    const { planPool, setOperationLimits, assertRoom } = await import("../plan-pool");
+    await d.update(schema.projects).set({ postLimit: 32 }).where(eq(schema.projects.id, grupo));
+    await setOperationLimits(grupo, { [hotel]: 16, [lounge]: 16 });
+    await expect(setOperationLimits(grupo, { [hotel]: 17 })).rejects.toThrow(/passa do plano/);
+    await setOperationLimits(grupo, { [lounge]: 14 });
+    await setOperationLimits(grupo, { [hotel]: 18 });
+    await expect(setOperationLimits(hotel, { [hotel]: 1 })).rejects.toThrow(); // só no principal
+    await expect(setOperationLimits(grupo, { [lounge]: 0 })).rejects.toThrow();
+    await d.update(schema.projects).set({ postLimit: 1 }).where(eq(schema.projects.id, lounge));
+    await createClientRoteiro(thalita, { projectId: hotel, date: "2026-11-10", title: "Primeiro", format: "reels" }).catch(() => undefined); // Thalita só tem o Hotel
+    await d.insert(schema.socialPosts).values({ projectId: lounge, title: "L1", format: "reels", status: "roteiro", scheduledAt: at("2026-11-04T00:00:00-03:00") });
+    await expect(assertRoom(lounge, "2026-11")).rejects.toThrow(/parte dele no plano/);
+    await expect(assertRoom(hotel, "2026-11")).resolves.toBeUndefined();
+    const pool = (await planPool(hotel, "2026-11"))!;
+    expect(pool).toMatchObject({ rootId: grupo, limit: 32, used: 2 });
+    expect(pool.ops.map((o) => [o.titulo, o.limit, o.used])).toEqual([["Hotel", 18, 1], ["Lounge", 1, 1]]);
+  });
+});

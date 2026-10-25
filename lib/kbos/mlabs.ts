@@ -1,7 +1,8 @@
 // Ponte com a mLabs via MCP (https://mcp.mlabs.io). SOMENTE LEITURA: lê agenda e demandas e espelha no calendário do Conteúdo.
 // O token fica só no servidor (MLABS_MCP_TOKEN). Nada aqui cria, edita ou apaga coisas na mLabs.
 import { createHash } from "node:crypto";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { projectFamily } from "./project-family";
 import { db } from "./db";
 import { socialPosts } from "./schema";
 import { matchingPublication, publicationUpdateAllowed } from "./social-identity";
@@ -142,7 +143,9 @@ export async function syncFromMlabs(projectId: string) {
   }
   const drafts = groupSchedules(all, names);
 
-  const existing = await db().select().from(socialPosts).where(eq(socialPosts.projectId, projectId));
+  // Grupo com operações: procura na família inteira (post movido para a operação não volta duplicado)
+  const fam = await projectFamily(projectId);
+  const existing = await db().select().from(socialPosts).where(inArray(socialPosts.projectId, fam.ids));
 
   let created = 0, updated = 0, ambiguous = 0;
   for (const d of drafts) {
@@ -152,12 +155,12 @@ export async function syncFromMlabs(projectId: string) {
     // O item oculto/vinculado continua preservado e não reaparece na sincronização.
     if (row?.linkedTo || row?.dismissedAt) continue;
     if (!row) {
-      const inserted = await db().insert(socialPosts).values({ projectId, brand: d.brand, title: d.title, format: d.format, networks: d.networks, scheduledAt: d.scheduledAt, status: d.status, caption: d.caption, externalKey: d.externalKey, copies: Math.max(1, d.networks.length) }).onConflictDoNothing({ target: socialPosts.externalKey }).returning();
+      const inserted = await db().insert(socialPosts).values({ projectId: fam.route(d.brand), brand: d.brand, title: d.title, format: d.format, networks: d.networks, scheduledAt: d.scheduledAt, status: d.status, caption: d.caption, externalKey: d.externalKey, copies: Math.max(1, d.networks.length) }).onConflictDoNothing({ target: socialPosts.externalKey }).returning();
       existing.push(...inserted);
       created += inserted.length;
     } else if (publicationUpdateAllowed(row.status, d.status)) {
       const changed = await db().update(socialPosts).set({ status: d.status, networks: d.networks, updatedAt: new Date() })
-        .where(and(eq(socialPosts.id, row.id), eq(socialPosts.projectId, projectId), eq(socialPosts.status, row.status), sql`date_trunc('milliseconds', ${socialPosts.updatedAt}) = ${row.updatedAt.toISOString()}::timestamptz`, isNull(socialPosts.linkedTo), isNull(socialPosts.dismissedAt)))
+        .where(and(eq(socialPosts.id, row.id), inArray(socialPosts.projectId, fam.ids), eq(socialPosts.status, row.status), sql`date_trunc('milliseconds', ${socialPosts.updatedAt}) = ${row.updatedAt.toISOString()}::timestamptz`, isNull(socialPosts.linkedTo), isNull(socialPosts.dismissedAt)))
         .returning({ id: socialPosts.id });
       if (changed.length) updated++; else ambiguous++;
     }
