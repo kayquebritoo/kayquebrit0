@@ -82,7 +82,7 @@ Plano: Grupo = 48/mês, cada operação 16; a gestão remaneja no portal (+/−)
 Antes da separação, mLabs/ICS/lista de produção/conciliação passaram a procurar na família inteira e a gravar post
 novo com empresa direto na operação (`lib/kbos/project-family.ts`), para nada voltar duplicado.
 
-### Fase 3 — Publicar nas redes pelo KBOS (substitui o agendador da mLabs) — Instagram e Facebook prontos ⏳ falta o app da Meta
+### Fase 3 — Publicar nas redes pelo KBOS (substitui o agendador da mLabs) — 6 redes prontas no código ⏳ faltam as chaves dos apps
 Feito (migração 0029, aditiva):
 - `kbos_social_accounts` (token da Página criptografado AES-256-GCM, `social-crypto.ts`), `kbos_post_media`
   (arquivo final no volume `/data/gallery/social`, upload em pedaços de 8 MB, até 1 GB de vídeo), colunas de envio
@@ -103,7 +103,7 @@ Feito (migração 0029, aditiva):
    empresarial que administra as Páginas do Grupo VIP.
 2. No app, adicionar o caso de uso/produto **Login do Facebook** (e "Instagram Graph API" / "Gerenciar conteúdo no
    Instagram" se aparecer). Em Login do Facebook → Configurações → URIs de redirecionamento do OAuth válidos:
-   `https://kbos.kayquebrito.com.br/api/admin/social/meta/callback/`
+   `https://kbos.kayquebrito.com.br/api/social/meta/callback/`
 3. Configurações do app → Básico: copiar **ID do app** e **Chave secreta**; preencher URL da política de privacidade
    (`https://kbos.kayquebrito.com.br/` serve enquanto não houver página própria).
 4. Na VPS: `bash /opt/kbos/scripts/kbos-config.sh` → opção **9** → colar ID e chave (a chave não aparece na tela).
@@ -114,10 +114,15 @@ Em modo de desenvolvimento o app já publica nas Páginas que **você** administ
 da revisão da Meta para o Grupo VIP. A revisão (Advanced Access) só será necessária para clientes cujas Páginas você
 não administra. Os Instagram precisam ser **profissionais** (Empresa/Criador) e ligados à Página do Facebook.
 
-Ainda nesta fase (depois do teste com a Meta):
-- TikTok: Content Posting API (exige app aprovado; "direct post" depois de auditoria).
-- YouTube Shorts: YouTube Data API (upload), cota diária.
-- LinkedIn (opcional): Posts API.
+**Conexões por cliente (out/2026, migração 0030):** cada cliente conecta as próprias contas pelo login oficial
+da rede (botão no portal ou link de conexão de 7 dias mandado no WhatsApp); o Kayque usa o cliente
+"Kayque Brito (pessoal)". Provedores em `lib/kbos/social/providers/` (Meta, YouTube, Perfil da Empresa no Google,
+TikTok, Pinterest, LinkedIn), tokens criptografados com `SOCIAL_TOKEN_KEY`, renovação automática, Desconectar
+revoga na rede, auditoria em Ajustes. URI nova da Meta: `https://kbos.kayquebrito.com.br/api/social/meta/callback/`.
+Passo a passo de cada rede: `docs/CONEXOES-REDES.md`.
+
+Ainda nesta fase:
+- Vídeo no Pinterest e no LinkedIn (envio em partes), Story no Facebook, páginas de empresa no LinkedIn.
 - Legenda por rede, primeiro comentário, marcar pessoas/local; Reels também no Facebook como Reel (hoje sai como vídeo).
 - Segredos só no `/opt/kbos/.env` pelo menu de configuração.
 
