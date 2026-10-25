@@ -31,3 +31,12 @@ CREATE TABLE IF NOT EXISTS kbos_project_cycles (
  created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS kbos_project_cycles_uq ON kbos_project_cycles(project_id, month);
+-- Registro de movimentações de dados (ex.: separar o Grupo VIP por operação), para desfazer.
+CREATE TABLE IF NOT EXISTS kbos_data_moves (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ kind text NOT NULL,
+ payload jsonb NOT NULL,
+ created_by uuid REFERENCES kbos_users(id) ON DELETE SET NULL,
+ created_at timestamptz NOT NULL DEFAULT now(),
+ reverted_at timestamptz
+);

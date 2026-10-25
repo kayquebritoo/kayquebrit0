@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 
-type Member = { userId: string; name: string; email: string };
+type Member = { userId: string; name: string; email: string; access?: string };
 
 /** Painel do projeto: outras pessoas do cliente que veem o projeto, as tarefas e o calendário no portal. */
 export default function ProjectMembers({ projectId }: { projectId: string }) {
@@ -30,6 +30,15 @@ export default function ProjectMembers({ projectId }: { projectId: string }) {
       setEmail(""); setMsg(`${j.name} agora vê este projeto no portal.`); await load();
     } catch (x) { setMsg(x instanceof Error ? x.message : "Erro."); } finally { setBusy(false); }
   }
+  async function setAccess(m: Member, access: string) {
+    setBusy(true); setMsg("");
+    try {
+      const r = await fetch(base, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ userId: m.userId, access }) });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "Não consegui mudar o acesso.");
+      setMsg(access === "gestao" ? `${m.name} agora planeja e roteiriza o conteúdo no portal.` : `${m.name} agora só acompanha e aprova.`);
+      await load();
+    } catch (x) { setMsg(x instanceof Error ? x.message : "Erro."); } finally { setBusy(false); }
+  }
   async function remove(m: Member) {
     if (!confirm(`Tirar o acesso de ${m.name} a este projeto?`)) return;
     setBusy(true); setMsg("");
@@ -44,14 +53,20 @@ export default function ProjectMembers({ projectId }: { projectId: string }) {
     <div className="kb-glass mt-4 grid gap-3 p-4">
       <div>
         <h3 className="text-base font-semibold">Acesso compartilhado no portal</h3>
-        <p className="kb-faint text-xs">Além do cliente titular. Veem projeto, tarefas, calendário, arquivos e chat. Cobranças continuam só com o titular.</p>
+        <p className="kb-faint text-xs">Além do cliente titular. Veem projeto, tarefas, calendário, arquivos e chat. Cobranças continuam só com o titular. Com <b>Gestão de conteúdo</b> (ex.: gerente de marketing) a pessoa vê o calendário inteiro, cria, roteiriza, edita, cancela e escolhe os takes no Lume.</p>
       </div>
       {items.length > 0 && (
         <ul className="grid gap-2">
           {items.map((m) => (
-            <li key={m.userId} className="flex min-w-0 items-center justify-between gap-3 text-sm">
+            <li key={m.userId} className="flex min-w-0 flex-wrap items-center justify-between gap-2 text-sm">
               <span className="min-w-0 truncate">{m.name} <span className="kb-faint">· {m.email}</span></span>
-              <button type="button" className="kb-chip min-h-11 shrink-0" disabled={busy} onClick={() => remove(m)}>Remover</button>
+              <span className="flex shrink-0 gap-2">
+                <select className="kb-control min-h-11" aria-label={`Nível de ${m.name}`} value={m.access ?? "acompanhar"} disabled={busy} onChange={(e) => void setAccess(m, e.target.value)}>
+                  <option value="acompanhar">Acompanha e aprova</option>
+                  <option value="gestao">Gestão de conteúdo</option>
+                </select>
+                <button type="button" className="kb-chip min-h-11" disabled={busy} onClick={() => remove(m)}>Remover</button>
+              </span>
             </li>
           ))}
         </ul>

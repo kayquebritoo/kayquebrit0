@@ -3,6 +3,9 @@ import { z } from "zod";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { readBody } from "@/lib/kbos/validators";
 import { serverError } from "@/lib/kbos/http";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/kbos/db";
+import { socialPosts } from "@/lib/kbos/schema";
 import { CycleError, PUB_STATUS, listPublications, syncPublications, updatePublication } from "@/lib/kbos/content-cycle";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +51,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if ("error" in parsed) return parsed.error;
     const { network, ...patch } = parsed.data;
     const r = await updatePublication(id, network, patch);
-    return NextResponse.json({ item: r.publication, state: r.state, items: await listPublications([id]) });
+    const [post] = await db().select({ status: socialPosts.status }).from(socialPosts).where(eq(socialPosts.id, id)).limit(1);
+    return NextResponse.json({ item: r.publication, state: r.state, postStatus: post?.status ?? null, items: await listPublications([id]) });
   } catch (e) {
     if (e instanceof CycleError) return NextResponse.json({ error: e.message }, { status: 400 });
     return serverError(e);

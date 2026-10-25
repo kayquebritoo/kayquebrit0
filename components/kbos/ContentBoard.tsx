@@ -1,6 +1,7 @@
 "use client";
 import Image from "next/image";
 import ContentReview from "./ContentReview";
+import PostPublications from "./PostPublications";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CLIENT_HUBS, lumeHref } from "@/lib/kbos/client-hubs";
 import { BRAND_LIST, brandColor } from "@/lib/kbos/brand-colors";
@@ -10,6 +11,7 @@ type Post = {
   id: string; projectId: string | null; brand: string | null; title: string; format: string; scheduledAt: string | null;
   status: string; script: string | null; caption: string | null; mediaUrl: string | null; clientNote: string | null; copies: number; postedUrl: string | null;
   networks?: string[]; scriptBy: string | null; captureBy: string | null; editor: string | null; errorMessage: string | null;
+  takes?: { id: number; nome: string; t: number | null; by: string | null }[];
 };
 type Project = { id: string; titulo: string; categoria?: string; postLimit?: number | null };
 
@@ -24,6 +26,7 @@ const STATUS: { id: string; label: string; color: string }[] = [
   { id: "agendado", label: "Agendado", color: "#c08cff" },
   { id: "postado", label: "Postado", color: "#2fbf71" },
   { id: "erro", label: "Erro ao postar", color: "#ff6b6b" },
+  { id: "cancelado", label: "Cancelado", color: "#5a5566" },
 ];
 const STEPS = ["roteiro", "captacao", "producao", "aprovacao", "aprovado", "postado"];
 const STEP_LABEL: Record<string, string> = { roteiro: "Roteiro", captacao: "Captação", producao: "Edição", aprovacao: "Aprovação", aprovado: "Aprovado", postado: "Postado" };
@@ -403,6 +406,21 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
           <label className="kb-field"><span>Legenda</span><textarea className="kb-control" style={{ padding: "10px 14px" }} rows={4} value={f.caption} onChange={(e) => setF({ ...f, caption: e.target.value })} /></label>
           {(f.status === "postado" || f.status === "erro" || post.postedUrl) && <label className="kb-field"><span>Link do post publicado</span><input className="kb-control" inputMode="url" placeholder="https://…" value={f.postedUrl} onChange={(e) => setF({ ...f, postedUrl: e.target.value })} /></label>}
         </section>
+
+        <PostPublications postId={post.id} onPostStatus={(status) => setF((x) => ({ ...x, status }))} />
+
+        {(post.takes?.length ?? 0) > 0 && (
+          <section className="space-y-2" aria-label="Takes escolhidos">
+            <p className={h}>Takes escolhidos pelo cliente</p>
+            <div className="flex flex-wrap gap-1.5">
+              {post.takes!.map((t) => (
+                <a key={t.id} className="kb-chip min-h-10" target="_blank" rel="noopener noreferrer" href={`/api/admin/lume/entrar?ir=${encodeURIComponent(`/midia/${t.id}`)}`}>
+                  {t.nome}{t.t !== null ? ` · ${Math.floor(t.t / 60)}:${String(Math.floor(t.t % 60)).padStart(2, "0")}` : ""}{t.by ? ` · ${t.by}` : ""} ↗
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
 
         {sugg.length > 0 && !f.script.trim() && (
           <section className="space-y-2" aria-label="Roteiros possíveis">

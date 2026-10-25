@@ -1,14 +1,17 @@
 // Acesso do cliente a um projeto: o titular (`projects.clienteId`) ou alguém com acesso compartilhado
 // (`kbos_project_members`, ex.: a equipe de marketing do cliente). Toda checagem de cliente passa por aqui.
-import { and, asc, eq, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import { db } from "./db";
 import { contacts, projectMembers, projects, users } from "./schema";
 
-/** Condição SQL: projetos que o cliente pode ver. */
+/** Condição SQL: projetos que o cliente pode ver. Acesso ao principal (ex.: Grupo VIP) vale para as operações dele. */
 export function clientProjects(userId: string) {
+  const direct = sql`(SELECT ${projects.id} FROM ${projects} WHERE ${projects.clienteId} = ${userId}
+    UNION SELECT ${projectMembers.projectId} FROM ${projectMembers} WHERE ${projectMembers.userId} = ${userId})`;
   return or(
     eq(projects.clienteId, userId),
     sql`${projects.id} IN (SELECT ${projectMembers.projectId} FROM ${projectMembers} WHERE ${projectMembers.userId} = ${userId})`,
+    sql`${projects.parentId} IN ${direct}`,
   )!;
 }
 
@@ -23,7 +26,11 @@ export type MemberAccess = (typeof MEMBER_ACCESS)[number];
 /** Projetos em que a pessoa faz a gestão do conteúdo (gerente de marketing): vê tudo, planeja e roteiriza. */
 export async function managedProjectIds(userId: string): Promise<string[]> {
   const rows = await db().select({ id: projectMembers.projectId }).from(projectMembers).where(and(eq(projectMembers.userId, userId), eq(projectMembers.access, "gestao")));
-  return rows.map((r) => r.id);
+  if (!rows.length) return [];
+  const ids = rows.map((r) => r.id);
+  // gestão no principal vale para as operações dele
+  const kids = await db().select({ id: projects.id }).from(projects).where(inArray(projects.parentId, ids));
+  return [...new Set([...ids, ...kids.map((k) => k.id)])];
 }
 
 export async function isClientOfProject(projectId: string, userId: string): Promise<boolean> {
@@ -31,13 +38,13 @@ export async function isClientOfProject(projectId: string, userId: string): Prom
   return !!row;
 }
 
-/** Clientes avisados sobre o projeto (chat, etapa): titular e acesso compartilhado. Cobrança segue só para o titular. */
+/** Clientes avisados sobre o projeto (chat, etapa): titular e acesso compartilhado, do projeto e do principal dele. Cobrança segue só para o titular. */
 export async function projectClientUsers(projectId: string) {
   return db()
     .select({ id: users.id, name: users.name, phone: users.phone })
     .from(users)
-    .where(sql`${users.id} IN (SELECT ${projects.clienteId} FROM ${projects} WHERE ${projects.id} = ${projectId}
-      UNION SELECT ${projectMembers.userId} FROM ${projectMembers} WHERE ${projectMembers.projectId} = ${projectId})`);
+    .where(sql`${users.id} IN (SELECT ${projects.clienteId} FROM ${projects} WHERE ${projects.id} = ${projectId} OR ${projects.id} = (SELECT p2.parent_id FROM kbos_projects p2 WHERE p2.id = ${projectId})
+      UNION SELECT ${projectMembers.userId} FROM ${projectMembers} WHERE ${projectMembers.projectId} = ${projectId} OR ${projectMembers.projectId} = (SELECT p3.parent_id FROM kbos_projects p3 WHERE p3.id = ${projectId}))`);
 }
 
 export async function listProjectMembers(projectId: string) {

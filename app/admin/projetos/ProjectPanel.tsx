@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import ProjectChat from "@/components/kbos/ProjectChat";
 import ClientHubLinks from "@/components/kbos/ClientHubLinks";
 import ProjectMembers from "@/components/kbos/ProjectMembers";
+import CycleCard from "@/components/kbos/CycleCard";
+import SplitOperations from "@/components/kbos/SplitOperations";
 import { PIPELINE } from "@/lib/kbos/constants";
 
 export type PanelProject = {
@@ -12,6 +14,8 @@ export type PanelProject = {
   status: string;
   valor: string | null;
   postLimit?: number | null;
+  recurring?: boolean;
+  parentId?: string | null;
   prazo: string | null;
   description?: string | null;
   contactId?: string | null;
@@ -38,8 +42,8 @@ async function call(url: string, method: string, body?: unknown) {
   return j;
 }
 
-export default function ProjectPanel({ project, contacts, onClose, onChanged, onMoved }: {
-  project: PanelProject; contacts: Contact[]; onClose: () => void; onChanged: () => void | Promise<void>; onMoved: (id: string, status: string) => void;
+export default function ProjectPanel({ project, contacts, projects = [], onClose, onChanged, onMoved }: {
+  project: PanelProject; contacts: Contact[]; projects?: PanelProject[]; onClose: () => void; onChanged: () => void | Promise<void>; onMoved: (id: string, status: string) => void;
 }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -54,6 +58,7 @@ export default function ProjectPanel({ project, contacts, onClose, onChanged, on
   const [f, setF] = useState({
     titulo: project.titulo, categoria: project.categoria, contactId: project.contactId ?? "", valor: project.valor ?? "",
     prazo: asDate(project.prazo), description: project.description ?? "", postLimit: project.postLimit == null ? "" : String(project.postLimit),
+    recurring: project.recurring || project.categoria === "social" ? "1" : "", parentId: project.parentId ?? "",
   });
   const [dirty, setDirty] = useState(false);
   const set = (k: keyof typeof f, v: string) => { setF((s) => ({ ...s, [k]: v })); setDirty(true); };
@@ -91,6 +96,7 @@ export default function ProjectPanel({ project, contacts, onClose, onChanged, on
       await call(`/api/projects/${project.id}`, "PATCH", {
         titulo: f.titulo, categoria: f.categoria, contactId: f.contactId || null,
         valor: f.valor.trim() ? f.valor.trim() : null, postLimit: f.postLimit.trim() === "" ? null : Math.max(0, Math.min(1000, Math.round(Number(f.postLimit)) || 0)), prazo: f.prazo || null, description: f.description.trim() || null,
+        recurring: !!f.recurring, parentId: f.parentId || null,
       });
       setDirty(false);
       await onChanged();
@@ -144,6 +150,8 @@ export default function ProjectPanel({ project, contacts, onClose, onChanged, on
 
         <div className="mt-4"><ClientHubLinks name={project.contactName} company={project.contactCompany} /></div>
         <ProjectMembers projectId={project.id} />
+        <CycleCard key={project.id} projectId={project.id} mode="admin" />
+        <SplitOperations projectId={project.id} onDone={onChanged} />
 
         <form onSubmit={save} className="kb-glass mt-5 grid gap-3 p-4">
           <label className="kb-field">Nome<input className="kb-control min-h-11" value={f.titulo} onChange={(e) => set("titulo", e.target.value)} required /></label>
@@ -163,6 +171,17 @@ export default function ProjectPanel({ project, contacts, onClose, onChanged, on
             <label className="kb-field">Valor (R$)<input className="kb-control min-h-11" inputMode="decimal" value={f.valor} onChange={(e) => set("valor", e.target.value)} /></label>
           </div>
           <label className="kb-field">Posts por mês no plano<input className="kb-control min-h-11" inputMode="numeric" placeholder={f.categoria === "social" ? "Vazio = 50 (padrão)" : "Vazio = sem limite"} value={f.postLimit} onChange={(e) => set("postLimit", e.target.value.replace(/\D/g, ""))} /><span className="kb-faint text-xs">Carrossel, estático e vídeo somados. 0 = sem limite. Vale para o cadastro do cliente no portal.</span></label>
+          <label className="flex min-h-11 items-center gap-3 text-sm">
+            <input type="checkbox" className="h-5 w-5" checked={!!f.recurring} disabled={f.categoria === "social"} onChange={(e) => set("recurring", e.target.checked ? "1" : "")} />
+            <span>Contrato recorrente <span className="kb-faint block text-xs">Fica ativo enquanto o contrato vale; cada mês é um ciclo. Não fica atrasado pelo prazo.{f.categoria === "social" ? " Redes sociais é sempre recorrente." : ""}</span></span>
+          </label>
+          <label className="kb-field">Operação de
+            <select className="kb-control min-h-11" value={f.parentId} onChange={(e) => set("parentId", e.target.value)}>
+              <option value="">— projeto principal (sem cliente acima) —</option>
+              {projects.filter((p) => p.id !== project.id && !p.parentId).map((p) => <option key={p.id} value={p.id}>{p.titulo}</option>)}
+            </select>
+            <span className="kb-faint text-xs">Ex.: Hotel, Restaurante e Lounge dentro do Grupo VIP. Contrato e financeiro ficam no principal; cada operação tem o próprio calendário e indicadores.</span>
+          </label>
           <label className="kb-field">Prazo<input type="date" className="kb-control min-h-11" value={f.prazo} onChange={(e) => set("prazo", e.target.value)} /></label>
           <label className="kb-field">Anotações<textarea className="kb-control min-h-24" value={f.description} onChange={(e) => set("description", e.target.value)} /></label>
           <button type="submit" disabled={!dirty} className="kb-btn min-h-11">Salvar alterações</button>

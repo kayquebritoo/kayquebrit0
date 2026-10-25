@@ -3,8 +3,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FRONT_LABEL, frontOf } from "@/lib/kbos/fronts";
 import { PIPELINE } from "@/lib/kbos/constants";
 import ProjectPanel, { type PanelProject } from "./ProjectPanel";
+import { isRecurring } from "@/lib/kbos/content-model";
 
-type Project = PanelProject & { tasksTotal?: number; tasksDone?: number };
+type Project = PanelProject & { tasksTotal?: number; tasksDone?: number; monthPosts?: number; monthDone?: number };
 type Contact = { id: string; name: string; company: string | null };
 
 const CATS: [string, string][] = [["fotografia", "Fotografia"], ["video", "Vídeo"], ["sites", "Sites"], ["apps", "Apps"], ["lojas", "Lojas"], ["design", "Design"], ["social", "Redes sociais (recorrente)"]];
@@ -12,6 +13,8 @@ const brl = (v: string | null) => (v && Number(v) ? Number(v).toLocaleString("pt
 const day = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", timeZone: "America/Belem" });
 
 function due(p: Project): { text: string; cls: string } | null {
+  // recorrente: o que atrasa é o conteúdo do mês, não o projeto
+  if (isRecurring(p)) return { text: "Recorrente", cls: "" };
   if (!p.prazo || p.status === "entregue") return null;
   const ms = new Date(p.prazo).getTime() - Date.now();
   const days = Math.ceil(ms / 86_400_000);
@@ -176,17 +179,28 @@ export default function KanbanBoard() {
                     const total = p.tasksTotal ?? 0;
                     const pct = total ? Math.round(((p.tasksDone ?? 0) / total) * 100) : 0;
                     const who = p.contactCompany || p.contactName;
+                    const parent = p.parentId ? items?.find((x) => x.id === p.parentId)?.titulo : null;
+                    const mp = p.monthPosts ?? 0;
                     return (
                       <button key={p.id} draggable onDragStart={(e) => e.dataTransfer.setData("text/project-id", p.id)} onClick={() => setSelectedId(p.id)} className={`kb-card cursor-grab text-left active:cursor-grabbing ${dd?.cls === "late" ? "late" : ""}`}>
+                        {parent && <span className="kb-faint text-[11px] uppercase tracking-[0.14em]">{parent} ›</span>}
                         <span className="text-sm font-medium leading-snug">{p.titulo}</span>
-                        {who && <span className="kb-muted text-xs">{who}</span>}
+                        {who && !parent && <span className="kb-muted text-xs">{who}</span>}
                         <span className="flex flex-wrap items-center gap-1.5">
                           <span className="kb-tag">{frontOf(p.categoria) ? FRONT_LABEL[frontOf(p.categoria)!] : p.categoria}</span>
                           {dd && <span className={`kb-tag ${dd.cls}`}>{dd.text}</span>}
                           {brl(p.valor) && <span className="kb-tag">{brl(p.valor)}</span>}
                         </span>
+                        {isRecurring(p) && mp > 0 && (
+                          <span className="flex items-center gap-2" aria-label={`Mês: ${p.monthDone} de ${mp} conteúdos publicados`}>
+                            <span className="kb-faint w-9 text-[11px]">mês</span>
+                            <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"><span className="block h-full rounded-full bg-[#3ecf8e]" style={{ width: `${Math.round(((p.monthDone ?? 0) / mp) * 100)}%` }} /></span>
+                            <span className="kb-faint text-[11px]">{p.monthDone}/{mp}</span>
+                          </span>
+                        )}
                         {total > 0 && (
                           <span className="flex items-center gap-2" aria-label={`${p.tasksDone} de ${total} tarefas feitas`}>
+                            {isRecurring(p) && mp > 0 && <span className="kb-faint w-9 text-[11px]">tarefas</span>}
                             <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"><span className="block h-full rounded-full bg-gradient-to-r from-[#4F12C7] to-[#E80EFD]" style={{ width: `${pct}%` }} /></span>
                             <span className="kb-faint text-[11px]">{p.tasksDone}/{total}</span>
                           </span>
@@ -203,7 +217,7 @@ export default function KanbanBoard() {
       )}
 
       {items && items.length === 0 && <p className="kb-muted text-sm">Nenhum projeto ainda. Crie um acima, ou aceite um orçamento que o projeto nasce sozinho.</p>}
-      {selected && <ProjectPanel project={selected} contacts={contacts} onClose={() => setSelectedId(null)} onChanged={load} onMoved={move} />}
+      {selected && <ProjectPanel project={selected} contacts={contacts} projects={items ?? []} onClose={() => setSelectedId(null)} onChanged={load} onMoved={move} />}
     </div>
   );
 }

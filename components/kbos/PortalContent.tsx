@@ -7,6 +7,7 @@ import PortalLumeCard from "@/components/kbos/PortalLumeCard";
 import ProjectChat from "@/components/kbos/ProjectChat";
 import PortalPosts from "@/components/kbos/PortalPosts";
 import OverduePosts from "@/components/kbos/OverduePosts";
+import CycleCard from "@/components/kbos/CycleCard";
 
 type Project = { id: string; titulo: string; categoria: string; status: string; prazo?: string | null };
 type TaskItem = { id: string; projectId: string | null; titulo: string; status: string; dueAt: string | null };
@@ -138,6 +139,7 @@ export default function PortalContent({ firstName }: { firstName?: string }) {
                   {todo.length > 5 && <button type="button" className="kb-btn-ghost mt-2 min-h-11 w-full" onClick={() => setExpanded((x) => ({ ...x, [p.id]: !x[p.id] }))}>{expanded[p.id] ? "Mostrar menos" : `Ver todas (${todo.length})`}</button>}
                 </div>
               )}
+              <CycleCard projectId={p.id} mode="portal" />
               <div className="border-t border-white/10 pt-4">
                 <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">Arquivos para aprovação</p>
                 <div className="mt-3 flex flex-col gap-3">

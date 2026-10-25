@@ -317,6 +317,14 @@ export const SCHEMA_STEPS: { id: string; sql: string }[] = [
  created_at timestamptz NOT NULL DEFAULT now()
 )` },
   { id: "conteudo.ciclos.8", sql: `CREATE UNIQUE INDEX IF NOT EXISTS kbos_project_cycles_uq ON kbos_project_cycles(project_id, month)` },
+  { id: "conteudo.ciclos.9", sql: `CREATE TABLE IF NOT EXISTS kbos_data_moves (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ kind text NOT NULL,
+ payload jsonb NOT NULL,
+ created_by uuid REFERENCES kbos_users(id) ON DELETE SET NULL,
+ created_at timestamptz NOT NULL DEFAULT now(),
+ reverted_at timestamptz
+)` },
 ];
 
 /**

@@ -179,3 +179,36 @@ describe("gestão de conteúdo no portal (gerente de marketing)", () => {
     for (const s of steps) await pg.exec(s.sql);
   });
 });
+
+describe("separar o Grupo VIP por operação (reversível)", () => {
+  it("plano só lê; aplicar move só marca exata, mantém sem-marca no principal; desfazer devolve tudo", async () => {
+    const { planFor, applySplit, revertSplit } = await import("../content-split");
+    await d.insert(schema.socialPosts).values([
+      { projectId: grupo, brand: "Hotel", title: "A", format: "reels", status: "postado", scheduledAt: at("2026-10-03T18:00:00-03:00") },
+      { projectId: grupo, brand: "Hotel", title: "B", format: "reels", status: "roteiro", scheduledAt: at("2026-11-03T18:00:00-03:00"), dismissedAt: NOW },
+      { projectId: grupo, brand: "Praça", title: "C", format: "carrossel", status: "aprovado", scheduledAt: at("2026-11-05T18:00:00-03:00") },
+      { projectId: grupo, brand: null, title: "Sem marca", format: "outro", status: "roteiro", scheduledAt: at("2026-11-06T18:00:00-03:00") },
+    ]);
+    const plan = await planFor(grupo);
+    expect(plan).toMatchObject({ total: 4, semMarca: 1 });
+    expect(plan.marcas.map((m) => [m.brand, m.total, m.ocultos, m.de, m.ate])).toEqual([["Hotel", 2, 1, "2026-10", "2026-11"], ["Praça", 1, 0, "2026-11", "2026-11"]]);
+    await expect(applySplit(grupo, [{ brand: "Lounge", titulo: "Lounge VIP" }], null)).rejects.toThrow(); // marca sem posts
+    await expect(applySplit(hotel, [{ brand: "Hotel", titulo: "X" }], null)).rejects.toThrow(); // já é operação
+    // "Hotel" reaproveita a operação que já existe; "Praça" cria o Restaurante
+    const r = await applySplit(grupo, [{ brand: "Hotel", titulo: "hotel" }, { brand: "Praça", titulo: "Restaurante Atalaia VIP" }], null);
+    expect(r).toMatchObject({ created: 1, moved: 3 });
+    const all = await d.select().from(schema.socialPosts);
+    expect(all.filter((p) => p.projectId === hotel).map((p) => p.title).sort()).toEqual(["A", "B"]);
+    expect(all.find((p) => p.title === "Sem marca")!.projectId).toBe(grupo);
+    const rest = (await d.select().from(schema.projects).where(eq(schema.projects.titulo, "Restaurante Atalaia VIP")))[0];
+    expect(rest).toMatchObject({ parentId: grupo, recurring: true });
+    // a gestora do principal passa a ver e gerir a operação nova
+    await addProjectMember(grupo, "thalita@example.com", "gestao");
+    expect((await portalPosts(thalita)).map((p) => p.title)).toContain("C");
+    await d.delete(schema.projectMembers).where(eq(schema.projectMembers.projectId, grupo));
+    const back = await revertSplit(r.moveId);
+    expect(back).toEqual({ back: 3, removed: 1 });
+    expect((await d.select().from(schema.socialPosts)).every((p) => p.projectId === grupo)).toBe(true);
+    await expect(revertSplit(r.moveId)).rejects.toThrow();
+  });
+});

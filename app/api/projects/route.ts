@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/kbos/db";
-import { contacts, projects, tasks, users } from "@/lib/kbos/schema";
+import { contacts, projects, socialPosts, tasks, users } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { projectCreateSchema, readBody } from "@/lib/kbos/validators";
 import { serverError } from "@/lib/kbos/http";
@@ -22,6 +22,9 @@ export async function GET() {
         contactCompany: contacts.company,
         tasksTotal: sql<number>`(select count(*)::int from ${tasks} where ${tasks.projectId} = ${projects.id})`,
         tasksDone: sql<number>`(select count(*)::int from ${tasks} where ${tasks.projectId} = ${projects.id} and ${tasks.status} = 'done')`,
+        // ciclo do mês corrente (Belém): o post só vira "postado" quando todas as redes saíram
+        monthPosts: sql<number>`(select count(*)::int from ${socialPosts} where ${socialPosts.projectId} = ${projects.id} and ${socialPosts.linkedTo} is null and ${socialPosts.dismissedAt} is null and ${socialPosts.status} <> 'cancelado' and date_trunc('month', ${socialPosts.scheduledAt} at time zone 'America/Belem') = date_trunc('month', now() at time zone 'America/Belem'))`,
+        monthDone: sql<number>`(select count(*)::int from ${socialPosts} where ${socialPosts.projectId} = ${projects.id} and ${socialPosts.linkedTo} is null and ${socialPosts.dismissedAt} is null and ${socialPosts.status} = 'postado' and date_trunc('month', ${socialPosts.scheduledAt} at time zone 'America/Belem') = date_trunc('month', now() at time zone 'America/Belem'))`,
       })
       .from(projects)
       .leftJoin(contacts, eq(contacts.id, projects.contactId));
@@ -31,7 +34,7 @@ export async function GET() {
     const rows = joined.map((r) =>
       isClient
         ? r.project
-        : { ...r.project, contactName: r.contactName, contactCompany: r.contactCompany, tasksTotal: r.tasksTotal, tasksDone: r.tasksDone },
+        : { ...r.project, contactName: r.contactName, contactCompany: r.contactCompany, tasksTotal: r.tasksTotal, tasksDone: r.tasksDone, monthPosts: r.monthPosts, monthDone: r.monthDone },
     );
     return NextResponse.json({ items: rows });
   } catch (e) {
@@ -67,6 +70,7 @@ export async function POST(req: Request) {
         contactId: body.contactId ?? null,
         valor: body.valor ?? null,
         prazo: body.prazo ? new Date(body.prazo) : null,
+        recurring: body.categoria === "social",
         // Fase 1 — vitrine (slug único; 409 amigável em conflito).
         slug: body.slug ?? null,
         description: body.description ?? null,

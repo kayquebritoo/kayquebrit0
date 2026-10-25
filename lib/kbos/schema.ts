@@ -922,6 +922,16 @@ export const postPublications = pgTable(
   (t) => [uniqueIndex("kbos_post_publications_uq").on(t.postId, t.network)],
 );
 
+/** 0028: registro de movimentações de dados feitas pelo admin (com o que é preciso para desfazer). */
+export const dataMoves = pgTable("kbos_data_moves", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  kind: text("kind").notNull(),
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: ts("created_at"),
+  revertedAt: timestamp("reverted_at", { withTimezone: true }),
+});
+
 /** 0028: ciclo mensal de um projeto recorrente. Fechar o mês guarda o retrato dos indicadores; o projeto segue ativo. */
 export const projectCycles = pgTable(
   "kbos_project_cycles",
