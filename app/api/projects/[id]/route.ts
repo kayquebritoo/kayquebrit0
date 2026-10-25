@@ -6,13 +6,14 @@ import { deny, sessionUser, PIPELINE } from "@/lib/kbos/rbac";
 import { notifyProject } from "@/lib/kbos/whatsapp";
 import { checkId, projectPatchSchema, readBody } from "@/lib/kbos/validators";
 import { serverError } from "@/lib/kbos/http";
+import { isClientOfProject } from "@/lib/kbos/project-members";
 
 const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as const;
 
 async function visible(id: string, userId: string, role: string) {
   const row = (await db().select().from(projects).where(eq(projects.id, id)).limit(1))[0];
   if (!row) return null;
-  if (role !== "cliente" || row.clienteId === userId) return row;
+  if (role !== "cliente" || row.clienteId === userId || (await isClientOfProject(id, userId))) return row;
   return "forbidden" as const;
 }
 

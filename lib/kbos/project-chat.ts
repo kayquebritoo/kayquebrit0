@@ -1,16 +1,17 @@
 // Chat do projeto (fase 1): cliente + equipe no mesmo grupo, por projeto.
-// Regra de acesso: equipe (qualquer papel ≠ cliente) vê todos; cliente só o projeto onde é o `clienteId`.
+// Regra de acesso: equipe (qualquer papel ≠ cliente) vê todos; cliente só os projetos dele (titular ou acesso compartilhado).
 import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { db } from "./db";
 import { chatMessages, chatReads, projects, users } from "./schema";
+import { isClientOfProject } from "./project-members";
 
 export const CHAT_MAX_LEN = 2000;
 export type ChatActor = { id: string; role: string };
 
 export async function canAccessProject(actor: ChatActor, projectId: string): Promise<boolean> {
-  const [p] = await db().select({ clienteId: projects.clienteId }).from(projects).where(eq(projects.id, projectId)).limit(1);
+  const [p] = await db().select({ id: projects.id }).from(projects).where(eq(projects.id, projectId)).limit(1);
   if (!p) return false;
-  return actor.role !== "cliente" || p.clienteId === actor.id;
+  return actor.role !== "cliente" || isClientOfProject(projectId, actor.id);
 }
 
 export function cleanBody(raw: unknown): string | null {

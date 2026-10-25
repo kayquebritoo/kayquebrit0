@@ -277,7 +277,15 @@ export const SCHEMA_STEPS: { id: string; sql: string }[] = [
   { id: "conteudo.2", sql: `ALTER TABLE kbos_social_posts ADD COLUMN IF NOT EXISTS script_by text` },
   { id: "conteudo.3", sql: `ALTER TABLE kbos_social_posts ADD COLUMN IF NOT EXISTS capture_by text` },
   { id: "conteudo.4", sql: `ALTER TABLE kbos_social_posts ADD COLUMN IF NOT EXISTS editor text` },
-  { id: "conteudo.5", sql: `ALTER TABLE kbos_social_posts ADD COLUMN IF NOT EXISTS error_message text` }
+  { id: "conteudo.5", sql: `ALTER TABLE kbos_social_posts ADD COLUMN IF NOT EXISTS error_message text` },
+  { id: "projects.members.0", sql: `CREATE TABLE IF NOT EXISTS kbos_project_members (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ project_id uuid NOT NULL REFERENCES kbos_projects(id) ON DELETE CASCADE,
+ user_id uuid NOT NULL REFERENCES kbos_users(id) ON DELETE CASCADE,
+ created_at timestamptz NOT NULL DEFAULT now()
+)` },
+  { id: "projects.members.1", sql: `CREATE UNIQUE INDEX IF NOT EXISTS kbos_project_members_uq ON kbos_project_members(project_id, user_id)` },
+  { id: "projects.members.2", sql: `CREATE INDEX IF NOT EXISTS kbos_project_members_user_idx ON kbos_project_members(user_id)` },
 ];
 
 /**

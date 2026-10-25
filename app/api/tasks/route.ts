@@ -5,6 +5,7 @@ import { contacts, projects, tasks } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { checkId, readBody, taskCreateSchema } from "@/lib/kbos/validators";
 import { serverError } from "@/lib/kbos/http";
+import { clientProjects } from "@/lib/kbos/project-members";
 
 const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as const;
 const isStaff = (role: string) => (STAFF as readonly string[]).includes(role);
@@ -22,11 +23,11 @@ export async function GET(req: Request) {
       const bad = checkId(projectId);
       if (bad) return bad;
       if (!isStaff(user.role)) {
-        // Cliente só vê tarefas dos próprios projetos.
+        // Cliente só vê tarefas dos projetos dele (titular ou acesso compartilhado).
         const own = await db()
           .select({ id: projects.id })
           .from(projects)
-          .where(and(eq(projects.id, projectId), eq(projects.clienteId, user.id)))
+          .where(and(eq(projects.id, projectId), clientProjects(user.id)))
           .limit(1);
         if (!own[0]) return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
       }

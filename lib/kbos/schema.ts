@@ -133,6 +133,18 @@ export const projects = pgTable("kbos_projects", {
   updatedAt: ts("updated_at"),
 });
 
+/** Outras pessoas do cliente com acesso ao projeto no portal (o titular segue em `projects.clienteId`). */
+export const projectMembers = pgTable(
+  "kbos_project_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    createdAt: ts("created_at"),
+  },
+  (t) => [uniqueIndex("kbos_project_members_uq").on(t.projectId, t.userId)],
+);
+
 export const fileStatus = pgEnum("kbos_file_status", ["enviado", "aprovado", "reprovado"]);
 
 export const projectFiles = pgTable("kbos_project_files", {

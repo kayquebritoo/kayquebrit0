@@ -6,6 +6,7 @@ import { sessionUser } from "@/lib/kbos/rbac";
 import { notifyProject } from "@/lib/kbos/whatsapp";
 import { checkId, fileReviewSchema, readBody } from "@/lib/kbos/validators";
 import { serverError } from "@/lib/kbos/http";
+import { isClientOfProject } from "@/lib/kbos/project-members";
 
 // PATCH: cliente aprova/reprova (só arquivos dos próprios projetos); equipe também pode.
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string; fileId: string }> }) {
@@ -20,7 +21,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { status, feedback } = parsed.data;
     const proj = (await db().select().from(projects).where(eq(projects.id, id)).limit(1))[0];
     if (!proj) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
-    if (user.role === "cliente" && proj.clienteId !== user.id) {
+    if (user.role === "cliente" && !(await isClientOfProject(id, user.id))) {
       return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
     }
     await db()

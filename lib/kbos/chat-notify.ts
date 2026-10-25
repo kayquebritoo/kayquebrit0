@@ -4,17 +4,18 @@ import { and, eq, gt, ne } from "drizzle-orm";
 import { db } from "./db";
 import { notifications, projects, users } from "./schema";
 import { queueWhatsApp } from "./whatsapp";
+import { projectClientUsers } from "./project-members";
 
 export const CHAT_NOTIFY_WINDOW_MS = 30 * 60 * 1000;
 
 export async function notifyChatMessage(author: { id: string; role: string; name: string }, projectId: string): Promise<number> {
   try {
-    const [proj] = await db().select({ titulo: projects.titulo, clienteId: projects.clienteId }).from(projects).where(eq(projects.id, projectId)).limit(1);
+    const [proj] = await db().select({ titulo: projects.titulo }).from(projects).where(eq(projects.id, projectId)).limit(1);
     if (!proj) return 0;
-    // Cliente escreveu → avisa os admins; equipe escreveu → avisa o cliente do projeto.
+    // Cliente escreveu → avisa os admins; equipe escreveu → avisa os clientes do projeto (titular e acesso compartilhado).
     const recipients = author.role === "cliente"
       ? await db().select({ id: users.id, phone: users.phone }).from(users).where(and(eq(users.role, "admin"), ne(users.id, author.id)))
-      : proj.clienteId ? await db().select({ id: users.id, phone: users.phone }).from(users).where(eq(users.id, proj.clienteId)) : [];
+      : await projectClientUsers(projectId);
     let sent = 0;
     const since = new Date(Date.now() - CHAT_NOTIFY_WINDOW_MS);
     for (const r of recipients) {

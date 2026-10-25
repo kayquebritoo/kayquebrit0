@@ -33,7 +33,7 @@ export default function PortalAccess({ contactId, email, phone, name }: { contac
       setMsg(`Link gerado para ${j.email}. Vale uma vez, até ${until}. Gerar outro não cancela este.`);
     } catch (x) { setMsg(x instanceof Error ? x.message : "Erro."); } finally { setBusy(false); }
   }
-  const linkShare = link ? `https://wa.me/${(link.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(`Oi! Este é o seu acesso ao KBOS: ${link.url}\nToque em "Entrar no meu espaço". O link vale uma única vez, até ${link.until}.`)}` : "";
+  const linkShare = link ? `https://wa.me/${(link.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(`Oi! Este é o seu acesso ao KBOS: ${link.url}\nToque em "Entrar no meu espaço" e crie seu usuário e senha para os próximos acessos. O link vale uma única vez, até ${link.until}.`)}` : "";
   const share = ok ? `https://wa.me/${(ok.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(`Oi! Seu espaço no KBOS está pronto: ${ok.url}\nEntre com o seu e-mail e peça o código por WhatsApp.`)}` : "";
 
   return (

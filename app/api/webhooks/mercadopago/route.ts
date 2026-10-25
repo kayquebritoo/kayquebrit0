@@ -111,7 +111,7 @@ export async function POST(req: Request) {
     .set({ status: "pago", gatewayRef: payment.id })
     .where(eq(transactions.id, row.id));
   if (row.projectId) {
-    await notifyProject(row.projectId, "pagamento", `Pagamento confirmado: *${row.descricao}* ✅`);
+    await notifyProject(row.projectId, "pagamento", `Pagamento confirmado: *${row.descricao}* ✅`, { ownerOnly: true });
   }
   return NextResponse.json({ ok: true, verified: true, applied: true });
 }

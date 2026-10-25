@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import ProjectChat from "@/components/kbos/ProjectChat";
 import ClientHubLinks from "@/components/kbos/ClientHubLinks";
+import ProjectMembers from "@/components/kbos/ProjectMembers";
 import { PIPELINE } from "@/lib/kbos/constants";
 
 export type PanelProject = {
@@ -142,6 +143,7 @@ export default function ProjectPanel({ project, contacts, onClose, onChanged, on
         {chatOpen && <ProjectChat projectId={project.id} title={project.titulo} onClose={() => setChatOpen(false)} />}
 
         <div className="mt-4"><ClientHubLinks name={project.contactName} company={project.contactCompany} /></div>
+        <ProjectMembers projectId={project.id} />
 
         <form onSubmit={save} className="kb-glass mt-5 grid gap-3 p-4">
           <label className="kb-field">Nome<input className="kb-control min-h-11" value={f.titulo} onChange={(e) => set("titulo", e.target.value)} required /></label>

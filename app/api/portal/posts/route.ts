@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { sessionUser } from "@/lib/kbos/rbac";
 import { serverError } from "@/lib/kbos/http";
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/kbos/db";
 import { projects } from "@/lib/kbos/schema";
@@ -9,6 +8,7 @@ import { readBody } from "@/lib/kbos/validators";
 import { PostError, createClientRoteiro, monthUsage, portalPosts } from "@/lib/kbos/social-posts";
 import { notifyClientRoteiro } from "@/lib/kbos/social-notify";
 import { POST_FORMATS } from "@/lib/kbos/social-import";
+import { clientProjects } from "@/lib/kbos/project-members";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
   const user = await sessionUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   try {
-    const mine = await db().select({ id: projects.id, titulo: projects.titulo }).from(projects).where(eq(projects.clienteId, user.id));
+    const mine = await db().select({ id: projects.id, titulo: projects.titulo }).from(projects).where(clientProjects(user.id));
     const month = new URL(req.url).searchParams.get("month") ?? "";
     const quota = /^\d{4}-\d{2}$/.test(month) && mine[0] ? await monthUsage(mine[0].id, month) : null;
     return NextResponse.json({ items: await portalPosts(user.id), projects: mine, quota });

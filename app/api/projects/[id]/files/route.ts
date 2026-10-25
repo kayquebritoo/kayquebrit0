@@ -6,6 +6,7 @@ import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { notifyProject } from "@/lib/kbos/whatsapp";
 import { checkId, fileCreateSchema, readBody } from "@/lib/kbos/validators";
 import { serverError } from "@/lib/kbos/http";
+import { isClientOfProject } from "@/lib/kbos/project-members";
 
 // GET arquivos do projeto (dono ou equipe).
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -14,7 +15,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const proj = (await db().select().from(projects).where(eq(projects.id, id)).limit(1))[0];
   if (!proj) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
-  if (user.role === "cliente" && proj.clienteId !== user.id) {
+  if (user.role === "cliente" && !(await isClientOfProject(id, user.id))) {
     return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
   }
   const files = await db()

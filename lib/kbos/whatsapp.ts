@@ -6,6 +6,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { notifications, projects, users } from "./schema";
+import { projectClientUsers } from "./project-members";
 import { buildIdempotencyKey, enqueueJob } from "./jobs";
 import { evoConfig, warnEvoFallbackOnce } from "./evolution";
 
@@ -60,15 +61,22 @@ export async function queueWhatsApp(destino: string, mensagem: string, evento?: 
   return { queued: r.queued, id, jobId: r.jobId, sent: false, deduped: r.deduped, via: r.via };
 }
 
-/** Dispara (sem nunca quebrar a operação principal) para o cliente do projeto. */
-export async function notifyProject(projectId: string, evento: string, mensagem: string) {
+/** Dispara (sem nunca quebrar a operação principal) para os clientes do projeto (titular e acesso compartilhado; `ownerOnly` = só o titular). */
+export async function notifyProject(projectId: string, evento: string, mensagem: string, opts: { ownerOnly?: boolean } = {}) {
   try {
     const d = db();
     const proj = (await d.select().from(projects).where(eq(projects.id, projectId)).limit(1))[0];
-    if (!proj?.clienteId) return null;
-    const cli = (await d.select().from(users).where(eq(users.id, proj.clienteId)).limit(1))[0];
-    if (!cli?.phone) return null;
-    return await queueWhatsApp(cli.phone, `*KBOS — ${proj.titulo}*\n${mensagem}`, evento);
+    if (!proj) return null;
+    const people = opts.ownerOnly
+      ? proj.clienteId ? await d.select({ phone: users.phone }).from(users).where(eq(users.id, proj.clienteId)) : []
+      : await projectClientUsers(projectId);
+    let first: Awaited<ReturnType<typeof queueWhatsApp>> | null = null;
+    for (const cli of people) {
+      if (!cli.phone) continue;
+      const r = await queueWhatsApp(cli.phone, `*KBOS — ${proj.titulo}*\n${mensagem}`, evento);
+      first ??= r;
+    }
+    return first;
   } catch (e) {
     console.error("[KBOS whatsapp]", e);
     return null;

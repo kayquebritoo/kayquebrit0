@@ -5,6 +5,7 @@ import { contacts, projects } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { hubFor } from "@/lib/kbos/client-hubs";
 import { LUME_ONLINE_DEFAULT, lumeClientEntryUrl } from "@/lib/kbos/lume";
+import { clientProjects } from "@/lib/kbos/project-members";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export async function GET(req: Request) {
       .select({ name: contacts.name, company: contacts.company })
       .from(projects)
       .innerJoin(contacts, eq(projects.contactId, contacts.id))
-      .where(eq(projects.clienteId, user.id))
+      .where(clientProjects(user.id))
       .limit(50);
     for (const r of rows) { hub = hubFor(r.name, r.company); if (hub) break; }
   } catch { /* sem banco: sem acesso */ }

@@ -5,6 +5,7 @@ import { projects, socialPosts } from "./schema";
 import { indexImportedPosts } from "./social-identity";
 import { effectivePostLimit } from "./plan-limit";
 import { POST_FORMATS, POST_STATUS, parseIcs, type PostFormat, type PostStatus } from "./social-import";
+import { clientProjectIds, clientProjects } from "./project-members";
 
 export type Post = typeof socialPosts.$inferSelect;
 
@@ -79,8 +80,7 @@ export async function updatePost(id: string, patch: PostPatch) {
 
 /** O que o cliente enxerga: posts dos projetos dele, a partir de "aguardando aprovação". Sem roteiro interno. */
 export async function portalPosts(userId: string) {
-  const mine = await db().select({ id: projects.id }).from(projects).where(eq(projects.clienteId, userId));
-  const ids = mine.map((p) => p.id);
+  const ids = await clientProjectIds(userId);
   if (!ids.length) return [];
   const rows = await db()
     .select({ id: socialPosts.id, title: socialPosts.title, brand: socialPosts.brand, format: socialPosts.format, networks: socialPosts.networks, scheduledAt: socialPosts.scheduledAt, status: socialPosts.status, caption: socialPosts.caption, mediaUrl: socialPosts.mediaUrl, clientNote: socialPosts.clientNote, script: socialPosts.script, createdBy: socialPosts.createdBy })
@@ -108,7 +108,7 @@ export async function monthUsage(projectId: string, month: string) {
 
 /** O cliente cadastra o roteiro dele pelo portal (data + formato + ideia). Vira "roteiro" no calendário da equipe. */
 export async function createClientRoteiro(userId: string, input: { projectId: string; date: string; title: string; format: PostFormat; brand?: string | null; script?: string | null }) {
-  const [proj] = await db().select({ id: projects.id }).from(projects).where(and(eq(projects.id, input.projectId), eq(projects.clienteId, userId))).limit(1);
+  const [proj] = await db().select({ id: projects.id }).from(projects).where(and(eq(projects.id, input.projectId), clientProjects(userId))).limit(1);
   if (!proj) throw new PostError("Projeto não encontrado.");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) throw new PostError("Escolha o dia do post.");
   if (!(POST_FORMATS as readonly string[]).includes(input.format)) throw new PostError("Formato inválido.");
@@ -158,12 +158,12 @@ export async function linkScript(scriptId: string, targetId: string) {
 /** Decisão do cliente (só no post dele e só enquanto aguarda aprovação). */
 export async function decidePost(userId: string, id: string, decision: "aprovar" | "ajustes", note?: string | null) {
   const [row] = await db()
-    .select({ post: socialPosts, clienteId: projects.clienteId })
+    .select({ post: socialPosts })
     .from(socialPosts)
-    .leftJoin(projects, eq(projects.id, socialPosts.projectId))
-    .where(eq(socialPosts.id, id))
+    .innerJoin(projects, eq(projects.id, socialPosts.projectId))
+    .where(and(eq(socialPosts.id, id), clientProjects(userId)))
     .limit(1);
-  if (!row || row.clienteId !== userId) throw new PostError("Post não encontrado.");
+  if (!row) throw new PostError("Post não encontrado.");
   if (row.post.status !== "aprovacao") throw new PostError("Esse post não está aguardando aprovação.");
   const text = (note ?? "").trim().slice(0, 1000);
   if (decision === "ajustes" && !text) throw new PostError("Conte rapidamente o que precisa mudar.");
@@ -205,8 +205,7 @@ export async function overduePosts(user: { id: string; name: string; role: strin
   const rows = await db().select().from(socialPosts).where(and(gte(socialPosts.scheduledAt, since), lt(socialPosts.scheduledAt, now), isNull(socialPosts.linkedTo), isNull(socialPosts.dismissedAt))).orderBy(asc(socialPosts.scheduledAt)).limit(500);
   let allowed: Set<string> | null = null;
   if (user.role === "cliente") {
-    const mine = await db().select({ id: projects.id }).from(projects).where(eq(projects.clienteId, user.id));
-    allowed = new Set(mine.map((p) => p.id));
+    allowed = new Set(await clientProjectIds(user.id));
   }
   const out: OverdueItem[] = [];
   for (const p of rows) {
