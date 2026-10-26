@@ -40,7 +40,7 @@ class Catalogo:
         return lista
 
     def buscar(self,tipo='',pasta='',de=None,ate=None,offset=0,limite=60,origem=''):
-        rows=[r for r in self.arquivos if (not origem or self.idx.origem.get(r[1])==origem) and (not tipo or r[4]==tipo) and (not pasta or normalizar(pasta) in normalizar(r[3])) and (de is None or r[5]>=de) and (ate is None or r[5]<=ate)]
+        rows=[r for r in self.arquivos if (not origem or self.idx.origem.get(r[1])==origem) and (not tipo or r[4]==tipo) and (not pasta or self.idx.na_pasta(pasta,r[3],r[1])) and (de is None or r[5]>=de) and (ate is None or r[5]<=ate)]
         out=[{'id':r[0],'caminho':r[3],'tipo':r[4],'segundo':r[2],'data':time.strftime('%d/%m/%Y',time.localtime(r[5])),'origem':'catalogo'} for r in rows[offset:offset+limite]]
         return {'resultados':self.enriquecer(out),'total':len(rows),'offset':offset}
 

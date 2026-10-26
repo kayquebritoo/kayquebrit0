@@ -288,6 +288,13 @@ class Indice:
         self.pos = {r[0]: i for i, r in enumerate(self.rows)}
         self.mods = np.array([r[5] or 0 for r in self.rows], dtype=np.float64)
         self.originais = {identidade(r[3]) for r in self.rows if r[4]=="video" and not eh_proxy(r[3])}
+        self.casa_de = lambda aid: ""  # marcação de casa (acervo_marcacoes); o servidor liga
+
+    def na_pasta(self, pasta, caminho, aid):
+        """Filtro de pasta: pelo caminho ou, se o filtro é uma casa (Hotel/Lounge/Praça), pela marcação do arquivo."""
+        if normalizar(pasta) in normalizar(caminho): return True
+        casa = self.casa_de(aid)
+        return bool(casa) and normalizar(casa) == normalizar(pasta).strip()
 
     def ordenar(self, s):
         """Relevância primeiro (nota arredondada a 3 casas, a mesma que o usuário vê); empate → arquivo mais recente."""
@@ -304,7 +311,7 @@ class Indice:
         for i in ordem:
             qid, aid, seg, caminho, t, mod = self.rows[i]
             if tipo and t != tipo: continue
-            if pasta and normalizar(pasta) not in normalizar(caminho): continue
+            if pasta and not self.na_pasta(pasta, caminho, aid): continue
             if origem and self.origem.get(aid) != origem: continue
             if de is not None and mod < de: continue
             if ate is not None and mod > ate: continue
@@ -347,6 +354,11 @@ def servir(porta):
     from acervo_cardapio import Cardapio, empresa_do_filtro
     cardapio = Cardapio()
     corrigidas = cardapio.renomear_referencias(DB)
+    from acervo_marcacoes import Marcacoes
+    marcacoes = Marcacoes(DB)
+    idx.casa_de = marcacoes.casa
+    _enriquecer = catalogo.enriquecer
+    catalogo.enriquecer = lambda lista: marcacoes.anotar(_enriquecer(lista), idx, cardapio)
     print(f"Cardápio: {len(cardapio.pratos)} pratos" + (f"; {corrigidas} referência(s) renomeada(s)." if corrigidas else "."), flush=True)
     entregas = acervo_entregas.Entregas(HOME, SEGREDO)
 
@@ -364,7 +376,7 @@ def servir(porta):
     def ler_json(h):
         if "application/json" not in h.headers.get("Content-Type", ""): raise ValueError("Envie JSON.")
         n = int(h.headers.get("Content-Length", "0"))
-        return json.loads(h.rfile.read(min(max(n, 0), 5000)) or b"{}")
+        return json.loads(h.rfile.read(min(max(n, 0), 20000)) or b"{}")
 
     class H(BaseHTTPRequestHandler):
         def log_message(self, *a): pass
@@ -463,6 +475,18 @@ def servir(porta):
                     self._j({"ok": ok}, 200 if ok else 404)
                 except (ValueError, KeyError, TypeError) as e:
                     self._j({"erro": str(e) or "Pedido inválido."}, 400)
+                return
+            if u.path == "/marcar":  # só equipe: casa, pratos, onde e quando de vários arquivos de uma vez
+                try:
+                    corpo = ler_json(self)
+                    quadros = [int(x) for x in corpo.get("ids", [])]
+                    arquivos = [idx.rows[idx.pos[q]][1] for q in quadros if q in idx.pos]
+                    if len(arquivos) != len(quadros): raise ValueError("Arquivo não encontrado no índice.")
+                    n = marcacoes.marcar(arquivos, corpo.get("casa"), corpo.get("pratos"), corpo.get("quando"),
+                                         corpo.get("onde"), corpo.get("obs"), pratos_validos=cardapio.por_id)
+                    self._j({"ok": True, "marcados": n})
+                except (ValueError, KeyError, TypeError) as e:
+                    self._j({"erro": str(e)[:200] or "Pedido inválido."}, 400)
                 return
             if u.path == "/entregas" or u.path.startswith("/entregas/"):  # só admin (cliente do portal já foi barrado acima)
                 acervo_entregas.admin_post(entregas, self, u.path, {k: v[0] for k, v in parse_qs(u.query).items()}); return
@@ -577,6 +601,8 @@ def servir(porta):
                     ajuste = feedback.ajuste(idx, termo)
                     card = cardapio.interpretar(texto, qs.get("p", ""))
                     pid = card["prato"]["id"] if card and "prato" in card else None
+                    def reforco(aj):  # arquivos marcados com o prato vêm primeiro
+                        return marcacoes.ajuste_prato(idx, pid, aj)[0] if pid else aj
                     def com_cardapio(obj):
                         if card: obj["cardapio"] = card
                         return obj
@@ -589,14 +615,14 @@ def servir(porta):
                         if termo_ref != termo:  # casou por palavras parecidas: feedback e mensagem usam o termo ensinado
                             termo, ajuste, nome = termo_ref, feedback.ajuste(idx, termo_ref), termo_ref
                         notas = Referencias.notas(idx, refs)
-                        resultados = idx.buscar(None, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem, notas=notas)
+                        resultados = idx.buscar(None, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=reforco(ajuste), origem=origem, notas=notas)
                         print(f"Referências {termo}: {len(refs)} imagem(ns), {len(resultados)} sugestões em {time.monotonic()-inicio:.3f}s.", flush=True)
                         self._j(com_cardapio({"resultados": feedback.marcar(catalogo.enriquecer(resultados), termo), "exemplos": feedback.resumo(termo),
                                  "modo": "referencias", "referencias": len(refs),
                                  "interpretacao": f"parecido com {len(refs)} imagem(ns) que ensinaram ao Lume como “{nome}”"}))
                         return
                     if perfil:
-                        resposta = conceitos.buscar(idx, perfil, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem)
+                        resposta = conceitos.buscar(idx, perfil, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=reforco(ajuste), origem=origem)
                         print(f"Conceito {perfil['id']}: {len(resposta['resultados'])} sugestões em {time.monotonic()-inicio:.3f}s.", flush=True)
                         resposta["resultados"] = feedback.marcar(catalogo.enriquecer(resposta["resultados"]), termo)
                         resposta["exemplos"] = feedback.resumo(termo)
@@ -606,7 +632,7 @@ def servir(porta):
                     vec = np.asarray(motor.buscar(cardapio.descricao_visual(pid) if pid else texto), dtype=np.float32)
                     if vec.shape != (512,) or not np.isfinite(vec).all():
                         raise ValueError("O motor retornou um vetor inválido.")
-                    resultados = idx.buscar(vec, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem)
+                    resultados = idx.buscar(vec, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=reforco(ajuste), origem=origem)
                     print(f"Busca concluída em {time.monotonic()-inicio:.2f}s; {len(resultados)} sugestões.", flush=True)
                     self._j(com_cardapio({"resultados": feedback.marcar(catalogo.enriquecer(resultados), termo), "exemplos": feedback.resumo(termo), "referencias": 0}))
                 except BuscaOcupada as e:
@@ -634,6 +660,11 @@ def servir(porta):
                     self._j({"drive": ({"ver": f"https://drive.google.com/file/d/{row[0]}/view", "baixar": f"https://drive.google.com/uc?export=download&id={row[0]}"} if row else None)})
                 except ValueError:
                     self._j({"erro": "Arquivo inválido."}, 400)
+            elif u.path == "/marcacao":  # marcação atual de um arquivo (id de quadro)
+                pos = idx.pos.get(int(qs["id"])) if qs.get("id", "").isdigit() else None
+                if pos is None: self._j({"erro": "Arquivo inválido."}, 400); return
+                m = marcacoes.por_arquivo.get(idx.rows[pos][1]) or {"casa": "", "pratos": [], "quando": "", "onde": "", "obs": ""}
+                self._j(marcacoes.anotar([{"id": int(qs["id"])}], idx, cardapio)[0].get("marcacao") or {**m, "pratos_nomes": []})
             elif u.path == "/cardapio":  # pratos do grupo: ?empresa=Lounge&q=camarão
                 self._j(cardapio.listar(empresa_do_filtro(qs.get("empresa", "")), qs.get("q", "").strip()))
             elif u.path == "/referencias":  # o que o Lume já aprendeu (admin vê também as pendentes dos clientes)

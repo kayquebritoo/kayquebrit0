@@ -62,7 +62,7 @@ class Conceitos:
             if origem and idx.origem.get(aid)!=origem:continue
             if de is not None and mod<de:continue
             if ate is not None and mod>ate:continue
-            if pasta and normalizar(pasta) not in normalizar(caminho):continue
+            if pasta and not idx.na_pasta(pasta,caminho,aid):continue
             key=identidade(caminho)
             if eh_proxy(caminho) and key in originais:continue
             if aid in vistos:continue
