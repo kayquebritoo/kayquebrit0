@@ -56,6 +56,17 @@ function BrandLogo({ brand, size = 20 }: { brand: string | null; size?: number }
   return <Image src={src} alt="" title={brand ?? undefined} width={size} height={size} sizes={`${size}px`} className="shrink-0 rounded-sm bg-white object-contain p-px" style={{ width: size, height: size }} />;
 }
 
+function safeUrl(u: string | null | undefined) {
+  if (!u) return null;
+  try { const x = new URL(u.trim()); return x.protocol === "http:" || x.protocol === "https:" ? x.href : null; } catch { return null; }
+}
+
+function OpenPost({ url, className = "" }: { url: string | null | undefined; className?: string }) {
+  const href = safeUrl(url);
+  if (!href) return null;
+  return <a href={href} target="_blank" rel="noopener noreferrer" aria-label="Abrir post publicado" title="Abrir post publicado" onClick={(e) => e.stopPropagation()} className={`kb-faint inline-flex shrink-0 items-center justify-center rounded-md px-1 text-[13px] hover:text-[var(--kb-ink,inherit)] hover:bg-white/10 ${className}`}>↗</a>;
+}
+
 function people(p: Post) {
   return [p.scriptBy && `Roteiro: ${p.scriptBy}`, p.captureBy && `Capta: ${p.captureBy}`, p.editor && `Edita: ${p.editor}`].filter(Boolean).join(" · ");
 }
@@ -156,15 +167,15 @@ export default function ContentBoard() {
   const undated = byDay.get("sem-data") ?? [];
 
   const row = (p: Post) => (
-    <button key={p.id} type="button" className="kb-row w-full text-left" onClick={() => setOpen(p)}>
+    <div key={p.id} role="button" tabIndex={0} className="kb-row w-full cursor-pointer text-left" onClick={() => setOpen(p)} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); setOpen(p); } }}>
       <span className="min-w-0">
         <span className="kb-ink block truncate text-[14px]">{p.title}</span>
         <span className="kb-faint flex items-center gap-1.5 truncate text-[12px]"><BrandLogo brand={p.brand} />{[p.scheduledAt && hhmm(p.scheduledAt) !== "00:00" ? hhmm(p.scheduledAt) : null, p.brand, FORMAT[p.format] ?? "Post", p.networks?.length ? `${p.networks.length} ${p.networks.length === 1 ? "rede" : "redes"}` : p.copies > 1 ? `${p.copies} cópias na origem` : null].filter(Boolean).join(" · ")}</span>
         {people(p) && <span className="kb-muted block truncate text-[12px]">{people(p)}</span>}
         {p.status === "erro" && p.errorMessage && <span className="block truncate text-[12px] text-[var(--kb-late)]">{p.errorMessage}</span>}
       </span>
-      <StatusTag status={p.status} />
-    </button>
+      <span className="flex shrink-0 items-center gap-1.5"><OpenPost url={p.postedUrl} className="min-h-8 min-w-8" /><StatusTag status={p.status} /></span>
+    </div>
   );
 
   return (
@@ -241,12 +252,15 @@ export default function ContentBoard() {
                     {/* tela grande: etiquetas com título */}
                     <div className="mt-1 hidden flex-col gap-0.5 sm:flex">
                       {list.slice(0, 3).map((p) => (
-                        <button key={p.id} type="button" onClick={(e) => { e.stopPropagation(); setOpen(p); }} title={`${p.title} — ${meta(p.status).label}`} className="flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-left text-[11px] hover:bg-white/10" style={{ borderLeft: `3px solid ${brandColor(p.brand) ?? meta(p.status).color}`, background: brandColor(p.brand) ? `${brandColor(p.brand)}14` : undefined }}>
-                          <span aria-hidden className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: meta(p.status).color }} />
-                          <BrandLogo brand={p.brand} size={18} />
-                          <b className="kb-faint shrink-0">{FORMAT_SHORT[p.format] ?? "P"}</b>
-                          <span className="kb-ink truncate">{p.title}</span>
-                        </button>
+                        <div key={p.id} className="flex min-w-0 items-center rounded-md hover:bg-white/10" style={{ borderLeft: `3px solid ${brandColor(p.brand) ?? meta(p.status).color}`, background: brandColor(p.brand) ? `${brandColor(p.brand)}14` : undefined }}>
+                          <button type="button" onClick={(e) => { e.stopPropagation(); setOpen(p); }} title={`${p.title} — ${meta(p.status).label}`} className="flex min-w-0 flex-1 items-center gap-1 px-1 py-0.5 text-left text-[11px]">
+                            <span aria-hidden className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: meta(p.status).color }} />
+                            <BrandLogo brand={p.brand} size={18} />
+                            <b className="kb-faint shrink-0">{FORMAT_SHORT[p.format] ?? "P"}</b>
+                            <span className="kb-ink truncate">{p.title}</span>
+                          </button>
+                          <OpenPost url={p.postedUrl} />
+                        </div>
                       ))}
                       {list.length > 3 && <span className="kb-faint px-1 text-[11px]">+{list.length - 3} mais</span>}
                     </div>
@@ -401,7 +415,7 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
           <label className="kb-field"><span>Data e hora</span><input className="kb-control" type="datetime-local" value={f.when} onChange={(e) => setF({ ...f, when: e.target.value })} /></label>
           <label className="kb-field"><span>Link do arquivo para o cliente ver (Drive, Lume…)</span><input className="kb-control" inputMode="url" placeholder="https://…" value={f.mediaUrl} onChange={(e) => setF({ ...f, mediaUrl: e.target.value })} /></label>
           <label className="kb-field"><span>Legenda</span><textarea className="kb-control" style={{ padding: "10px 14px" }} rows={4} value={f.caption} onChange={(e) => setF({ ...f, caption: e.target.value })} /></label>
-          {(f.status === "postado" || f.status === "erro" || post.postedUrl) && <label className="kb-field"><span>Link do post publicado</span><input className="kb-control" inputMode="url" placeholder="https://…" value={f.postedUrl} onChange={(e) => setF({ ...f, postedUrl: e.target.value })} /></label>}
+          {(f.status === "postado" || f.status === "erro" || post.postedUrl) && <label className="kb-field"><span>Link do post publicado</span><input className="kb-control" inputMode="url" placeholder="https://…" value={f.postedUrl} onChange={(e) => setF({ ...f, postedUrl: e.target.value })} />{safeUrl(f.postedUrl) && <a href={safeUrl(f.postedUrl)!} target="_blank" rel="noopener noreferrer" className="kb-chip mt-1 min-h-10 self-start">Abrir post ↗</a>}</label>}
         </section>
 
         <PostPublications key={pubKey} postId={post.id} onPostStatus={(status) => setF((x) => ({ ...x, status }))} />
