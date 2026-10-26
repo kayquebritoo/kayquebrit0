@@ -46,6 +46,10 @@ describe('calendário independente',()=>{
   const a={...base,id:'a',title:'Jantar',caption:'A'};const b={...base,id:'b',title:'Jantar',caption:'B'};
   expect(consolidationPlan([a,b],[])[0].safe).toBe(false);
   expect(consolidationPlan([a,{...b,caption:'A',title:'Outro título'}],[])[0].conflicts).toContain('títulos diferentes');
+  const full={...a,title:'Jantar especial',caption:'Jantar especial com sobremesa',script:'Roteiro inicial e continuação',format:'reels'};
+  const short={...b,title:'Jantar especial com...',caption:full.caption,script:'Roteiro inicial',format:'outro'};
+  const prefixPlan=consolidationPlan([full,short],[])[0]; expect(prefixPlan.safe).toBe(true);
+  expect(prefixPlan.patch.format).toBe('reels');
   const pub=(id:string)=>({postId:id} as typeof schema.postPublications.$inferSelect);
   expect(consolidationPlan([a,{...b,caption:'A'}],[pub('a'),pub('b')])[0].safe).toBe(false);
  });

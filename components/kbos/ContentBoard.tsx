@@ -472,9 +472,11 @@ function ImportIcs({ projectId, month, onClose, onDone }: { projectId: string; m
 
   async function pick(file: File | undefined) {
     if (!file) return;
+    await previewText(await file.text());
+  }
+  async function previewText(t: string) {
     setBusy(true); setError("");
     try {
-      const t = await file.text();
       const r = await fetch("/api/admin/social/import", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ projectId, text: t, dryRun: true }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Não consegui ler o arquivo.");
@@ -523,7 +525,10 @@ function ImportIcs({ projectId, month, onClose, onDone }: { projectId: string; m
         )}
         <input ref={input} type="file" accept=".ics,text/calendar" className="hidden" onChange={(e) => void pick(e.target.files?.[0])} />
         {tab === "ics" && (!info ? (
-          <button type="button" className="kb-btn min-h-12 w-full" disabled={busy} onClick={() => input.current?.click()}>{busy ? "Lendo…" : "Escolher arquivo .ics"}</button>
+          <div className="space-y-3">
+            <button type="button" className="kb-btn min-h-12 w-full" disabled={busy} onClick={() => input.current?.click()}>{busy ? "Lendo…" : "Escolher arquivo .ics"}</button>
+            <details><summary className="kb-muted min-h-11 cursor-pointer py-3 text-sm">Colar arquivo ICS</summary><textarea className="kb-control text-base" rows={5} aria-label="Conteúdo do arquivo ICS" value={text} onChange={e => setText(e.target.value)} /><button type="button" className="kb-btn-ghost min-h-11 mt-2" disabled={busy || !text.trim()} onClick={() => void previewText(text)}>Conferir arquivo colado</button></details>
+          </div>
         ) : (
           <>
             <p className="kb-muted text-sm"><b className="kb-ink">{info.fresh}</b> posts novos · {info.existing} já existiam (de {info.total}).</p>

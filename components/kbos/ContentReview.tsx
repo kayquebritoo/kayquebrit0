@@ -41,6 +41,18 @@ export default function ContentReview({ projectId, month, onOpenPost, onChanged 
       onChanged(); await load();
     } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setBusy(false); }
   }
+  async function consolidateCompatible() {
+    setBusy(true); setError("");
+    try {
+      for (const plan of plans.filter(p => p.safe)) {
+        const response = await fetch("/api/admin/social/consolidation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId, month, keeperId: plan.keeperId, version: plan.version }) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Não consegui consolidar. Os grupos anteriores foram preservados no histórico.");
+      }
+    } catch(e) { setError(e instanceof Error ? e.message : "Erro."); }
+    finally { onChanged(); await load(); setBusy(false); }
+  }
+
   async function undo(id: string) {
     setBusy(true); setError("");
     try {
@@ -77,6 +89,7 @@ export default function ContentReview({ projectId, month, onOpenPost, onChanged 
                 {report.records} {report.records === 1 ? "registro visível" : "registros visíveis"} · {report.groups.length} {report.groups.length === 1 ? "grupo" : "grupos"} para conferir · {report.unidentified} sem empresa identificada.
               </p>
               <p className="kb-faint text-xs">Títulos ou legendas semelhantes no mesmo dia e na mesma empresa são candidatos à revisão. Consolidar mantém o registro mais avançado, complementa campos vazios e vincula as cópias sem apagá-las. Divergências ficam para revisão.</p>
+              {plans.some(p => p.safe) && <button type="button" className="kb-btn min-h-11" disabled={busy} onClick={() => void consolidateCompatible()}>Consolidar {plans.filter(p => p.safe).length} grupos compatíveis</button>}
               {report.groups.length === 0 ? <p className="kb-muted py-2 text-sm">Nenhum candidato a repetido encontrado neste mês. Isso não confirma a publicação nas redes.</p> : report.groups.map(group => (
                 <details key={group.items.map(item => item.id).sort().join(":")} className="rounded-xl border border-white/10 px-3">
                   <summary className="kb-ink min-h-11 cursor-pointer py-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2">
