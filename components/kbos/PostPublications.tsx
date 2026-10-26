@@ -4,7 +4,7 @@ import { NETWORKS, NETWORK_LABEL } from "@/lib/kbos/content-model";
 
 type Pub = { network: string; status: string; url: string | null; error: string | null; publishedAt: string | null; scheduledAt: string | null; accountId?: string | null };
 const PUB_LABEL: Record<string, string> = { pendente: "Pendente", agendado: "Agendado", publicado: "Publicado", erro: "Erro", cancelado: "Fora" };
-const PUB_COLOR: Record<string, string> = { pendente: "#9a93a8", agendado: "#c08cff", publicado: "#2fbf71", erro: "#ff6b6b", cancelado: "#5a5566" };
+const PUB_COLOR: Record<string, string> = { pendente: "#9a93a8", agendado: "#f472b6", publicado: "#22c55e", erro: "#ff5c5c", cancelado: "#5a5566" };
 
 /** Editor do post (equipe): cada rede com o próprio status. O post só vira "postado" quando todas as redes ativas saem. */
 export default function PostPublications({ postId, onPostStatus }: { postId: string; onPostStatus: (status: string) => void }) {

@@ -17,17 +17,18 @@ type Post = {
 };
 type Project = { id: string; titulo: string; categoria?: string; postLimit?: number | null; parentId?: string | null };
 
-// Etapas na ordem do fluxo (cor = o que a pessoa vê no calendário).
+// Etapas na ordem do fluxo (cor = o que a pessoa vê no calendário). Cores com matiz bem separado:
+// edição (roxo) × agendado (rosa) e aprovado (turquesa) × postado (verde) não se confundem.
 const STATUS: { id: string; label: string; color: string }[] = [
   { id: "roteiro", label: "Roteiro", color: "#9a93a8" },
   { id: "captacao", label: "Captação", color: "#4DA3FF" },
   { id: "producao", label: "Em edição", color: "#8a6cf0" },
   { id: "aprovacao", label: "Aguardando cliente", color: "#f5c46e" },
-  { id: "ajustes", label: "Ajustes", color: "#ff9f5a" },
-  { id: "aprovado", label: "Aprovado", color: "#3ecf8e" },
-  { id: "agendado", label: "Agendado", color: "#c08cff" },
-  { id: "postado", label: "Postado", color: "#2fbf71" },
-  { id: "erro", label: "Erro ao postar", color: "#ff6b6b" },
+  { id: "ajustes", label: "Ajustes", color: "#ff8a3d" },
+  { id: "aprovado", label: "Aprovado", color: "#2dd4bf" },
+  { id: "agendado", label: "Agendado", color: "#f472b6" },
+  { id: "postado", label: "Postado", color: "#22c55e" },
+  { id: "erro", label: "Erro ao postar", color: "#ff5c5c" },
   { id: "cancelado", label: "Cancelado", color: "#5a5566" },
 ];
 const STEPS = ["roteiro", "captacao", "producao", "aprovacao", "aprovado", "postado"];
@@ -66,6 +67,21 @@ function OpenPost({ url, className = "" }: { url: string | null | undefined; cla
   if (!href) return null;
   return <a href={href} target="_blank" rel="noopener noreferrer" aria-label="Abrir post publicado" title="Abrir post publicado" onClick={(e) => e.stopPropagation()} className={`kb-faint inline-flex shrink-0 items-center justify-center rounded-md px-1 text-[13px] hover:text-[var(--kb-ink,inherit)] hover:bg-white/10 ${className}`}>↗</a>;
 }
+
+/** Ícone de situação ao lado da logo: postado (✓), agendado (relógio), erro (!), cancelado (×); o resto é um anel na cor da etapa = ainda não foi ao ar. */
+function StateIcon({ status, size = 14 }: { status: string; size?: number }) {
+  const { color, label } = meta(status);
+  const common = { width: size, height: size, viewBox: "0 0 16 16", className: "shrink-0", role: "img" as const, "aria-label": label };
+  if (status === "postado") return <svg {...common}><title>{label}</title><circle cx="8" cy="8" r="7.5" fill={color} /><path d="M4.6 8.3l2.2 2.2 4.6-4.8" fill="none" stroke="#0B0B1E" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+  if (status === "agendado") return <svg {...common}><title>{label}</title><circle cx="8" cy="8" r="6.6" fill="none" stroke={color} strokeWidth="1.8" /><path d="M8 4.6V8l2.3 1.5" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" /></svg>;
+  if (status === "erro") return <svg {...common}><title>{label}</title><circle cx="8" cy="8" r="7.5" fill={color} /><path d="M8 4.2v4.6M8 11.4v.2" stroke="#0B0B1E" strokeWidth="2" strokeLinecap="round" /></svg>;
+  if (status === "cancelado") return <svg {...common}><title>{label}</title><circle cx="8" cy="8" r="6.6" fill="none" stroke={color} strokeWidth="1.6" /><path d="M5.6 5.6l4.8 4.8M10.4 5.6l-4.8 4.8" stroke={color} strokeWidth="1.6" strokeLinecap="round" /></svg>;
+  return <svg {...common}><title>{label} · ainda não postado</title><circle cx="8" cy="8" r="5.6" fill="none" stroke={color} strokeWidth="2.2" /></svg>;
+}
+
+// "Próximo para editar": vídeos e carrosséis que ainda não passaram pela aprovação.
+const EDIT_FORMATS = new Set(["reels", "carrossel"]);
+const EDIT_STATUS = new Set(["roteiro", "captacao", "producao", "ajustes"]);
 
 function people(p: Post) {
   return [p.scriptBy && `Roteiro: ${p.scriptBy}`, p.captureBy && `Capta: ${p.captureBy}`, p.editor && `Edita: ${p.editor}`].filter(Boolean).join(" · ");
@@ -164,6 +180,15 @@ export default function ContentBoard() {
   }
   const monthName = new Date(`${month}-15T12:00:00`).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
   const dayPosts = byDay.get(selected) ?? [];
+  const nextEdit = useMemo(() => {
+    if (!items || month !== today.slice(0, 7)) return null;
+    const fila = items.filter((p) => EDIT_FORMATS.has(p.format) && EDIT_STATUS.has(p.status) && p.scheduledAt)
+      .sort((a, b) => a.scheduledAt!.localeCompare(b.scheduledAt!));
+    const atrasados = fila.filter((p) => dayKey(p.scheduledAt!) < today);
+    const proximos = fila.filter((p) => dayKey(p.scheduledAt!) >= today);
+    const post = proximos[0] ?? atrasados[0];
+    return post ? { post, fila: fila.length, atrasados: atrasados.length } : { post: null, fila: 0, atrasados: 0 };
+  }, [items, month, today]);
   const undated = byDay.get("sem-data") ?? [];
 
   const row = (p: Post) => (
@@ -212,6 +237,8 @@ export default function ContentBoard() {
       {error && <p className="kb-tag late w-full justify-start rounded-xl! px-3! py-2! text-sm">{error}</p>}
       {!items && !error && <div className="kb-skel h-64 w-full" />}
 
+      {nextEdit && <NextToEdit next={nextEdit} today={today} onOpen={setOpen} />}
+
       {items && projectId && <ContentReview key={`${projectId}:${month}`} projectId={projectId} month={month} onChanged={() => void load()} onOpenPost={(id) => { const post = items.find(item => item.id === id); if (post) setOpen(post); }} />}
 
       {items && view === "calendario" && (
@@ -247,15 +274,15 @@ export default function ContentBoard() {
                     <span className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[12px] tabular-nums ${c.key === today ? "bg-gradient-to-br from-[#4F12C7] to-[#E80EFD] font-semibold text-white" : "kb-muted"}`}>{c.n}</span>
                     {/* celular: logos compactos identificam cada empresa */}
                     <div className="mt-1 flex flex-wrap gap-0.5 sm:hidden">
-                      {list.slice(0, 6).map((p) => <span key={p.id} aria-label={p.brand ?? meta(p.status).label}>{p.brand && BRAND_LOGOS[p.brand] ? <BrandLogo brand={p.brand} size={12} /> : <span aria-hidden className="block h-1.5 w-1.5 rounded-full" style={{ background: meta(p.status).color }} />}</span>)}
+                      {list.slice(0, 6).map((p) => <span key={p.id} aria-label={p.brand ?? meta(p.status).label}>{p.brand && BRAND_LOGOS[p.brand] ? <BrandLogo brand={p.brand} size={12} /> : <StateIcon status={p.status} size={10} />}</span>)}
                     </div>
                     {/* tela grande: etiquetas com título */}
                     <div className="mt-1 hidden flex-col gap-0.5 sm:flex">
                       {list.slice(0, 3).map((p) => (
                         <div key={p.id} className="flex min-w-0 items-center rounded-md hover:bg-white/10" style={{ borderLeft: `3px solid ${brandColor(p.brand) ?? meta(p.status).color}`, background: brandColor(p.brand) ? `${brandColor(p.brand)}14` : undefined }}>
                           <button type="button" onClick={(e) => { e.stopPropagation(); setOpen(p); }} title={`${p.title} — ${meta(p.status).label}`} className="flex min-w-0 flex-1 items-center gap-1 px-1 py-0.5 text-left text-[11px]">
-                            <span aria-hidden className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: meta(p.status).color }} />
                             <BrandLogo brand={p.brand} size={18} />
+                            <StateIcon status={p.status} size={13} />
                             <b className="kb-faint shrink-0">{FORMAT_SHORT[p.format] ?? "P"}</b>
                             <span className="kb-ink truncate">{p.title}</span>
                           </button>
@@ -301,14 +328,42 @@ export default function ContentBoard() {
   );
 }
 
+function NextToEdit({ next, today, onOpen }: { next: { post: Post | null; fila: number; atrasados: number }; today: string; onOpen: (p: Post) => void }) {
+  const p = next.post;
+  if (!p) return <div className="kb-glass flex items-center gap-3 px-4! py-3!"><span className="kb-faint text-[11px] uppercase tracking-[0.08em]">Próximo para editar</span><span className="kb-muted text-[13px]">Nenhum vídeo ou carrossel na fila deste mês.</span></div>;
+  const dia = dayKey(p.scheduledAt!);
+  const diff = Math.round((Date.parse(`${dia}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) / 86400000);
+  const quando = diff === 0 ? "hoje" : diff === 1 ? "amanhã" : diff > 1 ? `em ${diff} dias` : `${-diff} ${diff === -1 ? "dia" : "dias"} atrasado`;
+  const st = meta(p.status);
+  return (
+    <button type="button" onClick={() => onOpen(p)} className="kb-glass group flex w-full min-w-0 items-center gap-3 px-4! py-3! text-left transition-transform duration-300 active:scale-[0.98]" style={{ borderLeft: `3px solid ${st.color}` }}>
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="kb-faint text-[11px] uppercase tracking-[0.08em]">Próximo para editar</span>
+        <span className="kb-ink flex min-w-0 items-center gap-2 text-[15px]"><BrandLogo brand={p.brand} size={22} /><span className="truncate">{p.title}</span></span>
+        <span className="kb-muted flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px]">
+          <span>{FORMAT[p.format] ?? "Post"} · {p.brand ?? "Sem casa"} · {new Date(p.scheduledAt!).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: BELEM })}</span>
+          <span className={diff < 0 ? "text-[var(--kb-late)]" : "kb-ink"}>{quando}</span>
+          <span className="inline-flex items-center gap-1"><StateIcon status={p.status} size={12} />{st.label}</span>
+        </span>
+      </span>
+      <span className="flex shrink-0 flex-col items-end gap-1 text-[12px]">
+        <span className="kb-faint tabular-nums">{next.fila} na fila</span>
+        {next.atrasados > 0 && <span className="tabular-nums text-[var(--kb-late)]">{next.atrasados} atrasado{next.atrasados === 1 ? "" : "s"}</span>}
+        <span className="kb-ink transition-transform duration-300 group-hover:translate-x-0.5" aria-hidden>→</span>
+      </span>
+    </button>
+  );
+}
+
 function Stepper({ status }: { status: string }) {
   const at = stepIndex(status);
   const bad = status === "erro";
+  const color = meta(status).color; // a linha usa a cor da etiqueta da etapa atual
   return (
     <ol className="flex gap-1" aria-label="Andamento do post">
       {STEPS.map((s, i) => (
         <li key={s} className="min-w-0 flex-1" aria-current={i === at ? "step" : undefined}>
-          <span className={`block h-1.5 rounded-full ${i <= at ? (bad && i === at ? "bg-[var(--kb-late-dot)]" : "bg-gradient-to-r from-[#4F12C7] to-[#E80EFD]") : "bg-white/10"}`} />
+          <span className={`block h-1.5 rounded-full transition-[background-color,opacity] duration-300 ${i <= at ? "" : "bg-white/10"}`} style={i <= at ? { background: bad && i === at ? "var(--kb-late-dot)" : color, opacity: i === at ? 1 : 0.5 } : undefined} />
           <span className={`mt-1 block truncate text-[10px] uppercase tracking-[0.06em] ${i === at ? "font-semibold" : "kb-faint"}`}>{STEP_LABEL[s]}</span>
         </li>
       ))}
