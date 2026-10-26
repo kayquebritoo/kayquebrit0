@@ -40,7 +40,7 @@ class Conceitos:
         if re.search(r'\b(nao|sem|exceto)\b',q):return None
         return next((p for p in self.cfg['perfis'] if p['regex'].search(q)),None)
 
-    def buscar(self,idx,perfil,tipo='',pasta='',limite=60,de=None,ate=None,ajuste=None,origem=''):
+    def buscar(self,idx,perfil,tipo='',pasta='',limite=60,de=None,ate=None,ajuste=None,origem='',elegivel=None):
         chave=(id(idx),perfil['id'])
         if chave not in self.cache:
             target=idx.m@self.vetores[perfil['id']+'_alvo']
@@ -56,6 +56,7 @@ class Conceitos:
         ordem=idx.ordenar(score)  # nota primeiro; empate → arquivo mais recente
         vistos=set();out=[]
         for i in ordem:
+            if elegivel is not None and not elegivel[i]:continue
             if margem[i]<=0:continue
             qid,aid,seg,caminho,t,mod=idx.rows[i]
             if tipo and t!=tipo:continue

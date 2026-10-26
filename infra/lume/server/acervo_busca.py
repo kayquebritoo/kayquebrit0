@@ -56,6 +56,14 @@ class MotorBusca:
         threading.Thread(target=ler, daemon=True).start()
 
     def buscar(self, texto, prazo=90):
+        return self._consultar({'texto': texto}, prazo)['vetor']
+
+    def buscar_multiplos(self, textos, prazo=90):
+        if not 1 <= len(textos) <= 32 or not all(isinstance(t, str) and t.strip() for t in textos):
+            raise ValueError('Lote de descrições inválido.')
+        return self._consultar({'textos': list(textos)}, prazo)['vetores']
+
+    def _consultar(self, pedido, prazo):
         if not self.guarda.acquire(blocking=False):
             raise BuscaOcupada('Já há uma busca em andamento. Aguarde a conclusão ou o limite de 90 segundos.')
         self.inicio = time.monotonic()
@@ -63,7 +71,7 @@ class MotorBusca:
             if self.processo is None or self.processo.poll() is not None:
                 self.fase = 'iniciando motor local'
                 self._iniciar()
-            self.processo.stdin.write(json.dumps({'texto': texto}) + '\n')
+            self.processo.stdin.write(json.dumps(pedido) + '\n')
             self.processo.stdin.flush()
             while True:
                 restante = prazo - (time.monotonic() - self.inicio)
@@ -74,9 +82,9 @@ class MotorBusca:
                     self.fase = ev['fase']
                 elif 'erro' in ev:
                     raise RuntimeError(ev['erro'])
-                elif 'vetor' in ev:
+                elif 'vetor' in ev or 'vetores' in ev:
                     self.fase = 'pronto'
-                    return ev['vetor']
+                    return ev
         except queue.Empty:
             self.encerrar()
             self.fase = 'tempo de busca excedido'
@@ -95,7 +103,9 @@ def worker():
     encoder = None
     for linha in sys.stdin:
         try:
-            texto = json.loads(linha)['texto']
+            pedido = json.loads(linha)
+            textos = pedido.get('textos')
+            lote = textos if textos is not None else [pedido['texto']]
             if encoder is None:
                 emitir({'fase': 'carregando bibliotecas locais'})
                 from sentence_transformers import SentenceTransformer
@@ -118,9 +128,17 @@ def worker():
                     encoder = SentenceTransformer(str(local), device='cpu', local_files_only=True)
             emitir({'fase': 'consultando acervo'})
             inicio_texto = time.monotonic()
-            vetor = encoder.encode([texto], convert_to_numpy=True, normalize_embeddings=True)[0]
+            if textos is not None:
+                # English concept prompts use the original CLIP text tower already
+                # used by the image indexer, not a new model or a new image index.
+                origem_visual = 'clip-ViT-B-32' if os.environ.get('LUME_MODO') == 'nuvem' else str(Path.home() / 'Library/Application Support/Acervo/modelo-clip')
+                visual = SentenceTransformer(origem_visual, device='cpu', local_files_only=True)
+                vetores = visual.encode(lote, convert_to_numpy=True, normalize_embeddings=True)
+                del visual  # text vectors are cached by the API; don't retain a second model
+            else:
+                vetores = encoder.encode(lote, convert_to_numpy=True, normalize_embeddings=True)
             print(f"Texto codificado em {time.monotonic()-inicio_texto:.3f}s; modelo: {local}", file=sys.stderr, flush=True)
-            emitir({'vetor': vetor.tolist()})
+            emitir({'vetores': vetores.tolist()} if textos is not None else {'vetor': vetores[0].tolist()})
         except Exception as e:
             print(f'Falha no motor: {type(e).__name__}: {e}', file=sys.stderr, flush=True)
             emitir({'erro': f'O motor local falhou: {type(e).__name__}: {e}'})
