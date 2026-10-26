@@ -75,6 +75,18 @@ Precision@10 e @20 **não calculadas**: faltam rótulos confirmados e a inspeç�
 de frames não permite excluir que outros momentos de um vídeo contenham o prato.
 As amostras vistas servem para rejeitar a ativação, não para anunciar sucesso.
 
+Revisão posterior do proprietário confirmou um falso positivo como docinhos de
+evento. Sua outra ocorrência tinha miniatura com SHA256 idêntico; isso confirma
+o mesmo frame, não a integridade/identidade dos vídeos completos. O conjunto
+privado `labels.json` registra essa origem de rótulo e os negativos identificados
+visualmente. Em uma **segunda cópia** do banco, quatro negativos foram aplicados
+com o novo feedback e nenhum positivo foi criado. O benchmark
+`benchmark-reviewed.json` passou a retornar um único candidato provável para as
+quatro variantes, preservando os top 20 dos três controles. Isso valida a
+exclusão dos exemplos revisados; não mede generalização nem confirma o candidato.
+Os votos de produção continuam intactos. A preparação levou 7,30 s e as buscas
+especializadas 0,023–0,034 s nessa rodada offline.
+
 Tempos offline com cache textual: cerca de 0,012–0,025 s por consulta especializada;
 preparação medida do worker/modelos em torno de 7 s. Não comparar diretamente
 esses tempos com latência HTTP completa nem tratá-los como teste de carga.
