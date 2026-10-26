@@ -9,8 +9,24 @@ para as buscas dele (a pasta dele) até o Kayque aprovar; aprovada, passa a vale
 """
 import io, sqlite3, time
 import numpy as np
+from acervo_midias import normalizar
 
 MAX_POR_TERMO = 12
+STOPWORDS = frozenset("a o as os da de do das dos e com ao à na no em um uma foto fotos video videos imagem imagens prato".split())
+STOPWORDS = frozenset(normalizar(x) for x in STOPWORDS)
+
+
+def tokens(texto):
+    """Palavras que importam: sem acento, sem stopwords, plural simples ('files' -> 'file')."""
+    out = set()
+    for t in normalizar(texto).replace("-", " ").split():
+        t = "".join(ch for ch in t if ch.isalnum())
+        if not t or t in STOPWORDS:
+            continue
+        if len(t) > 3 and t.endswith("s"):
+            t = t[:-1]
+        out.add(t)
+    return out
 
 
 class Referencias:
@@ -48,7 +64,32 @@ class Referencias:
                             (termo, v.astype(np.float16).tobytes(), jpg, escopo or "", time.time()))
             return cur.lastrowid
 
+    def termo_parecido(self, termo, escopo=None):
+        """Termo ensinado que casa com a busca: o exato, ou o mais parecido por palavras; None se nenhum."""
+        f, a = self._visivel(escopo)
+        with self._c() as c:
+            if c.execute("SELECT 1 FROM referencias WHERE termo=?" + f + " LIMIT 1", (termo, *a)).fetchone():
+                return termo
+            termos = [r[0] for r in c.execute("SELECT DISTINCT termo FROM referencias WHERE 1=1" + f, a)]
+        busca = tokens(termo)
+        if not busca:
+            return None
+        melhor, chave_melhor = None, (0, 0)
+        for t in termos:
+            ref = tokens(t)
+            if not ref or (len(busca) == 1 and len(ref) > 1):
+                continue
+            comum = len(busca & ref)
+            jac = comum / len(busca | ref)
+            if ref <= busca or jac >= 0.6:
+                if (jac, comum) > chave_melhor:
+                    melhor, chave_melhor = t, (jac, comum)
+        return melhor
+
     def vetores(self, termo, escopo=None):
+        termo = self.termo_parecido(termo, escopo)
+        if termo is None:
+            return None
         f, a = self._visivel(escopo)
         with self._c() as c:
             rows = c.execute("SELECT vetor FROM referencias WHERE termo=?" + f, (termo, *a)).fetchall()

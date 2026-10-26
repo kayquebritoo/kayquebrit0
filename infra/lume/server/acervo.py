@@ -571,14 +571,18 @@ def servir(porta):
                     perfil = conceitos.identificar(texto)
                     termo = chave(texto, perfil)
                     ajuste = feedback.ajuste(idx, termo)
-                    refs = referencias.vetores(termo, esc or "")
+                    termo_ref = referencias.termo_parecido(termo, esc or "")
+                    refs = referencias.vetores(termo_ref, esc or "") if termo_ref else None
                     if refs is not None:  # alguém já ensinou com imagens: imagem↔imagem, sem o motor de texto
+                        nome = texto
+                        if termo_ref != termo:  # casou por palavras parecidas: feedback e mensagem usam o termo ensinado
+                            termo, ajuste, nome = termo_ref, feedback.ajuste(idx, termo_ref), termo_ref
                         notas = Referencias.notas(idx, refs)
                         resultados = idx.buscar(None, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem, notas=notas)
                         print(f"Referências {termo}: {len(refs)} imagem(ns), {len(resultados)} sugestões em {time.monotonic()-inicio:.3f}s.", flush=True)
                         self._j({"resultados": feedback.marcar(catalogo.enriquecer(resultados), termo), "exemplos": feedback.resumo(termo),
                                  "modo": "referencias", "referencias": len(refs),
-                                 "interpretacao": f"parecido com {len(refs)} imagem(ns) que ensinaram ao Lume como “{texto}”"})
+                                 "interpretacao": f"parecido com {len(refs)} imagem(ns) que ensinaram ao Lume como “{nome}”"})
                         return
                     if perfil:
                         resposta = conceitos.buscar(idx, perfil, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem)

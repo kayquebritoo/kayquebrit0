@@ -49,6 +49,22 @@ class Ref(unittest.TestCase):
         with self.assertRaises(ValueError): self.r.adicionar("guara", unit(0))
         with self.assertRaises(ValueError): self.r.adicionar("", unit(0))
 
+    def test_termo_tolerante(self):
+        self.r.adicionar("file a moda da casa", unit(0))
+        for q in ["file da casa moda", "file a moda", "foto do file a moda da casa", "files a moda da casa", "file a moda da casa"]:
+            self.assertEqual(self.r.termo_parecido(q, ""), "file a moda da casa", q)
+            self.assertIsNotNone(self.r.vetores(q, ""), q)
+        self.assertIsNone(self.r.termo_parecido("casa", ""))      # token único genérico não puxa termo composto
+        self.assertIsNone(self.r.vetores("pizza", ""))
+        self.assertIsNone(self.r.termo_parecido("foto do prato", ""))
+
+    def test_tolerante_respeita_escopo_e_escolhe_melhor(self):
+        self.r.adicionar("camarao frito", unit(0), "Clientes/X")
+        self.assertIsNone(self.r.termo_parecido("camaroes frito", ""))
+        self.assertEqual(self.r.termo_parecido("foto camarao frito", "Clientes/X"), "camarao frito")
+        self.r.adicionar("camarao", unit(1)); self.r.adicionar("camarao frito empanado", unit(2))
+        self.assertEqual(self.r.termo_parecido("fotos de camarao", ""), "camarao")
+
 
 if __name__ == "__main__":
     unittest.main()
