@@ -55,7 +55,7 @@ def intencao(texto):
     return "petit gateau" if q in ALIASES else None
 
 
-def reclassificar(matriz, vetores):
+def reclassificar(matriz, vetores, ancoras=None):
     """Todos os frames concorrem; a seleção por arquivo ocorre depois dos filtros.
 
     Feedback não pode converter um frame incompatível em candidato elegível.
@@ -72,4 +72,11 @@ def reclassificar(matriz, vetores):
     rival = (matriz @ vs[len(ALVOS):].T).max(axis=1)
     margem = base - rival
     elegivel = (base >= MIN_SIMILARIDADE) & (margem >= MIN_MARGEM)
+    if ancoras is not None:
+        # Confirmed image examples are stronger than a text-only rejection.
+        # Conservative retrieval, not a calibrated confidence probability.
+        ancoras = np.asarray(ancoras, dtype=np.float32)
+        if ancoras.shape != base.shape or not np.isfinite(ancoras).all():
+            raise ValueError('Âncoras visuais inválidas.')
+        return .8 * ancoras + .2 * (base + .5 * margem), ancoras >= .90, base, margem
     return base + 0.5 * margem, elegivel, base, margem

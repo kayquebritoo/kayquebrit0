@@ -320,17 +320,17 @@ class Indice:
 
 
 
-def id_no_escopo(qid, esc):
+def id_no_escopo(idx, qid, esc):
     pos = idx.pos.get(int(qid))
     return pos is not None and normalizar(esc) in normalizar(idx.rows[pos][3])
 
 
-def dentro_do_escopo_req(caminho, qs, esc):
+def dentro_do_escopo_req(idx, caminho, qs, esc):
     """Rotas que apontam para UM arquivo (mídia, miniatura, link do Drive) só abrem se ele estiver na pasta do cliente."""
     try:
-        if caminho.startswith("/midia/"): return id_no_escopo(int(caminho.rsplit("/", 1)[-1]), esc)
-        if caminho.startswith("/thumb/"): return id_no_escopo(int(Path(caminho).stem), esc)
-        if caminho == "/drive": return id_no_escopo(int(qs.get("id", "")), esc)
+        if caminho.startswith("/midia/"): return id_no_escopo(idx, int(caminho.rsplit("/", 1)[-1]), esc)
+        if caminho.startswith("/thumb/"): return id_no_escopo(idx, int(Path(caminho).stem), esc)
+        if caminho == "/drive": return id_no_escopo(idx, int(qs.get("id", "")), esc)
     except ValueError:
         return False
     return True
@@ -526,7 +526,7 @@ def servir(porta):
                 # Cliente: só leitura, só dentro da pasta dele.
                 if not (u.path in {"/", "/catalogo", "/buscar", "/parecidos", "/drive", "/referencias"} or u.path.startswith(("/midia/", "/thumb/", "/referencia/"))):
                     self.send_error(404); return
-                if not dentro_do_escopo_req(u.path, qs, esc):
+                if not dentro_do_escopo_req(idx, u.path, qs, esc):
                     self.send_error(404); return
                 if "p" not in qs or normalizar(esc) not in normalizar(qs.get("p", "")): qs["p"] = esc
             de = ate = None
@@ -581,7 +581,7 @@ def servir(porta):
                     if os.environ.get('LUME_BUSCA_PRECISA') == '1' and intencao(texto):
                         if 'petit gateau' not in vetores_consulta:
                             vetores_consulta['petit gateau'] = motor.buscar_multiplos(ALVOS + RIVAIS)
-                        plano_visual = reclassificar(idx.m, vetores_consulta['petit gateau'])
+                        plano_visual = reclassificar(idx.m, vetores_consulta['petit gateau'], feedback.ancoras(idx, termo))
                     if refs is not None:  # alguém já ensinou com imagens: imagem↔imagem, sem o motor de texto
                         nome = texto
                         if termo_ref != termo:  # casou por palavras parecidas: feedback e mensagem usam o termo ensinado
@@ -634,7 +634,7 @@ def servir(porta):
                     print(f"Falha na busca: {e}", file=sys.stderr, flush=True)
                     self._j({"erro": str(e)}, 500)
             elif u.path == "/parecidos":
-                ids = [int(x) for x in qs.get("ids", "").split(",") if x.isdigit() and int(x) in idx.pos and (not esc or id_no_escopo(int(x), esc))]
+                ids = [int(x) for x in qs.get("ids", "").split(",") if x.isdigit() and int(x) in idx.pos and (not esc or id_no_escopo(idx, int(x), esc))]
                 if not ids: self._j([]); return
                 vec = idx.m[[idx.pos[i] for i in ids]].mean(axis=0); vec /= np.linalg.norm(vec) or 1
                 self._j(catalogo.enriquecer(idx.buscar(vec, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, origem=origem)))

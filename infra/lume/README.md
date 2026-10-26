@@ -35,8 +35,11 @@ Não apontar desenvolvimento/testes ao volume persistente da produção.
 
 `LUME_BUSCA_PRECISA=1` habilita explicitamente o ranking contrastivo experimental
 para as consultas completas de petit gâteau conhecidas. **Desligado por padrão.**
-Ainda há falsos positivos no acervo real; esta versão não comprova a meta de
-relevância e não deve ser ativada em produção sem nova validação visual.
+Quando há votos positivos confirmados, recupera por similaridade com esses frames
+(corte conservador de 0,90) e usa texto para ranking. A validação HTTP isolada
+recuperou exatamente os dois exemplos confirmados pelo proprietário nos sete
+aliases. Isso comprova recuperação desses exemplos, não generalização para todo
+o acervo. Ativação em produção requer aprovação de deploy.
 
 O plano normaliza Unicode e reconhece aliases limitados, preservando consultas
 com qualificadores/negações. Todos os frames existentes concorrem; há margem
@@ -48,7 +51,9 @@ do arquivo prevalece. Votos zero removem a avaliação corrente daquele frame.
 `feedback_eventos` registra anterior, novo voto e horário na mesma transação;
 não modifica avaliações de outras intenções. Histórico antigo não é inventado.
 Os aliases conhecidos compartilham a chave `petit gateau`; avaliações antigas
-feitas com outros aliases não são migradas automaticamente.
+feitas com outros aliases são lidas como equivalentes, sem migração do banco.
+Remover/alterar um voto em um alias resolve os estados legados daquele frame na
+mesma transação, para impedir que um voto antigo reapareça por outro alias.
 
 Benchmark com modelos já presentes no cache, sobre **cópia** SQLite:
 

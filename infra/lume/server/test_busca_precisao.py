@@ -14,6 +14,14 @@ from acervo_feedback import Feedback, chave
 
 
 class Consulta(unittest.TestCase):
+    def test_portal_indice_explicito_sem_global(self):
+        idx = type('Index', (), {'pos': {1: 0, 2: 1}, 'rows': [(1, 1, 0, 'Drive/Lounge/a.mp4'), (2, 2, 0, 'Drive/Hotel/b.mp4')]})()
+        for path,qs in [('/midia/1', {}), ('/thumb/1.jpg', {}), ('/drive', {'id': '1'})]:
+            self.assertTrue(acervo.dentro_do_escopo_req(idx, path, qs, 'Lounge'))
+            self.assertFalse(acervo.dentro_do_escopo_req(idx, path, qs, 'Hotel'))
+        self.assertFalse(acervo.dentro_do_escopo_req(idx, '/midia/999', {}, 'Lounge'))
+        self.assertFalse(acervo.dentro_do_escopo_req(idx, '/thumb/invalid.jpg', {}, 'Lounge'))
+
     def test_aliases_unicode_e_erros(self):
         for q in ('PETIT GÂTEAU', 'petit gateua', 'Peti gato', 'chocolate lava cake',
                   'molten chocolate cake', 'bolinho de chocolate com recheio cremoso',
@@ -54,6 +62,25 @@ class Consulta(unittest.TestCase):
         for vs in (np.zeros((1, 512)), np.full((len(ALVOS) + len(RIVAIS), 512), np.nan)):
             with self.assertRaises(ValueError):
                 reclassificar(np.zeros((1, 512)), vs)
+
+    def test_confirmado_prevalece_sobre_corte_textual(self):
+        vs = np.zeros((len(ALVOS) + len(RIVAIS), 512), np.float32)
+        vs[:len(ALVOS), 0] = 1; vs[len(ALVOS):, 1] = 1
+        m = np.zeros((2, 512), np.float32); m[0, 1] = 1; m[1, 0] = 1
+        self.assertEqual(reclassificar(m, vs)[1].tolist(), [False, True])
+        self.assertEqual(reclassificar(m, vs, np.array([1, .6]))[1].tolist(), [True, False])
+
+    def test_votos_legados_alias_sem_migrar_banco(self):
+        with tempfile.TemporaryDirectory() as d:
+            db = Path(d) / 'votes.db'; f = Feedback(db)
+            with sqlite3.connect(db) as c:
+                c.execute('INSERT INTO feedback VALUES(?,?,?,?)', ('bolinho de chocolate com sorvete', 7, 1, 1))
+            self.assertEqual(f.votos(chave('petit gateua')), {7: 1})
+            self.assertEqual(f.votos('brownie'), {})
+            f.votar('petit gateau', 7, 0)
+            self.assertEqual(f.votos('bolinho de chocolate com sorvete'), {})
+            with sqlite3.connect(db) as c:
+                self.assertEqual(c.execute('SELECT anterior,voto FROM feedback_eventos').fetchall(), [(1, 0)])
 
     def test_feedback_reversivel_e_isolado(self):
         with tempfile.TemporaryDirectory() as d:

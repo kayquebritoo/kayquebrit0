@@ -3,9 +3,53 @@
 ## Resultado e limite
 
 Auditoria e preparação em branch; sem merge, deploy, reinício, reindexação,
-mudança de credenciais, DNS, firewall ou autenticação. A relevância final ainda
-não está comprovada. Foram encontrados candidatos prováveis, mas nenhum exemplo
-teve seu interior cremoso confirmado. Isso não demonstra ausência no acervo.
+mudança de credenciais, DNS, firewall ou autenticação. Após a fase exploratória,
+o proprietário confirmou os dois resultados selecionados com 👍 na interface.
+A versão final lê esses votos legados em todos os aliases e recupera exatamente
+os dois exemplos em sete variantes da consulta. O texto abaixo documenta também
+os experimentos iniciais rejeitados. Não há medida de generalização fora dos
+exemplos confirmados; não anunciar Precision@10/@20 a partir deles.
+
+## Validação final com exemplos confirmados
+
+Novo snapshot consistente e íntegro em diretório privado
+`/opt/lume/audits/2026-10-25-confirmados`, SHA256
+`2a9ad3516470db0bca485336d58fe58faa7716ca78aefb3530fd199d87a2e77a`.
+Os dois votos já existiam no banco de produção sob a descrição portuguesa.
+Não foi preciso criar positivos nem modificar o banco de produção.
+
+Mudança final: aliases conhecidos leem os votos antigos sem migração; frames
+confirmados tornam-se âncoras visuais. Quando existem âncoras, o corte textual não
+pode excluir um positivo confirmado. Recuperação conservadora imagem↔imagem
+(similaridade mínima 0,90), texto como apoio ao ranking e negativos por intenção.
+Nenhum ID de mídia foi inserido no código. Sem âncoras, permanece o experimento
+textual contrastivo, cuja limitação de falsos positivos está registrada abaixo.
+
+Benchmark final: duas correspondências confirmadas nas sete variantes solicitadas,
+sem preencher a página. Top 20 IDs/scores de brownie, hambúrguer e drinks idênticos
+ao baseline. Preparação 7,58 s; consultas especializadas 0,025–0,038 s offline.
+Os positivos foram usados como exemplos: não são um conjunto independente.
+
+API real da branch executada em processo temporário, ligado apenas ao loopback,
+com cópia do banco e cache existente. Passaram sete aliases, votos visíveis,
+filtro foto vazio, vídeo com dois resultados, pasta e data com subconjuntos
+corretos, pasta forçada no portal e bloqueio 404 de arquivo de outra pasta.
+Processo temporário e seu worker foram encerrados ao concluir.
+
+O teste detectou e corrigiu uma falha preexistente: `id_no_escopo` acessava `idx`
+fora do alcance, encerrando requisições do portal. O índice agora é argumento
+explícito em todos os chamadores. Não muda autenticação nem amplia permissões.
+
+24 testes Python locais passaram. Suíte geral local: 527 aprovados e 14 pulados;
+TypeScript e lint sem erros (cinco avisos existentes). A falha da CI inicial foi
+isolada a um teste que procurava os caracteres `PT` dentro de ciphertext aleatório;
+o teste agora verifica que o valor armazenado não é nenhum dos tokens completos
+em texto puro. O teste de roundtrip/adulteração existente foi preservado.
+Nenhuma lógica de publicação social foi modificada.
+
+O ranking continua desligado por padrão, aguardando aprovação para release e
+reinício controlado da aplicação. Preservar indexador, Caddy e volumes. Validar
+após deploy e manter rollback para a imagem anterior.
 
 ## Ambiente verificado
 

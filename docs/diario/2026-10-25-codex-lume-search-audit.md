@@ -9,3 +9,12 @@ O ranking especial permanece desligado por padrão: ainda há falsos positivos e
 nenhum petit gâteau com recheio confirmado. Controles preservaram top 20 IDs/scores.
 Sem merge/deploy/reinício/reindexação ou mudança de dados/credenciais de produção.
 Diagnóstico, limites e operação em `docs/LUME-BUSCA-AUDITORIA.md`.
+
+Continuação: proprietário confirmou os dois arquivos selecionados e votados.
+Aliases leem votos legados sem migrar produção; âncoras visuais preservam ambos
+mesmo quando o texto os rejeitaria. Sete aliases na API HTTP isolada retornam
+exatamente os dois confirmados; filtros e escopo do portal passaram. Corrigido
+`idx` fora do alcance na checagem de arquivos do portal. 24 testes Python,
+527 Vitest aprovados/14 pulados, TypeScript/lint sem erros. Ajustado apenas o
+teste não determinístico de substring em ciphertext que havia bloqueado a CI.
+Ativação continua pendente de aprovação; produção preservada.

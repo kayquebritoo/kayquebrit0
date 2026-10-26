@@ -58,7 +58,7 @@ def main():
     for q in CONSULTAS:
         t = time.monotonic()
         if intencao(q):
-            score, mask, base, margin = reclassificar(idx.m, vs)
+            score, mask, base, margin = reclassificar(idx.m, vs, feedback.ancoras(idx, chave(q)))
             results = idx.buscar(None, notas=score, elegivel=mask & feedback.elegiveis(idx, chave(q)), ajuste=feedback.ajuste(idx, chave(q)))
             for r in results:
                 i = idx.pos[r['id']]
