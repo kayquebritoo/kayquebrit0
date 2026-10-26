@@ -16,7 +16,7 @@ const plain = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").
 const brandOf = (titulo: string) => BRAND_LIST.find((b) => plain(titulo).includes(plain(b))) ?? null;
 const FORMAT: Record<string, string> = { reels: "Vídeo (Reels)", carrossel: "Carrossel", estatico: "Post estático", story: "Story", outro: "Post" };
 const LABEL: Record<string, string> = { roteiro: "Planejado", captacao: "Em captação", producao: "Em edição", aprovacao: "Aguardando você", ajustes: "Ajustes pedidos", aprovado: "Aprovado", agendado: "Agendado", postado: "Publicado", erro: "Agendado", cancelado: "Cancelado" };
-const COLOR: Record<string, string> = { roteiro: "#9a93a8", captacao: "#4DA3FF", producao: "#8a6cf0", aprovacao: "#f5c46e", ajustes: "#ff9f5a", aprovado: "#3ecf8e", agendado: "#c08cff", postado: "#2fbf71", erro: "#c08cff", cancelado: "#5a5566" };
+const COLOR: Record<string, string> = { roteiro: "#9a93a8", captacao: "#4DA3FF", producao: "#8a6cf0", aprovacao: "#f5c46e", ajustes: "#ff8a3d", aprovado: "#2dd4bf", agendado: "#f472b6", postado: "#22c55e", erro: "#f472b6", cancelado: "#5a5566" };
 const BELEM = "America/Belem";
 const dayKey = (iso: string) => new Date(iso).toLocaleDateString("sv-SE", { timeZone: BELEM });
 const dayLong = (key: string) => new Date(`${key}T12:00:00-03:00`).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", timeZone: BELEM });
