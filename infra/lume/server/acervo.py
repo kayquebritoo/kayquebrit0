@@ -344,6 +344,10 @@ def servir(porta):
     catalogo = Catalogo(idx)
     feedback = Feedback(DB)
     referencias = Referencias(DB)
+    from acervo_cardapio import Cardapio, empresa_do_filtro
+    cardapio = Cardapio()
+    corrigidas = cardapio.renomear_referencias(DB)
+    print(f"Cardápio: {len(cardapio.pratos)} pratos" + (f"; {corrigidas} referência(s) renomeada(s)." if corrigidas else "."), flush=True)
     entregas = acervo_entregas.Entregas(HOME, SEGREDO)
 
     def ler_imagem(h, limite=8_000_000):
@@ -521,7 +525,7 @@ def servir(porta):
                 if not esc:
                     self._login(); return
                 # Cliente: só leitura, só dentro da pasta dele.
-                if not (u.path in {"/", "/catalogo", "/buscar", "/parecidos", "/drive", "/referencias"} or u.path.startswith(("/midia/", "/thumb/", "/referencia/"))):
+                if not (u.path in {"/", "/catalogo", "/buscar", "/parecidos", "/drive", "/referencias", "/cardapio"} or u.path.startswith(("/midia/", "/thumb/", "/referencia/"))):
                     self.send_error(404); return
                 if not dentro_do_escopo_req(u.path, qs, esc):
                     self.send_error(404); return
@@ -571,7 +575,14 @@ def servir(porta):
                     perfil = conceitos.identificar(texto)
                     termo = chave(texto, perfil)
                     ajuste = feedback.ajuste(idx, termo)
+                    card = cardapio.interpretar(texto, qs.get("p", ""))
+                    pid = card["prato"]["id"] if card and "prato" in card else None
+                    def com_cardapio(obj):
+                        if card: obj["cardapio"] = card
+                        return obj
                     termo_ref = referencias.termo_parecido(termo, esc or "")
+                    if termo_ref and not cardapio.referencia_serve(termo_ref, pid):
+                        termo_ref = None  # ensinada para outro prato de nome parecido (ex.: filé de carne × de peixe)
                     refs = referencias.vetores(termo_ref, esc or "") if termo_ref else None
                     if refs is not None:  # alguém já ensinou com imagens: imagem↔imagem, sem o motor de texto
                         nome = texto
@@ -580,9 +591,9 @@ def servir(porta):
                         notas = Referencias.notas(idx, refs)
                         resultados = idx.buscar(None, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem, notas=notas)
                         print(f"Referências {termo}: {len(refs)} imagem(ns), {len(resultados)} sugestões em {time.monotonic()-inicio:.3f}s.", flush=True)
-                        self._j({"resultados": feedback.marcar(catalogo.enriquecer(resultados), termo), "exemplos": feedback.resumo(termo),
+                        self._j(com_cardapio({"resultados": feedback.marcar(catalogo.enriquecer(resultados), termo), "exemplos": feedback.resumo(termo),
                                  "modo": "referencias", "referencias": len(refs),
-                                 "interpretacao": f"parecido com {len(refs)} imagem(ns) que ensinaram ao Lume como “{nome}”"})
+                                 "interpretacao": f"parecido com {len(refs)} imagem(ns) que ensinaram ao Lume como “{nome}”"}))
                         return
                     if perfil:
                         resposta = conceitos.buscar(idx, perfil, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem)
@@ -590,13 +601,14 @@ def servir(porta):
                         resposta["resultados"] = feedback.marcar(catalogo.enriquecer(resposta["resultados"]), termo)
                         resposta["exemplos"] = feedback.resumo(termo)
                         resposta["referencias"] = 0
-                        self._j(resposta); return
-                    vec = np.asarray(motor.buscar(texto), dtype=np.float32)
+                        self._j(com_cardapio(resposta)); return
+                    # prato do cardápio: busca pelo que aparece na foto (nome + ingredientes), não só pelo nome
+                    vec = np.asarray(motor.buscar(cardapio.descricao_visual(pid) if pid else texto), dtype=np.float32)
                     if vec.shape != (512,) or not np.isfinite(vec).all():
                         raise ValueError("O motor retornou um vetor inválido.")
                     resultados = idx.buscar(vec, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem)
                     print(f"Busca concluída em {time.monotonic()-inicio:.2f}s; {len(resultados)} sugestões.", flush=True)
-                    self._j({"resultados": feedback.marcar(catalogo.enriquecer(resultados), termo), "exemplos": feedback.resumo(termo), "referencias": 0})
+                    self._j(com_cardapio({"resultados": feedback.marcar(catalogo.enriquecer(resultados), termo), "exemplos": feedback.resumo(termo), "referencias": 0}))
                 except BuscaOcupada as e:
                     self._j({"erro": str(e)}, 503)
                 except TimeoutError as e:
@@ -622,6 +634,8 @@ def servir(porta):
                     self._j({"drive": ({"ver": f"https://drive.google.com/file/d/{row[0]}/view", "baixar": f"https://drive.google.com/uc?export=download&id={row[0]}"} if row else None)})
                 except ValueError:
                     self._j({"erro": "Arquivo inválido."}, 400)
+            elif u.path == "/cardapio":  # pratos do grupo: ?empresa=Lounge&q=camarão
+                self._j(cardapio.listar(empresa_do_filtro(qs.get("empresa", "")), qs.get("q", "").strip()))
             elif u.path == "/referencias":  # o que o Lume já aprendeu (admin vê também as pendentes dos clientes)
                 q = qs.get("q", "").strip()
                 termo = chave(q, conceitos.identificar(q)) if q else None

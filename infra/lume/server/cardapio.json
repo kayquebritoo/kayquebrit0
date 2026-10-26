@@ -1,0 +1,4000 @@
+{
+ "versao": 1,
+ "atualizado": "2026-10-26",
+ "fonte": "PDFs dos cardápios do Grupo Atalaia VIP (Praça, Lounge páscoa26, Hotel 26, Café da manhã maio26). Revisão da Talita pendente.",
+ "empresas": [
+  "Hotel",
+  "Lounge",
+  "Praça"
+ ],
+ "renomear_referencias": {
+  "file a moda da casa": "file de peixe a moda da casa"
+ },
+ "pratos": [
+  {
+   "id": "P001",
+   "nome": "Pizza Mussarela",
+   "tipo": "Pizza",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Pizza Mussarela: Queijo e tomate",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Mussarela",
+     "ingredientes": "Queijo e tomate",
+     "porcao": "Média / Grande",
+     "preco": "74,90 / 89,90"
+    }
+   ]
+  },
+  {
+   "id": "P002",
+   "nome": "Pizza Calabresa",
+   "tipo": "Pizza",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Pizza Calabresa: Queijo, calabresa e tomate",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Calabresa",
+     "ingredientes": "Queijo, calabresa e tomate",
+     "porcao": "Média / Grande",
+     "preco": "74,90 / 89,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Calabresa",
+     "ingredientes": "Mussarela, calabresa e tomate",
+     "porcao": "M / G",
+     "preco": "82,00 / 93,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Pizza Calabresa",
+     "ingredientes": "Queijo mussarela, calabresa, cebola, azeitona e orégano",
+     "porcao": "",
+     "preco": "82,00"
+    }
+   ]
+  },
+  {
+   "id": "P003",
+   "nome": "Pizza Marguerita",
+   "tipo": "Pizza",
+   "empresas": [
+    "Praça",
+    "Lounge"
+   ],
+   "descricao_visual": "Pizza Marguerita: Queijo, tomate e manjericão",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Marguerita",
+     "ingredientes": "Queijo, tomate e manjericão",
+     "porcao": "Média / Grande",
+     "preco": "76,90 / 91,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Marguerita",
+     "ingredientes": "Mussarela, tomate e manjericão",
+     "porcao": "M / G",
+     "preco": "86,00 / 99,00"
+    }
+   ]
+  },
+  {
+   "id": "P004",
+   "nome": "Pizza Portuguesa",
+   "tipo": "Pizza",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Pizza Portuguesa: Queijo, presunto, ovo e cebola",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Portuguesa",
+     "ingredientes": "Queijo, presunto, ovo e cebola",
+     "porcao": "Média / Grande",
+     "preco": "79,90 / 99,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Portuguesa",
+     "ingredientes": "Mussarela, presunto, ovo, cebola e tomate",
+     "porcao": "M / G",
+     "preco": "89,00 / 104,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Pizza Portuguesa",
+     "ingredientes": "Queijo mussarela, presunto, ovo e cebola",
+     "porcao": "",
+     "preco": "89,00"
+    }
+   ]
+  },
+  {
+   "id": "P005",
+   "nome": "Pizza Mista",
+   "tipo": "Pizza",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Pizza Mista: Queijo, presunto, calabresa e tomate",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Mista",
+     "ingredientes": "Queijo, presunto, calabresa e tomate",
+     "porcao": "Média / Grande",
+     "preco": "79,90 / 99,90"
+    }
+   ]
+  },
+  {
+   "id": "P006",
+   "nome": "Pizza Catupiry Especial",
+   "tipo": "Pizza",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Pizza Catupiry Especial: Queijo, catupiry, bacon, palmito",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Catupiry Especial",
+     "ingredientes": "Queijo, catupiry, bacon, palmito",
+     "porcao": "Média / Grande",
+     "preco": "85,90 / 104,90"
+    }
+   ]
+  },
+  {
+   "id": "P007",
+   "nome": "Pizza Frango com Catupiry",
+   "tipo": "Pizza",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Pizza Frango com Catupiry: Queijo, frango, catupiry e tomate",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Frango com Catupiry",
+     "ingredientes": "Queijo, frango, catupiry e tomate",
+     "porcao": "Média / Grande",
+     "preco": "79,90 / 99,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Frango com Catupiry",
+     "ingredientes": "Frango, catupiry, mussarela e tomate",
+     "porcao": "M / G",
+     "preco": "89,00 / 104,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Pizza Frango com Catupiry",
+     "ingredientes": "Queijo mussarela, frango, tomate, azeitona, catupiry e orégano",
+     "porcao": "",
+     "preco": "89,00"
+    }
+   ]
+  },
+  {
+   "id": "P008",
+   "nome": "Pizza Charque",
+   "tipo": "Pizza",
+   "empresas": [
+    "Praça",
+    "Lounge"
+   ],
+   "descricao_visual": "Pizza Charque: Queijo, charque e tomate",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Charque",
+     "ingredientes": "Queijo, charque e tomate",
+     "porcao": "Média / Grande",
+     "preco": "84,90 / 99,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Charque",
+     "ingredientes": "Charque, mussarela e tomate",
+     "porcao": "M / G",
+     "preco": "96,00 / 119,00"
+    }
+   ]
+  },
+  {
+   "id": "P009",
+   "nome": "Pizza Picanha",
+   "tipo": "Pizza",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Pizza Picanha: Queijo, picanha e tomate",
+   "alertas": [
+    "Parecidos: entrada Picanha 250g (Praça) e Isca de Picanha (Lounge/Hotel)."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Picanha",
+     "ingredientes": "Queijo, picanha e tomate",
+     "porcao": "Média / Grande",
+     "preco": "99,90 / 125,90"
+    }
+   ]
+  },
+  {
+   "id": "P010",
+   "nome": "Pizza Picanha + Charque",
+   "tipo": "Pizza",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Pizza Picanha + Charque: Queijo, picanha, charque e tomate",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Picanha + Charque",
+     "ingredientes": "Queijo, picanha, charque e tomate",
+     "porcao": "Média / Grande",
+     "preco": "99,90 / 125,90"
+    }
+   ]
+  },
+  {
+   "id": "P011",
+   "nome": "Pizza Filé com Fritas",
+   "tipo": "Pizza",
+   "empresas": [
+    "Praça",
+    "Lounge"
+   ],
+   "descricao_visual": "Pizza Filé com Fritas: Queijo, filé, tomate e fritas",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Filé com Fritas",
+     "ingredientes": "Queijo, filé, tomate e fritas",
+     "porcao": "Média / Grande",
+     "preco": "103,90 / 129,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Filé com Fritas",
+     "ingredientes": "Filé, mussarela, tomate e batata frita",
+     "porcao": "M / G",
+     "preco": "102,00 / 128,00"
+    }
+   ]
+  },
+  {
+   "id": "P012",
+   "nome": "Pizza Paraense",
+   "tipo": "Pizza",
+   "empresas": [
+    "Praça",
+    "Lounge"
+   ],
+   "descricao_visual": "Pizza Paraense: Queijo, camarão, jambu no tucupi",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Paraense",
+     "ingredientes": "Queijo, camarão, jambu no tucupi",
+     "porcao": "Média / Grande",
+     "preco": "99,90 / 125,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Paraense",
+     "ingredientes": "Camarão, mussarela e jambu no tucupi",
+     "porcao": "M / G",
+     "preco": "102,00 / 128,00"
+    }
+   ]
+  },
+  {
+   "id": "P013",
+   "nome": "Pizza Camarão com Catupiry",
+   "tipo": "Pizza",
+   "empresas": [
+    "Praça",
+    "Lounge"
+   ],
+   "descricao_visual": "Pizza Camarão com Catupiry: Queijo, camarão e catupiry",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Camarão com Catupiry",
+     "ingredientes": "Queijo, camarão e catupiry",
+     "porcao": "Média / Grande",
+     "preco": "99,90 / 125,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Camarão com Catupiry",
+     "ingredientes": "Camarão, catupiry e mussarela",
+     "porcao": "M / G",
+     "preco": "102,00 / 128,00"
+    }
+   ]
+  },
+  {
+   "id": "P014",
+   "nome": "Big Atalaia Burguer",
+   "tipo": "Burger",
+   "empresas": [
+    "Praça",
+    "Lounge"
+   ],
+   "descricao_visual": "Big Atalaia Burguer: Pão brioche, blend artesanal (150g), cheddar, queijo prato, molho big mac, cebola roxa, picles e alface americana",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Burgers artesanais",
+     "nome_no_cardapio": "Big Atalaia Burguer",
+     "ingredientes": "Pão brioche, blend artesanal (150g), cheddar, queijo prato, molho big mac, cebola roxa, picles e alface americana",
+     "porcao": "150g",
+     "preco": "46,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Burgers artesanais (a partir das 16h)",
+     "nome_no_cardapio": "Big Atalaia Burguer",
+     "ingredientes": "Blend artesanal (150g), pão brioche, cheddar, queijo prato, molho big mac, cebola roxa, picles e alface americana",
+     "porcao": "150g",
+     "preco": "45,00"
+    }
+   ]
+  },
+  {
+   "id": "P015",
+   "nome": "Atalaia Bacon",
+   "tipo": "Burger",
+   "empresas": [
+    "Praça",
+    "Lounge"
+   ],
+   "descricao_visual": "Atalaia Bacon: Pão brioche, blend artesanal (150g), fatias de bacon, queijo prato, picles, cebola roxa, alface americana e molho secreto da casa",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Burgers artesanais",
+     "nome_no_cardapio": "Atalaia Bacon",
+     "ingredientes": "Pão brioche, blend artesanal (150g), fatias de bacon, queijo prato, picles, cebola roxa, alface americana e molho secreto da casa",
+     "porcao": "150g",
+     "preco": "46,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Burgers artesanais (a partir das 16h)",
+     "nome_no_cardapio": "Atalaia Bacon",
+     "ingredientes": "Blend artesanal (150g), pão brioche, fatias de bacon, queijo prato, picles, cebola roxa, alface americana e molho secreto da casa",
+     "porcao": "150g",
+     "preco": "45,00"
+    }
+   ]
+  },
+  {
+   "id": "P016",
+   "nome": "Cheddar Bacon",
+   "tipo": "Burger",
+   "empresas": [
+    "Praça",
+    "Lounge"
+   ],
+   "descricao_visual": "Cheddar Bacon: Pão brioche, blend artesanal (150g), farofa de bacon, queijo prato e cheddar em dobro",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Burgers artesanais",
+     "nome_no_cardapio": "Cheddar Bacon",
+     "ingredientes": "Pão brioche, blend artesanal (150g), farofa de bacon, queijo prato e cheddar em dobro",
+     "porcao": "150g",
+     "preco": "46,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Burgers artesanais (a partir das 16h)",
+     "nome_no_cardapio": "Cheddar Bacon",
+     "ingredientes": "Blend artesanal (150g), pão brioche, farofa de bacon, queijo prato e cheddar em dobro",
+     "porcao": "150g",
+     "preco": "45,00"
+    }
+   ]
+  },
+  {
+   "id": "P017",
+   "nome": "Picanha do Chef",
+   "tipo": "Burger",
+   "empresas": [
+    "Praça",
+    "Lounge"
+   ],
+   "descricao_visual": "Picanha do Chef: Pão brioche, picanha em tiras (120g), queijo prato e cebola caramelizada",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Burgers artesanais",
+     "nome_no_cardapio": "Picanha do Chef",
+     "ingredientes": "Pão brioche, picanha em tiras (120g), queijo prato e cebola caramelizada",
+     "porcao": "120g",
+     "preco": "51,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Burgers artesanais (a partir das 16h)",
+     "nome_no_cardapio": "Picanha do Chef",
+     "ingredientes": "Picanha em tiras (120g), pão brioche, queijo prato e cebola caramelizada",
+     "porcao": "120g",
+     "preco": "48,00"
+    }
+   ]
+  },
+  {
+   "id": "P018",
+   "nome": "Filé da Praça",
+   "tipo": "Burger",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Filé da Praça: Pão brioche, filé em tiras (120g), queijo prato e alface americana",
+   "alertas": [
+    "Mesma ideia de burger com nomes diferentes: Filé da Praça (Praça) e Filé Atalaia (Lounge) — filé em tiras 120g, brioche, queijo prato, alface."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Burgers artesanais",
+     "nome_no_cardapio": "Filé da Praça",
+     "ingredientes": "Pão brioche, filé em tiras (120g), queijo prato e alface americana",
+     "porcao": "120g",
+     "preco": "55,90"
+    }
+   ]
+  },
+  {
+   "id": "P019",
+   "nome": "Burger Camarão com Catupiry",
+   "tipo": "Burger",
+   "empresas": [
+    "Praça",
+    "Lounge"
+   ],
+   "descricao_visual": "Burger Camarão com Catupiry: Pão brioche, camarão (120g), catupiry, queijo prato e alface americana",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Burgers artesanais",
+     "nome_no_cardapio": "Camarão com Catupiry (burger)",
+     "ingredientes": "Pão brioche, camarão (120g), catupiry, queijo prato e alface americana — ESPECIALIDADE DA CASA",
+     "porcao": "120g",
+     "preco": "53,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Burgers artesanais (a partir das 16h)",
+     "nome_no_cardapio": "Camarão com Catupiry (burger)",
+     "ingredientes": "Camarão (120g), pão brioche, catupiry, queijo prato e alface americana — ESPECIALIDADE DA CASA",
+     "porcao": "120g",
+     "preco": "49,00"
+    }
+   ]
+  },
+  {
+   "id": "P020",
+   "nome": "X-Egg's Burguer",
+   "tipo": "Burger",
+   "empresas": [
+    "Praça",
+    "Hotel"
+   ],
+   "descricao_visual": "X-Egg's Burguer: Pão de hambúrguer, ovo, carne, queijo, presunto, alface e tomate",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Burgers tradicionais",
+     "nome_no_cardapio": "X-Egg's Burguer",
+     "ingredientes": "Pão de hambúrguer, ovo, carne, queijo, presunto, alface e tomate",
+     "porcao": "",
+     "preco": "34,90"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Burgers (a partir das 16h)",
+     "nome_no_cardapio": "X-Eggs Burguer",
+     "ingredientes": "Blend 150g, ovo, mussarela, alface, tomate, pão brioche e molho artesanal da casa",
+     "porcao": "150g",
+     "preco": "35,00"
+    }
+   ]
+  },
+  {
+   "id": "P021",
+   "nome": "X-Egg's Calabresa",
+   "tipo": "Burger",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "X-Egg's Calabresa: Pão de hambúrguer, carne, calabresa, ovo, queijo, presunto, alface e tomate",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Burgers tradicionais",
+     "nome_no_cardapio": "X-Egg's Calabresa",
+     "ingredientes": "Pão de hambúrguer, carne, calabresa, ovo, queijo, presunto, alface e tomate",
+     "porcao": "",
+     "preco": "36,90"
+    }
+   ]
+  },
+  {
+   "id": "P022",
+   "nome": "X-Egg's Bacon",
+   "tipo": "Burger",
+   "empresas": [
+    "Praça",
+    "Hotel"
+   ],
+   "descricao_visual": "X-Egg's Bacon: Pão de hambúrguer, carne, bacon, ovo, queijo, presunto, alface e tomate",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Burgers tradicionais",
+     "nome_no_cardapio": "X-Egg's Bacon",
+     "ingredientes": "Pão de hambúrguer, carne, bacon, ovo, queijo, presunto, alface e tomate",
+     "porcao": "",
+     "preco": "36,90"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Burgers (a partir das 16h)",
+     "nome_no_cardapio": "X-Eggs Bacon",
+     "ingredientes": "Blend 150g, bacon, ovo, mussarela, alface, tomate, pão brioche e molho artesanal da casa",
+     "porcao": "150g",
+     "preco": "44,00"
+    }
+   ]
+  },
+  {
+   "id": "P023",
+   "nome": "X-Egg's Frango",
+   "tipo": "Burger",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "X-Egg's Frango: Pão de hambúrguer, frango, ovo, queijo, presunto, alface e tomate",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Burgers tradicionais",
+     "nome_no_cardapio": "X-Egg's Frango",
+     "ingredientes": "Pão de hambúrguer, frango, ovo, queijo, presunto, alface e tomate",
+     "porcao": "",
+     "preco": "34,90"
+    }
+   ]
+  },
+  {
+   "id": "P024",
+   "nome": "X-Burguer",
+   "tipo": "Burger",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "X-Burguer: Pão de hambúrguer, carne, queijo, alface e tomate",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Burgers tradicionais",
+     "nome_no_cardapio": "X-Burguer",
+     "ingredientes": "Pão de hambúrguer, carne, queijo, alface e tomate",
+     "porcao": "",
+     "preco": "29,90"
+    }
+   ]
+  },
+  {
+   "id": "P025",
+   "nome": "X-Calabresa",
+   "tipo": "Burger",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "X-Calabresa: Pão de hambúrguer, carne, calabresa, queijo, presunto, alface e tomate",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Burgers tradicionais",
+     "nome_no_cardapio": "X-Calabresa",
+     "ingredientes": "Pão de hambúrguer, carne, calabresa, queijo, presunto, alface e tomate",
+     "porcao": "",
+     "preco": "34,90"
+    }
+   ]
+  },
+  {
+   "id": "P026",
+   "nome": "X-Bacon",
+   "tipo": "Burger",
+   "empresas": [
+    "Praça",
+    "Hotel"
+   ],
+   "descricao_visual": "X-Bacon: Pão de hambúrguer, carne, bacon, queijo, presunto, alface e tomate",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Burgers tradicionais",
+     "nome_no_cardapio": "X-Bacon",
+     "ingredientes": "Pão de hambúrguer, carne, bacon, queijo, presunto, alface e tomate",
+     "porcao": "",
+     "preco": "34,90"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Burgers (a partir das 16h)",
+     "nome_no_cardapio": "X-Bacon",
+     "ingredientes": "Blend 150g, bacon, mussarela, alface, tomate, pão brioche e molho artesanal da casa",
+     "porcao": "150g",
+     "preco": "40,00"
+    }
+   ]
+  },
+  {
+   "id": "P027",
+   "nome": "X-Frango",
+   "tipo": "Burger",
+   "empresas": [
+    "Praça",
+    "Hotel"
+   ],
+   "descricao_visual": "X-Frango: Pão de hambúrguer, frango, queijo, presunto, alface e tomate",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Burgers tradicionais",
+     "nome_no_cardapio": "X-Frango",
+     "ingredientes": "Pão de hambúrguer, frango, queijo, presunto, alface e tomate",
+     "porcao": "",
+     "preco": "29,90"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Burgers (a partir das 16h)",
+     "nome_no_cardapio": "X-Frango",
+     "ingredientes": "120g filé de frango, mussarela, alface, tomate, pão brioche e molho artesanal da casa",
+     "porcao": "120g",
+     "preco": "38,00"
+    }
+   ]
+  },
+  {
+   "id": "P028",
+   "nome": "X-Banana",
+   "tipo": "Burger",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "X-Banana: Pão de hambúrguer, carne, banana, queijo, presunto, alface e tomate",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Burgers tradicionais",
+     "nome_no_cardapio": "X-Banana",
+     "ingredientes": "Pão de hambúrguer, carne, banana, queijo, presunto, alface e tomate",
+     "porcao": "",
+     "preco": "32,90"
+    }
+   ]
+  },
+  {
+   "id": "P029",
+   "nome": "X-Egg's Calabresa Bacon",
+   "tipo": "Burger",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "X-Egg's Calabresa Bacon: Pão brioche, carne, bacon, calabresa, ovo, queijo, presunto, alface e tomate",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Burgers tradicionais",
+     "nome_no_cardapio": "X-Egg's Calabresa Bacon",
+     "ingredientes": "Pão brioche, carne, bacon, calabresa, ovo, queijo, presunto, alface e tomate",
+     "porcao": "",
+     "preco": "39,90"
+    }
+   ]
+  },
+  {
+   "id": "P030",
+   "nome": "X-Tudo",
+   "tipo": "Burger",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "X-Tudo: Pão de hambúrguer, 2 carnes, 2 ovos, mussarela, cheddar, calabresa, bacon, presunto, alface e tomate",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Burgers tradicionais",
+     "nome_no_cardapio": "X-Tudo",
+     "ingredientes": "Pão de hambúrguer, 2 carnes, 2 ovos, mussarela, cheddar, calabresa, bacon, presunto, alface e tomate",
+     "porcao": "",
+     "preco": "46,90"
+    }
+   ]
+  },
+  {
+   "id": "P031",
+   "nome": "Batata frita adicional para lanche",
+   "tipo": "Burger",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Batata frita adicional para lanche: Porção de batata frita",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Burgers - adicionais",
+     "nome_no_cardapio": "Batata frita adicional para lanche",
+     "ingredientes": "Porção de batata frita",
+     "porcao": "100g",
+     "preco": "14,00"
+    }
+   ]
+  },
+  {
+   "id": "P032",
+   "nome": "Batata Frita",
+   "tipo": "Entrada",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Batata Frita: Batata frita",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Batata Frita",
+     "ingredientes": "Batata frita",
+     "porcao": "300g",
+     "preco": "29,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Batata frita",
+     "ingredientes": "Batata frita; acompanha molho rosé",
+     "porcao": "",
+     "preco": "42,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Batata frita",
+     "ingredientes": "Batata frita; acompanha molho rosé",
+     "porcao": "",
+     "preco": "39,00"
+    }
+   ]
+  },
+  {
+   "id": "P033",
+   "nome": "Batata Frita com queijo e bacon",
+   "tipo": "Entrada",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Batata Frita com queijo e bacon: Batata frita, queijo e bacon",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Batata Frita com queijo e bacon",
+     "ingredientes": "Batata frita, queijo e bacon",
+     "porcao": "300g",
+     "preco": "39,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Batata frita com queijo e bacon",
+     "ingredientes": "Batata frita com queijo e bacon; acompanha molho rosé",
+     "porcao": "",
+     "preco": "58,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Batata frita com queijo e bacon",
+     "ingredientes": "Batata frita com queijo e bacon; acompanha molho rosé",
+     "porcao": "",
+     "preco": "55,00"
+    }
+   ]
+  },
+  {
+   "id": "P034",
+   "nome": "Isca de Peixe",
+   "tipo": "Entrada",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Isca de Peixe: Iscas de peixe empanadas",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Isca de Peixe",
+     "ingredientes": "Iscas de peixe empanadas",
+     "porcao": "250g",
+     "preco": "66,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Isca de Peixe",
+     "ingredientes": "250g de iscas empanadas na farinha da casa; acompanha molho rosé e farofa",
+     "porcao": "250g",
+     "preco": "79,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Isca de Peixe",
+     "ingredientes": "250g de iscas empanadas na farinha da casa; acompanha molho rosé e farofa",
+     "porcao": "250g",
+     "preco": "77,00"
+    }
+   ]
+  },
+  {
+   "id": "P035",
+   "nome": "Filé Aperitivo",
+   "tipo": "Entrada",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Filé Aperitivo: Filé (carne) em cubos/tiras",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Filé Aperitivo",
+     "ingredientes": "Filé (carne) em cubos/tiras",
+     "porcao": "250g",
+     "preco": "69,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Filé Aperitivo",
+     "ingredientes": "250g de tiras de filé bovino grelhadas com cebola; acompanha vinagrete e farofa",
+     "porcao": "250g",
+     "preco": "89,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Filé Aperitivo",
+     "ingredientes": "200g de tiras de filé bovino grelhadas com cebola; acompanha vinagrete e farofa",
+     "porcao": "200g",
+     "preco": "89,00"
+    }
+   ]
+  },
+  {
+   "id": "P036",
+   "nome": "Picanha",
+   "tipo": "Entrada",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Picanha: Picanha",
+   "alertas": [
+    "Parecidos: entrada Picanha 250g (Praça) e Isca de Picanha (Lounge/Hotel)."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Picanha (entrada)",
+     "ingredientes": "Picanha",
+     "porcao": "250g",
+     "preco": "73,90"
+    }
+   ]
+  },
+  {
+   "id": "P037",
+   "nome": "Camarão à Milanesa",
+   "tipo": "Entrada",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Camarão à Milanesa: Camarão empanado",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Camarão à Milanesa",
+     "ingredientes": "Camarão empanado",
+     "porcao": "280g",
+     "preco": "84,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Camarão à Milanesa (entrada)",
+     "ingredientes": "250g de camarões empanados na farinha da casa; acompanha molho rosé e farofa",
+     "porcao": "250g",
+     "preco": "119,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Camarão à Milanesa (entrada)",
+     "ingredientes": "280g de camarões empanados na farinha da casa; acompanha molho rosé e farofa",
+     "porcao": "280g",
+     "preco": "110,00"
+    }
+   ]
+  },
+  {
+   "id": "P038",
+   "nome": "Peixe na Chapa",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Peixe na Chapa: Filé de peixe, arroz branco, panachê de legumes, vinagrete, farofa e fritas",
+   "alertas": [
+    "Parecidos: Peixe na Chapa (Praça) e Filé de Peixe na Chapa (Lounge/Hotel) — a foto quase não diferencia; confirmar pela origem da foto."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Chapas",
+     "nome_no_cardapio": "Peixe na Chapa",
+     "ingredientes": "Filé de peixe, arroz branco, panachê de legumes, vinagrete, farofa e fritas",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 84,90 / 2 pessoas 165,00"
+    }
+   ]
+  },
+  {
+   "id": "P039",
+   "nome": "Peixe à Milanesa",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Peixe à Milanesa: Filé de peixe empanado, arroz branco, vinagrete, farofa e fritas",
+   "alertas": [
+    "Parecidos: Peixe à Milanesa (Praça) e Filé de Peixe à Milanesa (Lounge/Hotel)."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Chapas",
+     "nome_no_cardapio": "Peixe à Milanesa",
+     "ingredientes": "Filé de peixe empanado, arroz branco, vinagrete, farofa e fritas",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 79,00 / 2 pessoas 155,00"
+    }
+   ]
+  },
+  {
+   "id": "P040",
+   "nome": "Picanha na Chapa",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Picanha na Chapa: Picanha, arroz branco, panachê de legumes, farofa e fritas",
+   "alertas": [
+    "Parecidos: Picanha na Chapa (Praça) e Picanha Grill (Lounge/Hotel)."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Chapas",
+     "nome_no_cardapio": "Picanha na Chapa",
+     "ingredientes": "Picanha, arroz branco, panachê de legumes, farofa e fritas",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 93,00 / 2 pessoas 179,00"
+    }
+   ]
+  },
+  {
+   "id": "P041",
+   "nome": "Frango na Chapa",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Frango na Chapa: Frango, arroz branco, panachê de legumes, farofa e fritas",
+   "alertas": [
+    "Parecidos: Frango na Chapa (Praça) e Filé de Frango Grelhado (Lounge/Hotel)."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Chapas",
+     "nome_no_cardapio": "Frango na Chapa",
+     "ingredientes": "Frango, arroz branco, panachê de legumes, farofa e fritas",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 69,00 / 2 pessoas 139,00"
+    }
+   ]
+  },
+  {
+   "id": "P042",
+   "nome": "Chapa Mista Especial",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Chapa Mista Especial: Carne, peixe, camarão, frango, calabresa, arroz branco, salada, farofa e fritas",
+   "alertas": [
+    "Não confundir: Chapa Mista Especial (Praça, 800g, 3 pessoas, com salada) ≠ Chapa Mista Completa (Lounge/Hotel, contrafilé+peixe+frango+camarão+calabresa, arroz à grega)."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Chapas",
+     "nome_no_cardapio": "Chapa Mista Especial",
+     "ingredientes": "Carne, peixe, camarão, frango, calabresa, arroz branco, salada, farofa e fritas",
+     "porcao": "800g",
+     "preco": "3 pessoas 229,00"
+    }
+   ]
+  },
+  {
+   "id": "P043",
+   "nome": "Caldo de Carne",
+   "tipo": "Caldo",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Caldo de Carne: Caldo de carne",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Caldos",
+     "nome_no_cardapio": "Caldo de Carne",
+     "ingredientes": "Caldo de carne",
+     "porcao": "",
+     "preco": "36,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Caldos",
+     "nome_no_cardapio": "Caldo de Carne",
+     "ingredientes": "Caldo de carne",
+     "porcao": "",
+     "preco": "39,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Caldos",
+     "nome_no_cardapio": "Caldo de Carne",
+     "ingredientes": "Caldo de carne",
+     "porcao": "",
+     "preco": "39,00"
+    }
+   ]
+  },
+  {
+   "id": "P044",
+   "nome": "Caldo de Frango",
+   "tipo": "Caldo",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Caldo de Frango: Caldo de frango",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Caldos",
+     "nome_no_cardapio": "Caldo de Frango",
+     "ingredientes": "Caldo de frango",
+     "porcao": "",
+     "preco": "33,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Caldos",
+     "nome_no_cardapio": "Caldo de Frango",
+     "ingredientes": "Caldo de frango",
+     "porcao": "",
+     "preco": "36,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Caldos",
+     "nome_no_cardapio": "Caldo de Frango",
+     "ingredientes": "Caldo de frango",
+     "porcao": "",
+     "preco": "36,00"
+    }
+   ]
+  },
+  {
+   "id": "P045",
+   "nome": "Caldo de Caranguejo",
+   "tipo": "Caldo",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Caldo de Caranguejo: Caldo de caranguejo",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Caldos",
+     "nome_no_cardapio": "Caldo de Caranguejo",
+     "ingredientes": "Caldo de caranguejo",
+     "porcao": "",
+     "preco": "39,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Caldos",
+     "nome_no_cardapio": "Caldo de Caranguejo",
+     "ingredientes": "Caldo de caranguejo",
+     "porcao": "",
+     "preco": "46,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Caldos",
+     "nome_no_cardapio": "Caldo de Caranguejo",
+     "ingredientes": "Caldo de caranguejo",
+     "porcao": "",
+     "preco": "46,00"
+    }
+   ]
+  },
+  {
+   "id": "P046",
+   "nome": "Arroz Branco",
+   "tipo": "Acompanhamento",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Arroz Branco: Arroz branco",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Porções",
+     "nome_no_cardapio": "Arroz Branco",
+     "ingredientes": "Arroz branco",
+     "porcao": "",
+     "preco": "11,90"
+    }
+   ]
+  },
+  {
+   "id": "P047",
+   "nome": "Feijão",
+   "tipo": "Acompanhamento",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Feijão: Feijão",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Porções",
+     "nome_no_cardapio": "Feijão",
+     "ingredientes": "Feijão",
+     "porcao": "",
+     "preco": "12,00"
+    }
+   ]
+  },
+  {
+   "id": "P048",
+   "nome": "Vinagrete",
+   "tipo": "Acompanhamento",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Vinagrete: Vinagrete",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Porções",
+     "nome_no_cardapio": "Vinagrete",
+     "ingredientes": "Vinagrete",
+     "porcao": "",
+     "preco": "9,90"
+    }
+   ]
+  },
+  {
+   "id": "P049",
+   "nome": "Farofa",
+   "tipo": "Acompanhamento",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Farofa: Farofa",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Porções",
+     "nome_no_cardapio": "Farofa",
+     "ingredientes": "Farofa",
+     "porcao": "",
+     "preco": "9,90"
+    }
+   ]
+  },
+  {
+   "id": "P050",
+   "nome": "Açaí com Granola",
+   "tipo": "Açaí",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Açaí com Granola: Açaí com granola e farinha de tapioca",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Açaí",
+     "nome_no_cardapio": "Açaí com Granola",
+     "ingredientes": "Açaí com granola e farinha de tapioca",
+     "porcao": "",
+     "preco": "34,90"
+    }
+   ]
+  },
+  {
+   "id": "P051",
+   "nome": "Açaí com Charque",
+   "tipo": "Açaí",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Açaí com Charque: Açaí com farinha de tapioca e charque frito",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Açaí",
+     "nome_no_cardapio": "Açaí com Charque",
+     "ingredientes": "Açaí com farinha de tapioca e charque frito",
+     "porcao": "",
+     "preco": "59,90"
+    }
+   ]
+  },
+  {
+   "id": "P052",
+   "nome": "Açaí com Peixe Frito",
+   "tipo": "Açaí",
+   "empresas": [
+    "Praça"
+   ],
+   "descricao_visual": "Açaí com Peixe Frito: Açaí com farinha de tapioca e peixe frito",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Açaí",
+     "nome_no_cardapio": "Açaí com Peixe Frito",
+     "ingredientes": "Açaí com farinha de tapioca e peixe frito",
+     "porcao": "",
+     "preco": "59,90"
+    }
+   ]
+  },
+  {
+   "id": "P053",
+   "nome": "Pudim",
+   "tipo": "Sobremesa",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Pudim: Pudim",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Sobremesas",
+     "nome_no_cardapio": "Pudim",
+     "ingredientes": "Pudim",
+     "porcao": "",
+     "preco": "11,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Sobremesas",
+     "nome_no_cardapio": "Pudim de Leite",
+     "ingredientes": "Pudim de leite",
+     "porcao": "",
+     "preco": "16,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Sobremesas",
+     "nome_no_cardapio": "Pudim de Leite",
+     "ingredientes": "Pudim de leite",
+     "porcao": "",
+     "preco": "16,00"
+    }
+   ]
+  },
+  {
+   "id": "P054",
+   "nome": "Petit Gateau",
+   "tipo": "Sobremesa",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Petit Gateau: Petit gateau",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Sobremesas",
+     "nome_no_cardapio": "Petit Gateau",
+     "ingredientes": "Petit gateau",
+     "porcao": "",
+     "preco": "32,90"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Sobremesas",
+     "nome_no_cardapio": "Petit Gateau",
+     "ingredientes": "Petit gateau",
+     "porcao": "",
+     "preco": "35,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Sobremesas",
+     "nome_no_cardapio": "Petit Gateau",
+     "ingredientes": "Petit gateau",
+     "porcao": "",
+     "preco": "35,00"
+    }
+   ]
+  },
+  {
+   "id": "P055",
+   "nome": "Caipirinha",
+   "tipo": "Drink",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Caipirinha: Cachaça, limão, açúcar e gelo",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Caipirinha",
+     "ingredientes": "Cachaça, limão, açúcar e gelo",
+     "porcao": "",
+     "preco": "25,00"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Caipirinha",
+     "ingredientes": "Cachaça, limão e gelo",
+     "porcao": "",
+     "preco": "23,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Caipirinha",
+     "ingredientes": "Cachaça, limão e gelo",
+     "porcao": "",
+     "preco": "23,00"
+    }
+   ]
+  },
+  {
+   "id": "P056",
+   "nome": "Caipiroska",
+   "tipo": "Drink",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Caipiroska: Vodka, limão, açúcar e gelo",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Caipiroska",
+     "ingredientes": "Vodka, limão, açúcar e gelo",
+     "porcao": "",
+     "preco": "33,00"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Caipirosca",
+     "ingredientes": "Vodka, limão e gelo",
+     "porcao": "",
+     "preco": "29,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Caipirosca",
+     "ingredientes": "Vodka, limão e gelo",
+     "porcao": "",
+     "preco": "29,00"
+    }
+   ]
+  },
+  {
+   "id": "P057",
+   "nome": "Cuba Libre",
+   "tipo": "Drink",
+   "empresas": [
+    "Praça",
+    "Hotel"
+   ],
+   "descricao_visual": "Cuba Libre: Rum, suco de limão e coca-cola",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Cuba Libre",
+     "ingredientes": "Rum, suco de limão e coca-cola",
+     "porcao": "",
+     "preco": "33,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Cuba Libre",
+     "ingredientes": "Rum, suco de limão e coca-cola",
+     "porcao": "",
+     "preco": "33,00"
+    }
+   ]
+  },
+  {
+   "id": "P058",
+   "nome": "Coquetel com álcool",
+   "tipo": "Drink",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Coquetel com álcool: Vodka, morango, pitaia e abacaxi",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Coquetel com álcool",
+     "ingredientes": "Vodka, morango, pitaia e abacaxi",
+     "porcao": "",
+     "preco": "36,00"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Coquetel com álcool",
+     "ingredientes": "Vodka Orloff, morango, pitaia, abacaxi e gelo",
+     "porcao": "",
+     "preco": "35,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Coquetel com álcool",
+     "ingredientes": "Vodka Orloff, morango, pitaia e abacaxi",
+     "porcao": "",
+     "preco": "35,00"
+    }
+   ]
+  },
+  {
+   "id": "P059",
+   "nome": "Coquetel sem álcool",
+   "tipo": "Drink",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Coquetel sem álcool: Morango, pitaia e abacaxi",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Coquetel sem álcool",
+     "ingredientes": "Morango, pitaia e abacaxi",
+     "porcao": "",
+     "preco": "35,00"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Coquetel sem álcool",
+     "ingredientes": "Morango, pitaia, abacaxi e gelo",
+     "porcao": "",
+     "preco": "34,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Coquetel sem álcool",
+     "ingredientes": "Morango, pitaia e abacaxi",
+     "porcao": "",
+     "preco": "34,00"
+    }
+   ]
+  },
+  {
+   "id": "P060",
+   "nome": "Marguerita",
+   "tipo": "Drink",
+   "empresas": [
+    "Praça",
+    "Hotel"
+   ],
+   "descricao_visual": "Marguerita: Tequila, limão, licor de menta e sal na borda",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Marguerita (drink)",
+     "ingredientes": "Tequila, limão, licor de menta e sal na borda",
+     "porcao": "",
+     "preco": "36,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Marguerita",
+     "ingredientes": "Tequila, limão, licor de menta e sal na borda",
+     "porcao": "",
+     "preco": "41,00"
+    }
+   ]
+  },
+  {
+   "id": "P061",
+   "nome": "Dry Martini",
+   "tipo": "Drink",
+   "empresas": [
+    "Praça",
+    "Hotel"
+   ],
+   "descricao_visual": "Dry Martini: Gotas de vermute seco e azeitona",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Dry Martini",
+     "ingredientes": "Gotas de vermute seco e azeitona",
+     "porcao": "",
+     "preco": "36,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Dry Martini",
+     "ingredientes": "Gotas de vermute seco e azeitona",
+     "porcao": "",
+     "preco": "34,00"
+    }
+   ]
+  },
+  {
+   "id": "P062",
+   "nome": "Aperol Spritz",
+   "tipo": "Drink",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Aperol Spritz: Aperol, espumante e água com gás",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Aperol Spritz",
+     "ingredientes": "Aperol, espumante e água com gás",
+     "porcao": "",
+     "preco": "39,00"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Aperol Spritz",
+     "ingredientes": "Aperol, espumante e água com gás",
+     "porcao": "",
+     "preco": "35,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Aperol Spritz",
+     "ingredientes": "Aperol, espumante e água com gás",
+     "porcao": "",
+     "preco": "35,00"
+    }
+   ]
+  },
+  {
+   "id": "P063",
+   "nome": "Negroni",
+   "tipo": "Drink",
+   "empresas": [
+    "Praça",
+    "Hotel"
+   ],
+   "descricao_visual": "Negroni: Campari, vermute doce e angostura bitter",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Negroni",
+     "ingredientes": "Campari, vermute doce e angostura bitter",
+     "porcao": "",
+     "preco": "39,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Negroni",
+     "ingredientes": "Campari, vermute doce e angostura bitter",
+     "porcao": "",
+     "preco": "35,00"
+    }
+   ]
+  },
+  {
+   "id": "P064",
+   "nome": "Gin Tropical",
+   "tipo": "Drink",
+   "empresas": [
+    "Praça",
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Gin Tropical: Gin, xarope de limão e energético",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Praça",
+     "cardapio": "Cardápio Praça de Alimentação",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Gin Tropical",
+     "ingredientes": "Gin, xarope de limão e energético",
+     "porcao": "",
+     "preco": "39,00"
+    },
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Gin Tropical",
+     "ingredientes": "Gin, xarope de limão e energético",
+     "porcao": "",
+     "preco": "35,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Gin Tropical",
+     "ingredientes": "Gin, xarope de limão e energético",
+     "porcao": "",
+     "preco": "35,00"
+    }
+   ]
+  },
+  {
+   "id": "P065",
+   "nome": "Bolinho de peixe com queijo",
+   "tipo": "Entrada",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Bolinho de peixe com queijo: 8 unidades recheadas com queijo, empanadas na farinha, servidas com molho tártaro",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Bolinho de peixe com queijo",
+     "ingredientes": "8 unidades recheadas com queijo, empanadas na farinha, servidas com molho tártaro",
+     "porcao": "8 un",
+     "preco": "72,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Bolinho de peixe com queijo",
+     "ingredientes": "8 unidades de bolinho de peixe recheado com queijo, empanados na farinha, servidos com molho tártaro",
+     "porcao": "8 un",
+     "preco": "70,00"
+    }
+   ]
+  },
+  {
+   "id": "P066",
+   "nome": "Trilogia VIP",
+   "tipo": "Entrada",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Trilogia VIP: Camarões, patinhas de caranguejo e iscas de peixe à milanesa com camas de molhos tártaro e rosé",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Trilogia VIP",
+     "ingredientes": "Camarões, patinhas de caranguejo e iscas de peixe à milanesa com camas de molhos tártaro e rosé",
+     "porcao": "",
+     "preco": "124,90"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Trilogia VIP",
+     "ingredientes": "Camarões, patinhas de caranguejo e iscas de peixe à milanesa com cama de molhos tártaro e rosé",
+     "porcao": "",
+     "preco": "119,00"
+    }
+   ]
+  },
+  {
+   "id": "P067",
+   "nome": "Caranguejo Toc Toc",
+   "tipo": "Entrada",
+   "empresas": [
+    "Lounge"
+   ],
+   "descricao_visual": "Caranguejo Toc Toc: Caranguejos inteiros (toc toc); acompanha vinagrete e farofa",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Caranguejo Toc Toc",
+     "ingredientes": "Caranguejos inteiros (toc toc); acompanha vinagrete e farofa",
+     "porcao": "3 un / 6 un",
+     "preco": "49,00 / 79,00"
+    }
+   ]
+  },
+  {
+   "id": "P068",
+   "nome": "Pratiqueira frita",
+   "tipo": "Entrada",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Pratiqueira frita: 6 pratiqueiras inteiras fritas; acompanha vinagrete e farofa",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Pratiqueira frita",
+     "ingredientes": "6 pratiqueiras inteiras fritas; acompanha vinagrete e farofa",
+     "porcao": "6 un",
+     "preco": "69,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Pratiqueira frita",
+     "ingredientes": "6 pratiqueiras inteiras fritas; acompanha vinagrete e farofa",
+     "porcao": "6 un",
+     "preco": "69,00"
+    }
+   ]
+  },
+  {
+   "id": "P069",
+   "nome": "Camarão ao Alho e Óleo",
+   "tipo": "Entrada",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Camarão ao Alho e Óleo: 250g de camarões flambados ao alho e óleo; acompanha vinagrete e farofa",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Camarão ao Alho e Óleo",
+     "ingredientes": "250g de camarões flambados ao alho e óleo; acompanha vinagrete e farofa",
+     "porcao": "250g",
+     "preco": "116,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Camarão ao Alho e Óleo",
+     "ingredientes": "280g de camarões flambados ao alho e óleo; acompanha farofa e vinagrete",
+     "porcao": "280g",
+     "preco": "109,00"
+    }
+   ]
+  },
+  {
+   "id": "P070",
+   "nome": "Patinha de Caranguejo à Milanesa",
+   "tipo": "Entrada",
+   "empresas": [
+    "Lounge"
+   ],
+   "descricao_visual": "Patinha de Caranguejo à Milanesa: 250g de patinhas empanadas na farinha da casa; acompanha molho rosé e farofa",
+   "alertas": [
+    "Mesmo prato com nome um pouco diferente no Hotel e no Lounge — confirmar se pode unificar."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Patinha de Caranguejo à Milanesa",
+     "ingredientes": "250g de patinhas empanadas na farinha da casa; acompanha molho rosé e farofa",
+     "porcao": "250g",
+     "preco": "79,00"
+    }
+   ]
+  },
+  {
+   "id": "P071",
+   "nome": "Frango a Passarinho",
+   "tipo": "Entrada",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Frango a Passarinho: 400g de frango frito a passarinho; acompanha vinagrete e farofa",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Frango a Passarinho",
+     "ingredientes": "400g de frango frito a passarinho; acompanha vinagrete e farofa",
+     "porcao": "400g",
+     "preco": "72,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Frango a Passarinho",
+     "ingredientes": "400g de frango frito a passarinho; acompanha vinagrete e farofa",
+     "porcao": "400g",
+     "preco": "72,00"
+    }
+   ]
+  },
+  {
+   "id": "P072",
+   "nome": "Isca de Picanha",
+   "tipo": "Entrada",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Isca de Picanha: 250g de tiras de picanha bovina grelhadas com cebola; acompanha macaxeira, vinagrete e farofa",
+   "alertas": [
+    "Parecidos: entrada Picanha 250g (Praça) e Isca de Picanha (Lounge/Hotel)."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Isca de Picanha",
+     "ingredientes": "250g de tiras de picanha bovina grelhadas com cebola; acompanha macaxeira, vinagrete e farofa",
+     "porcao": "250g",
+     "preco": "96,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Isca de Picanha",
+     "ingredientes": "200g de tiras de picanha bovina grelhadas com cebola; acompanha macaxeira, vinagrete e farofa",
+     "porcao": "200g",
+     "preco": "96,00"
+    }
+   ]
+  },
+  {
+   "id": "P073",
+   "nome": "Macaxeira frita",
+   "tipo": "Entrada",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Macaxeira frita: Macaxeira frita; acompanha molho rosé",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Macaxeira frita",
+     "ingredientes": "Macaxeira frita; acompanha molho rosé",
+     "porcao": "",
+     "preco": "45,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Macaxeira frita",
+     "ingredientes": "Macaxeira frita; acompanha molho rosé",
+     "porcao": "",
+     "preco": "42,00"
+    }
+   ]
+  },
+  {
+   "id": "P074",
+   "nome": "Macaxeira frita com queijo e bacon",
+   "tipo": "Entrada",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Macaxeira frita com queijo e bacon: Macaxeira frita com queijo e bacon; acompanha molho rosé",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Macaxeira frita com queijo e bacon",
+     "ingredientes": "Macaxeira frita com queijo e bacon; acompanha molho rosé",
+     "porcao": "",
+     "preco": "68,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Macaxeira frita com queijo e bacon",
+     "ingredientes": "Macaxeira frita com queijo e bacon; acompanha molho rosé",
+     "porcao": "",
+     "preco": "65,00"
+    }
+   ]
+  },
+  {
+   "id": "P075",
+   "nome": "Salmão à Moda da Casa",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Salmão à Moda da Casa: Filé de salmão grelhado com legumes salteados; acompanha arroz branco e fritas",
+   "alertas": [
+    "ATENÇÃO: existem 5 pratos 'à moda' diferentes — Filé à Moda da Casa (carne, filé mignon), Filé de Peixe à Moda da Casa (peixe crocante c/ molho branco, camarão e caranguejo), Salmão à Moda da Casa, Lagosta à Moda da Casa e a Pizza Filé à Moda (Hotel). Não confundir.",
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Especiais de peixe",
+     "nome_no_cardapio": "Salmão à Moda da Casa",
+     "ingredientes": "Filé de salmão grelhado com legumes salteados; acompanha arroz branco e fritas",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 110,00 / 2 pessoas 205,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Especiais de peixe",
+     "nome_no_cardapio": "Salmão à Moda da Casa",
+     "ingredientes": "Filé de salmão grelhado com legumes salteados; acompanha arroz piamontese ou branco e fritas",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 97,00 / 2 pessoas 189,00"
+    }
+   ]
+  },
+  {
+   "id": "P076",
+   "nome": "Filé de Peixe à Milanesa",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Filé de Peixe à Milanesa: Filé de peixe empanado na farinha da casa; acompanha arroz branco, fritas, vinagrete e farofa",
+   "alertas": [
+    "Parecidos: Peixe à Milanesa (Praça) e Filé de Peixe à Milanesa (Lounge/Hotel)."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Especiais de peixe",
+     "nome_no_cardapio": "Filé de Peixe à Milanesa",
+     "ingredientes": "Filé de peixe empanado na farinha da casa; acompanha arroz branco, fritas, vinagrete e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 99,00 / 2 pessoas 196,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Especiais de peixe",
+     "nome_no_cardapio": "Filé de Peixe à Milanesa",
+     "ingredientes": "Filé de peixe empanado na farinha da casa; acompanha arroz branco, fritas, vinagrete e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 89,00 / 2 pessoas 176,00"
+    }
+   ]
+  },
+  {
+   "id": "P077",
+   "nome": "Filé de Peixe à Paraense",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Filé de Peixe à Paraense: Filé de peixe com camarões grelhados ao tucupi; acompanha arroz de jambu, fritas e farofa",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Especiais de peixe",
+     "nome_no_cardapio": "Filé de Peixe à Paraense",
+     "ingredientes": "Filé de peixe com camarões grelhados ao tucupi; acompanha arroz de jambu, fritas e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 110,00 / 2 pessoas 205,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Especiais de peixe",
+     "nome_no_cardapio": "Filé de Peixe à Paraense",
+     "ingredientes": "Filé de peixe com camarões grelhados ao tucupi; acompanha arroz de jambu, purê de batatas e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 97,00 / 2 pessoas 189,00"
+    }
+   ]
+  },
+  {
+   "id": "P078",
+   "nome": "Filé de Peixe ao Molho de Camarão",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Filé de Peixe ao Molho de Camarão: Filé de peixe com camarões grelhados ao molho sugo (vermelho); acompanha arroz branco, fritas e farofa",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Especiais de peixe",
+     "nome_no_cardapio": "Filé de Peixe ao Molho de Camarão",
+     "ingredientes": "Filé de peixe com camarões grelhados ao molho sugo (vermelho); acompanha arroz branco, fritas e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 110,00 / 2 pessoas 205,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Especiais de peixe",
+     "nome_no_cardapio": "Filé de Peixe ao Molho de Camarão",
+     "ingredientes": "Filé de peixe com camarões grelhados ao molho sugo (vermelho); acompanha arroz branco, purê de batatas e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 97,00 / 2 pessoas 189,00"
+    }
+   ]
+  },
+  {
+   "id": "P079",
+   "nome": "Filé de Peixe com Camarão ao Molho Bechamel",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Filé de Peixe com Camarão ao Molho Bechamel: Filé de peixe com camarões grelhados ao molho bechamel (branco); acompanha arroz branco, fritas e farofa",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Especiais de peixe",
+     "nome_no_cardapio": "Filé de Peixe com Camarão ao Molho Bechamel",
+     "ingredientes": "Filé de peixe com camarões grelhados ao molho bechamel (branco); acompanha arroz branco, fritas e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 110,00 / 2 pessoas 205,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Especiais de peixe",
+     "nome_no_cardapio": "Filé de Peixe com Camarão ao Molho Bechamel",
+     "ingredientes": "Filé de peixe com camarões grelhados ao molho bechamel (branco); acompanha arroz branco e purê de batatas",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 97,00 / 2 pessoas 189,00"
+    }
+   ]
+  },
+  {
+   "id": "P080",
+   "nome": "Filé de Peixe à Moda da Casa",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Filé de Peixe à Moda da Casa: Filé de peixe crocante com molho branco de mussarela, camarões e caranguejo desfiado; acompanha arroz branco, fritas e farofa",
+   "alertas": [
+    "ATENÇÃO: existem 5 pratos 'à moda' diferentes — Filé à Moda da Casa (carne, filé mignon), Filé de Peixe à Moda da Casa (peixe crocante c/ molho branco, camarão e caranguejo), Salmão à Moda da Casa, Lagosta à Moda da Casa e a Pizza Filé à Moda (Hotel). Não confundir."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Especiais de peixe",
+     "nome_no_cardapio": "Filé de Peixe à Moda da Casa",
+     "ingredientes": "Filé de peixe crocante com molho branco de mussarela, camarões e caranguejo desfiado; acompanha arroz branco, fritas e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 112,00 / 2 pessoas 207,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Especiais de peixe",
+     "nome_no_cardapio": "Filé de Peixe à Moda da Casa",
+     "ingredientes": "Filé de peixe crocante com molho branco de mussarela, camarões e caranguejo desfiado; acompanha arroz branco, fritas e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 99,00 / 2 pessoas 189,00"
+    }
+   ]
+  },
+  {
+   "id": "P081",
+   "nome": "Filé de Peixe na Chapa",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Filé de Peixe na Chapa: Filé de peixe com panaché de legumes na chapa; acompanha arroz branco, fritas, farofa e vinagrete",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões.",
+    "Parecidos: Peixe na Chapa (Praça) e Filé de Peixe na Chapa (Lounge/Hotel) — a foto quase não diferencia; confirmar pela origem da foto."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Especiais de peixe",
+     "nome_no_cardapio": "Filé de Peixe na Chapa",
+     "ingredientes": "Filé de peixe com panaché de legumes na chapa; acompanha arroz branco, fritas, farofa e vinagrete",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 105,00 / 2 pessoas 199,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Especiais de peixe",
+     "nome_no_cardapio": "Filé de Peixe na Chapa",
+     "ingredientes": "Filé de peixe com panaché de legumes na chapa; acompanha arroz à grega, fritas e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 97,00 / 2 pessoas 179,00"
+    }
+   ]
+  },
+  {
+   "id": "P082",
+   "nome": "Filé de Peixe na Chapa com Camarão",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Filé de Peixe na Chapa com Camarão: 4 postas de filé de peixe e 300g de camarão com panaché de legumes na chapa; acompanha arroz branco, arroz à grega, fritas, farofa e vinagrete",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Especiais de peixe",
+     "nome_no_cardapio": "Filé de Peixe na Chapa com Camarão",
+     "ingredientes": "4 postas de filé de peixe e 300g de camarão com panaché de legumes na chapa; acompanha arroz branco, arroz à grega, fritas, farofa e vinagrete",
+     "porcao": "serve 4",
+     "preco": "379,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Especiais de peixe",
+     "nome_no_cardapio": "Filé de Peixe na Chapa com Camarão",
+     "ingredientes": "4 postas de filé de peixe e 300g de camarão com panaché de legumes na chapa; acompanha arroz branco, arroz à grega, fritas e farofa",
+     "porcao": "serve 4",
+     "preco": "359,00"
+    }
+   ]
+  },
+  {
+   "id": "P083",
+   "nome": "Chapa Mista Completa",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Chapa Mista Completa: 200g contrafilé bovino, 200g filé de peixe, 200g filé de frango, 80g camarão, calabresa e panaché de legumes na chapa; acompanha arroz branco, arroz à grega, fritas, vinagrete e farofa",
+   "alertas": [
+    "Não confundir: Chapa Mista Especial (Praça, 800g, 3 pessoas, com salada) ≠ Chapa Mista Completa (Lounge/Hotel, contrafilé+peixe+frango+camarão+calabresa, arroz à grega)."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Especiais de peixe",
+     "nome_no_cardapio": "Chapa Mista Completa",
+     "ingredientes": "200g contrafilé bovino, 200g filé de peixe, 200g filé de frango, 80g camarão, calabresa e panaché de legumes na chapa; acompanha arroz branco, arroz à grega, fritas, vinagrete e farofa",
+     "porcao": "serve 3",
+     "preco": "279,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Especiais de peixe",
+     "nome_no_cardapio": "Chapa Mista Completa",
+     "ingredientes": "200g contrafilé bovino, 200g filé de peixe, 200g filé de frango, 80g camarão, calabresa e panaché de legumes na chapa; acompanha arroz branco, arroz à grega, fritas, vinagrete e farofa",
+     "porcao": "serve 3",
+     "preco": "269,00"
+    }
+   ]
+  },
+  {
+   "id": "P084",
+   "nome": "Caldeirada Tradicional",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Caldeirada Tradicional: Pescada amarela cozida com legumes e 2 ovos; acompanha arroz branco e pirão",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Caldeiradas & moquecas",
+     "nome_no_cardapio": "Caldeirada Tradicional",
+     "ingredientes": "Pescada amarela cozida com legumes e 2 ovos; acompanha arroz branco e pirão",
+     "porcao": "250g / 500g",
+     "preco": "1 pessoa 119,00 / 2 pessoas 219,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Caldeiradas & moquecas",
+     "nome_no_cardapio": "Caldeirada Tradicional",
+     "ingredientes": "Pescada amarela cozida com legumes e 2 ovos; acompanha arroz branco e pirão",
+     "porcao": "250g / 500g",
+     "preco": "1 pessoa 109,00 / 2 pessoas 205,00"
+    }
+   ]
+  },
+  {
+   "id": "P085",
+   "nome": "Caldeirada Peixe e Camarão",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Caldeirada Peixe e Camarão: 500g pescada amarela e 80g camarões cozidos com legumes e 2 ovos; acompanha arroz branco e pirão",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Caldeiradas & moquecas",
+     "nome_no_cardapio": "Caldeirada Peixe e Camarão",
+     "ingredientes": "500g pescada amarela e 80g camarões cozidos com legumes e 2 ovos; acompanha arroz branco e pirão (no Lounge: 'Caldeirada Especial de Peixe e Camarão')",
+     "porcao": "2 pessoas",
+     "preco": "239,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Caldeiradas & moquecas",
+     "nome_no_cardapio": "Caldeirada Peixe e Camarão",
+     "ingredientes": "500g pescada amarela e 80g camarões cozidos com legumes e 2 ovos; acompanha arroz branco e pirão",
+     "porcao": "2 pessoas",
+     "preco": "227,00"
+    }
+   ]
+  },
+  {
+   "id": "P086",
+   "nome": "Caldeirada Paraense",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Caldeirada Paraense: 500g pescada amarela e 80g camarões cozidos com legumes e jambu no tucupi; acompanha arroz branco e pirão",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Caldeiradas & moquecas",
+     "nome_no_cardapio": "Caldeirada Paraense",
+     "ingredientes": "500g pescada amarela e 80g camarões cozidos com legumes e jambu no tucupi; acompanha arroz branco e pirão",
+     "porcao": "2 pessoas",
+     "preco": "239,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Caldeiradas & moquecas",
+     "nome_no_cardapio": "Caldeirada Paraense",
+     "ingredientes": "500g pescada amarela e 80g camarões cozidos com legumes e jambu no tucupi; acompanha arroz branco e pirão",
+     "porcao": "2 pessoas",
+     "preco": "227,00"
+    }
+   ]
+  },
+  {
+   "id": "P087",
+   "nome": "Moqueca Tradicional",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Moqueca Tradicional: 500g de peixe cozido com legumes no leite de coco; acompanha arroz branco e pirão",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Caldeiradas & moquecas",
+     "nome_no_cardapio": "Moqueca Tradicional",
+     "ingredientes": "500g de peixe cozido com legumes no leite de coco; acompanha arroz branco e pirão",
+     "porcao": "2 pessoas",
+     "preco": "219,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Caldeiradas & moquecas",
+     "nome_no_cardapio": "Moqueca Tradicional",
+     "ingredientes": "500g de peixe cozido com legumes no leite de coco; acompanha arroz branco e pirão",
+     "porcao": "2 pessoas",
+     "preco": "209,00"
+    }
+   ]
+  },
+  {
+   "id": "P088",
+   "nome": "Moqueca de Peixe e Camarão",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Moqueca de Peixe e Camarão: 500g de peixe e 80g camarões cozidos com legumes no leite de coco; acompanha arroz branco e pirão",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Caldeiradas & moquecas",
+     "nome_no_cardapio": "Moqueca de Peixe e Camarão",
+     "ingredientes": "500g de peixe e 80g camarões cozidos com legumes no leite de coco; acompanha arroz branco e pirão (no Lounge: 'Moqueca Especial de Peixe e Camarão')",
+     "porcao": "2 pessoas",
+     "preco": "245,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Caldeiradas & moquecas",
+     "nome_no_cardapio": "Moqueca de Peixe e Camarão",
+     "ingredientes": "500g de peixe e 80g camarões cozidos com legumes no leite de coco; acompanha arroz branco e pirão",
+     "porcao": "2 pessoas",
+     "preco": "235,00"
+    }
+   ]
+  },
+  {
+   "id": "P089",
+   "nome": "Peixe Inteiro",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge"
+   ],
+   "descricao_visual": "Peixe Inteiro: Peixe da temporada (pescada amarela ou anchova) assado na brasa; acompanha arroz branco, fritas, vinagrete e farofa",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Assados de brasa",
+     "nome_no_cardapio": "Peixe Inteiro",
+     "ingredientes": "Peixe da temporada (pescada amarela ou anchova) assado na brasa; acompanha arroz branco, fritas, vinagrete e farofa",
+     "porcao": "3 pessoas",
+     "preco": "287,00"
+    }
+   ]
+  },
+  {
+   "id": "P090",
+   "nome": "Peixe Inteiro com Camarão",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge"
+   ],
+   "descricao_visual": "Peixe Inteiro com Camarão: Peixe da temporada assado na brasa com camarões grelhados (280g); acompanha arroz branco, fritas, vinagrete e farofa",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Assados de brasa",
+     "nome_no_cardapio": "Peixe Inteiro com Camarão",
+     "ingredientes": "Peixe da temporada assado na brasa com camarões grelhados (280g); acompanha arroz branco, fritas, vinagrete e farofa",
+     "porcao": "4 pessoas",
+     "preco": "339,00"
+    }
+   ]
+  },
+  {
+   "id": "P091",
+   "nome": "Camarão Grelhado",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Camarão Grelhado: 280g de camarões grelhados com legumes salteados; acompanha arroz branco e farofa",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Camarão e lagosta",
+     "nome_no_cardapio": "Camarão Grelhado",
+     "ingredientes": "280g de camarões grelhados com legumes salteados; acompanha arroz branco e farofa",
+     "porcao": "2 pessoas",
+     "preco": "206,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Camarão e lagosta",
+     "nome_no_cardapio": "Camarão Grelhado",
+     "ingredientes": "280g de camarões grelhados com legumes salteados; acompanha arroz branco e farofa",
+     "porcao": "2 pessoas",
+     "preco": "186,00"
+    }
+   ]
+  },
+  {
+   "id": "P092",
+   "nome": "Camarão à Milanesa",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Camarão à Milanesa: 280g de camarões empanados na farinha da casa; acompanha arroz à grega, fritas e farofa",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Camarão e lagosta",
+     "nome_no_cardapio": "Camarão à Milanesa (prato)",
+     "ingredientes": "280g de camarões empanados na farinha da casa; acompanha arroz à grega, fritas e farofa",
+     "porcao": "2 pessoas",
+     "preco": "207,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Camarão e lagosta",
+     "nome_no_cardapio": "Camarão à Milanesa (prato)",
+     "ingredientes": "280g de camarões empanados na farinha da casa; acompanha arroz à grega, fritas e farofa",
+     "porcao": "2 pessoas",
+     "preco": "187,00"
+    }
+   ]
+  },
+  {
+   "id": "P093",
+   "nome": "Camarão Gratinado ao Bechamel",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Camarão Gratinado ao Bechamel: 280g de camarões flambados ao bechamel com parmesão; acompanha arroz branco, fritas e farofa",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Camarão e lagosta",
+     "nome_no_cardapio": "Camarão Gratinado ao Bechamel",
+     "ingredientes": "280g de camarões flambados ao bechamel com parmesão; acompanha arroz branco, fritas e farofa",
+     "porcao": "2 pessoas",
+     "preco": "211,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Camarão e lagosta",
+     "nome_no_cardapio": "Camarão Gratinado ao Bechamel",
+     "ingredientes": "280g de camarões flambados ao bechamel com parmesão; acompanha arroz branco, fritas e farofa",
+     "porcao": "2 pessoas",
+     "preco": "191,00"
+    }
+   ]
+  },
+  {
+   "id": "P094",
+   "nome": "Lagosta à Moda da Casa",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Lagosta à Moda da Casa: 1 lagosta assada na brasa, gratinada com queijo; acompanha arroz à grega, legumes salteados, fritas e farofa",
+   "alertas": [
+    "ATENÇÃO: existem 5 pratos 'à moda' diferentes — Filé à Moda da Casa (carne, filé mignon), Filé de Peixe à Moda da Casa (peixe crocante c/ molho branco, camarão e caranguejo), Salmão à Moda da Casa, Lagosta à Moda da Casa e a Pizza Filé à Moda (Hotel). Não confundir."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Camarão e lagosta",
+     "nome_no_cardapio": "Lagosta à Moda da Casa",
+     "ingredientes": "1 lagosta assada na brasa, gratinada com queijo; acompanha arroz à grega, legumes salteados, fritas e farofa",
+     "porcao": "2 pessoas",
+     "preco": "399,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Camarão e lagosta",
+     "nome_no_cardapio": "Lagosta à Moda da Casa",
+     "ingredientes": "1 lagosta assada na brasa, gratinada com queijo; acompanha arroz à grega, legumes salteados, fritas e farofa",
+     "porcao": "2 pessoas",
+     "preco": "360,00"
+    }
+   ]
+  },
+  {
+   "id": "P095",
+   "nome": "Picanha Grill",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Picanha Grill: Medalhões de picanha bovina grelhados; acompanha arroz branco, fritas, vinagrete e farofa",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões.",
+    "Parecidos: Picanha na Chapa (Praça) e Picanha Grill (Lounge/Hotel)."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Carnes nobres",
+     "nome_no_cardapio": "Picanha Grill",
+     "ingredientes": "Medalhões de picanha bovina grelhados; acompanha arroz branco, fritas, vinagrete e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 119,00 / 2 pessoas 217,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Carnes nobres",
+     "nome_no_cardapio": "Picanha Grill",
+     "ingredientes": "Medalhões de picanha bovina grelhados; acompanha arroz branco, macaxeira frita, vinagrete e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 109,00 / 2 pessoas 207,00"
+    }
+   ]
+  },
+  {
+   "id": "P096",
+   "nome": "Filé a Cavalo",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Filé a Cavalo: Cortes altos de filé mignon bovino grelhados com 2 ovos fritos; acompanha arroz branco, fritas, vinagrete e farofa",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Carnes nobres",
+     "nome_no_cardapio": "Filé a Cavalo",
+     "ingredientes": "Cortes altos de filé mignon bovino grelhados com 2 ovos fritos; acompanha arroz branco, fritas, vinagrete e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 119,00 / 2 pessoas 217,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Carnes nobres",
+     "nome_no_cardapio": "Filé a Cavalo",
+     "ingredientes": "Cortes altos de filé mignon bovino grelhados com 2 ovos fritos; acompanha arroz branco, fritas, vinagrete e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 109,00 / 2 pessoas 207,00"
+    }
+   ]
+  },
+  {
+   "id": "P097",
+   "nome": "Filé à Moda da Casa",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Filé à Moda da Casa: Cortes altos de filé mignon bovino grelhados; acompanha arroz branco, fritas, vinagrete e farofa",
+   "alertas": [
+    "ATENÇÃO: existem 5 pratos 'à moda' diferentes — Filé à Moda da Casa (carne, filé mignon), Filé de Peixe à Moda da Casa (peixe crocante c/ molho branco, camarão e caranguejo), Salmão à Moda da Casa, Lagosta à Moda da Casa e a Pizza Filé à Moda (Hotel). Não confundir.",
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Carnes nobres",
+     "nome_no_cardapio": "Filé à Moda da Casa",
+     "ingredientes": "Cortes altos de filé mignon bovino grelhados; acompanha arroz branco, fritas, vinagrete e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 119,00 / 2 pessoas 217,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Carnes nobres",
+     "nome_no_cardapio": "Filé à Moda da Casa",
+     "ingredientes": "Cortes altos de filé mignon bovino grelhados; acompanha arroz piamontese, macaxeira frita e farofa de ovos",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 109,00 / 2 pessoas 207,00"
+    }
+   ]
+  },
+  {
+   "id": "P098",
+   "nome": "Filé com Fritas",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Filé com Fritas: Filé mignon bovino com panaché de legumes na chapa; acompanha arroz branco, fritas, vinagrete e farofa",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Carnes nobres",
+     "nome_no_cardapio": "Filé com Fritas",
+     "ingredientes": "Filé mignon bovino com panaché de legumes na chapa; acompanha arroz branco, fritas, vinagrete e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 119,00 / 2 pessoas 217,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Carnes nobres",
+     "nome_no_cardapio": "Filé com Fritas",
+     "ingredientes": "Filé mignon bovino com panaché de legumes na chapa; acompanha arroz branco, fritas, vinagrete e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 109,00 / 2 pessoas 207,00"
+    }
+   ]
+  },
+  {
+   "id": "P099",
+   "nome": "Filé Fazendeiro",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Filé Fazendeiro: 400g filé mignon bovino, 80g de calabresa com panaché de legumes na chapa; acompanha arroz branco, fritas, vinagrete e farofa",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Carnes nobres",
+     "nome_no_cardapio": "Filé Fazendeiro",
+     "ingredientes": "400g filé mignon bovino, 80g de calabresa com panaché de legumes na chapa; acompanha arroz branco, fritas, vinagrete e farofa",
+     "porcao": "2 pessoas",
+     "preco": "219,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Carnes nobres",
+     "nome_no_cardapio": "Filé Fazendeiro",
+     "ingredientes": "400g filé mignon bovino, 80g de calabresa com panaché de legumes na chapa; acompanha arroz branco, fritas, vinagrete e farofa",
+     "porcao": "2 pessoas",
+     "preco": "209,00"
+    }
+   ]
+  },
+  {
+   "id": "P100",
+   "nome": "Filé de Frango Grelhado",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Filé de Frango Grelhado: Filé de frango grelhado; acompanha arroz branco, fritas, vinagrete e farofa",
+   "alertas": [
+    "Parecidos: Frango na Chapa (Praça) e Filé de Frango Grelhado (Lounge/Hotel)."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Frango",
+     "nome_no_cardapio": "Filé de Frango Grelhado",
+     "ingredientes": "Filé de frango grelhado; acompanha arroz branco, fritas, vinagrete e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 89,00 / 2 pessoas 159,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Frango",
+     "nome_no_cardapio": "Filé de Frango Grelhado",
+     "ingredientes": "Filé de frango grelhado; acompanha arroz branco, fritas, vinagrete e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 79,00 / 2 pessoas 149,00"
+    }
+   ]
+  },
+  {
+   "id": "P101",
+   "nome": "Filé Atalaia",
+   "tipo": "Burger",
+   "empresas": [
+    "Lounge"
+   ],
+   "descricao_visual": "Filé Atalaia: Filé em tiras (120g), pão brioche, queijo prato e alface americana",
+   "alertas": [
+    "Mesma ideia de burger com nomes diferentes: Filé da Praça (Praça) e Filé Atalaia (Lounge) — filé em tiras 120g, brioche, queijo prato, alface."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Burgers artesanais (a partir das 16h)",
+     "nome_no_cardapio": "Filé Atalaia",
+     "ingredientes": "Filé em tiras (120g), pão brioche, queijo prato e alface americana",
+     "porcao": "120g",
+     "preco": "48,00"
+    }
+   ]
+  },
+  {
+   "id": "P102",
+   "nome": "Porção de fritas pequena",
+   "tipo": "Burger",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Porção de fritas pequena: Batata frita",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Burgers artesanais (a partir das 16h)",
+     "nome_no_cardapio": "Porção de fritas pequena",
+     "ingredientes": "Batata frita",
+     "porcao": "100g",
+     "preco": "15,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Burgers (a partir das 16h)",
+     "nome_no_cardapio": "Porção de fritas pequena",
+     "ingredientes": "Batata frita",
+     "porcao": "",
+     "preco": "18,00"
+    }
+   ]
+  },
+  {
+   "id": "P103",
+   "nome": "Açaí com farinha ou tapioca",
+   "tipo": "Sobremesa",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Açaí com farinha ou tapioca: Açaí com farinha (d'água) ou tapioca",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Sobremesas",
+     "nome_no_cardapio": "Açaí com farinha ou tapioca",
+     "ingredientes": "Açaí com farinha (d'água) ou tapioca",
+     "porcao": "",
+     "preco": "30,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Sobremesas",
+     "nome_no_cardapio": "Açaí com farinha ou tapioca",
+     "ingredientes": "Açaí com farinha (d'água) ou tapioca",
+     "porcao": "",
+     "preco": "30,00"
+    }
+   ]
+  },
+  {
+   "id": "P104",
+   "nome": "Caipirinha Cremosa",
+   "tipo": "Drink",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Caipirinha Cremosa: Cachaça, limão, leite condensado e gelo",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Caipirinha Cremosa",
+     "ingredientes": "Cachaça, limão, leite condensado e gelo",
+     "porcao": "",
+     "preco": "36,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Caipirinha Cremosa",
+     "ingredientes": "Cachaça, limão, leite condensado e gelo",
+     "porcao": "",
+     "preco": "35,00"
+    }
+   ]
+  },
+  {
+   "id": "P105",
+   "nome": "Caipifruta",
+   "tipo": "Drink",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Caipifruta: Vodka com abacaxi, morango ou kiwi",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Caipifruta",
+     "ingredientes": "Vodka com abacaxi, morango ou kiwi",
+     "porcao": "",
+     "preco": "39,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Caipifruta",
+     "ingredientes": "Vodka com abacaxi, morango ou kiwi",
+     "porcao": "",
+     "preco": "33,00"
+    }
+   ]
+  },
+  {
+   "id": "P106",
+   "nome": "Caipireja",
+   "tipo": "Drink",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Caipireja: Vodka, cerveja, mix de limão, sal na borda e gelo",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Caipireja",
+     "ingredientes": "Vodka, cerveja, mix de limão, sal na borda e gelo",
+     "porcao": "",
+     "preco": "39,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Caipireja",
+     "ingredientes": "Vodka, cerveja, mix de limão, sal na borda e gelo",
+     "porcao": "",
+     "preco": "39,00"
+    }
+   ]
+  },
+  {
+   "id": "P107",
+   "nome": "Taça de Cozumel",
+   "tipo": "Drink",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Taça de Cozumel: Cerveja, mix de limão, sal na borda e gelo",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Taça de Cozumel",
+     "ingredientes": "Cerveja, mix de limão, sal na borda e gelo",
+     "porcao": "",
+     "preco": "31,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Taça de Cozumel",
+     "ingredientes": "Cerveja, mix de limão, sal na borda e gelo",
+     "porcao": "",
+     "preco": "31,00"
+    }
+   ]
+  },
+  {
+   "id": "P108",
+   "nome": "Gin Tônica",
+   "tipo": "Drink",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Gin Tônica: Gin, limão siciliano e água tônica",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Gin Tônica",
+     "ingredientes": "Gin, limão siciliano e água tônica",
+     "porcao": "",
+     "preco": "36,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Gin Tônica",
+     "ingredientes": "Gin, limão siciliano e água tônica",
+     "porcao": "",
+     "preco": "36,00"
+    }
+   ]
+  },
+  {
+   "id": "P109",
+   "nome": "Gin Pitaia",
+   "tipo": "Drink",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Gin Pitaia: Gin, soda, pitaia e gelo",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Gin Pitaia",
+     "ingredientes": "Gin, soda, pitaia e gelo",
+     "porcao": "",
+     "preco": "41,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Gin Pitaia",
+     "ingredientes": "Gin, soda, pitaia e gelo",
+     "porcao": "",
+     "preco": "41,00"
+    }
+   ]
+  },
+  {
+   "id": "P110",
+   "nome": "Sex on the Beach",
+   "tipo": "Drink",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Sex on the Beach: Vodka, suco de laranja, licor de pêssego e groselha",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Sex on the Beach",
+     "ingredientes": "Vodka, suco de laranja, licor de pêssego e groselha",
+     "porcao": "",
+     "preco": "33,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Sex on the Beach",
+     "ingredientes": "Vodka, suco de laranja, licor de pêssego e groselha",
+     "porcao": "",
+     "preco": "33,00"
+    }
+   ]
+  },
+  {
+   "id": "P111",
+   "nome": "Yellow Beach",
+   "tipo": "Drink",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Yellow Beach: Gin, suco de tangerina, licor de cassis e soda",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Yellow Beach",
+     "ingredientes": "Gin, suco de tangerina, licor de cassis e soda",
+     "porcao": "",
+     "preco": "31,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Yellow Beach",
+     "ingredientes": "Gin, suco de tangerina, licor de cassis e soda",
+     "porcao": "",
+     "preco": "31,00"
+    }
+   ]
+  },
+  {
+   "id": "P112",
+   "nome": "Mojito",
+   "tipo": "Drink",
+   "empresas": [
+    "Lounge",
+    "Hotel"
+   ],
+   "descricao_visual": "Mojito: Rum Bacardi",
+   "alertas": [
+    "Mesmo nome, mas descrição/ingredientes ou acompanhamentos diferem entre as casas — ver versões."
+   ],
+   "versoes": [
+    {
+     "empresa": "Lounge",
+     "cardapio": "Cardápio Lounge",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Mojito",
+     "ingredientes": "Rum Bacardi (descrição incompleta no PDF do Lounge; no Hotel: mix de limão, hortelã e soda)",
+     "porcao": "",
+     "preco": "32,00"
+    },
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Mojito",
+     "ingredientes": "Rum Bacardi, mix de limão, hortelã e soda",
+     "porcao": "",
+     "preco": "32,00"
+    }
+   ]
+  },
+  {
+   "id": "P113",
+   "nome": "Patinha de Caranguejo",
+   "tipo": "Entrada",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Patinha de Caranguejo: 250g de patinhas empanadas na farinha da casa; acompanha molho rosé e farofa",
+   "alertas": [
+    "Mesmo prato com nome um pouco diferente no Hotel e no Lounge — confirmar se pode unificar."
+   ],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Entradas",
+     "nome_no_cardapio": "Patinha de Caranguejo",
+     "ingredientes": "250g de patinhas empanadas na farinha da casa; acompanha molho rosé e farofa",
+     "porcao": "250g",
+     "preco": "79,00"
+    }
+   ]
+  },
+  {
+   "id": "P114",
+   "nome": "Filé de Frango à Milanesa",
+   "tipo": "Prato principal",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Filé de Frango à Milanesa: Filé de frango empanado na farinha da casa; acompanha arroz à grega, fritas, vinagrete e farofa",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Frango",
+     "nome_no_cardapio": "Filé de Frango à Milanesa",
+     "ingredientes": "Filé de frango empanado na farinha da casa; acompanha arroz à grega, fritas, vinagrete e farofa",
+     "porcao": "200g / 400g",
+     "preco": "1 pessoa 79,00 / 2 pessoas 149,00"
+    }
+   ]
+  },
+  {
+   "id": "P115",
+   "nome": "X-Filé",
+   "tipo": "Burger",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "X-Filé: 120g filé mignon bovino, mussarela, alface, tomate, pão brioche e molho artesanal da casa",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Burgers (a partir das 16h)",
+     "nome_no_cardapio": "X-Filé",
+     "ingredientes": "120g filé mignon bovino, mussarela, alface, tomate, pão brioche e molho artesanal da casa",
+     "porcao": "120g",
+     "preco": "45,00"
+    }
+   ]
+  },
+  {
+   "id": "P116",
+   "nome": "X-Picanha",
+   "tipo": "Burger",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "X-Picanha: 120g picanha bovina, mussarela, alface, tomate, pão brioche e molho artesanal da casa",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Burgers (a partir das 16h)",
+     "nome_no_cardapio": "X-Picanha",
+     "ingredientes": "120g picanha bovina, mussarela, alface, tomate, pão brioche e molho artesanal da casa",
+     "porcao": "120g",
+     "preco": "45,00"
+    }
+   ]
+  },
+  {
+   "id": "P117",
+   "nome": "X-Camarão",
+   "tipo": "Burger",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "X-Camarão: Blend 150g, camarão, mussarela, alface, tomate, pão brioche e molho artesanal da casa",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Burgers (a partir das 16h)",
+     "nome_no_cardapio": "X-Camarão",
+     "ingredientes": "Blend 150g, camarão, mussarela, alface, tomate, pão brioche e molho artesanal da casa",
+     "porcao": "150g",
+     "preco": "51,00"
+    }
+   ]
+  },
+  {
+   "id": "P118",
+   "nome": "Pizza 4 Queijos e Camarão",
+   "tipo": "Pizza",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Pizza 4 Queijos e Camarão: Queijo mussarela, gorgonzola, provolone e parmesão, camarão, tomate e azeitona",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Pizza 4 Queijos e Camarão",
+     "ingredientes": "Queijo mussarela, gorgonzola, provolone e parmesão, camarão, tomate e azeitona",
+     "porcao": "",
+     "preco": "95,00"
+    }
+   ]
+  },
+  {
+   "id": "P119",
+   "nome": "Pizza Filé à Moda",
+   "tipo": "Pizza",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Pizza Filé à Moda: Queijo mussarela, filé mignon, tomate, azeitona, molho branco e bacon torrado",
+   "alertas": [
+    "ATENÇÃO: existem 5 pratos 'à moda' diferentes — Filé à Moda da Casa (carne, filé mignon), Filé de Peixe à Moda da Casa (peixe crocante c/ molho branco, camarão e caranguejo), Salmão à Moda da Casa, Lagosta à Moda da Casa e a Pizza Filé à Moda (Hotel). Não confundir."
+   ],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Pizzas",
+     "nome_no_cardapio": "Pizza Filé à Moda",
+     "ingredientes": "Queijo mussarela, filé mignon, tomate, azeitona, molho branco e bacon torrado",
+     "porcao": "",
+     "preco": "95,00"
+    }
+   ]
+  },
+  {
+   "id": "P120",
+   "nome": "Lagoa Azul",
+   "tipo": "Drink",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Lagoa Azul: Rum Bacardi, curaçau blue, mix de limão e soda",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Lagoa Azul",
+     "ingredientes": "Rum Bacardi, curaçau blue, mix de limão e soda",
+     "porcao": "",
+     "preco": "36,00"
+    }
+   ]
+  },
+  {
+   "id": "P121",
+   "nome": "Atalaia VIP",
+   "tipo": "Drink",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Atalaia VIP: Batida de fruta (morango, kiwi ou abacaxi) e vodka na garrafinha",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Cardápio Restaurante Hotel",
+     "categoria": "Drinks",
+     "nome_no_cardapio": "Atalaia VIP (drink)",
+     "ingredientes": "Batida de fruta (morango, kiwi ou abacaxi) e vodka na garrafinha",
+     "porcao": "",
+     "preco": "42,00"
+    }
+   ]
+  },
+  {
+   "id": "P122",
+   "nome": "Tapioca com manteiga",
+   "tipo": "Café da manhã",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Tapioca com manteiga: Tapioca e manteiga",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Café da manhã (Hotel)",
+     "categoria": "Café da manhã - tapiocas",
+     "nome_no_cardapio": "Tapioca com manteiga",
+     "ingredientes": "Tapioca e manteiga",
+     "porcao": "",
+     "preco": "12,00"
+    }
+   ]
+  },
+  {
+   "id": "P123",
+   "nome": "Tapioca com queijo",
+   "tipo": "Café da manhã",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Tapioca com queijo: Tapioca e queijo",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Café da manhã (Hotel)",
+     "categoria": "Café da manhã - tapiocas",
+     "nome_no_cardapio": "Tapioca com queijo",
+     "ingredientes": "Tapioca e queijo",
+     "porcao": "",
+     "preco": "15,00"
+    }
+   ]
+  },
+  {
+   "id": "P124",
+   "nome": "Tapioca com queijo e presunto",
+   "tipo": "Café da manhã",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Tapioca com queijo e presunto: Tapioca, queijo e presunto",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Café da manhã (Hotel)",
+     "categoria": "Café da manhã - tapiocas",
+     "nome_no_cardapio": "Tapioca com queijo e presunto",
+     "ingredientes": "Tapioca, queijo e presunto",
+     "porcao": "",
+     "preco": "16,00"
+    }
+   ]
+  },
+  {
+   "id": "P125",
+   "nome": "Tapioca com ovo",
+   "tipo": "Café da manhã",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Tapioca com ovo: Tapioca e ovo",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Café da manhã (Hotel)",
+     "categoria": "Café da manhã - tapiocas",
+     "nome_no_cardapio": "Tapioca com ovo",
+     "ingredientes": "Tapioca e ovo",
+     "porcao": "",
+     "preco": "15,00"
+    }
+   ]
+  },
+  {
+   "id": "P126",
+   "nome": "Tapioca completa",
+   "tipo": "Café da manhã",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Tapioca completa: Tapioca, queijo, presunto e ovo",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Café da manhã (Hotel)",
+     "categoria": "Café da manhã - tapiocas",
+     "nome_no_cardapio": "Tapioca completa",
+     "ingredientes": "Tapioca, queijo, presunto e ovo",
+     "porcao": "",
+     "preco": "19,00"
+    }
+   ]
+  },
+  {
+   "id": "P127",
+   "nome": "Tapioca com leite de coco",
+   "tipo": "Café da manhã",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Tapioca com leite de coco: Tapioca e leite de coco",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Café da manhã (Hotel)",
+     "categoria": "Café da manhã - tapiocas",
+     "nome_no_cardapio": "Tapioca com leite de coco",
+     "ingredientes": "Tapioca e leite de coco",
+     "porcao": "",
+     "preco": "15,00"
+    }
+   ]
+  },
+  {
+   "id": "P128",
+   "nome": "Tapioca com leite de coco e leite condensado",
+   "tipo": "Café da manhã",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Tapioca com leite de coco e leite condensado: Tapioca, leite de coco e leite condensado",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Café da manhã (Hotel)",
+     "categoria": "Café da manhã - tapiocas",
+     "nome_no_cardapio": "Tapioca com leite de coco e leite condensado",
+     "ingredientes": "Tapioca, leite de coco e leite condensado",
+     "porcao": "",
+     "preco": "16,00"
+    }
+   ]
+  },
+  {
+   "id": "P129",
+   "nome": "Bolo",
+   "tipo": "Café da manhã",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Bolo: Fatia de bolo",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Café da manhã (Hotel)",
+     "categoria": "Café da manhã - pães e bolos",
+     "nome_no_cardapio": "Bolo",
+     "ingredientes": "Fatia de bolo",
+     "porcao": "",
+     "preco": "11,00"
+    }
+   ]
+  },
+  {
+   "id": "P130",
+   "nome": "Pão com manteiga ou margarina",
+   "tipo": "Café da manhã",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Pão com manteiga ou margarina: Pão e manteiga/margarina",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Café da manhã (Hotel)",
+     "categoria": "Café da manhã - pães e bolos",
+     "nome_no_cardapio": "Pão com manteiga ou margarina",
+     "ingredientes": "Pão e manteiga/margarina",
+     "porcao": "",
+     "preco": "9,00"
+    }
+   ]
+  },
+  {
+   "id": "P131",
+   "nome": "Pão com ovo",
+   "tipo": "Café da manhã",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Pão com ovo: Pão e ovo",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Café da manhã (Hotel)",
+     "categoria": "Café da manhã - pães e bolos",
+     "nome_no_cardapio": "Pão com ovo",
+     "ingredientes": "Pão e ovo",
+     "porcao": "",
+     "preco": "11,00"
+    }
+   ]
+  },
+  {
+   "id": "P132",
+   "nome": "Queijo quente",
+   "tipo": "Café da manhã",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Queijo quente: Pão e queijo derretido",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Café da manhã (Hotel)",
+     "categoria": "Café da manhã - pães e bolos",
+     "nome_no_cardapio": "Queijo quente",
+     "ingredientes": "Pão e queijo derretido",
+     "porcao": "",
+     "preco": "13,00"
+    }
+   ]
+  },
+  {
+   "id": "P133",
+   "nome": "Misto quente",
+   "tipo": "Café da manhã",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Misto quente: Pão, queijo e presunto",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Café da manhã (Hotel)",
+     "categoria": "Café da manhã - pães e bolos",
+     "nome_no_cardapio": "Misto quente",
+     "ingredientes": "Pão, queijo e presunto",
+     "porcao": "",
+     "preco": "15,00"
+    }
+   ]
+  },
+  {
+   "id": "P134",
+   "nome": "Pão completo",
+   "tipo": "Café da manhã",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Pão completo: Pão, queijo, presunto e ovo",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Café da manhã (Hotel)",
+     "categoria": "Café da manhã - pães e bolos",
+     "nome_no_cardapio": "Pão completo",
+     "ingredientes": "Pão, queijo, presunto e ovo",
+     "porcao": "",
+     "preco": "17,00"
+    }
+   ]
+  },
+  {
+   "id": "P135",
+   "nome": "Café",
+   "tipo": "Café da manhã",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Café: Café",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Café da manhã (Hotel)",
+     "categoria": "Café da manhã - bebidas",
+     "nome_no_cardapio": "Café",
+     "ingredientes": "Café",
+     "porcao": "",
+     "preco": "8,50"
+    }
+   ]
+  },
+  {
+   "id": "P136",
+   "nome": "Café com leite",
+   "tipo": "Café da manhã",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Café com leite: Café e leite",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Café da manhã (Hotel)",
+     "categoria": "Café da manhã - bebidas",
+     "nome_no_cardapio": "Café com leite",
+     "ingredientes": "Café e leite",
+     "porcao": "",
+     "preco": "9,50"
+    }
+   ]
+  },
+  {
+   "id": "P137",
+   "nome": "Nescau",
+   "tipo": "Café da manhã",
+   "empresas": [
+    "Hotel"
+   ],
+   "descricao_visual": "Nescau: Achocolatado com leite",
+   "alertas": [],
+   "versoes": [
+    {
+     "empresa": "Hotel",
+     "cardapio": "Café da manhã (Hotel)",
+     "categoria": "Café da manhã - bebidas",
+     "nome_no_cardapio": "Nescau",
+     "ingredientes": "Achocolatado com leite",
+     "porcao": "",
+     "preco": "12,00"
+    }
+   ]
+  }
+ ]
+}
