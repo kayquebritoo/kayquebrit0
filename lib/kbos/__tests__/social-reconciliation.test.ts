@@ -28,6 +28,16 @@ describe("conferência somente leitura do conteúdo", () => {
     expect(report.unidentified).toBe(2);
   });
 
+  it("sem empresa exige origem importada e roteiro idêntico ou publicação comprovada, sem cruzar marcas", () => {
+    const a=post("a",{brand:null,externalKey:"origem-a",status:"postado",networks:["instagram"]});
+    const b=post("b",{brand:null,externalKey:"origem-b"});
+    expect(reviewContent([a,b,post("hotel")]).groups).toHaveLength(1);
+    expect(reviewContent([a,b]).groups[0].items).toHaveLength(2);
+    expect(reviewContent([{...a,status:"agendado"},b]).groups).toHaveLength(0);
+    expect(reviewContent([{...a,status:"roteiro",script:"Texto"},{...b,script:"Texto"}]).groups).toHaveLength(1);
+    expect(reviewContent([a,{...b,scheduledAt:new Date("2026-10-03T19:00:00Z")}]).groups).toHaveLength(0);
+  });
+
   it("reconhece a legenda de título abreviado e une grupos relacionados uma só vez", () => {
     const report = reviewContent([post("a"), post("b", { title: "Título abreviado", format: "outro" }), post("c", { caption: "Outra" })]);
     expect(report.groups).toHaveLength(1);

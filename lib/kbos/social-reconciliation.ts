@@ -1,6 +1,8 @@
 import { contentDay, normalizeContent, titleIdentity, type ContentIdentity } from "./social-identity";
 
 type ReviewPost = ContentIdentity & {
+  networks?: string[];
+  script?: string | null;
   status: string;
   linkedTo: string | null;
   dismissedAt: Date | null;
@@ -16,7 +18,16 @@ export function reviewContent(rows: ReviewPost[]) {
   const keys = new Map<string, number>();
   visible.forEach((post, index) => {
     // Falta de empresa ou data não sustenta agrupamento entre empresas.
-    if (!post.projectId || !post.brand || !post.scheduledAt) return;
+    if (!post.projectId || !post.scheduledAt) return;
+    if (!post.brand) {
+      // Importações sem empresa só se agrupam com identidade forte no mesmo instante.
+      // Nunca usam marca nula como coringa de Hotel/Lounge/Praça.
+      if (!post.externalKey) return;
+      const identity = [post.projectId, post.scheduledAt.toISOString(), normalizeContent(post.title), post.format];
+      const candidates = [post.caption?.trim() ? `unbranded-caption:${JSON.stringify([...identity, normalizeContent(post.caption)])}` : null, post.script?.trim() ? `unbranded-script:${JSON.stringify([...identity, post.script.trim()])}` : null].filter((k): k is string => !!k);
+      for (const key of candidates) { const previous=keys.get(key); if(previous !== undefined) parent[root(index)]=root(previous); else keys.set(key,index); }
+      return;
+    }
     const candidates = [`title:${JSON.stringify([post.projectId, titleIdentity(post)])}`];
     if (post.caption?.trim()) candidates.push(`caption:${JSON.stringify([post.projectId, normalizeContent(post.brand), contentDay(post.scheduledAt), normalizeContent(post.caption)])}`);
     for (const key of candidates) {
@@ -30,8 +41,8 @@ export function reviewContent(rows: ReviewPost[]) {
     const key = root(index);
     grouped.set(key, [...(grouped.get(key) ?? []), post]);
   });
-  const groups = [...grouped.values()].filter(group => group.length > 1).map(group => ({
-    brand: group[0].brand!,
+  const groups = [...grouped.values()].filter(group => group.length > 1 && (group[0].brand || group.some(p => p.script?.trim() || (p.status === "postado" && p.networks?.length)))).map(group => ({
+    brand: group[0].brand ?? "Grupo / sem empresa",
     day: contentDay(group[0].scheduledAt),
     title: group[0].title,
     differences: [
