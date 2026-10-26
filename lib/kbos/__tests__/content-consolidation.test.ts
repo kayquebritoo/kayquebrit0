@@ -25,12 +25,14 @@ describe('calendário independente',()=>{
     {projectId:child.id,brand:'Hotel',title:'Jantar',format:'reels',scheduledAt:new Date('2026-10-17T03:00:00Z'),status:'postado',caption:'Legenda',networks:['instagram']}
   ]).returning();
   await d.insert(schema.postPublications).values({postId:b.id,network:'instagram',status:'publicado',url:'https://instagram.com/p/test'});
-  const snap=await calendarSnapshot(root.id); expect(snap.posts).toHaveLength(2);expect(snap.publications).toHaveLength(1);
+  const [linked]=await d.insert(schema.socialPosts).values({projectId:child.id,brand:'Hotel',title:'Roteiro concluído',scheduledAt:new Date('2026-10-17T03:00:00Z'),linkedTo:b.id}).returning();
+  const snap=await calendarSnapshot(root.id); expect(snap.posts).toHaveLength(3);expect(snap.publications).toHaveLength(1);
   const [plan]=await consolidationFor(root.id,'2026-10');expect(plan.safe).toBe(true);expect(plan.keeperId).toBe(b.id);
   const result=await applyConsolidation(root.id,'2026-10',b.id,plan.version,user.id);expect(result.consolidated).toBe(1);
   const rows=await d.select().from(schema.socialPosts).where(eq(schema.socialPosts.projectId,child.id));
   expect(rows.find(p=>p.id===a.id)?.linkedTo).toBe(b.id);expect(rows.find(p=>p.id===b.id)?.script).toBe('Roteiro completo');expect(rows.find(p=>p.id===b.id)?.status).toBe('postado');
-  expect((await calendarSnapshot(root.id)).posts).toHaveLength(2);
+  expect((await calendarSnapshot(root.id)).posts).toHaveLength(3);
+  expect((await d.select().from(schema.socialPosts).where(eq(schema.socialPosts.id,linked.id)))[0].linkedTo).toBe(b.id);
   expect((await d.select().from(schema.postPublications))).toHaveLength(1);
   await expect(applyConsolidation(root.id,'2026-10',b.id,plan.version,user.id)).rejects.toThrow();
   expect(await revertConsolidation(String(result.moveId))).toEqual({restored:2});

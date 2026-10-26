@@ -29,7 +29,7 @@ export function consolidationPlan(rows: Post[], publications: Publication[]) {
     if (new Set(posts.map(p => p.decidedAt?.toISOString()).filter(Boolean)).size > 1) conflicts.push("decidedAt");
     if (posts.some(p => p.status === "cancelado")) conflicts.push("cancelado");
     if (posts.some(p => p.id !== keeper.id && pubIds.has(p.id))) conflicts.push("publicações em mais de um registro");
-    if (rows.some(p => p.linkedTo && posts.some(candidate => candidate.id === p.linkedTo))) conflicts.push("vínculos existentes");
+    if (rows.some(p => p.linkedTo && posts.some(candidate => candidate.id !== keeper.id && candidate.id === p.linkedTo))) conflicts.push("vínculos existentes");
     // Títulos unidos apenas por legenda não bastam para consolidar automaticamente.
     const captions = posts.map(p => normalizeContent(p.caption ?? ""));
     const sameCaption = captions[0].length > 0 && captions.every(c => c === captions[0]);

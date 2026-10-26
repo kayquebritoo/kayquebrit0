@@ -113,7 +113,7 @@ export default function ContentReview({ projectId, month, onOpenPost, onChanged 
               ))}
             </>
           )}
-          {moves.map(move => <p key={move.id} className="kb-muted text-sm">{move.count} cópia(s) vinculada(s). <button type="button" className="kb-chip min-h-11" disabled={busy} onClick={() => void undo(move.id)}>Desfazer consolidação</button></p>)}
+          {moves.length > 0 && <details className="rounded-xl border border-white/10 px-3"><summary className="kb-muted min-h-11 cursor-pointer py-3 text-sm">Histórico: {moves.length} uniões reversíveis</summary>{moves.map(move => <p key={move.id} className="kb-muted text-sm">{move.count} cópia(s) vinculada(s). <button type="button" className="kb-chip min-h-11" disabled={busy} onClick={() => void undo(move.id)}>Desfazer consolidação</button></p>)}</details>}
           <button type="button" className="kb-chip min-h-11" disabled={busy} onClick={() => void load()}>{error ? "Tentar novamente" : "Atualizar conferência"}</button>
         </div>
       )}
