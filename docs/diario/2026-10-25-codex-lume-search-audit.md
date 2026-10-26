@@ -18,3 +18,10 @@ exatamente os dois confirmados; filtros e escopo do portal passaram. Corrigido
 527 Vitest aprovados/14 pulados, TypeScript/lint sem erros. Ajustado apenas o
 teste não determinístico de substring em ciphertext que havia bloqueado a CI.
 Ativação continua pendente de aprovação; produção preservada.
+
+Publicação posterior aprovada e concluída: imagem `lume-review:f6abb430` ativa,
+somente aplicação recriada, saudável. Sete aliases validados no HTTPS público
+e na interface com os dois confirmados; controles top 20 preservados. Indexador
+e Caddy mantiveram os mesmos IDs/StartedAt. Backup/rollback privados em
+`/opt/lume/releases/f6abb430`. PR sem merge para não acionar reinício automático
+do KBOS; coordenar integração à main em janela própria.

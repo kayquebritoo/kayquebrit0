@@ -1,5 +1,25 @@
 # Auditoria da busca Lume — 25/10/2026 (Belém)
 
+## Publicação aprovada e concluída
+
+Em 25/10/2026, após autorização explícita, a imagem `lume-review:f6abb430`
+(código `f6abb430a01dde8831fefc880e2c3a5409abc46b`) foi ativada na VPS.
+Somente `lume-lume-1` foi recriado; IDs e horários de início de indexador e
+Caddy permaneceram idênticos. Aplicação saudável. A flag de busca foi ativada;
+as demais configurações de ambiente foram comparadas e preservadas.
+
+Validação no HTTPS público e na interface: sete aliases retornaram os dois
+exemplos confirmados; os controles mantiveram top 20 IDs/scores. Consulta fria
+8,06 s, consultas seguintes 0,035–0,051 s nessa rodada, sem teste de carga.
+Novo backup consistente íntegro, imagem anterior e script de rollback ficaram
+privados em `/opt/lume/releases/f6abb430`. Nenhuma mídia removida ou reindexada.
+
+PR #7 permanece sem merge: a main deste repositório também aciona o deploy
+automático do KBOS, cujo reinício não foi autorizado. A publicação usa a imagem
+validada e um override explícito do Compose; não alterou o checkout da VPS nem
+o Caddyfile local. A integração à main exige coordenar os dois deploys em outra
+janela. As seções abaixo preservam o histórico da auditoria e da preparação.
+
 ## Resultado e limite
 
 Auditoria e preparação em branch; sem merge, deploy, reinício, reindexação,
