@@ -1,6 +1,7 @@
 "use client";
 import Image from "next/image";
 import ContentReview from "./ContentReview";
+import CalendarExport from "./CalendarExport";
 import PostPublications from "./PostPublications";
 import PostPublishing from "./PostPublishing";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -14,7 +15,7 @@ type Post = {
   networks?: string[]; scriptBy: string | null; captureBy: string | null; editor: string | null; errorMessage: string | null;
   takes?: { id: number; nome: string; t: number | null; by: string | null }[];
 };
-type Project = { id: string; titulo: string; categoria?: string; postLimit?: number | null };
+type Project = { id: string; titulo: string; categoria?: string; postLimit?: number | null; parentId?: string | null };
 
 // Etapas na ordem do fluxo (cor = o que a pessoa vê no calendário).
 const STATUS: { id: string; label: string; color: string }[] = [
@@ -79,51 +80,43 @@ export default function ContentBoard() {
   const [error, setError] = useState("");
   const [open, setOpen] = useState<Post | null>(null);
   const [importing, setImporting] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [notice, setNotice] = useState("");
   const [selected, setSelected] = useState<string>(() => new Date().toLocaleDateString("sv-SE", { timeZone: BELEM }));
+
+  const loadSequence = useRef(0);
 
   useEffect(() => {
     (async () => {
       try {
         const r = await fetch("/api/projects", { cache: "no-store" });
         const d = await r.json();
-        const all: Project[] = (d.items || []).map((p: Project) => ({ id: p.id, titulo: p.titulo, categoria: p.categoria, postLimit: p.postLimit ?? null }));
+        const all: Project[] = (d.items || []).map((p: Project) => ({ id: p.id, titulo: p.titulo, categoria: p.categoria, postLimit: p.postLimit ?? null, parentId: p.parentId ?? null }));
         // só clientes recorrentes de redes sociais (categoria "social"); projetos pontuais (marca, site…) nunca entram
         const list = all.filter((p) => p.categoria === "social");
         setProjects(list);
-        setProjectId((cur) => cur || list[0]?.id || "");
+        setProjectId((cur) => cur || list.find(p => !p.parentId && list.some(child => child.parentId === p.id))?.id || list[0]?.id || "");
       } catch { setError("Não consegui carregar os projetos."); }
     })();
   }, []);
 
   const load = useCallback(async () => {
+    const sequence = ++loadSequence.current;
+    if (!projectId) return;
     try {
       const q = new URLSearchParams({ month });
       if (projectId) q.set("projectId", projectId);
       const r = await fetch(`/api/admin/social?${q}`, { cache: "no-store" });
       const d = await r.json();
+      if (sequence !== loadSequence.current) return;
       if (!r.ok) throw new Error(d.error || "Não consegui carregar o calendário.");
       setItems(d.items);
       setError("");
-    } catch (e) { setError(e instanceof Error ? e.message : "Erro."); }
+    } catch (e) { if (sequence === loadSequence.current) setError(e instanceof Error ? e.message : "Erro."); }
   }, [month, projectId]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carga do calendário ao trocar mês/projeto
     void load();
   }, [load]);
-
-  async function syncMlabs() {
-    setSyncing(true); setNotice(""); setError("");
-    try {
-      const r = await fetch("/api/admin/social/mlabs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ projectId }) });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(d.error || "Não consegui sincronizar.");
-      setNotice(`mLabs sincronizada: ${d.created} novo(s), ${d.updated} atualizado(s) (${d.found} posts lidos).${d.ambiguous ? ` ${d.ambiguous} correspondência(s) precisam de revisão em Conferir possíveis repetidos.` : ""}`);
-      await load();
-    } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setSyncing(false); }
-  }
 
   const shown = useMemo(() => (items ?? []).filter((p) => filter === "all" || p.status === filter), [items, filter]);
   const counts = useMemo(() => {
@@ -154,6 +147,7 @@ export default function ContentBoard() {
 
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: BELEM });
   function shift(delta: number) {
+    ++loadSequence.current; setItems(null);
     const [y, m] = month.split("-").map(Number);
     setMonth(monthKey(new Date(y, m - 1 + delta, 1)));
   }
@@ -176,7 +170,7 @@ export default function ContentBoard() {
   return (
     <div className="kb-page mx-auto w-full max-w-6xl space-y-4 pb-10">
       <div className="flex flex-wrap items-center gap-2">
-        <select aria-label="Projeto" className="kb-control min-h-11 max-w-full flex-1" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+        <select aria-label="Projeto" className="kb-control min-h-11 max-w-full flex-1" value={projectId} onChange={(e) => { ++loadSequence.current; setItems(null); setProjectId(e.target.value); }}>
           {projects.length === 0 && <option value="">Sem projetos</option>}
           {projects.map((p) => <option key={p.id} value={p.id}>{p.titulo}</option>)}
         </select>
@@ -185,7 +179,7 @@ export default function ContentBoard() {
             <button key={id} type="button" aria-pressed={view === id} onClick={() => setView(id)}>{label}</button>
           ))}
         </div>
-        <button type="button" className="kb-btn min-h-11" disabled={!projectId || syncing} onClick={() => void syncMlabs()}>{syncing ? "Sincronizando…" : "Sincronizar mLabs"}</button>
+        <CalendarExport projectId={projectId} month={month} />
         <button type="button" className="kb-btn-ghost min-h-11" disabled={!projectId} onClick={() => setImporting(true)}>Importar / colar status</button>
       </div>
 
@@ -204,11 +198,10 @@ export default function ContentBoard() {
         ))}
       </div>
 
-      {notice && <p role="status" className="kb-tag w-full justify-start rounded-xl! px-3! py-2! text-sm">{notice}</p>}
       {error && <p className="kb-tag late w-full justify-start rounded-xl! px-3! py-2! text-sm">{error}</p>}
       {!items && !error && <div className="kb-skel h-64 w-full" />}
 
-      {items && projectId && <ContentReview key={`${projectId}:${month}`} projectId={projectId} month={month} onOpenPost={(id) => { const post = items.find(item => item.id === id); if (post) setOpen(post); }} />}
+      {items && projectId && <ContentReview key={`${projectId}:${month}`} projectId={projectId} month={month} onChanged={() => void load()} onOpenPost={(id) => { const post = items.find(item => item.id === id); if (post) setOpen(post); }} />}
 
       {items && view === "calendario" && (
         <>
@@ -278,7 +271,7 @@ export default function ContentBoard() {
 
       {items && view === "lista" && (
         <>
-          {shown.length === 0 && <p className="kb-muted py-10 text-center text-sm">Nenhum post por aqui. Importe o calendário do mLabs ou troque o mês.</p>}
+          {shown.length === 0 && <p className="kb-muted py-10 text-center text-sm">Nenhum post por aqui. Importe um calendário ou troque o mês/projeto.</p>}
           {[...byDay.entries()].map(([k, list]) => (
             <section key={k} aria-label={k}>
               <h2 className="kb-faint mb-1 text-[12px] uppercase tracking-wide">{k === "sem-data" ? "Sem data" : dayLabel(`${k}T12:00:00-03:00`)}</h2>
@@ -500,7 +493,7 @@ function ImportIcs({ projectId, month, onClose, onDone }: { projectId: string; m
 
   return (
     <div className="kb-modal-back" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="kb-modal space-y-3" role="dialog" aria-label="Importar calendário do mLabs">
+      <div onClick={(e) => e.stopPropagation()} className="kb-modal space-y-3" role="dialog" aria-label="Importar calendário">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="font-display kb-ink text-lg">Importar e atualizar</h2>
