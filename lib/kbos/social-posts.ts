@@ -1,7 +1,7 @@
 // Calendário de conteúdo no banco: importar, listar, editar (equipe) e aprovar (cliente no portal).
 import { and, asc, eq, gte, inArray, isNull, lt, or } from "drizzle-orm";
 import { db } from "./db";
-import { projects, socialPosts, type PostTake } from "./schema";
+import { projects, socialPosts, dataMoves, type PostTake } from "./schema";
 import { indexImportedPosts } from "./social-identity";
 import { effectivePostLimit } from "./plan-limit";
 import { POST_FORMATS, POST_STATUS, parseIcs, type PostFormat, type PostStatus } from "./social-import";
@@ -79,7 +79,15 @@ export async function updatePost(id: string, patch: PostPatch) {
   const set: Partial<typeof socialPosts.$inferInsert> = { ...fields, updatedAt: new Date() };
   if (dismissed !== undefined) set.dismissedAt = dismissed ? new Date() : null;
   if (patch.status === "aprovacao") { set.decidedAt = null; set.decidedBy = null; set.clientNote = null; }
-  const [row] = await db().update(socialPosts).set(set).where(eq(socialPosts.id, id)).returning();
+  const database = db();
+  const changingBrand = patch.brand !== undefined && patch.brand !== cur.brand;
+  if (changingBrand && cur.projectId) {
+    const family = await projectFamily(await rootOf(cur.projectId));
+    set.projectId = family.route(patch.brand);
+  }
+  const update = database.update(socialPosts).set(set).where(eq(socialPosts.id, id)).returning();
+  const rows = changingBrand ? (await database.batch([update, database.insert(dataMoves).values({ kind: "classificar-conteudo", payload: { postId:id, before: {brand:cur.brand,projectId:cur.projectId}, after: {brand:patch.brand,projectId:set.projectId ?? cur.projectId} } }).returning({id:dataMoves.id})]))[0] : await update;
+  const row = rows[0];
   return { post: row, sentToApproval: patch.status === "aprovacao" && cur.status !== "aprovacao" };
 }
 
@@ -191,6 +199,8 @@ export async function createClientRoteiro(userId: string, input: { projectId: st
 }
 
 // ── Vínculo roteiro ↔ post ───────────────────────────────────────────────────
+const identityText = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
 const SCRIPT_STAGES: PostStatus[] = ["roteiro", "captacao", "producao"];
 
 /** Roteiros que provavelmente deram origem a este post (mesma marca/formato, perto da data). */
@@ -201,7 +211,7 @@ export async function suggestScripts(postId: string) {
   const rows = await db().select().from(socialPosts).where(and(inArray(socialPosts.projectId, (await projectFamily(await rootOf(post.projectId))).ids), isNull(socialPosts.linkedTo), isNull(socialPosts.dismissedAt), inArray(socialPosts.status, SCRIPT_STAGES))).limit(1000);
   return rows
     .filter((r) => r.id !== post.id && r.scheduledAt && Math.abs(r.scheduledAt.getTime() - center) <= 21 * DAY_MS)
-    .map((r) => ({ r, score: (r.brand && post.brand && r.brand === post.brand ? 3 : r.brand && post.brand ? -3 : 0) + (r.format === post.format ? 2 : 0) + (r.script ? 1 : 0) - Math.abs(r.scheduledAt!.getTime() - center) / DAY_MS / 7 }))
+    .map((r) => ({ r, score: (post.caption && r.script && identityText(r.script).includes(identityText(post.caption)) ? 100 : 0) + (r.brand && post.brand && r.brand === post.brand ? 3 : r.brand && post.brand ? -3 : 0) + (r.format === post.format ? 2 : 0) + (r.script ? 1 : 0) - Math.abs(r.scheduledAt!.getTime() - center) / DAY_MS / 7 }))
     .sort((a, b) => b.score - a.score)
     .slice(0, 5)
     .map(({ r }) => ({ id: r.id, title: r.title, brand: r.brand, format: r.format, status: r.status, scheduledAt: r.scheduledAt, hasScript: !!r.script, scriptBy: r.scriptBy }));
@@ -215,10 +225,14 @@ export async function linkScript(scriptId: string, targetId: string) {
   if (!sc || !tg) throw new PostError("Post não encontrado.");
   if (sc.projectId !== tg.projectId) throw new PostError("Os dois precisam ser do mesmo projeto.");
   if (sc.linkedTo) throw new PostError("Esse roteiro já está ligado a outro post.");
-  const [out] = await db().update(socialPosts).set({
-    script: tg.script ?? sc.script, scriptBy: tg.scriptBy ?? sc.scriptBy, captureBy: tg.captureBy ?? sc.captureBy, editor: tg.editor ?? sc.editor, createdBy: tg.createdBy ?? sc.createdBy, updatedAt: new Date(),
-  }).where(eq(socialPosts.id, targetId)).returning();
-  await db().update(socialPosts).set({ linkedTo: targetId, updatedAt: new Date() }).where(eq(socialPosts.id, scriptId));
+  const script = !tg.script ? sc.script : !sc.script ? tg.script : identityText(sc.script).includes(identityText(tg.script)) ? sc.script : identityText(tg.script).includes(identityText(sc.script)) ? tg.script : `${tg.script}\n\n---\nRoteiro vinculado: ${sc.title}\n\n${sc.script}`;
+  const database = db();
+  const [outRows] = await database.batch([
+    database.update(socialPosts).set({ script, scriptBy: tg.scriptBy ?? sc.scriptBy, captureBy: tg.captureBy ?? sc.captureBy, editor: tg.editor ?? sc.editor, createdBy: tg.createdBy ?? sc.createdBy, updatedAt: new Date() }).where(eq(socialPosts.id, targetId)).returning(),
+    database.update(socialPosts).set({ linkedTo: targetId, updatedAt: new Date() }).where(eq(socialPosts.id, scriptId)).returning({id:socialPosts.id}),
+    database.insert(dataMoves).values({kind:"vincular-roteiro",payload:{sourceBefore:sc,targetBefore:tg,sourceId:scriptId,targetId}}).returning({id:dataMoves.id}),
+  ]);
+  const out = outRows[0];
   return out;
 }
 

@@ -56,7 +56,8 @@ beforeAll(async () => {
       const results = [];
       for (const query of queries) {
         const { sql, params } = query.toSQL();
-        results.push((await tx.query(sql, params)).rows);
+        // Neon/Drizzle mapeia os nomes SQL do RETURNING para as propriedades do schema.
+        results.push((await tx.query(sql, params)).rows.map(row => Object.fromEntries(Object.entries(row as Record<string, unknown>).map(([key,value]) => [key.replace(/_([a-z])/g, (_match, letter: string) => letter.toUpperCase()),value]))));
       }
       return results;
     }),
@@ -351,4 +352,28 @@ it("sincroniza mLabs sem cruzar empresas, escolher duplicados ou regredir postad
     if (previous === undefined) delete process.env.MLABS_MCP_TOKEN; else process.env.MLABS_MCP_TOKEN = previous;
     init.mockRestore(); call.mockRestore();
   }
+});
+
+it("classifica uma publicação na operação correta com auditoria sem regredir etapa ou redes", async () => {
+  const [root] = await d.insert(schema.projects).values({titulo:"Grupo classificação",categoria:"social"}).returning();
+  const [hotel] = await d.insert(schema.projects).values({titulo:"Hotel Atalaia VIP",categoria:"social",parentId:root.id}).returning();
+  const [post] = await d.insert(schema.socialPosts).values({projectId:root.id,title:"Hospedagem",status:"postado",networks:["instagram"],caption:"Hospedagem em família"}).returning();
+  const result=await updatePost(post.id,{brand:"Hotel"});
+  expect(result.post.projectId).toBe(hotel.id); expect(result.post.status).toBe("postado"); expect(result.post.networks).toEqual(["instagram"]);
+  const audit=await d.select().from(schema.dataMoves).where(eq(schema.dataMoves.kind,"classificar-conteudo"));
+  expect(audit.find(a=>a.payload.postId===post.id)?.payload.before).toEqual({brand:null,projectId:root.id});
+});
+
+it("prioriza legenda correspondente e mantém roteiro completo ao ligar versões", async () => {
+  const [project]=await d.insert(schema.projects).values({titulo:"Roteiros conferidos",categoria:"social"}).returning();
+  const [source,other,target]=await d.insert(schema.socialPosts).values([
+    {projectId:project.id,brand:"Hotel",title:"Roteiro completo",status:"roteiro",scheduledAt:new Date("2026-10-03T03:00:00Z"),script:"Cenas, direção e legenda: Dias de descanso no hotel"},
+    {projectId:project.id,brand:"Hotel",title:"Mais perto, outro assunto",status:"roteiro",scheduledAt:new Date("2026-10-04T03:00:00Z"),script:"Outra coisa"},
+    {projectId:project.id,brand:"Hotel",title:"Dias de descanso",caption:"Dias de descanso no hotel",script:"Dias de descanso no hotel",status:"postado",scheduledAt:new Date("2026-10-04T03:00:00Z")},
+  ]).returning();
+  expect((await suggestScripts(target.id))[0].id).toBe(source.id);
+  const out=await linkScript(source.id,target.id);expect(out.script).toBe(source.script);expect(out.status).toBe("postado");
+  expect((await d.select().from(schema.socialPosts).where(eq(schema.socialPosts.id,other.id)))[0].linkedTo).toBeNull();
+  const audits=await d.select().from(schema.dataMoves).where(eq(schema.dataMoves.kind,"vincular-roteiro"));
+  expect(audits.find(a=>a.payload.sourceId===source.id)?.payload.targetBefore).toMatchObject({script:target.script,status:"postado"});
 });

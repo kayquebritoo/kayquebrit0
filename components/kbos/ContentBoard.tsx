@@ -304,7 +304,7 @@ function Stepper({ status }: { status: string }) {
 
 function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: string[]; onClose: () => void; onSaved: (p: Post) => void }) {
   const [f, setF] = useState({
-    title: post.title, status: post.status, caption: post.caption ?? "", mediaUrl: post.mediaUrl ?? "", script: post.script ?? "",
+    brand: post.brand ?? "", title: post.title, status: post.status, caption: post.caption ?? "", mediaUrl: post.mediaUrl ?? "", script: post.script ?? "",
     scriptBy: post.scriptBy ?? "", captureBy: post.captureBy ?? "", editor: post.editor ?? "", when: toLocalInput(post.scheduledAt),
     postedUrl: post.postedUrl ?? "", errorMessage: post.errorMessage ?? "",
   });
@@ -348,6 +348,7 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
       const r = await fetch(`/api/admin/social/${post.id}`, {
         method: "PATCH", headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          ...(f.brand !== (post.brand ?? "") ? { brand: f.brand || null } : {}),
           title: f.title.trim() || post.title, status: f.status, caption: text(f.caption), mediaUrl: text(f.mediaUrl), script: text(f.script),
           scriptBy: text(f.scriptBy), captureBy: text(f.captureBy), editor: text(f.editor), postedUrl: text(f.postedUrl), errorMessage: f.status === "erro" ? text(f.errorMessage) : null,
           ...(f.when ? { scheduledAt: `${f.when}:00-03:00` } : {}),
@@ -370,6 +371,7 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
           </div>
           <button type="button" onClick={onClose} aria-label="Fechar" className="h-11 w-11 shrink-0 rounded-full text-2xl">×</button>
         </div>
+        <label className="kb-field"><span>Empresa</span><select className="kb-control" value={f.brand} onChange={e => setF({ ...f, brand: e.target.value })}><option value="">Sem empresa identificada</option>{BRAND_LIST.map(brand => <option key={brand} value={brand}>{brand}</option>)}{f.brand && !BRAND_LIST.includes(f.brand) && <option value={f.brand}>{f.brand}</option>}</select></label>
         <Stepper status={f.status} />
         {post.clientNote && <p className="kb-tag late w-full justify-start rounded-xl! px-3! py-2! text-sm">Pedido do cliente: {post.clientNote}</p>}
 
@@ -418,7 +420,7 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
           </section>
         )}
 
-        {sugg.length > 0 && !f.script.trim() && (
+        {sugg.length > 0 && (!f.script.trim() || !!post.caption) && (
           <section className="space-y-2" aria-label="Roteiros possíveis">
             <p className={h}>Roteiros que podem ser deste post</p>
             {sugg.map((x) => (
