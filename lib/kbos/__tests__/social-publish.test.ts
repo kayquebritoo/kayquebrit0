@@ -146,7 +146,9 @@ describe("agendar e publicar", () => {
     await syncPublications(post, ["instagram", "facebook"]);
     await expect(schedulePost(post, { at: new Date() })).rejects.toThrow(/Falta ligar a conta/);
     await saveMetaAccounts([{ network: "instagram", externalId: "ig1", pageId: "p1", name: "Hotel", username: "hotel", pictureUrl: null, token: "PT" }, { network: "facebook", externalId: "p9", pageId: "p9", name: "Grupo", username: null, pictureUrl: null, token: "PT9" }], null);
-    expect((await d.select().from(schema.socialAccounts)).every((a) => !a.tokenEnc?.includes("PT"))).toBe(true);
+    // Random ciphertext may contain the two characters "PT" by chance.
+    // Assert the stored values are not either complete plaintext token.
+    expect((await d.select().from(schema.socialAccounts)).every((a) => a.tokenEnc !== "PT" && a.tokenEnc !== "PT9")).toBe(true);
     await d.update(schema.socialAccounts).set({ projectId: hotel }).where(eq(schema.socialAccounts.externalId, "ig1"));
     await d.update(schema.socialAccounts).set({ projectId: grupo }).where(eq(schema.socialAccounts.externalId, "p9"));
     expect((await accountFor(hotel, "facebook"))!.externalId).toBe("p9"); // do principal

@@ -1,0 +1,24 @@
+# Private runtime/benchmark artifacts, never source control.
+.env*
+*.db*
+*.sqlite*
+*.log
+*.pem
+*.key
+*.npz
+*.npy
+*.zip
+*.tgz
+*.tar*
+*.jpg
+*.jpeg
+*.png
+*.mp4
+*.mov
+data/
+indice/
+thumbs/
+hf/
+audits/
+benchmark-*.json
+!pwa/*.png

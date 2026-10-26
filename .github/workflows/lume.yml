@@ -1,0 +1,18 @@
+name: Lume Python
+on:
+  push:
+    paths: ['infra/lume/server/**', '.github/workflows/lume.yml']
+  pull_request:
+    paths: ['infra/lume/server/**', '.github/workflows/lume.yml']
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'numpy>=1.26' 'pillow>=10.0'
+      - name: Tests with disposable databases, no models or media
+        run: python -m unittest discover -s infra/lume/server -p 'test_*.py'

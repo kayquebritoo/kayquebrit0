@@ -16,6 +16,7 @@ from acervo_midias import Catalogo, intervalo, normalizar, servir_arquivo
 from acervo_conceitos import identidade, eh_proxy
 from acervo_feedback import Feedback, chave
 from acervo_referencias import Referencias
+from acervo_consulta import intencao, ALVOS, RIVAIS, reclassificar
 import acervo_entregas
 from PIL import Image
 
@@ -293,7 +294,7 @@ class Indice:
         """Relevância primeiro (nota arredondada a 3 casas, a mesma que o usuário vê); empate → arquivo mais recente."""
         return np.lexsort((-self.mods, -np.round(s, 3)))
 
-    def buscar(self, vec, tipo="", pasta="", limite=60, de=None, ate=None, ajuste=None, origem="", notas=None):
+    def buscar(self, vec, tipo="", pasta="", limite=60, de=None, ate=None, ajuste=None, origem="", notas=None, elegivel=None):
         """`notas` (opcional) substitui a semelhança com `vec`, ex.: semelhança com imagens de referência."""
         if not len(self.rows):
             return []
@@ -302,6 +303,7 @@ class Indice:
         ordem = self.ordenar(s)
         vistos, out = set(), []
         for i in ordem:
+            if elegivel is not None and not elegivel[i]: continue
             qid, aid, seg, caminho, t, mod = self.rows[i]
             if tipo and t != tipo: continue
             if pasta and normalizar(pasta) not in normalizar(caminho): continue
@@ -318,17 +320,17 @@ class Indice:
 
 
 
-def id_no_escopo(qid, esc):
+def id_no_escopo(idx, qid, esc):
     pos = idx.pos.get(int(qid))
     return pos is not None and normalizar(esc) in normalizar(idx.rows[pos][3])
 
 
-def dentro_do_escopo_req(caminho, qs, esc):
+def dentro_do_escopo_req(idx, caminho, qs, esc):
     """Rotas que apontam para UM arquivo (mídia, miniatura, link do Drive) só abrem se ele estiver na pasta do cliente."""
     try:
-        if caminho.startswith("/midia/"): return id_no_escopo(int(caminho.rsplit("/", 1)[-1]), esc)
-        if caminho.startswith("/thumb/"): return id_no_escopo(int(Path(caminho).stem), esc)
-        if caminho == "/drive": return id_no_escopo(int(qs.get("id", "")), esc)
+        if caminho.startswith("/midia/"): return id_no_escopo(idx, int(caminho.rsplit("/", 1)[-1]), esc)
+        if caminho.startswith("/thumb/"): return id_no_escopo(idx, int(Path(caminho).stem), esc)
+        if caminho == "/drive": return id_no_escopo(idx, int(qs.get("id", "")), esc)
     except ValueError:
         return False
     return True
@@ -344,6 +346,7 @@ def servir(porta):
     catalogo = Catalogo(idx)
     feedback = Feedback(DB)
     referencias = Referencias(DB)
+    vetores_consulta = {}
     entregas = acervo_entregas.Entregas(HOME, SEGREDO)
 
     def ler_imagem(h, limite=8_000_000):
@@ -523,7 +526,7 @@ def servir(porta):
                 # Cliente: só leitura, só dentro da pasta dele.
                 if not (u.path in {"/", "/catalogo", "/buscar", "/parecidos", "/drive", "/referencias"} or u.path.startswith(("/midia/", "/thumb/", "/referencia/"))):
                     self.send_error(404); return
-                if not dentro_do_escopo_req(u.path, qs, esc):
+                if not dentro_do_escopo_req(idx, u.path, qs, esc):
                     self.send_error(404); return
                 if "p" not in qs or normalizar(esc) not in normalizar(qs.get("p", "")): qs["p"] = esc
             de = ate = None
@@ -571,30 +574,55 @@ def servir(porta):
                     perfil = conceitos.identificar(texto)
                     termo = chave(texto, perfil)
                     ajuste = feedback.ajuste(idx, termo)
+                    votos_elegiveis = feedback.elegiveis(idx, termo)
                     termo_ref = referencias.termo_parecido(termo, esc or "")
                     refs = referencias.vetores(termo_ref, esc or "") if termo_ref else None
+                    plano_visual = None
+                    if os.environ.get('LUME_BUSCA_PRECISA') == '1' and intencao(texto):
+                        if 'petit gateau' not in vetores_consulta:
+                            vetores_consulta['petit gateau'] = motor.buscar_multiplos(ALVOS + RIVAIS)
+                        plano_visual = reclassificar(idx.m, vetores_consulta['petit gateau'], feedback.ancoras(idx, termo))
                     if refs is not None:  # alguém já ensinou com imagens: imagem↔imagem, sem o motor de texto
                         nome = texto
                         if termo_ref != termo:  # casou por palavras parecidas: feedback e mensagem usam o termo ensinado
                             termo, ajuste, nome = termo_ref, feedback.ajuste(idx, termo_ref), termo_ref
+                            votos_elegiveis = feedback.elegiveis(idx, termo)
                         notas = Referencias.notas(idx, refs)
-                        resultados = idx.buscar(None, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem, notas=notas)
+                        elegivel = votos_elegiveis
+                        if plano_visual is not None:
+                            visuais, mascara, _, _ = plano_visual
+                            elegivel = votos_elegiveis & mascara
+                            notas = .7 * notas + .3 * visuais
+                        resultados = idx.buscar(None, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem, notas=notas, elegivel=elegivel)
                         print(f"Referências {termo}: {len(refs)} imagem(ns), {len(resultados)} sugestões em {time.monotonic()-inicio:.3f}s.", flush=True)
                         self._j({"resultados": feedback.marcar(catalogo.enriquecer(resultados), termo), "exemplos": feedback.resumo(termo),
                                  "modo": "referencias", "referencias": len(refs),
                                  "interpretacao": f"parecido com {len(refs)} imagem(ns) que ensinaram ao Lume como “{nome}”"})
                         return
                     if perfil:
-                        resposta = conceitos.buscar(idx, perfil, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem)
+                        resposta = conceitos.buscar(idx, perfil, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem, elegivel=votos_elegiveis)
                         print(f"Conceito {perfil['id']}: {len(resposta['resultados'])} sugestões em {time.monotonic()-inicio:.3f}s.", flush=True)
                         resposta["resultados"] = feedback.marcar(catalogo.enriquecer(resposta["resultados"]), termo)
                         resposta["exemplos"] = feedback.resumo(termo)
                         resposta["referencias"] = 0
                         self._j(resposta); return
+                    if plano_visual is not None:
+                        # Small fixed text cache. No image embeddings/index are modified.
+                        notas, elegivel, base, margem = plano_visual
+                        resultados = idx.buscar(None, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate,
+                                                ajuste=ajuste, origem=origem, notas=notas, elegivel=elegivel & votos_elegiveis)
+                        for r in resultados:
+                            p = idx.pos[r['id']]
+                            r.update(similaridade=round(float(base[p]), 4), margem=round(float(margem[p]), 4))
+                        self._j({'resultados': feedback.marcar(catalogo.enriquecer(resultados), termo),
+                                 'exemplos': feedback.resumo(termo), 'referencias': 0, 'modo': 'petit_gateau_contrastivo_v1',
+                                 'interpretacao': 'petit gâteau: bolo individual de chocolate com interior cremoso',
+                                 'aviso': 'Candidatos estimados pelo modelo; confira o conteúdo. Sem candidatos suficientes para esta política não significa ausência no acervo.'})
+                        return
                     vec = np.asarray(motor.buscar(texto), dtype=np.float32)
                     if vec.shape != (512,) or not np.isfinite(vec).all():
                         raise ValueError("O motor retornou um vetor inválido.")
-                    resultados = idx.buscar(vec, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem)
+                    resultados = idx.buscar(vec, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, ajuste=ajuste, origem=origem, elegivel=votos_elegiveis)
                     print(f"Busca concluída em {time.monotonic()-inicio:.2f}s; {len(resultados)} sugestões.", flush=True)
                     self._j({"resultados": feedback.marcar(catalogo.enriquecer(resultados), termo), "exemplos": feedback.resumo(termo), "referencias": 0})
                 except BuscaOcupada as e:
@@ -606,7 +634,7 @@ def servir(porta):
                     print(f"Falha na busca: {e}", file=sys.stderr, flush=True)
                     self._j({"erro": str(e)}, 500)
             elif u.path == "/parecidos":
-                ids = [int(x) for x in qs.get("ids", "").split(",") if x.isdigit() and int(x) in idx.pos and (not esc or id_no_escopo(int(x), esc))]
+                ids = [int(x) for x in qs.get("ids", "").split(",") if x.isdigit() and int(x) in idx.pos and (not esc or id_no_escopo(idx, int(x), esc))]
                 if not ids: self._j([]); return
                 vec = idx.m[[idx.pos[i] for i in ids]].mean(axis=0); vec /= np.linalg.norm(vec) or 1
                 self._j(catalogo.enriquecer(idx.buscar(vec, qs.get("t", ""), qs.get("p", ""), de=de, ate=ate, origem=origem)))
