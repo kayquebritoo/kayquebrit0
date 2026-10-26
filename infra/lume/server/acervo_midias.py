@@ -31,6 +31,12 @@ class Catalogo:
         self.arquivos=[r for r in arquivos if not (r[4]=='video' and eh_proxy(r[3]) and identidade(r[3]) in originais)]
         self.arquivos.sort(key=lambda r:(r[5],r[1]),reverse=True)
 
+    def adicionar(self,idx,aid):
+        """Arquivo recém-enviado aparece no topo do acervo (mais recente primeiro)."""
+        rs=[r for r in idx.rows if r[1]==aid]
+        if not rs:return
+        self.arquivos.insert(0,sorted(rs,key=lambda r:r[2])[len(rs)//2]);self.total_indexados+=1
+
     def enriquecer(self,lista):
         for x in lista:
             pos=self.idx.pos.get(x['id'])

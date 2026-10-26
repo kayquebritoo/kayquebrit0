@@ -290,6 +290,17 @@ class Indice:
         self.originais = {identidade(r[3]) for r in self.rows if r[4]=="video" and not eh_proxy(r[3])}
         self.casa_de = lambda aid: ""  # marcação de casa (acervo_marcacoes); o servidor liga
 
+    def adicionar(self, aid, caminho, tipo, mod, tamanho, origem, quadros):
+        """Arquivo novo (enviado pelo Lume) entra no índice em memória sem recarregar tudo. quadros = [(qid, segundo, vetor)]."""
+        novos = [(qid, aid, seg, caminho, tipo, mod) for qid, seg, _ in quadros]
+        m = np.vstack([self.m] + [np.asarray(v, dtype=np.float32).reshape(1, -1) for _, _, v in quadros])
+        base = len(self.rows)
+        self.rows = self.rows + novos
+        self.m = m
+        self.pos.update({r[0]: base + i for i, r in enumerate(novos)})
+        self.mods = np.concatenate([self.mods, np.full(len(novos), mod, dtype=np.float64)])
+        self.tamanhos[aid] = tamanho; self.origem[aid] = origem
+
     def na_pasta(self, pasta, caminho, aid):
         """Filtro de pasta: pelo caminho ou, se o filtro é uma casa (Hotel/Lounge/Praça), pela marcação do arquivo."""
         if normalizar(pasta) in normalizar(caminho): return True
@@ -359,6 +370,13 @@ def servir(porta):
     idx.casa_de = marcacoes.casa
     _enriquecer = catalogo.enriquecer
     catalogo.enriquecer = lambda lista: marcacoes.anotar(_enriquecer(lista), idx, cardapio)
+    from acervo_envios import Envios, nome_seguro
+    envios = Envios(HOME, conn, embed_images, video_frames, save_thumb, LOCK_IMAGEM, PHOTO_EXT, VIDEO_EXT)
+    LOCK_ENVIO = threading.Lock()
+
+    def original(qid):  # enviado pelo Lume (volume do servidor) ou caminho indexado
+        pos = idx.pos.get(qid)
+        return (envios.arquivo_local(idx.rows[pos][3]) if pos is not None else None) or catalogo.caminho(qid)
     print(f"Cardápio: {len(cardapio.pratos)} pratos" + (f"; {corrigidas} referência(s) renomeada(s)." if corrigidas else "."), flush=True)
     entregas = acervo_entregas.Entregas(HOME, SEGREDO)
 
@@ -391,7 +409,7 @@ def servir(porta):
             qid = u.path.rsplit('/',1)[-1]
             if not autenticado(self.headers): self.send_error(401); return
             if u.path.startswith('/midia/') and qid.isdigit() and not NUVEM:
-                servir_arquivo(self,catalogo.caminho(int(qid)),qs.get('download')=='1',head=True)
+                servir_arquivo(self,original(int(qid)),qs.get('download')=='1',head=True)
             else:self.send_error(404)
         def _login(self):
             f = Path(__file__).parent / "login.lume.html"
@@ -475,6 +493,41 @@ def servir(porta):
                     self._j({"ok": ok}, 200 if ok else 404)
                 except (ValueError, KeyError, TypeError) as e:
                     self._j({"erro": str(e) or "Pedido inválido."}, 400)
+                return
+            if u.path == "/enviar":  # só equipe: arquivo novo + perguntas (casa, pratos, onde, quando)
+                try:
+                    qs = {k: v[0] for k, v in parse_qs(u.query).items()}
+                    casa = qs.get("casa", "")
+                    pratos = [p for p in qs.get("pratos", "").split(",") if p]
+                    if casa not in ("", "Hotel", "Lounge", "Praça"): raise ValueError("Casa inválida: use Hotel, Lounge ou Praça.")
+                    ruins = [p for p in pratos if p not in cardapio.por_id]
+                    if ruins: raise ValueError("Prato fora do cardápio: " + ", ".join(ruins))
+                    n = int(self.headers.get("Content-Length", "0"))
+                    existente = envios.ja_existe(qs.get("nome", ""), n)
+                    if existente is not None:  # mesmo nome e tamanho: não duplica, só marca
+                        faltam = n
+                        while faltam > 0:  # descarta o corpo sem guardar
+                            bloco = self.rfile.read(min(1024 * 1024, faltam))
+                            if not bloco: break
+                            faltam -= len(bloco)
+                        aid, duplicado, quando_exif = existente, True, None
+                    else:
+                        caminho, tipo, arquivo, tam = envios.receber(self.rfile, n, qs.get("nome", ""), casa)
+                        with LOCK_ENVIO:
+                            aid, quadros, mod, quando_exif = envios.indexar(caminho, tipo, arquivo, tam)
+                            idx.adicionar(aid, caminho, tipo, mod, tam, "Hotel", quadros)
+                            catalogo.adicionar(idx, aid)
+                        duplicado = False
+                    quando = qs.get("quando", "") or quando_exif or None
+                    marcacoes.marcar([aid], casa or None, pratos or None, quando, qs.get("onde") or None, qs.get("obs") or None,
+                                     pratos_validos=cardapio.por_id)
+                    qid = next((r[0] for r in idx.rows if r[1] == aid), None)
+                    self._j({"ok": True, "id": qid, "duplicado": duplicado, "quando": marcacoes.por_arquivo.get(aid, {}).get("quando", "")})
+                except (ValueError, OSError) as e:
+                    self._j({"erro": str(e)[:200] or "Não consegui receber esse arquivo."}, 400)
+                except Exception as e:
+                    print(f"Falha ao enviar: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+                    self._j({"erro": "Não consegui guardar esse arquivo agora."}, 500)
                 return
             if u.path == "/marcar":  # só equipe: casa, pratos, onde e quando de vários arquivos de uma vez
                 try:
@@ -578,10 +631,13 @@ def servir(porta):
                         try: r = c.execute("SELECT drive_id FROM drive WHERE arquivo_id=?", (idx.rows[pos][1],)).fetchone(); drive_id = r[0] if r else None
                         except sqlite3.OperationalError: pass
                         c.close()
-                    if not drive_id: self.send_error(404); return
+                    if not drive_id:  # enviado pelo Lume: o original está no volume do servidor
+                        local = envios.arquivo_local(idx.rows[pos][3]) if pos is not None else None
+                        if local: servir_arquivo(self, local, qs.get('download')=='1'); return
+                        self.send_error(404); return
                     alvo = f"https://drive.google.com/uc?export=download&id={drive_id}" if qs.get('download')=='1' else f"https://drive.google.com/file/d/{drive_id}/view"
                     self.send_response(302); self.send_header("Location", alvo); self.end_headers(); return
-                servir_arquivo(self,catalogo.caminho(int(qid)),qs.get('download')=='1')
+                servir_arquivo(self,original(int(qid)),qs.get('download')=='1')
             elif u.path.startswith("/thumb/"):
                 f = THUMBS / Path(u.path).name
                 if not f.is_file(): self.send_error(404); return
