@@ -6,7 +6,7 @@ import { deny, sessionUser, PIPELINE } from "@/lib/kbos/rbac";
 import { notifyProject } from "@/lib/kbos/whatsapp";
 import { checkId, projectPatchSchema, readBody } from "@/lib/kbos/validators";
 import { serverError } from "@/lib/kbos/http";
-import { isClientOfProject } from "@/lib/kbos/project-members";
+import { clientProjectView, isClientOfProject } from "@/lib/kbos/project-members";
 
 const STAFF = ["admin", "designer", "editor", "fotografo", "programador"] as const;
 
@@ -24,7 +24,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const row = await visible(id, user.id, user.role);
   if (!row) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
   if (row === "forbidden") return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
-  return NextResponse.json({ item: row });
+  return NextResponse.json({ item: user.role === "cliente" ? clientProjectView(row) : row });
 }
 
 // PATCH: equipe move status / edita. Mudança de status notifica o cliente no WhatsApp.

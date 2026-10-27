@@ -24,7 +24,7 @@ type Me = { name: string; email: string; role: keyof typeof ROLE_LABELS };
 // piscando a cada navegação (a sessão é revalidada em segundo plano).
 let cachedUser: Me | null = null;
 
-type NavLink = { href: string; label: string; adminOnly?: boolean; clientOnly?: boolean; exact?: boolean };
+type NavLink = { href: string; label: string; adminOnly?: boolean; staffOnly?: boolean; clientOnly?: boolean; exact?: boolean };
 type NavGroup = { id: string; label: string; icon: ReactNode; links: NavLink[] };
 
 const ico = (d: string) => (
@@ -47,7 +47,7 @@ const GROUPS: NavGroup[] = [
     label: "Produção",
     icon: ico("M4 6h16M4 12h10M4 18h7M17 15l2 2 3-4"),
     links: [
-      { href: "/admin/projetos", label: "Projetos e entregas" },
+      { href: "/admin/projetos", label: "Projetos e entregas", staffOnly: true },
       { href: "/admin/tarefas", label: "Tarefas e prazos", adminOnly: true },
       { href: "/admin/conteudo", label: "Conteúdo e posts", adminOnly: true },
       { href: "/admin/agenda", label: "Agenda", adminOnly: true },
@@ -118,11 +118,14 @@ export function KbosShell({
   title,
   subtitle,
   admin,
+  staff,
 }: {
   children: React.ReactNode;
   title: string;
   subtitle?: string;
   admin?: boolean;
+  /** Tela da equipe (qualquer papel interno): cliente volta ao portal. */
+  staff?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -142,7 +145,7 @@ export function KbosShell({
         const r = await fetch("/api/auth/me");
         if (!r.ok) throw new Error("auth");
         const d = await r.json();
-        if (admin && d.user.role !== "admin") {
+        if ((admin && d.user.role !== "admin") || (staff && d.user.role === "cliente")) {
           router.replace("/portal");
           return;
         }
@@ -156,7 +159,7 @@ export function KbosShell({
     return () => {
       alive = false;
     };
-  }, [admin, router]);
+  }, [admin, staff, router]);
 
   // Vindo da home (navegação client-side), a trava de rolagem do fullpage
   // (`fullpage-locked`: html/body com overflow hidden) podia ficar presa e o
@@ -191,7 +194,8 @@ export function KbosShell({
   }
 
   const isAdmin = user.role === "admin";
-  const allowed = (l: NavLink) => (!l.adminOnly || isAdmin) && (!l.clientOnly || !isAdmin);
+  const isClient = user.role === "cliente";
+  const allowed = (l: NavLink) => (!l.adminOnly || isAdmin) && (!l.staffOnly || !isClient) && (!l.clientOnly || !isAdmin);
   const groups = GROUPS.map((g) => ({ ...g, links: g.links.filter(allowed) })).filter((g) => g.links.length);
   const isActive = (l: NavLink) =>
     l.exact ? pathname === l.href : pathname === l.href || pathname.startsWith(l.href + "/");
@@ -204,7 +208,7 @@ export function KbosShell({
       {/* ── Sidebar (desktop) ───────────────────────── */}
       <aside className="sticky top-0 hidden h-screen w-[264px] shrink-0 p-4 lg:block">
         <div className="kb-glass flex h-full flex-col gap-5 overflow-y-auto px-3 py-5">
-          <Link href={isAdmin ? "/admin" : "/admin/projetos"} className="flex items-center gap-2.5 px-2">
+          <Link href={isAdmin ? "/admin" : isClient ? "/portal" : "/admin/projetos"} className="flex items-center gap-2.5 px-2">
             <span className="font-display inline-flex h-7 w-10 items-center justify-center rounded-[4px_9px_4px_4px] bg-[var(--kb-ink)] text-[15px] font-bold text-[var(--kb-bg)]">KB</span>
             <span className="font-display text-lg font-bold tracking-[0.08em]">KBOS</span>
           </Link>

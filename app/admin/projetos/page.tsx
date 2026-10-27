@@ -6,7 +6,7 @@ export const metadata = { title: "Projetos — KBOS" };
 
 export default function ProjetosPage() {
   return (
-    <KbosShell title="Projetos" subtitle="Pipeline operacional + vitrine e cursos">
+    <KbosShell staff title="Projetos" subtitle="Pipeline operacional + vitrine e cursos">
       <KanbanBoard />
       <ShowcaseManager />
     </KbosShell>

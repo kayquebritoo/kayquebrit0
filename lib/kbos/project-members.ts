@@ -15,6 +15,14 @@ export function clientProjects(userId: string) {
   )!;
 }
 
+/** O que o cliente vê de um projeto. Lista fechada: valor, orçamento, briefing, contato e titular ficam só com a equipe. */
+export function clientProjectView(p: typeof projects.$inferSelect) {
+  return {
+    id: p.id, titulo: p.titulo, categoria: p.categoria, status: p.status, prazo: p.prazo,
+    recurring: p.recurring, parentId: p.parentId, coverUrl: p.coverUrl, thumbUrl: p.thumbUrl, updatedAt: p.updatedAt,
+  };
+}
+
 export async function clientProjectIds(userId: string): Promise<string[]> {
   const rows = await db().select({ id: projects.id }).from(projects).where(clientProjects(userId));
   return rows.map((r) => r.id);

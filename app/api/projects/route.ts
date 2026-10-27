@@ -5,7 +5,7 @@ import { contacts, projects, socialPosts, tasks, users } from "@/lib/kbos/schema
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { projectCreateSchema, readBody } from "@/lib/kbos/validators";
 import { serverError } from "@/lib/kbos/http";
-import { clientProjects } from "@/lib/kbos/project-members";
+import { clientProjectView, clientProjects } from "@/lib/kbos/project-members";
 
 // GET: equipe vê tudo; cliente vê só os próprios.
 export async function GET() {
@@ -33,7 +33,7 @@ export async function GET() {
       : await base.orderBy(desc(projects.updatedAt)).limit(200);
     const rows = joined.map((r) =>
       isClient
-        ? r.project
+        ? clientProjectView(r.project)
         : { ...r.project, contactName: r.contactName, contactCompany: r.contactCompany, tasksTotal: r.tasksTotal, tasksDone: r.tasksDone, monthPosts: r.monthPosts, monthDone: r.monthDone },
     );
     return NextResponse.json({ items: rows });
