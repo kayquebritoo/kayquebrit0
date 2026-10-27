@@ -62,6 +62,7 @@ const GROUPS: NavGroup[] = [
       { href: "/admin/inbox", label: "Inbox", adminOnly: true },
       { href: "/admin/kanban", label: "Funil de vendas", adminOnly: true },
       { href: "/admin/crm", label: "Contatos", adminOnly: true },
+      { href: "/admin/empresas", label: "Empresas e acessos", adminOnly: true },
       { href: "/admin/orcamentos", label: "Orçamentos e contratos", adminOnly: true },
       { href: "/admin/campaigns", label: "Campanhas", adminOnly: true },
     ],
