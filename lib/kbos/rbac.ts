@@ -71,6 +71,7 @@ async function adminBypassUser(): Promise<SessionUser> {
     googleSubject: null,
     authCodeRequestedAt: null,
     passwordHash: null,
+    disabledAt: null,
     createdAt: new Date(0),
   };
 }
@@ -105,6 +106,8 @@ async function resolveSessionUser(): Promise<SessionUser | null> {
       .limit(1);
     const row = rows[0];
     if (!row || row.expiresAt.getTime() < Date.now()) return null;
+    // Conta desativada: toda sessão dela para de valer na hora.
+    if (row.user.disabledAt) return null;
     return row.user;
   } catch {
     return null;

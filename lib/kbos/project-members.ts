@@ -4,7 +4,12 @@ import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import { db } from "./db";
 import { contacts, projectMembers, projects, users } from "./schema";
 
-/** Condição SQL: projetos que o cliente pode ver. Acesso ao principal (ex.: Grupo VIP) vale para as operações dele. */
+/** Empresas com acesso ativo da pessoa, incluindo as empresas dos grupos a que ela tem acesso (0031). */
+const companyIdsSql = (userId: string) => sql`(SELECT co.id FROM kbos_companies co WHERE co.id IN (SELECT a.company_id FROM kbos_company_access a WHERE a.user_id = ${userId} AND a.revoked_at IS NULL)
+    OR co.parent_id IN (SELECT a.company_id FROM kbos_company_access a WHERE a.user_id = ${userId} AND a.revoked_at IS NULL))`;
+
+/** Condição SQL: projetos que o cliente pode ver. Acesso ao principal (ex.: Grupo VIP) vale para as operações dele;
+ * acesso à empresa (0031) vale para os projetos dela. */
 export function clientProjects(userId: string) {
   const direct = sql`(SELECT ${projects.id} FROM ${projects} WHERE ${projects.clienteId} = ${userId}
     UNION SELECT ${projectMembers.projectId} FROM ${projectMembers} WHERE ${projectMembers.userId} = ${userId})`;
@@ -12,6 +17,7 @@ export function clientProjects(userId: string) {
     eq(projects.clienteId, userId),
     sql`${projects.id} IN (SELECT ${projectMembers.projectId} FROM ${projectMembers} WHERE ${projectMembers.userId} = ${userId})`,
     sql`${projects.parentId} IN ${direct}`,
+    sql`${projects.companyId} IN ${companyIdsSql(userId)}`,
   )!;
 }
 
@@ -34,8 +40,12 @@ export type MemberAccess = (typeof MEMBER_ACCESS)[number];
 /** Projetos em que a pessoa faz a gestão do conteúdo (gerente de marketing): vê tudo, planeja e roteiriza. */
 export async function managedProjectIds(userId: string): Promise<string[]> {
   const rows = await db().select({ id: projectMembers.projectId }).from(projectMembers).where(and(eq(projectMembers.userId, userId), eq(projectMembers.access, "gestao")));
-  if (!rows.length) return [];
-  const ids = rows.map((r) => r.id);
+  // gestão na empresa (0031) vale para os projetos dela e das empresas do grupo
+  const byCompany = await db().select({ id: projects.id }).from(projects).where(sql`${projects.companyId} IN (SELECT co.id FROM kbos_companies co
+    WHERE co.id IN (SELECT a.company_id FROM kbos_company_access a WHERE a.user_id = ${userId} AND a.revoked_at IS NULL AND a.role = 'gestao')
+       OR co.parent_id IN (SELECT a.company_id FROM kbos_company_access a WHERE a.user_id = ${userId} AND a.revoked_at IS NULL AND a.role = 'gestao'))`);
+  if (!rows.length && !byCompany.length) return [];
+  const ids = [...rows.map((r) => r.id), ...byCompany.map((r) => r.id)];
   // gestão no principal vale para as operações dele
   const kids = await db().select({ id: projects.id }).from(projects).where(inArray(projects.parentId, ids));
   return [...new Set([...ids, ...kids.map((k) => k.id)])];
@@ -44,6 +54,18 @@ export async function managedProjectIds(userId: string): Promise<string[]> {
 export async function isClientOfProject(projectId: string, userId: string): Promise<boolean> {
   const [row] = await db().select({ id: projects.id }).from(projects).where(and(eq(projects.id, projectId), clientProjects(userId))).limit(1);
   return !!row;
+}
+
+/** Projetos de que a pessoa é titular: `clienteId` ou papel "titular" na empresa (0031). Só o titular vê cobranças. */
+export async function ownedProjectIds(userId: string, among: string[]): Promise<string[]> {
+  if (!among.length) return [];
+  const rows = await db().select({ id: projects.id }).from(projects).where(and(inArray(projects.id, among), or(
+    eq(projects.clienteId, userId),
+    sql`${projects.companyId} IN (SELECT co.id FROM kbos_companies co
+      WHERE co.id IN (SELECT a.company_id FROM kbos_company_access a WHERE a.user_id = ${userId} AND a.revoked_at IS NULL AND a.role = 'titular')
+         OR co.parent_id IN (SELECT a.company_id FROM kbos_company_access a WHERE a.user_id = ${userId} AND a.revoked_at IS NULL AND a.role = 'titular'))`,
+  )));
+  return rows.map((r) => r.id);
 }
 
 /** Clientes avisados sobre o projeto (chat, etapa): titular e acesso compartilhado, do projeto e do principal dele. Cobrança segue só para o titular. */

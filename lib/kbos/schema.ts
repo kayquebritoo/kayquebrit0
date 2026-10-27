@@ -58,6 +58,8 @@ export const users = pgTable("kbos_users", {
   // Magic Link: contas antigas definem a senha via `/api/auth/password`
   // com o token do link mágico; admin usa o bypass como senha imediata.
   passwordHash: text("password_hash"),
+  /** 0031: conta desativada pelo admin. Sessões param de valer na hora e o login é recusado. */
+  disabledAt: timestamp("disabled_at", { withTimezone: true }),
   createdAt: ts("created_at"),
 }, (table) => [uniqueIndex("kbos_users_username_unique").on(sql`lower(${table.username})`)]);
 
@@ -134,6 +136,8 @@ export const projects = pgTable("kbos_projects", {
   recurring: boolean("recurring").notNull().default(false),
   /** 0028: operação de um cliente maior (ex.: Hotel → Grupo VIP). Contrato e financeiro ficam no pai. */
   parentId: uuid("parent_id"),
+  /** 0031: empresa (marca/operação) dona do projeto. Acesso à empresa vale para os projetos dela. */
+  companyId: uuid("company_id"),
   createdAt: ts("created_at"),
   updatedAt: ts("updated_at"),
 });
@@ -1049,4 +1053,41 @@ export const projectCycles = pgTable(
     createdAt: ts("created_at"),
   },
   (t) => [uniqueIndex("kbos_project_cycles_uq").on(t.projectId, t.month)],
+);
+
+/** 0031: empresa do cliente (ex.: Grupo VIP → Hotel, Lounge, Praça). Um nível de grupo. */
+export const companies = pgTable(
+  "kbos_companies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    parentId: uuid("parent_id"),
+    contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
+    /** Pasta do acervo no Lume, definida pelo admin (substitui a regra por nome em `client-hubs.ts`). */
+    lumePasta: text("lume_pasta"),
+    /** Brandbook publicado da empresa (planejamento de marca). */
+    brandPlanId: uuid("brand_plan_id").references(() => clientPlans.id, { onDelete: "set null" }),
+    createdAt: ts("created_at"),
+    updatedAt: ts("updated_at"),
+  },
+  (t) => [uniqueIndex("kbos_companies_slug_uq").on(t.slug)],
+);
+
+export const COMPANY_ROLES = ["titular", "gestao", "acompanhar"] as const;
+export type CompanyRole = (typeof COMPANY_ROLES)[number];
+
+/** 0031: quem do cliente acessa a empresa. Revogar grava `revokedAt` (fica o histórico). Acesso ao grupo vale para as empresas dele. */
+export const companyAccess = pgTable(
+  "kbos_company_access",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyId: uuid("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    role: text("role").$type<CompanyRole>().notNull().default("acompanhar"),
+    grantedBy: uuid("granted_by").references(() => users.id, { onDelete: "set null" }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: ts("created_at"),
+  },
+  (t) => [uniqueIndex("kbos_company_access_uq").on(t.companyId, t.userId)],
 );

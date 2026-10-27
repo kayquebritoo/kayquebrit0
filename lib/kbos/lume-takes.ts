@@ -5,13 +5,15 @@ import { contacts, projects } from "./schema";
 import { hubFor } from "./client-hubs";
 import { LUME_ONLINE_DEFAULT, lumeClientCookie, toTakes } from "./lume";
 import { clientProjects } from "./project-members";
+import { companyLumePasta } from "./companies";
 
 /** Pasta do Lume do projeto (pelo contato do projeto, cadastrado pelo admin). Cliente só nos projetos dele. */
 export async function projectLumePasta(projectId: string, user: { id: string; role: string }): Promise<string | null> {
   const where = user.role === "cliente" ? and(eq(projects.id, projectId), clientProjects(user.id)) : eq(projects.id, projectId);
   const [row] = await db().select({ titulo: projects.titulo, name: contacts.name, company: contacts.company }).from(projects).leftJoin(contacts, eq(contacts.id, projects.contactId)).where(where).limit(1);
   if (!row) return null;
-  return hubFor(row.name, row.company, row.titulo)?.pasta ?? null;
+  // Pasta definida pelo admin na empresa vale primeiro; a regra por nome fica só para projetos ainda sem empresa.
+  return (await companyLumePasta(projectId)) ?? hubFor(row.name, row.company, row.titulo)?.pasta ?? null;
 }
 
 const lumeBase = () => (process.env.LUME_URL || LUME_ONLINE_DEFAULT).trim().replace(/\/+$/, "");

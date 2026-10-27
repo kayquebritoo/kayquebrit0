@@ -588,3 +588,12 @@ export async function readBody<T>(req: Request, schema: z.ZodType<T>) {
 export function checkId(id: string) {
   return uuidField.safeParse(id).success ? null : invalidId();
 }
+
+/** 0031: empresa do cliente (admin). */
+export const companyBody = z.object({
+  name: z.string().trim().min(2).max(120),
+  parentId: z.string().uuid().nullable().optional(),
+  contactId: z.string().uuid().nullable().optional(),
+  lumePasta: z.string().trim().max(80).nullable().optional(),
+  brandPlanId: z.string().uuid().nullable().optional(),
+});
