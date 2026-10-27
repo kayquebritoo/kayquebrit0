@@ -52,7 +52,7 @@ export async function verifyAccessCode(id:string,code:string) {
  // Uso único e criação da sessão são atômicos.
  const session=await db().execute(sql`WITH claimed AS (
  UPDATE kbos_auth_challenges SET consumed=true WHERE id=${id}::uuid AND consumed=false AND expires_at>now() RETURNING user_id
- ) INSERT INTO kbos_sessions (user_id,expires_at) SELECT user_id,now()+interval '30 days' FROM claimed RETURNING id,user_id`);
+ ) INSERT INTO kbos_sessions (user_id,expires_at) SELECT c.user_id,now()+interval '30 days' FROM claimed c JOIN kbos_users u ON u.id=c.user_id WHERE u.disabled_at IS NULL RETURNING id,user_id`);
  if(!session.rows[0])throw new PublicError('Este código já foi usado. Solicite outro.',400);
  return {sessionId:String(session.rows[0].id),userId:String(session.rows[0].user_id)};
 }

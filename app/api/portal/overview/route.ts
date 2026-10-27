@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/kbos/db";
-import { projects, tasks, transactions } from "@/lib/kbos/schema";
+import { tasks, transactions } from "@/lib/kbos/schema";
 import { sessionUser } from "@/lib/kbos/rbac";
 import { serverError } from "@/lib/kbos/http";
 import { unreadByProject } from "@/lib/kbos/project-chat";
-import { clientProjectIds } from "@/lib/kbos/project-members";
+import { clientProjectIds, ownedProjectIds } from "@/lib/kbos/project-members";
 
 // Visão do cliente: só o que é dele (projetos onde ele é o cliente).
 // Cobranças = entradas dos projetos em que ele é o titular (acesso compartilhado não vê pagamento);
@@ -16,7 +16,7 @@ export async function GET() {
   try {
     const ids = await clientProjectIds(user.id);
     if (ids.length === 0) return NextResponse.json({ tasks: [], invoices: [], unread: {} });
-    const owned = (await db().select({ id: projects.id }).from(projects).where(and(eq(projects.clienteId, user.id), inArray(projects.id, ids)))).map((p) => p.id);
+    const owned = await ownedProjectIds(user.id, ids);
     const [taskRows, invoiceRows, unread] = await Promise.all([
       db()
         .select({ id: tasks.id, projectId: tasks.projectId, titulo: tasks.titulo, status: tasks.status, dueAt: tasks.dueAt })

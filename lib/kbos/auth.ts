@@ -145,7 +145,7 @@ export async function consumeMagicLink(token: string) {
   )[0];
   if (!row) return null;
   const user = (await d.select().from(users).where(eq(users.email, row.email)).limit(1))[0];
-  if (!user) return null;
+  if (!user || user.disabledAt) return null;
   const sess = (
     await d
       .insert(sessions)
@@ -258,5 +258,6 @@ export async function findLoginUser(raw: string) {
  const value=raw.trim().toLowerCase();
  const identifier=value === "kayque" ? ADMIN_EMAIL : value;
  const [user]=await db().select().from(users).where(sql`lower(${users.email}) = ${identifier} OR lower(${users.username}) = ${identifier}`).limit(1);
- return user;
+ // conta desativada se comporta como inexistente (senha e código)
+ return user?.disabledAt ? undefined : user;
 }

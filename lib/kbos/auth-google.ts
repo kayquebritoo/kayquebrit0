@@ -50,6 +50,7 @@ export async function finishGoogle(url:URL,raw:string,authenticatedUserId?:strin
   if(!linked)throw new PublicError('Tente entrar novamente.');
   user=linked;
  }
+ if(user.disabledAt)throw new PublicError('Este acesso foi desativado. Fale com o Kayque.');
  const [session]=await db().insert(sessions).values({userId:user.id,expiresAt:new Date(Date.now()+30*86400_000)}).returning();
  return {sessionId:session.id,dest:safeAuthNext(flow.next||'')||(user.role==='admin'?'/admin':'/portal')};
 }

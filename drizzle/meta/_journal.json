@@ -218,6 +218,13 @@
       "when": 1794300000000,
       "tag": "0030_conexoes_redes",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794400000000,
+      "tag": "0031_empresas_acesso",
+      "breakpoints": true
     }
   ]
 }

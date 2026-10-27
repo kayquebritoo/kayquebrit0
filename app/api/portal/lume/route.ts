@@ -6,6 +6,7 @@ import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { hubFor } from "@/lib/kbos/client-hubs";
 import { LUME_ONLINE_DEFAULT, lumeClientEntryUrl } from "@/lib/kbos/lume";
 import { clientProjects } from "@/lib/kbos/project-members";
+import { clientLumeHub } from "@/lib/kbos/companies";
 
 export const dynamic = "force-dynamic";
 
@@ -18,15 +19,19 @@ export async function GET(req: Request) {
   if (!user) return Response.json({ error: "Não autenticado." }, { status: 401 });
   const secret = (process.env.LUME_API_TOKEN || "").trim();
   const check = new URL(req.url).searchParams.get("check") === "1";
-  let hub = null;
+  let hub: { label: string; pasta: string } | null = null;
   try {
-    const rows = await db()
-      .select({ name: contacts.name, company: contacts.company })
-      .from(projects)
-      .innerJoin(contacts, eq(projects.contactId, contacts.id))
-      .where(clientProjects(user.id))
-      .limit(50);
-    for (const r of rows) { hub = hubFor(r.name, r.company); if (hub) break; }
+    // Pasta definida pelo admin na empresa (0031) vale primeiro; a regra por nome fica para quem ainda não tem empresa.
+    hub = await clientLumeHub(user.id);
+    if (!hub) {
+      const rows = await db()
+        .select({ name: contacts.name, company: contacts.company })
+        .from(projects)
+        .innerJoin(contacts, eq(projects.contactId, contacts.id))
+        .where(clientProjects(user.id))
+        .limit(50);
+      for (const r of rows) { hub = hubFor(r.name, r.company); if (hub) break; }
+    }
   } catch { /* sem banco: sem acesso */ }
   if (!hub || !secret) {
     return check ? NextResponse.json({ available: false }) : NextResponse.json({ error: "O acervo de arquivos ainda não foi liberado para você." }, { status: 404 });
