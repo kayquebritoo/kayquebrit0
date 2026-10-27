@@ -74,6 +74,8 @@ services:
       PORT: "3000"
       GIT_SHA: ${GIT_SHA:-local}
       DATABASE_URL: ${DATABASE_URL:-postgres://postgres:kbos@db:5432/kbos}
+      # "pg" = PostgreSQL convencional (kbos-pg18 na VPS); vazio = Neon HTTP.
+      DATABASE_DRIVER: ${DATABASE_DRIVER:-}
       REDIS_URL: redis://redis:6379
       APP_URL: ${APP_URL:-http://localhost:3000}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
@@ -159,6 +161,8 @@ services:
     command: ["npx", "tsx", "worker/index.ts"]
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgres://postgres:kbos@db:5432/kbos}
+      # "pg" = PostgreSQL convencional (kbos-pg18 na VPS); vazio = Neon HTTP.
+      DATABASE_DRIVER: ${DATABASE_DRIVER:-}
       REDIS_URL: redis://redis:6379
       # Mesmos defaults do `web` (ver comentário lá): zero-config no compose.
       EVOLUTION_API_URL: ${EVOLUTION_API_URL:-http://evolution:8080}
