@@ -10,7 +10,7 @@ import { contentBrand, summarizeContent } from "@/lib/kbos/content-summary";
 import { effectivePostLimit } from "@/lib/kbos/plan-limit";
 
 type Post = {
-  id: string; projectId: string | null; brand: string | null; title: string; format: string; scheduledAt: string | null;
+  id: string; projectId: string | null; brand: string | null; collabBrands?: string[]; title: string; format: string; scheduledAt: string | null;
   status: string; script: string | null; caption: string | null; mediaUrl: string | null; clientNote: string | null; copies: number; postedUrl: string | null;
   networks?: string[]; scriptBy: string | null; captureBy: string | null; editor: string | null; errorMessage: string | null;
   takes?: { id: number; nome: string; t: number | null; by: string | null }[];
@@ -50,6 +50,10 @@ const BRAND_LOGOS: Record<string, string> = {
   Lounge: "/brands/atalaia/lounge.png",
   Praça: "/brands/atalaia/praca.png",
 };
+
+/** "Hotel + Lounge" quando o post é colab entre empresas. */
+const brandsOf = (p: { brand: string | null; collabBrands?: string[] }) => (p.brand ? [p.brand, ...(p.collabBrands ?? [])] : []);
+const brandLabel = (p: { brand: string | null; collabBrands?: string[] }) => brandsOf(p).join(" + ") || null;
 
 function BrandLogo({ brand, size = 20 }: { brand: string | null; size?: number }) {
   const src = brand ? BRAND_LOGOS[brand] : undefined;
@@ -149,7 +153,7 @@ export default function ContentBoard() {
   const summary = useMemo(() => summarizeContent(items ?? [], BRAND_LIST), [items]);
   const selectedProject = projects.find(project => project.id === projectId);
   const planLimit = selectedProject ? effectivePostLimit(selectedProject.categoria ?? "", selectedProject.postLimit) : null;
-  const brandItems = useMemo(() => (items ?? []).filter(p => brandFilter === null || contentBrand(p.brand) === brandFilter), [items, brandFilter]);
+  const brandItems = useMemo(() => (items ?? []).filter(p => brandFilter === null || contentBrand(p.brand) === brandFilter || (!!brandFilter && (p.collabBrands ?? []).includes(brandFilter))), [items, brandFilter]);
   const shown = useMemo(() => brandItems.filter((p) => filter === "all" || p.status === filter), [brandItems, filter]);
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: brandItems.length };
@@ -200,7 +204,7 @@ export default function ContentBoard() {
     <div key={p.id} role="button" tabIndex={0} className="kb-row w-full cursor-pointer text-left" onClick={() => setOpen(p)} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); setOpen(p); } }}>
       <span className="min-w-0">
         <span className="kb-ink block truncate text-[14px]">{p.title}</span>
-        <span className="kb-faint flex items-center gap-1.5 truncate text-[12px]"><BrandLogo brand={p.brand} />{[p.scheduledAt && hhmm(p.scheduledAt) !== "00:00" ? hhmm(p.scheduledAt) : null, p.brand, FORMAT[p.format] ?? "Post", p.networks?.length ? `${p.networks.length} ${p.networks.length === 1 ? "rede" : "redes"}` : p.copies > 1 ? `${p.copies} cópias na origem` : null].filter(Boolean).join(" · ")}</span>
+        <span className="kb-faint flex items-center gap-1.5 truncate text-[12px]">{brandsOf(p).map(b => <BrandLogo key={b} brand={b} />)}{[p.scheduledAt && hhmm(p.scheduledAt) !== "00:00" ? hhmm(p.scheduledAt) : null, brandLabel(p), FORMAT[p.format] ?? "Post", p.networks?.length ? `${p.networks.length} ${p.networks.length === 1 ? "rede" : "redes"}` : p.copies > 1 ? `${p.copies} cópias na origem` : null].filter(Boolean).join(" · ")}</span>
         {people(p) && <span className="kb-muted block truncate text-[12px]">{people(p)}</span>}
         {p.status === "erro" && p.errorMessage && <span className="block truncate text-[12px] text-[var(--kb-late)]">{p.errorMessage}</span>}
       </span>
@@ -302,7 +306,7 @@ export default function ContentBoard() {
                       {list.slice(0, 3).map((p) => (
                         <div key={p.id} className="flex min-w-0 items-center rounded-md hover:bg-white/10" style={{ borderLeft: `3px solid ${brandColor(p.brand) ?? meta(p.status).color}`, background: brandColor(p.brand) ? `${brandColor(p.brand)}14` : undefined }}>
                           <button type="button" onClick={(e) => { e.stopPropagation(); setOpen(p); }} title={`${p.title} — ${meta(p.status).label}`} className="flex min-w-0 flex-1 items-center gap-1 px-1 py-0.5 text-left text-[11px]">
-                            <BrandLogo brand={p.brand} size={18} />
+                            {brandsOf(p).map(b => <BrandLogo key={b} brand={b} size={18} />)}
                             <StateIcon status={p.status} size={13} />
                             <b className="kb-faint shrink-0">{FORMAT_SHORT[p.format] ?? "P"}</b>
                             <span className="kb-ink truncate">{p.title}</span>
@@ -362,7 +366,7 @@ function NextToEdit({ next, today, onOpen }: { next: { post: Post | null; fila: 
         <span className="kb-faint text-[11px] uppercase tracking-[0.08em]">Próximo para editar</span>
         <span className="kb-ink flex min-w-0 items-center gap-2 text-[15px]"><BrandLogo brand={p.brand} size={22} /><span className="truncate">{p.title}</span></span>
         <span className="kb-muted flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px]">
-          <span>{FORMAT[p.format] ?? "Post"} · {p.brand ?? "Sem casa"} · {new Date(p.scheduledAt!).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: BELEM })}</span>
+          <span>{FORMAT[p.format] ?? "Post"} · {brandLabel(p) ?? "Sem casa"} · {new Date(p.scheduledAt!).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: BELEM })}</span>
           <span className={diff < 0 ? "text-[var(--kb-late)]" : "kb-ink"}>{quando}</span>
           <span className="inline-flex items-center gap-1"><StateIcon status={p.status} size={12} />{st.label}</span>
         </span>
@@ -394,7 +398,7 @@ function Stepper({ status }: { status: string }) {
 
 function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: string[]; onClose: () => void; onSaved: (p: Post) => void }) {
   const [f, setF] = useState({
-    brand: post.brand ?? "", title: post.title, status: post.status, caption: post.caption ?? "", mediaUrl: post.mediaUrl ?? "", script: post.script ?? "",
+    brand: post.brand ?? "", collab: post.collabBrands ?? [], title: post.title, status: post.status, caption: post.caption ?? "", mediaUrl: post.mediaUrl ?? "", script: post.script ?? "",
     scriptBy: post.scriptBy ?? "", captureBy: post.captureBy ?? "", editor: post.editor ?? "", when: toLocalInput(post.scheduledAt),
     postedUrl: post.postedUrl ?? "", errorMessage: post.errorMessage ?? "",
   });
@@ -432,6 +436,7 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
     } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setBusy(false); }
   }
 
+  const collab = f.brand ? f.collab.filter((b) => b !== f.brand) : [];
   async function save() {
     setBusy(true); setError("");
     try {
@@ -439,6 +444,7 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
         method: "PATCH", headers: { "content-type": "application/json" },
         body: JSON.stringify({
           ...(f.brand !== (post.brand ?? "") ? { brand: f.brand || null } : {}),
+          ...(collab.join("|") !== (post.collabBrands ?? []).join("|") ? { collabBrands: collab } : {}),
           title: f.title.trim() || post.title, status: f.status, caption: text(f.caption), mediaUrl: text(f.mediaUrl), script: text(f.script),
           scriptBy: text(f.scriptBy), captureBy: text(f.captureBy), editor: text(f.editor), postedUrl: text(f.postedUrl), errorMessage: f.status === "erro" ? text(f.errorMessage) : null,
           ...(f.when ? { scheduledAt: `${f.when}:00-03:00` } : {}),
@@ -456,12 +462,28 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
       <div onClick={(e) => e.stopPropagation()} className="kb-modal space-y-4" role="dialog" aria-label="Editar post">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">{[post.brand, FORMAT[post.format] ?? "Post", post.scheduledAt ? dayLabel(post.scheduledAt) : null].filter(Boolean).join(" · ")}</p>
+            <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">{[brandLabel(post), FORMAT[post.format] ?? "Post", post.scheduledAt ? dayLabel(post.scheduledAt) : null].filter(Boolean).join(" · ")}</p>
             <h2 className="font-display kb-ink break-words text-lg">{post.title}</h2>
           </div>
           <button type="button" onClick={onClose} aria-label="Fechar" className="h-11 w-11 shrink-0 rounded-full text-2xl">×</button>
         </div>
         <label className="kb-field"><span>Empresa</span><select className="kb-control" value={f.brand} onChange={e => setF({ ...f, brand: e.target.value })}><option value="">Sem empresa identificada</option>{BRAND_LIST.map(brand => <option key={brand} value={brand}>{brand}</option>)}{f.brand && !BRAND_LIST.includes(f.brand) && <option value={f.brand}>{f.brand}</option>}</select></label>
+        {f.brand && (
+          <div className="space-y-1.5" role="group" aria-label="Colab com outras empresas">
+            <p className="kb-faint text-[12px]">Colab com <span className="opacity-70">(até 2 empresas a mais)</span></p>
+            <div className="flex flex-wrap gap-1.5">
+              {BRAND_LIST.filter((b) => b !== f.brand).map((b) => {
+                const on = collab.includes(b);
+                return (
+                  <button key={b} type="button" className="kb-chip min-h-11" aria-pressed={on} disabled={!on && collab.length >= 2}
+                    onClick={() => setF({ ...f, collab: on ? collab.filter((x) => x !== b) : [...collab, b] })}>
+                    <BrandLogo brand={b} size={20} />{b}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <Stepper status={f.status} />
         {post.clientNote && <p className="kb-tag late w-full justify-start rounded-xl! px-3! py-2! text-sm">Pedido do cliente: {post.clientNote}</p>}
 

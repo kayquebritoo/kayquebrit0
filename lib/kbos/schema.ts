@@ -875,6 +875,8 @@ export const socialPosts = pgTable("kbos_social_posts", {
   projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
   contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
   brand: text("brand"),
+  /** 0032: outras empresas do mesmo post em colab (a principal continua em `brand`). */
+  collabBrands: jsonb("collab_brands").$type<string[]>().notNull().default([]),
   title: text("title").notNull(),
   format: text("format").notNull().default("outro"),
   networks: jsonb("networks").$type<string[]>().notNull().default([]),
