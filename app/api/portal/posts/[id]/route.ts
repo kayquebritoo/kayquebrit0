@@ -32,6 +32,7 @@ export async function POST(req: Request, ctx: Ctx) {
 const edit = z.object({
   title: z.string().min(2).max(200).optional(),
   brand: z.string().max(60).nullable().optional(),
+  collabBrands: z.array(z.string().min(1).max(60)).max(2).optional(),
   format: z.enum(POST_FORMATS).optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   networks: z.array(z.string().max(30)).max(10).optional(),

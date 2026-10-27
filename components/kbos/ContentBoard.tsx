@@ -3,9 +3,10 @@ import Image from "next/image";
 import CalendarExport from "./CalendarExport";
 import PostPublications from "./PostPublications";
 import PostPublishing from "./PostPublishing";
+import BrandPicker from "./BrandPicker";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CLIENT_HUBS, lumeHref } from "@/lib/kbos/client-hubs";
-import { BRAND_LIST, brandColor } from "@/lib/kbos/brand-colors";
+import { BRAND_LIST, BRAND_LOGOS, brandColor, brandLabel, brandsOf } from "@/lib/kbos/brand-colors";
 import { contentBrand, summarizeContent } from "@/lib/kbos/content-summary";
 import { effectivePostLimit } from "@/lib/kbos/plan-limit";
 
@@ -44,16 +45,6 @@ const dayLabel = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { we
 const hhmm = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: BELEM });
 const toLocalInput = (iso: string | null) => (iso ? new Date(iso).toLocaleString("sv-SE", { timeZone: BELEM }).replace(" ", "T").slice(0, 16) : "");
 const WEEK = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-
-const BRAND_LOGOS: Record<string, string> = {
-  Hotel: "/brands/atalaia/hotel.png",
-  Lounge: "/brands/atalaia/lounge.png",
-  Praça: "/brands/atalaia/praca.png",
-};
-
-/** "Hotel + Lounge" quando o post é colab entre empresas. */
-const brandsOf = (p: { brand: string | null; collabBrands?: string[] }) => (p.brand ? [p.brand, ...(p.collabBrands ?? [])] : []);
-const brandLabel = (p: { brand: string | null; collabBrands?: string[] }) => brandsOf(p).join(" + ") || null;
 
 function BrandLogo({ brand, size = 20 }: { brand: string | null; size?: number }) {
   const src = brand ? BRAND_LOGOS[brand] : undefined;
@@ -398,7 +389,7 @@ function Stepper({ status }: { status: string }) {
 
 function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: string[]; onClose: () => void; onSaved: (p: Post) => void }) {
   const [f, setF] = useState({
-    brand: post.brand ?? "", collab: post.collabBrands ?? [], title: post.title, status: post.status, caption: post.caption ?? "", mediaUrl: post.mediaUrl ?? "", script: post.script ?? "",
+    brands: brandsOf(post), title: post.title, status: post.status, caption: post.caption ?? "", mediaUrl: post.mediaUrl ?? "", script: post.script ?? "",
     scriptBy: post.scriptBy ?? "", captureBy: post.captureBy ?? "", editor: post.editor ?? "", when: toLocalInput(post.scheduledAt),
     postedUrl: post.postedUrl ?? "", errorMessage: post.errorMessage ?? "",
   });
@@ -436,14 +427,15 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
     } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setBusy(false); }
   }
 
-  const collab = f.brand ? f.collab.filter((b) => b !== f.brand) : [];
+  const brand = f.brands[0] ?? "";
+  const collab = f.brands.slice(1);
   async function save() {
     setBusy(true); setError("");
     try {
       const r = await fetch(`/api/admin/social/${post.id}`, {
         method: "PATCH", headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          ...(f.brand !== (post.brand ?? "") ? { brand: f.brand || null } : {}),
+          ...(brand !== (post.brand ?? "") ? { brand: brand || null } : {}),
           ...(collab.join("|") !== (post.collabBrands ?? []).join("|") ? { collabBrands: collab } : {}),
           title: f.title.trim() || post.title, status: f.status, caption: text(f.caption), mediaUrl: text(f.mediaUrl), script: text(f.script),
           scriptBy: text(f.scriptBy), captureBy: text(f.captureBy), editor: text(f.editor), postedUrl: text(f.postedUrl), errorMessage: f.status === "erro" ? text(f.errorMessage) : null,
@@ -467,23 +459,7 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
           </div>
           <button type="button" onClick={onClose} aria-label="Fechar" className="h-11 w-11 shrink-0 rounded-full text-2xl">×</button>
         </div>
-        <label className="kb-field"><span>Empresa</span><select className="kb-control" value={f.brand} onChange={e => setF({ ...f, brand: e.target.value })}><option value="">Sem empresa identificada</option>{BRAND_LIST.map(brand => <option key={brand} value={brand}>{brand}</option>)}{f.brand && !BRAND_LIST.includes(f.brand) && <option value={f.brand}>{f.brand}</option>}</select></label>
-        {f.brand && (
-          <div className="space-y-1.5" role="group" aria-label="Colab com outras empresas">
-            <p className="kb-faint text-[12px]">Colab com <span className="opacity-70">(até 2 empresas a mais)</span></p>
-            <div className="flex flex-wrap gap-1.5">
-              {BRAND_LIST.filter((b) => b !== f.brand).map((b) => {
-                const on = collab.includes(b);
-                return (
-                  <button key={b} type="button" className="kb-chip min-h-11" aria-pressed={on} disabled={!on && collab.length >= 2}
-                    onClick={() => setF({ ...f, collab: on ? collab.filter((x) => x !== b) : [...collab, b] })}>
-                    <BrandLogo brand={b} size={20} />{b}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        <BrandPicker brands={BRAND_LIST} value={f.brands} onChange={(brands) => setF({ ...f, brands })} />
         <Stepper status={f.status} />
         {post.clientNote && <p className="kb-tag late w-full justify-start rounded-xl! px-3! py-2! text-sm">Pedido do cliente: {post.clientNote}</p>}
 

@@ -1,11 +1,12 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BRAND_LIST, brandColor } from "@/lib/kbos/brand-colors";
+import { BRAND_LIST, brandColor, brandLabel, brandsOf } from "@/lib/kbos/brand-colors";
+import BrandPicker from "./BrandPicker";
 import { NETWORKS, NETWORK_LABEL } from "@/lib/kbos/content-model";
 
 type Take = { id: number; nome: string; t: number | null; by: string | null; at: string };
 type Post = {
-  id: string; projectId: string | null; title: string; brand: string | null; format: string; networks: string[]; scheduledAt: string | null; status: string;
+  id: string; projectId: string | null; title: string; brand: string | null; collabBrands?: string[]; format: string; networks: string[]; scheduledAt: string | null; status: string;
   caption: string | null; mediaUrl: string | null; clientNote: string | null; script: string | null; mine: boolean; manage: boolean; takes: Take[];
   people: { scriptBy: string | null; captureBy: string | null; editor: string | null } | null; postedUrl: string | null;
 };
@@ -23,8 +24,8 @@ const dayLong = (key: string) => new Date(`${key}T12:00:00-03:00`).toLocaleDateS
 const WEEK = ["D", "S", "T", "Q", "Q", "S", "S"];
 const BRANDS = BRAND_LIST;
 /** Empresas que existem para ESTE cliente (pelas operações dele e pelos posts): quem não é do grupo não vê Hotel/Lounge/Praça. */
-const brandsFor = (projects: Proj[], posts: { brand: string | null }[] = []) =>
-  BRANDS.filter((b) => projects.some((p) => brandOf(p.titulo) === b) || posts.some((p) => p.brand === b));
+const brandsFor = (projects: Proj[], posts: { brand: string | null; collabBrands?: string[] }[] = []) =>
+  BRANDS.filter((b) => projects.some((p) => brandOf(p.titulo) === b) || posts.some((p) => brandsOf(p).includes(b)));
 const mmss = (t: number | null) => (t === null ? "" : `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`);
 type Quota = { limit: number | null; used: number; byFormat: Record<string, number> };
 
@@ -76,7 +77,7 @@ export default function PortalPosts() {
     } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setBusy(null); }
   }
 
-  const shown = useMemo(() => (items ?? []).filter((p) => !brand || p.brand === brand), [items, brand]);
+  const shown = useMemo(() => (items ?? []).filter((p) => !brand || brandsOf(p).includes(brand)), [items, brand]);
   const brands = useMemo(() => brandsFor(projects, items ?? []), [projects, items]);
   const byDay = useMemo(() => {
     const m = new Map<string, Post[]>();
@@ -119,7 +120,7 @@ export default function PortalPosts() {
       {waiting.map((p) => (
         <article key={p.id} className="kb-card gap-3">
           <div className="min-w-0">
-            <p className="kb-faint text-xs">{[p.brand, FORMAT[p.format] ?? "Post", p.scheduledAt ? dayLong(dayKey(p.scheduledAt)) : null].filter(Boolean).join(" · ")}</p>
+            <p className="kb-faint text-xs">{[brandLabel(p), FORMAT[p.format] ?? "Post", p.scheduledAt ? dayLong(dayKey(p.scheduledAt)) : null].filter(Boolean).join(" · ")}</p>
             <h3 className="break-words text-base font-medium">{p.title}</h3>
             {p.caption && <p className="kb-muted mt-2 whitespace-pre-wrap break-words text-sm">{p.caption}</p>}
           </div>
@@ -189,7 +190,7 @@ export default function PortalPosts() {
             <>
               <span className="min-w-0">
                 <span className={`block truncate text-sm ${p.status === "cancelado" ? "line-through" : ""}`}>{p.title}</span>
-                <span className="kb-faint flex items-center gap-1.5 truncate text-xs">{brandColor(p.brand) && <i aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: brandColor(p.brand) ?? undefined }} />}{[p.brand, FORMAT[p.format] ?? "Post", p.networks?.length ? p.networks.map((n) => NETWORK_LABEL[n] ?? n).join(", ") : null, p.takes?.length ? `${p.takes.length} take${p.takes.length > 1 ? "s" : ""}` : null].filter(Boolean).join(" · ")}</span>
+                <span className="kb-faint flex items-center gap-1.5 truncate text-xs">{brandsOf(p).filter((b) => brandColor(b)).map((b) => <i key={b} aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: brandColor(b) ?? undefined }} />)}{[brandLabel(p), FORMAT[p.format] ?? "Post", p.networks?.length ? p.networks.map((n) => NETWORK_LABEL[n] ?? n).join(", ") : null, p.takes?.length ? `${p.takes.length} take${p.takes.length > 1 ? "s" : ""}` : null].filter(Boolean).join(" · ")}</span>
                 {p.manage && p.people && <span className="kb-faint block truncate text-[11px]">{[p.people.scriptBy && `Roteiro: ${p.people.scriptBy}`, p.people.captureBy && `Capta: ${p.people.captureBy}`, p.people.editor && `Edita: ${p.people.editor}`].filter(Boolean).join(" · ")}</span>}
               </span>
               <span className={`kb-tag shrink-0 gap-1.5 ${p.status === "ajustes" ? "late" : ""}`}><i aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: COLOR[p.status] ?? "#9a93a8" }} />{LABEL[p.status] ?? p.status}</span>
@@ -221,7 +222,7 @@ function ContentEditor({ post, projects, date, onClose, onDone, onPickTakes }: {
   const ops = projects.filter((p) => p.parentId);
   const firstManaged = ops.find((p) => p.manage) ?? projects.find((p) => p.manage) ?? projects[0];
   const [f, setF] = useState(() => ({
-    projectId: post?.projectId ?? firstManaged?.id ?? "", date: post?.scheduledAt ? dayKey(post.scheduledAt) : date, brand: post?.brand ?? (firstManaged ? brandOf(firstManaged.titulo) ?? "" : ""), format: post?.format ?? "reels",
+    projectId: post?.projectId ?? firstManaged?.id ?? "", date: post?.scheduledAt ? dayKey(post.scheduledAt) : date, brands: post ? brandsOf(post) : (firstManaged && brandOf(firstManaged.titulo) ? [brandOf(firstManaged.titulo)!] : []), format: post?.format ?? "reels",
     title: post?.title ?? "", script: post?.script ?? "", caption: post?.caption ?? "", networks: post?.networks?.length ? post.networks : ["instagram"],
   }));
   const [busy, setBusy] = useState(false);
@@ -232,11 +233,11 @@ function ContentEditor({ post, projects, date, onClose, onDone, onPickTakes }: {
   async function save(then?: (p: Post) => void) {
     setBusy(true); setError("");
     try {
-      const common = { title: f.title, brand: f.brand || null, format: f.format, script: f.script || null, ...(manage ? { caption: f.caption || null, networks: f.networks } : {}) };
+      const common = { title: f.title, brand: f.brands[0] ?? null, collabBrands: f.brands.slice(1), format: f.format, script: f.script || null, ...(manage ? { caption: f.caption || null, networks: f.networks } : {}) };
       let id = post?.id ?? "";
       if (post) await send(`/api/portal/posts/${post.id}`, "PATCH", { ...common, date: f.date });
       else id = (await send("/api/portal/posts", "POST", { ...common, projectId: f.projectId, date: f.date })).id;
-      if (then) then({ ...(post ?? { status: "roteiro", mine: true, manage, takes: [], networks: f.networks }), id, projectId: f.projectId, title: f.title, brand: f.brand || null, format: f.format } as Post);
+      if (then) then({ ...(post ?? { status: "roteiro", mine: true, manage, takes: [], networks: f.networks }), id, projectId: f.projectId, title: f.title, brand: f.brands[0] ?? null, collabBrands: f.brands.slice(1), format: f.format } as Post);
       else onDone();
     } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setBusy(false); }
   }
@@ -259,12 +260,12 @@ function ContentEditor({ post, projects, date, onClose, onDone, onPickTakes }: {
           </div>
           <button type="button" onClick={onClose} aria-label="Fechar" className="h-11 w-11 shrink-0 rounded-full text-2xl">×</button>
         </div>
-        {!post && projects.length > 1 && <label className="kb-field"><span>{ops.length ? "Empresa / operação" : "Projeto"}</span><select className="kb-control min-h-12" value={f.projectId} onChange={(e) => { const pr = projects.find((p) => p.id === e.target.value); setF({ ...f, projectId: e.target.value, brand: (pr && brandOf(pr.titulo)) || f.brand }); }}>{projects.map((p) => <option key={p.id} value={p.id}>{p.parentId ? p.titulo : ops.length ? `${p.titulo} (todas)` : p.titulo}</option>)}</select></label>}
+        {!post && projects.length > 1 && <label className="kb-field"><span>{ops.length ? "Empresa / operação" : "Projeto"}</span><select className="kb-control min-h-12" value={f.projectId} onChange={(e) => { const pr = projects.find((p) => p.id === e.target.value); setF({ ...f, projectId: e.target.value, brands: pr && brandOf(pr.titulo) ? [brandOf(pr.titulo)!, ...f.brands.filter((b) => b !== brandOf(pr.titulo))].slice(0, 3) : f.brands }); }}>{projects.map((p) => <option key={p.id} value={p.id}>{p.parentId ? p.titulo : ops.length ? `${p.titulo} (todas)` : p.titulo}</option>)}</select></label>}
         <div className="grid grid-cols-2 gap-2">
           <label className="kb-field"><span>Dia</span><input className="kb-control min-h-12 text-base" type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></label>
           <label className="kb-field"><span>Formato</span><select className="kb-control min-h-12" value={f.format} onChange={(e) => setF({ ...f, format: e.target.value })}>{Object.entries(FORMAT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
         </div>
-        {brandsFor(projects, post ? [post] : []).length > 0 && <label className="kb-field"><span>Empresa</span><select className="kb-control min-h-12" value={f.brand} onChange={(e) => setF({ ...f, brand: e.target.value })}><option value="">—</option>{brandsFor(projects, post ? [post] : []).map((b) => <option key={b} value={b}>{b}</option>)}</select></label>}
+        {brandsFor(projects, post ? [post] : []).length > 0 && <BrandPicker brands={brandsFor(projects, post ? [post] : [])} value={f.brands} onChange={(brands) => setF({ ...f, brands })} />}
         <label className="kb-field"><span>Título</span><input className="kb-control min-h-12 text-base" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="Ex.: Camarão na chapa" /></label>
         {manage && (
           <div className="kb-field"><span>Redes</span>
