@@ -65,6 +65,11 @@ export type PostPatch = Partial<{ title: string; brand: string | null; collabBra
 
 export class PostError extends Error {}
 
+/** Colab: até 2 empresas além da principal, sem repetir; sem principal não há colab. */
+export function cleanCollab(main: string | null | undefined, wanted: string[] | null | undefined) {
+  return main ? [...new Set((wanted ?? []).map((b) => b.trim().slice(0, 60)).filter((b) => b && b !== main))].slice(0, 2) : [];
+}
+
 /** Edição da equipe. Mandar para aprovação exige o arquivo (link) para o cliente conseguir ver. */
 export async function updatePost(id: string, patch: PostPatch) {
   const [cur] = await db().select().from(socialPosts).where(eq(socialPosts.id, id)).limit(1);
@@ -80,8 +85,7 @@ export async function updatePost(id: string, patch: PostPatch) {
   // Colab: até 2 empresas além da principal, sem repetir a principal; sem principal não há colab.
   const mainBrand = patch.brand !== undefined ? patch.brand : cur.brand;
   if (patch.collabBrands !== undefined || patch.brand !== undefined) {
-    const wanted = patch.collabBrands ?? cur.collabBrands ?? [];
-    set.collabBrands = mainBrand ? [...new Set(wanted.map((b) => b.trim().slice(0, 60)).filter((b) => b && b !== mainBrand))].slice(0, 2) : [];
+    set.collabBrands = cleanCollab(mainBrand, patch.collabBrands ?? cur.collabBrands);
   }
   if (dismissed !== undefined) set.dismissedAt = dismissed ? new Date() : null;
   if (patch.status === "aprovacao") { set.decidedAt = null; set.decidedBy = null; set.clientNote = null; }
@@ -109,7 +113,7 @@ export async function portalPosts(userId: string) {
   const visible = [inArray(socialPosts.status, PORTAL_STATUS), eq(socialPosts.createdBy, userId)];
   if (managed.size) visible.push(inArray(socialPosts.projectId, [...managed]));
   const rows = await db()
-    .select({ id: socialPosts.id, projectId: socialPosts.projectId, title: socialPosts.title, brand: socialPosts.brand, format: socialPosts.format, networks: socialPosts.networks, scheduledAt: socialPosts.scheduledAt, status: socialPosts.status, caption: socialPosts.caption, mediaUrl: socialPosts.mediaUrl, clientNote: socialPosts.clientNote, script: socialPosts.script, createdBy: socialPosts.createdBy, scriptBy: socialPosts.scriptBy, captureBy: socialPosts.captureBy, editor: socialPosts.editor, takes: socialPosts.takes, postedUrl: socialPosts.postedUrl })
+    .select({ id: socialPosts.id, projectId: socialPosts.projectId, title: socialPosts.title, brand: socialPosts.brand, collabBrands: socialPosts.collabBrands, format: socialPosts.format, networks: socialPosts.networks, scheduledAt: socialPosts.scheduledAt, status: socialPosts.status, caption: socialPosts.caption, mediaUrl: socialPosts.mediaUrl, clientNote: socialPosts.clientNote, script: socialPosts.script, createdBy: socialPosts.createdBy, scriptBy: socialPosts.scriptBy, captureBy: socialPosts.captureBy, editor: socialPosts.editor, takes: socialPosts.takes, postedUrl: socialPosts.postedUrl })
     .from(socialPosts)
     .where(and(inArray(socialPosts.projectId, ids), isNull(socialPosts.linkedTo), isNull(socialPosts.dismissedAt), or(...visible)))
     .orderBy(asc(socialPosts.scheduledAt))
@@ -122,7 +126,7 @@ export async function portalPosts(userId: string) {
 }
 
 /** Campos que o cliente pode mexer. Status: só planejar (roteiro) ou cancelar; produção e publicação são da equipe. */
-export type ClientPostPatch = Partial<{ title: string; brand: string | null; format: PostFormat; date: string; networks: string[]; script: string | null; caption: string | null; status: "roteiro" | "cancelado" }>;
+export type ClientPostPatch = Partial<{ title: string; brand: string | null; collabBrands: string[]; format: PostFormat; date: string; networks: string[]; script: string | null; caption: string | null; status: "roteiro" | "cancelado" }>;
 
 async function clientEditable(userId: string, id: string) {
   const [row] = await db().select({ post: socialPosts }).from(socialPosts).innerJoin(projects, eq(projects.id, socialPosts.projectId)).where(and(eq(socialPosts.id, id), clientProjects(userId))).limit(1);
@@ -140,6 +144,7 @@ export async function updateClientPost(userId: string, id: string, patch: Client
   const set: Partial<typeof socialPosts.$inferInsert> = { updatedAt: new Date() };
   if (patch.title !== undefined) { const t = patch.title.trim().slice(0, 200); if (t.length < 2) throw new PostError("Dê um título ao conteúdo."); set.title = t; }
   if (patch.brand !== undefined) set.brand = patch.brand?.trim().slice(0, 60) || null;
+  if (patch.brand !== undefined || patch.collabBrands !== undefined) set.collabBrands = cleanCollab(set.brand !== undefined ? set.brand : post.brand, patch.collabBrands ?? post.collabBrands);
   if (patch.format !== undefined) { if (!(POST_FORMATS as readonly string[]).includes(patch.format)) throw new PostError("Formato inválido."); set.format = patch.format; }
   if (patch.date !== undefined) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(patch.date)) throw new PostError("Escolha o dia do post.");
@@ -187,7 +192,7 @@ export async function monthUsage(projectId: string, month: string) {
 }
 
 /** O cliente cadastra o roteiro dele pelo portal (data + formato + ideia). Vira "roteiro" no calendário da equipe. */
-export async function createClientRoteiro(userId: string, input: { projectId: string; date: string; title: string; format: PostFormat; brand?: string | null; script?: string | null; caption?: string | null; networks?: string[] }) {
+export async function createClientRoteiro(userId: string, input: { projectId: string; date: string; title: string; format: PostFormat; brand?: string | null; collabBrands?: string[]; script?: string | null; caption?: string | null; networks?: string[] }) {
   const [proj] = await db().select({ id: projects.id }).from(projects).where(and(eq(projects.id, input.projectId), clientProjects(userId))).limit(1);
   if (!proj) throw new PostError("Projeto não encontrado.");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) throw new PostError("Escolha o dia do post.");
@@ -196,7 +201,7 @@ export async function createClientRoteiro(userId: string, input: { projectId: st
   if (title.length < 2) throw new PostError("Dê um título ao roteiro.");
   try { await assertRoom(proj.id, input.date.slice(0, 7)); } catch (e) { if (e instanceof PoolError) throw new PostError(e.message); throw e; }
   const [row] = await db().insert(socialPosts).values({
-    projectId: proj.id, brand: input.brand?.trim().slice(0, 60) || null, title, format: input.format, scheduledAt: new Date(`${input.date}T00:00:00-03:00`),
+    projectId: proj.id, brand: input.brand?.trim().slice(0, 60) || null, collabBrands: cleanCollab(input.brand?.trim().slice(0, 60), input.collabBrands), title, format: input.format, scheduledAt: new Date(`${input.date}T00:00:00-03:00`),
     status: "roteiro", script: input.script?.trim().slice(0, 30000) || null, createdBy: userId,
     caption: input.caption?.trim().slice(0, 5000) || null,
   }).returning();

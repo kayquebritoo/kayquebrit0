@@ -32,7 +32,7 @@ export async function GET(req: Request) {
   }
 }
 
-const create = z.object({ projectId: z.string().uuid(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), title: z.string().min(2).max(200), format: z.enum(POST_FORMATS), brand: z.string().max(60).nullable().optional(), script: z.string().max(30000).nullable().optional(), caption: z.string().max(5000).nullable().optional(), networks: z.array(z.string().max(30)).max(10).optional() });
+const create = z.object({ projectId: z.string().uuid(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), title: z.string().min(2).max(200), format: z.enum(POST_FORMATS), brand: z.string().max(60).nullable().optional(), collabBrands: z.array(z.string().min(1).max(60)).max(2).optional(), script: z.string().max(30000).nullable().optional(), caption: z.string().max(5000).nullable().optional(), networks: z.array(z.string().max(30)).max(10).optional() });
 
 // POST /api/portal/posts — o cliente cadastra um roteiro no calendário (só nos projetos dele).
 export async function POST(req: Request) {
