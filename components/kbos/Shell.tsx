@@ -259,7 +259,7 @@ export function KbosShell({
           </div>
         </header>
         <main className="kb-page mx-auto max-w-6xl px-4 pb-[calc(96px+env(safe-area-inset-bottom))] pt-2 md:px-8 lg:pb-16">
-          <WaHealthBanner />
+          {isAdmin && <WaHealthBanner />}
           {children}
         </main>
       </div>

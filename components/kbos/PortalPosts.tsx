@@ -22,6 +22,9 @@ const dayKey = (iso: string) => new Date(iso).toLocaleDateString("sv-SE", { time
 const dayLong = (key: string) => new Date(`${key}T12:00:00-03:00`).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", timeZone: BELEM });
 const WEEK = ["D", "S", "T", "Q", "Q", "S", "S"];
 const BRANDS = BRAND_LIST;
+/** Empresas que existem para ESTE cliente (pelas operações dele e pelos posts): quem não é do grupo não vê Hotel/Lounge/Praça. */
+const brandsFor = (projects: Proj[], posts: { brand: string | null }[] = []) =>
+  BRANDS.filter((b) => projects.some((p) => brandOf(p.titulo) === b) || posts.some((p) => p.brand === b));
 const mmss = (t: number | null) => (t === null ? "" : `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`);
 type Quota = { limit: number | null; used: number; byFormat: Record<string, number> };
 
@@ -74,6 +77,7 @@ export default function PortalPosts() {
   }
 
   const shown = useMemo(() => (items ?? []).filter((p) => !brand || p.brand === brand), [items, brand]);
+  const brands = useMemo(() => brandsFor(projects, items ?? []), [projects, items]);
   const byDay = useMemo(() => {
     const m = new Map<string, Post[]>();
     for (const p of shown) if (p.scheduledAt) m.set(dayKey(p.scheduledAt), [...(m.get(dayKey(p.scheduledAt)) ?? []), p]);
@@ -157,10 +161,10 @@ export default function PortalPosts() {
           <p className="kb-faint text-xs">{["carrossel", "estatico", "reels"].map((k) => `${quota.byFormat[k] ?? 0} ${k === "carrossel" ? "carrossel" : k === "estatico" ? "estático" : "vídeo"}`).join(" · ")}{quota.limit !== null && quota.used >= quota.limit ? " · limite do mês atingido" : ""}</p>
         </div>
       )}
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar por empresa">
+      {brands.length > 0 && <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar por empresa">
         <button type="button" className="kb-chip min-h-9" aria-pressed={brand === ""} onClick={() => setBrand("")}>Todas</button>
-        {BRANDS.map((b) => <button key={b} type="button" className="kb-chip min-h-9 gap-1.5" aria-pressed={brand === b} onClick={() => setBrand(brand === b ? "" : b)}><i aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: brandColor(b) ?? "#999" }} />{b}</button>)}
-      </div>
+        {brands.map((b) => <button key={b} type="button" className="kb-chip min-h-9 gap-1.5" aria-pressed={brand === b} onClick={() => setBrand(brand === b ? "" : b)}><i aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: brandColor(b) ?? "#999" }} />{b}</button>)}
+      </div>}
       <div role="grid" aria-label={`Calendário de ${monthName}`}>
         <div className="grid grid-cols-7" role="row">{WEEK.map((w, i) => <div key={i} role="columnheader" className="kb-faint py-1 text-center text-[11px]">{w}</div>)}</div>
         <div className="grid grid-cols-7 gap-y-1">
@@ -260,7 +264,7 @@ function ContentEditor({ post, projects, date, onClose, onDone, onPickTakes }: {
           <label className="kb-field"><span>Dia</span><input className="kb-control min-h-12 text-base" type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></label>
           <label className="kb-field"><span>Formato</span><select className="kb-control min-h-12" value={f.format} onChange={(e) => setF({ ...f, format: e.target.value })}>{Object.entries(FORMAT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
         </div>
-        <label className="kb-field"><span>Empresa</span><select className="kb-control min-h-12" value={f.brand} onChange={(e) => setF({ ...f, brand: e.target.value })}><option value="">—</option>{BRANDS.map((b) => <option key={b} value={b}>{b}</option>)}</select></label>
+        {brandsFor(projects, post ? [post] : []).length > 0 && <label className="kb-field"><span>Empresa</span><select className="kb-control min-h-12" value={f.brand} onChange={(e) => setF({ ...f, brand: e.target.value })}><option value="">—</option>{brandsFor(projects, post ? [post] : []).map((b) => <option key={b} value={b}>{b}</option>)}</select></label>}
         <label className="kb-field"><span>Título</span><input className="kb-control min-h-12 text-base" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="Ex.: Camarão na chapa" /></label>
         {manage && (
           <div className="kb-field"><span>Redes</span>
