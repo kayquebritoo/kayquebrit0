@@ -108,6 +108,17 @@ export default function ContentBoard() {
   const [selected, setSelected] = useState<string>(() => new Date().toLocaleDateString("sv-SE", { timeZone: BELEM }));
 
   const loadSequence = useRef(0);
+  // dia aberto por inteiro no calendário (o "+N mais" mostra o resto ali mesmo)
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
+  const dayListRef = useRef<HTMLElement>(null);
+  /** Escolhe o dia; no celular, leva até a lista do dia (o calendário ocupa a tela toda). */
+  const pickDay = (key: string, hasPosts: boolean) => {
+    setSelected(key);
+    if (hasPosts && typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches) {
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      requestAnimationFrame(() => dayListRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }));
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -286,18 +297,19 @@ export default function ContentBoard() {
                     tabIndex={0}
                     aria-label={`${c.n}, ${list.length} post${list.length === 1 ? "" : "s"}`}
                     aria-selected={sel}
-                    onClick={() => setSelected(c.key)}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(c.key); } }}
+                    onClick={() => pickDay(c.key, list.length > 0)}
+                    onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); pickDay(c.key, list.length > 0); } }}
                     className={`min-h-[58px] cursor-pointer border-b border-r border-white/5 p-1 text-left transition-colors sm:min-h-[118px] sm:p-1.5 ${c.inMonth ? "" : "opacity-40"} ${sel ? "bg-[var(--kb-chip-hover)]" : "hover:bg-[var(--kb-chip)]"}`}
                   >
                     <span className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[12px] tabular-nums ${c.key === today ? "bg-gradient-to-br from-[#4F12C7] to-[#E80EFD] font-semibold text-white" : "kb-muted"}`}>{c.n}</span>
                     {/* celular: logos compactos identificam cada empresa */}
                     <div className="mt-1 flex flex-wrap gap-0.5 sm:hidden">
                       {list.slice(0, 6).map((p) => <span key={p.id} aria-label={p.brand ?? meta(p.status).label}>{p.brand && BRAND_LOGOS[p.brand] ? <BrandLogo brand={p.brand} size={12} /> : <StateIcon status={p.status} size={10} />}</span>)}
+                      {list.length > 6 && <span className="kb-faint text-[10px] leading-3 tabular-nums">+{list.length - 6}</span>}
                     </div>
                     {/* tela grande: etiquetas com título */}
                     <div className="mt-1 hidden flex-col gap-0.5 sm:flex">
-                      {list.slice(0, 3).map((p) => (
+                      {list.slice(0, expandedDay === c.key ? list.length : 3).map((p) => (
                         <div key={p.id} className="flex min-w-0 items-center rounded-md hover:bg-white/10" style={{ borderLeft: `3px solid ${brandColor(p.brand) ?? meta(p.status).color}`, background: brandColor(p.brand) ? `${brandColor(p.brand)}14` : undefined }}>
                           <button type="button" onClick={(e) => { e.stopPropagation(); setOpen(p); }} title={`${p.title} — ${meta(p.status).label}`} className="flex min-w-0 flex-1 items-center gap-1 px-1 py-0.5 text-left text-[11px]">
                             {brandsOf(p).map(b => <BrandLogo key={b} brand={b} size={18} />)}
@@ -308,7 +320,12 @@ export default function ContentBoard() {
                           <OpenPost url={p.postedUrl} />
                         </div>
                       ))}
-                      {list.length > 3 && <span className="kb-faint px-1 text-[11px]">+{list.length - 3} mais</span>}
+                      {list.length > 3 && (
+                        <button type="button" className="kb-faint rounded-md px-1 py-0.5 text-left text-[11px] hover:bg-white/10 hover:text-[var(--kb-ink)]" aria-expanded={expandedDay === c.key}
+                          onClick={(e) => { e.stopPropagation(); setSelected(c.key); setExpandedDay(expandedDay === c.key ? null : c.key); }}>
+                          {expandedDay === c.key ? "mostrar menos" : `+${list.length - 3} mais`}
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -316,7 +333,7 @@ export default function ContentBoard() {
             </div>
           </div>
 
-          <section aria-label="Posts do dia">
+          <section ref={dayListRef} aria-label="Posts do dia" className="scroll-mt-24">
             <h2 className="kb-faint mb-1 text-[12px] uppercase tracking-wide">{dayLabel(`${selected}T12:00:00-03:00`)}</h2>
             {dayPosts.length === 0 ? <p className="kb-muted py-6 text-center text-sm">Nada marcado para esse dia.</p> : dayPosts.map(row)}
           </section>
