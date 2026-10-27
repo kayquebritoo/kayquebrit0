@@ -5,7 +5,7 @@ import { PIPELINE } from "@/lib/kbos/constants";
 import ProjectPanel, { type PanelProject } from "./ProjectPanel";
 import { isRecurring } from "@/lib/kbos/content-model";
 
-type Project = PanelProject & { tasksTotal?: number; tasksDone?: number; monthPosts?: number; monthDone?: number };
+type Project = PanelProject & { tasksTotal?: number; tasksDone?: number; monthPosts?: number; monthDone?: number; monthLate?: number };
 type Contact = { id: string; name: string; company: string | null };
 
 const CATS: [string, string][] = [["fotografia", "Fotografia"], ["video", "Vídeo"], ["sites", "Sites"], ["apps", "Apps"], ["lojas", "Lojas"], ["design", "Design"], ["social", "Redes sociais (recorrente)"]];
@@ -192,10 +192,11 @@ export default function KanbanBoard() {
                           {brl(p.valor) && <span className="kb-tag">{brl(p.valor)}</span>}
                         </span>
                         {isRecurring(p) && mp > 0 && (
-                          <span className="flex items-center gap-2" aria-label={`Mês: ${p.monthDone} de ${mp} conteúdos publicados`}>
+                          <span className="flex items-center gap-2" aria-label={`Mês: ${p.monthDone} de ${mp} conteúdos publicados${p.monthLate ? `, ${p.monthLate} atrasados` : ""}`}>
                             <span className="kb-faint w-9 text-[11px]">mês</span>
                             <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"><span className="block h-full rounded-full bg-[#3ecf8e]" style={{ width: `${Math.round(((p.monthDone ?? 0) / mp) * 100)}%` }} /></span>
-                            <span className="kb-faint text-[11px]">{p.monthDone}/{mp}</span>
+                            <span className="kb-faint text-[11px] tabular-nums">{p.monthDone}/{mp}</span>
+                            {!!p.monthLate && <span className="kb-tag late !text-[11px] tabular-nums">{p.monthLate} atras.</span>}
                           </span>
                         )}
                         {total > 0 && (

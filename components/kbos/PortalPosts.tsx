@@ -9,7 +9,11 @@ type Post = {
   id: string; projectId: string | null; title: string; brand: string | null; collabBrands?: string[]; format: string; networks: string[]; scheduledAt: string | null; status: string;
   caption: string | null; mediaUrl: string | null; clientNote: string | null; script: string | null; mine: boolean; manage: boolean; takes: Take[];
   people: { scriptBy: string | null; captureBy: string | null; editor: string | null } | null; postedUrl: string | null;
+  /** Calculados no servidor pela regra única (olham cada rede). */
+  phase?: string; late?: boolean;
 };
+/** "Postado" só quando saiu em todas as redes; se falta alguma, mostra como agendado (igual à conta do mês). */
+const shownStatus = (p: Pick<Post, "status" | "phase">) => (p.status === "postado" && p.phase && p.phase !== "publicado" ? "agendado" : p.status);
 type Proj = { id: string; titulo: string; manage?: boolean; parentId?: string | null };
 type Pool = { rootId: string; titulo: string; limit: number | null; used: number; manage: boolean; ops: { id: string; titulo: string; limit: number | null; used: number }[] };
 const plain = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -50,6 +54,7 @@ export default function PortalPosts() {
   const [picking, setPicking] = useState<Post | null>(null);
   const [quota, setQuota] = useState<Quota | null>(null);
   const [pools, setPools] = useState<Pool[]>([]);
+  const [summary, setSummary] = useState<{ total: number; published: number; late: number } | null>(null);
   const [brand, setBrand] = useState("");
 
   const load = useCallback(async () => {
@@ -61,6 +66,7 @@ export default function PortalPosts() {
       setProjects(d.projects || []);
       setQuota(d.quota ?? null);
       setPools(d.pools ?? []);
+      setSummary(d.summary ?? null);
     } catch { setItems([]); }
   }, [month]);
   useEffect(() => {
@@ -147,6 +153,11 @@ export default function PortalPosts() {
         <p className="font-display text-base capitalize">{monthName}</p>
         <button type="button" aria-label="Próximo mês" className="kb-chip min-h-11 min-w-11" onClick={() => shift(1)}>›</button>
       </div>
+      {summary && (summary.total > 0 || summary.late > 0) && (
+        <p className="kb-muted text-sm tabular-nums" aria-label={`Resumo de ${monthName}`}>
+          {summary.total} no mês · {summary.published} publicado{summary.published === 1 ? "" : "s"} · <span className={summary.late ? "text-[var(--kb-late)]" : ""}>{summary.late} atrasado{summary.late === 1 ? "" : "s"}</span>
+        </p>
+      )}
       {pools.map((pl) => <PoolCard key={pl.rootId} pool={pl} monthName={monthName} onChanged={() => void load()} />)}
       {quota && (
         <div className="kb-card gap-2" aria-label="Posts do mês">
@@ -193,7 +204,7 @@ export default function PortalPosts() {
                 <span className="kb-faint flex items-center gap-1.5 truncate text-xs">{brandsOf(p).filter((b) => brandColor(b)).map((b) => <i key={b} aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: brandColor(b) ?? undefined }} />)}{[brandLabel(p), FORMAT[p.format] ?? "Post", p.networks?.length ? p.networks.map((n) => NETWORK_LABEL[n] ?? n).join(", ") : null, p.takes?.length ? `${p.takes.length} take${p.takes.length > 1 ? "s" : ""}` : null].filter(Boolean).join(" · ")}</span>
                 {p.manage && p.people && <span className="kb-faint block truncate text-[11px]">{[p.people.scriptBy && `Roteiro: ${p.people.scriptBy}`, p.people.captureBy && `Capta: ${p.people.captureBy}`, p.people.editor && `Edita: ${p.people.editor}`].filter(Boolean).join(" · ")}</span>}
               </span>
-              <span className={`kb-tag shrink-0 gap-1.5 ${p.status === "ajustes" ? "late" : ""}`}><i aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: COLOR[p.status] ?? "#9a93a8" }} />{LABEL[p.status] ?? p.status}</span>
+              <span className={`kb-tag shrink-0 gap-1.5 ${p.status === "ajustes" || p.late ? "late" : ""}`}><i aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: COLOR[shownStatus(p)] ?? "#9a93a8" }} />{LABEL[shownStatus(p)] ?? shownStatus(p)}{p.late ? " · atrasado" : ""}</span>
             </>
           );
           const cls = `kb-row w-full text-left ${p.status === "cancelado" ? "opacity-50" : ""}`;

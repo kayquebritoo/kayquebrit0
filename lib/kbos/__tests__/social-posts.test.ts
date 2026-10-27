@@ -172,12 +172,12 @@ describe("roteiro ↔ post, atrasados e roteiro do cliente", () => {
     // antes de vincular, o roteiro velho conta como atrasado
     const now = new Date("2026-10-12T12:00:00-03:00");
     const admin = { id: "x", name: "Kayque", role: "admin" };
-    expect((await overduePosts(admin, now)).some((o) => o.id === rot.id)).toBe(true);
+    expect((await overduePosts(admin, now)).items.some((o) => o.id === rot.id)).toBe(true);
 
     const linked = await linkScript(rot.id, post.id);
     expect(linked.script).toBe("Cena 1: close do prato");
     expect(linked.createdBy).toBe(cli.id);
-    expect((await overduePosts(admin, now)).some((o) => o.id === rot.id)).toBe(false);
+    expect((await overduePosts(admin, now)).items.some((o) => o.id === rot.id)).toBe(false);
     expect((await listPosts({ projectId: proj.id })).some((p) => p.id === rot.id)).toBe(false);
     await expect(linkScript(rot.id, post.id)).rejects.toBeInstanceOf(PostError);
 

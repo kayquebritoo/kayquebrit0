@@ -6,6 +6,7 @@ import { db } from "@/lib/kbos/db";
 import { projects } from "@/lib/kbos/schema";
 import { readBody } from "@/lib/kbos/validators";
 import { PostError, createClientRoteiro, monthUsage, portalPosts } from "@/lib/kbos/social-posts";
+import { contentFlags, monthMetricsByProject } from "@/lib/kbos/content-cycle";
 import { notifyClientRoteiro } from "@/lib/kbos/social-notify";
 import { POST_FORMATS } from "@/lib/kbos/social-import";
 import { clientProjects, managedProjectIds } from "@/lib/kbos/project-members";
@@ -26,7 +27,13 @@ export async function GET(req: Request) {
     // cliente com operações: o plano é do principal, dividido entre as empresas
     const pools = valid ? (await Promise.all(roots.map((r) => planPool(r, month)))).filter((p) => p && p.ops.length).map((p) => ({ ...p!, manage: managed.has(p!.rootId) })) : [];
     const quota = valid && mine[0] && !pools.length ? await monthUsage(mine[0].id, month) : null;
-    return NextResponse.json({ items: await portalPosts(user.id), projects: mine, quota, pools });
+    // números do mês com a MESMA regra do relatório e do admin (o principal soma as operações)
+    let summary: { total: number; published: number; late: number } | null = null;
+    if (valid && roots.length) {
+      const m = await monthMetricsByProject(roots, month);
+      summary = [...m.values()].reduce((s, x) => ({ total: s.total + x.previstos, published: s.published + x.publicados, late: s.late + x.atrasados }), { total: 0, published: 0, late: 0 });
+    }
+    return NextResponse.json({ items: await contentFlags(await portalPosts(user.id)), projects: mine, quota, pools, summary });
   } catch (e) {
     return serverError(e);
   }

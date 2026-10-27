@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/kbos/db";
-import { contacts, projects, socialPosts, tasks, users } from "@/lib/kbos/schema";
+import { contacts, projects, tasks, users } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { projectCreateSchema, readBody } from "@/lib/kbos/validators";
 import { serverError } from "@/lib/kbos/http";
 import { clientProjectView, clientProjects } from "@/lib/kbos/project-members";
+import { currentMonth, monthMetricsByProject } from "@/lib/kbos/content-cycle";
 
 // GET: equipe vê tudo; cliente vê só os próprios.
 export async function GET() {
@@ -22,20 +23,19 @@ export async function GET() {
         contactCompany: contacts.company,
         tasksTotal: sql<number>`(select count(*)::int from ${tasks} where ${tasks.projectId} = ${projects.id})`,
         tasksDone: sql<number>`(select count(*)::int from ${tasks} where ${tasks.projectId} = ${projects.id} and ${tasks.status} = 'done')`,
-        // ciclo do mês corrente (Belém): o post só vira "postado" quando todas as redes saíram
-        monthPosts: sql<number>`(select count(*)::int from ${socialPosts} where ${socialPosts.projectId} = ${projects.id} and ${socialPosts.linkedTo} is null and ${socialPosts.dismissedAt} is null and ${socialPosts.status} <> 'cancelado' and date_trunc('month', ${socialPosts.scheduledAt} at time zone 'America/Belem') = date_trunc('month', now() at time zone 'America/Belem'))`,
-        monthDone: sql<number>`(select count(*)::int from ${socialPosts} where ${socialPosts.projectId} = ${projects.id} and ${socialPosts.linkedTo} is null and ${socialPosts.dismissedAt} is null and ${socialPosts.status} = 'postado' and date_trunc('month', ${socialPosts.scheduledAt} at time zone 'America/Belem') = date_trunc('month', now() at time zone 'America/Belem'))`,
       })
       .from(projects)
       .leftJoin(contacts, eq(contacts.id, projects.contactId));
     const joined = isClient
       ? await base.where(clientProjects(user.id)).orderBy(desc(projects.updatedAt))
       : await base.orderBy(desc(projects.updatedAt)).limit(200);
-    const rows = joined.map((r) =>
-      isClient
-        ? clientProjectView(r.project)
-        : { ...r.project, contactName: r.contactName, contactCompany: r.contactCompany, tasksTotal: r.tasksTotal, tasksDone: r.tasksDone, monthPosts: r.monthPosts, monthDone: r.monthDone },
-    );
+    // Conteúdo do mês corrente (Belém) com a MESMA regra do relatório (`cycleMetrics`): o principal soma as operações.
+    const month = isClient ? null : await monthMetricsByProject(joined.map((r) => r.project.id), currentMonth());
+    const rows = joined.map((r) => {
+      if (isClient) return clientProjectView(r.project);
+      const m = month!.get(r.project.id);
+      return { ...r.project, contactName: r.contactName, contactCompany: r.contactCompany, tasksTotal: r.tasksTotal, tasksDone: r.tasksDone, monthPosts: m?.previstos ?? 0, monthDone: m?.publicados ?? 0, monthLate: m?.atrasados ?? 0 };
+    });
     return NextResponse.json({ items: rows });
   } catch (e) {
     return serverError(e);

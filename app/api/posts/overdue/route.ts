@@ -5,12 +5,13 @@ import { overduePosts } from "@/lib/kbos/social-posts";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/posts/overdue — posts atrasados de quem está logado (cliente: os dele; equipe: os seus; admin: todos).
+// GET /api/posts/overdue — atrasados do mês corrente de quem está logado: { month, total, hidden, items }.
+// `total` é o mesmo número do "Atrasados" do relatório do mês (cliente: os dele; equipe: os seus; admin: todos).
 export async function GET() {
   const user = await sessionUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   try {
-    return NextResponse.json({ items: await overduePosts(user) });
+    return NextResponse.json(await overduePosts(user));
   } catch (e) {
     return serverError(e);
   }

@@ -15,6 +15,8 @@ type Post = {
   status: string; script: string | null; caption: string | null; mediaUrl: string | null; clientNote: string | null; copies: number; postedUrl: string | null;
   networks?: string[]; scriptBy: string | null; captureBy: string | null; editor: string | null; errorMessage: string | null;
   takes?: { id: number; nome: string; t: number | null; by: string | null }[];
+  /** Calculados no servidor pela regra única (olham cada rede): ver `contentFlags`. */
+  phase?: string; late?: boolean;
 };
 type Project = { id: string; titulo: string; categoria?: string; postLimit?: number | null; parentId?: string | null };
 
@@ -184,8 +186,9 @@ export default function ContentBoard() {
     if (!items || month !== today.slice(0, 7)) return null;
     const fila = brandItems.filter((p) => EDIT_FORMATS.has(p.format) && EDIT_STATUS.has(p.status) && p.scheduledAt)
       .sort((a, b) => a.scheduledAt!.localeCompare(b.scheduledAt!));
-    const atrasados = fila.filter((p) => dayKey(p.scheduledAt!) < today);
-    const proximos = fila.filter((p) => dayKey(p.scheduledAt!) >= today);
+    // atrasado pela regra única (prazo do post e redes), calculada no servidor
+    const atrasados = fila.filter((p) => p.late);
+    const proximos = fila.filter((p) => !p.late);
     const post = proximos[0] ?? atrasados[0];
     return post ? { post, fila: fila.length, atrasados: atrasados.length } : { post: null, fila: 0, atrasados: 0 };
   }, [items, brandItems, month, today]);
@@ -251,7 +254,7 @@ export default function ContentBoard() {
             ))}
           </div>
           <div className="ml-auto flex items-center gap-1">
-            <span className="kb-faint mr-2 text-[12px] tabular-nums" aria-live="polite">{shown.length} exibidos · {summary.total} conteúdos no mês</span>
+            <span className="kb-faint mr-2 text-[12px] tabular-nums" aria-live="polite">{summary.total} no mês · {summary.published} publicados · <span className={summary.late ? "text-[var(--kb-late)]" : ""}>{summary.late} atrasados</span>{shown.length !== summary.total ? ` · ${shown.length} exibidos` : ""}</span>
             <button type="button" className="kb-btn-ghost inline-flex min-h-12 min-w-12 items-center justify-center" aria-label="Importar calendário ou colar status" title="Importar calendário ou colar status" disabled={!projectId} onClick={() => setImporting(true)}>
               <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5" /></svg>
             </button>
@@ -261,8 +264,8 @@ export default function ContentBoard() {
       )}
       {items && planLimit !== null && (
         <p className="kb-faint text-xs">
-          Plano mensal: {planLimit} conteúdos · {summary.active} cadastrados ativos{summary.cancelled > 0 ? ` · ${summary.cancelled} cancelados (fora do plano)` : ""}.
-          {summary.active > planLimit ? ` ${summary.active - planLimit} acima do plano.` : ""}
+          Plano mensal: {planLimit} conteúdos · {summary.total} no mês{summary.cancelled > 0 ? ` · ${summary.cancelled} cancelados (fora da conta)` : ""}.
+          {summary.total > planLimit ? ` ${summary.total - planLimit} acima do plano.` : ""}
         </p>
       )}
 

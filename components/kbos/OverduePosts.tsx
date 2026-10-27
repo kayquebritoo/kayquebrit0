@@ -3,28 +3,31 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type Item = { id: string; title: string; brand: string | null; status: string; scheduledAt: string; daysLate: number; waitingClient: boolean; mine: boolean; people: string | null };
-const STATUS: Record<string, string> = { roteiro: "Roteiro", captacao: "Captação", producao: "Em edição", aprovacao: "Aguardando aprovação", ajustes: "Ajustes", aprovado: "Aprovado", agendado: "Agendado", erro: "Erro ao postar" };
+// "postado" atrasado = saiu em parte das redes (a regra olha cada rede).
+const STATUS: Record<string, string> = { roteiro: "Roteiro", captacao: "Captação", producao: "Em edição", aprovacao: "Aguardando aprovação", ajustes: "Ajustes", aprovado: "Aprovado", agendado: "Agendado", postado: "Falta publicar em alguma rede", erro: "Erro ao postar" };
+const monthLabel = (m: string) => new Date(`${m}-15T12:00:00`).toLocaleDateString("pt-BR", { month: "long" });
 const when = (d: number) => (d <= 0 ? "venceu hoje" : d === 1 ? "1 dia de atraso" : `${d} dias de atraso`);
 
-/** Aviso de posts atrasados. Some sozinho quando não há nenhum. */
+/** Aviso de posts atrasados do mês. O número é o mesmo do relatório do mês; some sozinho quando não há nenhum. */
 export default function OverduePosts({ audience }: { audience: "admin" | "cliente" }) {
-  const [items, setItems] = useState<Item[]>([]);
+  const [data, setData] = useState<{ month: string; total: number; hidden: number; items: Item[] } | null>(null);
   useEffect(() => {
     let alive = true;
     fetch("/api/posts/overdue", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : { items: [] }))
-      .then((d) => { if (alive) setItems(d.items || []); })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (alive && d && typeof d.total === "number") setData(d); })
       .catch(() => {});
     return () => { alive = false; };
   }, []);
-  if (items.length === 0) return null;
+  if (!data || data.total === 0) return null;
+  const { items, total, hidden } = data;
 
   const client = audience === "cliente";
   const shown = items.slice(0, 6);
   return (
     <section aria-label="Posts atrasados" className="kb-glass flex flex-col gap-2 p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-display kb-ink text-base">{items.length === 1 ? "1 post atrasado" : `${items.length} posts atrasados`}</h2>
+        <h2 className="font-display kb-ink text-base">{total === 1 ? "1 post atrasado" : `${total} posts atrasados`} em {monthLabel(data.month)}</h2>
         {!client && <Link href="/admin/conteudo" className="kb-chip min-h-11">Abrir calendário</Link>}
       </div>
       <ul className="flex flex-col">
@@ -40,6 +43,7 @@ export default function OverduePosts({ audience }: { audience: "admin" | "client
         ))}
       </ul>
       {items.length > shown.length && <p className="kb-faint text-xs">+{items.length - shown.length} no calendário.</p>}
+      {hidden > 0 && <p className="kb-faint text-xs">{hidden === 1 ? "1 ainda está" : `${hidden} ainda estão`} em produção com a equipe.</p>}
     </section>
   );
 }

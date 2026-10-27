@@ -5,7 +5,7 @@ import { and, asc, eq, gte, inArray, isNull, lt } from "drizzle-orm";
 import { db } from "./db";
 import { postPublications, projectCycles, projects, socialPosts } from "./schema";
 import { effectivePostLimit } from "./plan-limit";
-import { PUB_STATUS, contentState, cycleMetrics, isRecurring, type CycleMetrics, type PubStatus } from "./content-model";
+import { PUB_STATUS, contentState, cycleMetrics, isLate, isRecurring, type CycleMetrics, type Phase, type PubStatus } from "./content-model";
 
 export * from "./content-model";
 
@@ -26,6 +26,34 @@ async function monthRows(projectIds: string[], month: string) {
     .orderBy(asc(socialPosts.scheduledAt));
   const pubs = posts.length ? await db().select({ postId: postPublications.postId, network: postPublications.network, status: postPublications.status }).from(postPublications).where(inArray(postPublications.postId, posts.map((p) => p.id))) : [];
   return posts.map((post) => ({ post, pubs: pubs.filter((p) => p.postId === post.id) }));
+}
+
+/** Mês corrente em Belém (AAAA-MM). */
+export const currentMonth = (now = new Date()) => now.toLocaleDateString("sv-SE", { timeZone: "America/Belem" }).slice(0, 7);
+
+/** Números do mês por projeto, com a MESMA regra do relatório. O principal soma as operações dele. */
+export async function monthMetricsByProject(projectIds: string[], month: string, now = new Date()): Promise<Map<string, CycleMetrics>> {
+  const out = new Map<string, CycleMetrics>();
+  if (!projectIds.length) return out;
+  const kids = await db().select({ id: projects.id, parentId: projects.parentId }).from(projects).where(inArray(projects.parentId, projectIds));
+  const rows = await monthRows([...new Set([...projectIds, ...kids.map((k) => k.id)])], month);
+  for (const id of projectIds) {
+    const family = new Set([id, ...kids.filter((k) => k.parentId === id).map((k) => k.id)]);
+    out.set(id, cycleMetrics(rows.filter((r) => r.post.projectId && family.has(r.post.projectId)), now));
+  }
+  return out;
+}
+
+export type ContentFlags = { phase: Phase; late: boolean; published: number; networks: number };
+/** Fase e "atrasado" de cada post, olhando as redes (para as telas contarem igual ao relatório). */
+export async function contentFlags<T extends { id: string; status: string; scheduledAt: Date | null; networks?: string[] | null }>(posts: T[], now = new Date()): Promise<(T & ContentFlags)[]> {
+  if (!posts.length) return [];
+  const pubs = await db().select({ postId: postPublications.postId, network: postPublications.network, status: postPublications.status }).from(postPublications).where(inArray(postPublications.postId, posts.map((p) => p.id)));
+  return posts.map((p) => {
+    const mine = pubs.filter((x) => x.postId === p.id);
+    const st = contentState(p, mine);
+    return { ...p, phase: st.phase, late: isLate(p, mine, now), published: st.published, networks: st.networks };
+  });
 }
 
 export type CycleReport = {

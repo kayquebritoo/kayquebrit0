@@ -45,7 +45,19 @@ export function contentState(post: PostLike, pubs: PubLike[] = []): ContentState
 
 const DAY_MS = 86_400_000;
 const belemMidnight = (d: Date) => d.toLocaleTimeString("en-GB", { timeZone: "America/Belem", hour12: false }) === "00:00:00";
-const deadline = (d: Date) => (belemMidnight(d) ? new Date(d.getTime() + DAY_MS) : d);
+/** Prazo do post: o horário marcado; post sem horário (00:00 em Belém) vence no fim do dia. */
+export const postDeadline = (d: Date) => (belemMidnight(d) ? new Date(d.getTime() + DAY_MS) : d);
+
+/**
+ * ÚNICA regra de "atrasado" do KBOS (admin, portal, relatório, Kanban e avisos):
+ * passou do prazo e o conteúdo não está publicado em TODAS as redes ativas (nem cancelado).
+ * Sem publicações por rede cadastradas, vale o status do post (legado).
+ */
+export function isLate(post: PostLike, pubs: PubLike[] = [], now = new Date()) {
+  if (!post.scheduledAt) return false;
+  const { phase } = contentState(post, pubs);
+  return phase !== "publicado" && phase !== "cancelado" && postDeadline(post.scheduledAt) < now;
+}
 
 export type CycleMetrics = {
   previstos: number; produzidos: number; aprovados: number; publicados: number; pendentes: number; atrasados: number;
@@ -54,7 +66,12 @@ export type CycleMetrics = {
 };
 
 
-/** Indicadores de um mês. Cada conteúdo conta uma vez, não importa em quantas redes saia. */
+/**
+ * Indicadores de um mês — a conta que TODAS as telas mostram (relatório, Kanban, calendários, portal).
+ * Entram os conteúdos do mês (Belém) sem roteiros já realizados nem dispensados (filtro feito na consulta).
+ * previstos = sem cancelados; publicados = todas as redes saíram; atrasados = `isLate`.
+ * Cada conteúdo conta uma vez, não importa em quantas redes saia; colab conta na empresa principal.
+ */
 export function cycleMetrics(rows: { post: PostLike; pubs: PubLike[] }[], now = new Date(), limit: number | null = null): CycleMetrics {
   const porFase = Object.fromEntries(PHASES.map((p) => [p, 0])) as Record<Phase, number>;
   let atrasados = 0, publicacoes = 0, publicacoesFeitas = 0;
@@ -64,7 +81,7 @@ export function cycleMetrics(rows: { post: PostLike; pubs: PubLike[] }[], now = 
     if (st.phase === "cancelado") continue;
     publicacoes += st.networks || (post.networks?.length ?? 0);
     publicacoesFeitas += st.networks ? st.published : st.phase === "publicado" ? (post.networks?.length ?? 0) : 0;
-    if (st.phase !== "publicado" && post.scheduledAt && deadline(post.scheduledAt) < now) atrasados++;
+    if (isLate(post, pubs, now)) atrasados++;
   }
   const previstos = rows.length - porFase.cancelado;
   const at = (min: Phase) => PHASES.filter((p) => p !== "cancelado" && ORDER(p) >= ORDER(min)).reduce((s, p) => s + porFase[p], 0);

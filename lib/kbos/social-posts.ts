@@ -6,7 +6,8 @@ import { indexImportedPosts } from "./social-identity";
 import { effectivePostLimit } from "./plan-limit";
 import { POST_FORMATS, POST_STATUS, parseIcs, type PostFormat, type PostStatus } from "./social-import";
 import { clientProjectIds, clientProjects, managedProjectIds } from "./project-members";
-import { syncPublications } from "./content-cycle";
+import { contentFlags, currentMonth, syncPublications } from "./content-cycle";
+import { isLate, postDeadline } from "./content-model";
 import { projectFamily, rootOf } from "./project-family";
 import { PoolError, assertRoom } from "./plan-pool";
 
@@ -269,15 +270,12 @@ export async function decidePost(userId: string, id: string, decision: "aprovar"
 }
 
 // ── Atrasados ──────────────────────────────────────────────────────────────────
-const belemMidnight = (d: Date) => d.toLocaleTimeString("en-GB", { timeZone: "America/Belem", hour12: false }) === "00:00:00";
+// A regra é uma só, em content-model (`isLate`): prazo vencido e conteúdo não publicado em todas as redes.
+export { postDeadline } from "./content-model";
 
-/** Prazo real do post: horário 00:00 é só "o dia" (planejamento) e vence ao fim dele. */
-export function postDeadline(scheduledAt: Date) {
-  return belemMidnight(scheduledAt) ? new Date(scheduledAt.getTime() + DAY_MS) : scheduledAt;
-}
-
-export function isOverdue(p: { scheduledAt: Date | null; status: string }, now = new Date()) {
-  return !!p.scheduledAt && p.status !== "postado" && p.status !== "cancelado" && postDeadline(p.scheduledAt) < now;
+/** Atrasado pela regra única. Sem as publicações (`pubs`), vale o status do post (legado). */
+export function isOverdue(p: { scheduledAt: Date | null; status: string }, now = new Date(), pubs: { network: string; status: string }[] = []) {
+  return isLate(p, pubs, now);
 }
 
 const firstToken = (s: string) => s.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
@@ -290,28 +288,42 @@ export function isResponsible(p: { scriptBy: string | null; captureBy: string | 
 }
 
 export type OverdueItem = { id: string; title: string; brand: string | null; status: string; scheduledAt: Date; daysLate: number; waitingClient: boolean; mine: boolean; people: string | null };
+/** `total` é o número completo (igual ao "Atrasados" do relatório do mês); `items` lista só o que a pessoa pode ver. */
+export type OverdueSummary = { month: string; total: number; hidden: number; items: OverdueItem[] };
 
-/** Posts atrasados visíveis para quem está logado: cliente (só os dele), equipe (os seus) e admin (todos). */
-export async function overduePosts(user: { id: string; name: string; role: string }, now = new Date()): Promise<OverdueItem[]> {
-  const since = new Date(now.getTime() - 30 * DAY_MS);
-  const rows = await db().select().from(socialPosts).where(and(gte(socialPosts.scheduledAt, since), lt(socialPosts.scheduledAt, now), isNull(socialPosts.linkedTo), isNull(socialPosts.dismissedAt))).orderBy(asc(socialPosts.scheduledAt)).limit(500);
-  let allowed: Set<string> | null = null;
-  if (user.role === "cliente") {
-    allowed = new Set(await clientProjectIds(user.id));
-  }
+/**
+ * Posts atrasados do MÊS CORRENTE (Belém), a mesma janela e a mesma regra do relatório do mês.
+ * Admin: todos. Equipe: os seus. Cliente: conta todos os dos projetos dele, mas lista só os que ele vê no
+ * calendário (etapas do portal, os que ele criou ou os projetos em que faz a gestão); o resto vira `hidden`.
+ */
+export async function overduePosts(user: { id: string; name: string; role: string }, now = new Date()): Promise<OverdueSummary> {
+  const month = currentMonth(now);
+  const { from, to } = monthRange(month);
+  const until = now < to ? now : to;
+  const raw = await db().select().from(socialPosts).where(and(gte(socialPosts.scheduledAt, from), lt(socialPosts.scheduledAt, until), isNull(socialPosts.linkedTo), isNull(socialPosts.dismissedAt))).orderBy(asc(socialPosts.scheduledAt)).limit(1000);
+  const rows = (await contentFlags(raw, now)).filter((p) => p.late && p.scheduledAt);
+  const client = user.role === "cliente";
+  const allowed = client ? new Set(await clientProjectIds(user.id)) : null;
+  const managed = client ? new Set(await managedProjectIds(user.id)) : null;
   const out: OverdueItem[] = [];
+  let total = 0;
   for (const p of rows) {
-    if (!isOverdue(p, now) || !p.scheduledAt) continue;
     const mine = isResponsible(p, user.name);
-    if (user.role === "cliente") {
-      if (!p.projectId || !allowed!.has(p.projectId) || !PORTAL_STATUS.includes(p.status as PostStatus)) continue;
-    } else if (user.role !== "admin" && !mine) continue;
+    if (client) {
+      if (!p.projectId || !allowed!.has(p.projectId)) continue;
+      total++;
+      const visible = PORTAL_STATUS.includes(p.status as PostStatus) || p.createdBy === user.id || managed!.has(p.projectId);
+      if (!visible) continue;
+    } else {
+      if (user.role !== "admin" && !mine) continue;
+      total++;
+    }
     out.push({
-      id: p.id, title: p.title, brand: p.brand, status: p.status, scheduledAt: p.scheduledAt,
-      daysLate: Math.max(0, Math.floor((now.getTime() - postDeadline(p.scheduledAt).getTime()) / DAY_MS)),
+      id: p.id, title: p.title, brand: p.brand, status: p.status, scheduledAt: p.scheduledAt!,
+      daysLate: Math.max(0, Math.floor((now.getTime() - postDeadline(p.scheduledAt!).getTime()) / DAY_MS)),
       waitingClient: p.status === "aprovacao", mine,
-      people: user.role === "cliente" ? null : [p.scriptBy, p.captureBy, p.editor].filter(Boolean).join(" · ") || null,
+      people: client ? null : [p.scriptBy, p.captureBy, p.editor].filter(Boolean).join(" · ") || null,
     });
   }
-  return out;
+  return { month, total, hidden: total - out.length, items: out };
 }
