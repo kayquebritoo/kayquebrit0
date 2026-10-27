@@ -145,8 +145,9 @@ describe("agendar e publicar", () => {
     await expect(schedulePost(post, { at: new Date() })).rejects.toThrow(/Instagram/);
     await syncPublications(post, ["instagram", "facebook"]);
     await expect(schedulePost(post, { at: new Date() })).rejects.toThrow(/Falta ligar a conta/);
-    await saveMetaAccounts([{ network: "instagram", externalId: "ig1", pageId: "p1", name: "Hotel", username: "hotel", pictureUrl: null, token: "PT" }, { network: "facebook", externalId: "p9", pageId: "p9", name: "Grupo", username: null, pictureUrl: null, token: "PT9" }], null);
-    expect((await d.select().from(schema.socialAccounts)).every((a) => !a.tokenEnc?.includes("PT"))).toBe(true);
+    // tokens longos e únicos: "PT" curto aparecia por acaso no texto cifrado (aleatório) e o teste falhava às vezes
+    await saveMetaAccounts([{ network: "instagram", externalId: "ig1", pageId: "p1", name: "Hotel", username: "hotel", pictureUrl: null, token: "TOKEN-EM-CLARO-HOTEL" }, { network: "facebook", externalId: "p9", pageId: "p9", name: "Grupo", username: null, pictureUrl: null, token: "TOKEN-EM-CLARO-GRUPO" }], null);
+    expect((await d.select().from(schema.socialAccounts)).every((a) => !!a.tokenEnc && !a.tokenEnc.includes("TOKEN-EM-CLARO"))).toBe(true);
     await d.update(schema.socialAccounts).set({ projectId: hotel }).where(eq(schema.socialAccounts.externalId, "ig1"));
     await d.update(schema.socialAccounts).set({ projectId: grupo }).where(eq(schema.socialAccounts.externalId, "p9"));
     expect((await accountFor(hotel, "facebook"))!.externalId).toBe("p9"); // do principal
