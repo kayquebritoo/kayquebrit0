@@ -216,6 +216,28 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Backup do banco de hora em hora (mesmo DATABASE_URL do app). Arquivos em
+  # KBOS_BACKUP_DIR no host (padrão /opt/kbos-backups, fora do repo: o deploy
+  # faz `git reset --hard`). Retenção e formato em infra/backup/backup.sh.
+  # Restaurar: pg_restore --clean --if-exists --no-owner -d "$DATABASE_URL" <arquivo>.dump
+  db-backup:
+    image: postgres:18-alpine
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:kbos@db:5432/kbos}
+      BACKUP_KEEP_HOURS: ${BACKUP_KEEP_HOURS:-48}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-30}
+    volumes:
+      - ./backup/backup.sh:/backup.sh:ro
+      - ${KBOS_BACKUP_DIR:-/opt/kbos-backups}:/backups
+    healthcheck:
+      # unhealthy se passar de 2 h sem backup bom
+      test: ["CMD-SHELL", "test $$(( $$(date +%s) - $$(cat /backups/.last-ok 2>/dev/null || echo 0) )) -lt 7800"]
+      interval: 5m
+      timeout: 5s
+      start_period: 10m
+    restart: unless-stopped
+
   # --- Evolution API (motor WhatsApp) — profile `evolution` ---
   evo-db:
     image: postgres:15-alpine

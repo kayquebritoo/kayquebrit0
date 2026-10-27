@@ -78,16 +78,33 @@ export function appUrlEnv(): string {
   return "http://localhost:3000";
 }
 
+/** Remetente padrão do estúdio (domínio verificado no Resend). */
+export const DEFAULT_FROM = "KBOS <contato@kayquebrito.com.br>";
+
+/**
+ * Remetente no formato que o Resend aceita (`Nome <email@dominio>`). Tolera o
+ * que costuma aparecer no .env: aspas sobrando, só o e-mail, nome sem `< >`.
+ * Sem e-mail válido, usa o padrão. (Em 27/10 o .env da VPS gerava
+ * "Resend 422: Invalid `from` field" e nenhum código de login saía por e-mail.)
+ */
+export function normalizeFrom(raw: string | null | undefined): string {
+  const v = (raw || "").trim().replace(/^['"]+|['"]+$/g, "").trim();
+  const m = v.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+  if (!m) return DEFAULT_FROM;
+  const name = v.slice(0, m.index).replace(/[<>"']/g, "").trim() || "KBOS";
+  return `${name} <${m[0]}>`;
+}
+
 /** Lê e normaliza a configuração de e-mail a partir das variáveis de ambiente. */
 export function getEmailConfig(): EmailConfig {
   const resendKey = (process.env.RESEND_API_KEY || "").trim();
   // `EMAIL_FROM` é alias aceito para `RESEND_FROM` (compat com .env da VPS).
-  const from = (
+  const from = normalizeFrom(
     process.env.RESEND_FROM ||
     process.env.EMAIL_FROM ||
     process.env.SMTP_FROM ||
     ""
-  ).trim();
+  );
 
   const host = (process.env.SMTP_HOST || "").trim();
   const user = (process.env.SMTP_USER || "").trim();
