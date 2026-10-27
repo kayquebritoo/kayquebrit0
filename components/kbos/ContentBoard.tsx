@@ -6,6 +6,7 @@ import PostPublishing from "./PostPublishing";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CLIENT_HUBS, lumeHref } from "@/lib/kbos/client-hubs";
 import { BRAND_LIST, brandColor } from "@/lib/kbos/brand-colors";
+import { contentBrand, summarizeContent } from "@/lib/kbos/content-summary";
 import { effectivePostLimit } from "@/lib/kbos/plan-limit";
 
 type Post = {
@@ -135,7 +136,7 @@ export default function ContentBoard() {
       const d = await r.json();
       if (sequence !== loadSequence.current) return;
       if (!r.ok) throw new Error(d.error || "Não consegui carregar o calendário.");
-      setItems(d.items);
+      setItems(summarizeContent<Post>(d.items).contents);
       setError("");
     } catch (e) { if (sequence === loadSequence.current) setError(e instanceof Error ? e.message : "Erro."); }
   }, [month, projectId]);
@@ -145,7 +146,10 @@ export default function ContentBoard() {
     void load();
   }, [load]);
 
-  const brandItems = useMemo(() => (items ?? []).filter(p => !brandFilter || p.brand === brandFilter), [items, brandFilter]);
+  const summary = useMemo(() => summarizeContent(items ?? [], BRAND_LIST), [items]);
+  const selectedProject = projects.find(project => project.id === projectId);
+  const planLimit = selectedProject ? effectivePostLimit(selectedProject.categoria ?? "", selectedProject.postLimit) : null;
+  const brandItems = useMemo(() => (items ?? []).filter(p => brandFilter === null || contentBrand(p.brand) === brandFilter), [items, brandFilter]);
   const shown = useMemo(() => brandItems.filter((p) => filter === "all" || p.status === filter), [brandItems, filter]);
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: brandItems.length };
@@ -241,21 +245,30 @@ export default function ContentBoard() {
       {items && (
         <div className="flex flex-wrap items-center gap-2" aria-label="Empresas e ações do calendário">
           <div className="flex flex-wrap gap-1" role="group" aria-label="Filtrar por empresa">
-            {BRAND_LIST.map((b) => (
-              <button key={b} type="button" className="kb-chip min-h-12" aria-pressed={brandFilter === b} onClick={() => setBrandFilter(current => current === b ? null : b)}>
-                <BrandLogo brand={b} size={24} />{b}
-                <span className="kb-faint tabular-nums">{items.filter(p => p.brand === b).length}</span>
+            <button type="button" className="kb-chip min-h-12" aria-pressed={brandFilter === null} onClick={() => setBrandFilter(null)}>
+              Todas as empresas <span className="kb-faint tabular-nums">{summary.total}</span>
+            </button>
+            {[...summary.byBrand].map(([brand, count]) => (
+              <button key={brand} type="button" className="kb-chip min-h-12" aria-pressed={brandFilter === brand} onClick={() => setBrandFilter(current => current === brand ? null : brand)}>
+                <BrandLogo brand={brand} size={24} />{brand || "Sem empresa"}
+                <span className="kb-faint tabular-nums">{count}</span>
               </button>
             ))}
           </div>
           <div className="ml-auto flex items-center gap-1">
-            <span className="kb-faint mr-2 text-[12px] tabular-nums">{(() => { const pr = projects.find((x) => x.id === projectId); const lim = pr ? effectivePostLimit(pr.categoria ?? "", pr.postLimit) : null; return lim === null ? `${items.length} no mês` : `${items.length} de ${lim} no mês`; })()}</span>
+            <span className="kb-faint mr-2 text-[12px] tabular-nums" aria-live="polite">{shown.length} exibidos · {summary.total} conteúdos no mês</span>
             <button type="button" className="kb-btn-ghost inline-flex min-h-12 min-w-12 items-center justify-center" aria-label="Importar calendário ou colar status" title="Importar calendário ou colar status" disabled={!projectId} onClick={() => setImporting(true)}>
               <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5" /></svg>
             </button>
             <CalendarExport projectId={projectId} month={month} compact />
           </div>
         </div>
+      )}
+      {items && planLimit !== null && (
+        <p className="kb-faint text-xs">
+          Plano mensal: {planLimit} conteúdos · {summary.active} cadastrados ativos{summary.cancelled > 0 ? ` · ${summary.cancelled} cancelados (fora do plano)` : ""}.
+          {summary.active > planLimit ? ` ${summary.active - planLimit} acima do plano.` : ""}
+        </p>
       )}
 
       {items && view === "calendario" && (
