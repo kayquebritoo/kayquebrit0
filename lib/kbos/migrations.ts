@@ -438,6 +438,8 @@ export const SCHEMA_STEPS: { id: string; sql: string }[] = [
   { id: "empresas.4", sql: `CREATE INDEX IF NOT EXISTS kbos_company_access_user_idx ON kbos_company_access(user_id)` },
   { id: "empresas.5", sql: `ALTER TABLE kbos_projects ADD COLUMN IF NOT EXISTS company_id uuid REFERENCES kbos_companies(id) ON DELETE SET NULL` },
   { id: "empresas.6", sql: `CREATE INDEX IF NOT EXISTS kbos_projects_company_idx ON kbos_projects(company_id)` },
+  // 0032: post em colab entre empresas (Hotel + Lounge…). Só acrescenta.
+  { id: "conteudo.colab.0", sql: `ALTER TABLE kbos_social_posts ADD COLUMN IF NOT EXISTS collab_brands jsonb NOT NULL DEFAULT '[]'::jsonb` },
   { id: "empresas.7", sql: `ALTER TABLE kbos_users ADD COLUMN IF NOT EXISTS disabled_at timestamptz` },
 ];
 

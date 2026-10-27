@@ -61,7 +61,7 @@ export async function listPosts(opts: { projectId?: string; from?: Date; to?: Da
   return db().select().from(socialPosts).where(conds.length ? and(...conds) : undefined).orderBy(asc(socialPosts.scheduledAt)).limit(1000);
 }
 
-export type PostPatch = Partial<{ title: string; brand: string | null; format: PostFormat; networks: string[]; scheduledAt: Date | null; status: PostStatus; script: string | null; caption: string | null; mediaUrl: string | null; postedUrl: string | null; scriptBy: string | null; captureBy: string | null; editor: string | null; errorMessage: string | null; dismissed: boolean }>;
+export type PostPatch = Partial<{ title: string; brand: string | null; collabBrands: string[]; format: PostFormat; networks: string[]; scheduledAt: Date | null; status: PostStatus; script: string | null; caption: string | null; mediaUrl: string | null; postedUrl: string | null; scriptBy: string | null; captureBy: string | null; editor: string | null; errorMessage: string | null; dismissed: boolean }>;
 
 export class PostError extends Error {}
 
@@ -77,6 +77,12 @@ export async function updatePost(id: string, patch: PostPatch) {
   if (mediaUrl && !/^https:\/\//i.test(mediaUrl)) throw new PostError("O link do arquivo precisa começar com https://.");
   const { dismissed, ...fields } = patch;
   const set: Partial<typeof socialPosts.$inferInsert> = { ...fields, updatedAt: new Date() };
+  // Colab: até 2 empresas além da principal, sem repetir a principal; sem principal não há colab.
+  const mainBrand = patch.brand !== undefined ? patch.brand : cur.brand;
+  if (patch.collabBrands !== undefined || patch.brand !== undefined) {
+    const wanted = patch.collabBrands ?? cur.collabBrands ?? [];
+    set.collabBrands = mainBrand ? [...new Set(wanted.map((b) => b.trim().slice(0, 60)).filter((b) => b && b !== mainBrand))].slice(0, 2) : [];
+  }
   if (dismissed !== undefined) set.dismissedAt = dismissed ? new Date() : null;
   if (patch.status === "aprovacao") { set.decidedAt = null; set.decidedBy = null; set.clientNote = null; }
   const database = db();

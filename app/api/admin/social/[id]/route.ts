@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 const patch = z.object({
   title: z.string().min(1).max(200).optional(),
   brand: z.string().max(60).nullable().optional(),
+  collabBrands: z.array(z.string().min(1).max(60)).max(2).optional(),
   format: z.enum(POST_FORMATS).optional(),
   networks: z.array(z.string().max(30)).max(10).optional(),
   scheduledAt: z.string().datetime({ offset: true }).nullable().optional(),
