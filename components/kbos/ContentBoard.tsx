@@ -1,6 +1,5 @@
 "use client";
 import Image from "next/image";
-import ContentReview from "./ContentReview";
 import CalendarExport from "./CalendarExport";
 import PostPublications from "./PostPublications";
 import PostPublishing from "./PostPublishing";
@@ -103,6 +102,7 @@ export default function ContentBoard() {
   const [month, setMonth] = useState(() => monthKey(new Date()));
   const [view, setView] = useState<"calendario" | "lista">("calendario");
   const [filter, setFilter] = useState("all");
+  const [brandFilter, setBrandFilter] = useState<string | null>(null);
   const [items, setItems] = useState<Post[] | null>(null);
   const [error, setError] = useState("");
   const [open, setOpen] = useState<Post | null>(null);
@@ -145,12 +145,13 @@ export default function ContentBoard() {
     void load();
   }, [load]);
 
-  const shown = useMemo(() => (items ?? []).filter((p) => filter === "all" || p.status === filter), [items, filter]);
+  const brandItems = useMemo(() => (items ?? []).filter(p => !brandFilter || p.brand === brandFilter), [items, brandFilter]);
+  const shown = useMemo(() => brandItems.filter((p) => filter === "all" || p.status === filter), [brandItems, filter]);
   const counts = useMemo(() => {
-    const c: Record<string, number> = { all: items?.length ?? 0 };
-    for (const s of STATUS) c[s.id] = (items ?? []).filter((p) => p.status === s.id).length;
+    const c: Record<string, number> = { all: brandItems.length };
+    for (const s of STATUS) c[s.id] = brandItems.filter((p) => p.status === s.id).length;
     return c;
-  }, [items]);
+  }, [brandItems]);
   const byDay = useMemo(() => {
     const m = new Map<string, Post[]>();
     for (const p of shown) {
@@ -182,13 +183,13 @@ export default function ContentBoard() {
   const dayPosts = byDay.get(selected) ?? [];
   const nextEdit = useMemo(() => {
     if (!items || month !== today.slice(0, 7)) return null;
-    const fila = items.filter((p) => EDIT_FORMATS.has(p.format) && EDIT_STATUS.has(p.status) && p.scheduledAt)
+    const fila = brandItems.filter((p) => EDIT_FORMATS.has(p.format) && EDIT_STATUS.has(p.status) && p.scheduledAt)
       .sort((a, b) => a.scheduledAt!.localeCompare(b.scheduledAt!));
     const atrasados = fila.filter((p) => dayKey(p.scheduledAt!) < today);
     const proximos = fila.filter((p) => dayKey(p.scheduledAt!) >= today);
     const post = proximos[0] ?? atrasados[0];
     return post ? { post, fila: fila.length, atrasados: atrasados.length } : { post: null, fila: 0, atrasados: 0 };
-  }, [items, month, today]);
+  }, [items, brandItems, month, today]);
   const undated = byDay.get("sem-data") ?? [];
 
   const row = (p: Post) => (
@@ -206,7 +207,7 @@ export default function ContentBoard() {
   return (
     <div className="kb-page mx-auto w-full max-w-6xl space-y-4 pb-10">
       <div className="flex flex-wrap items-center gap-2">
-        <select aria-label="Projeto" className="kb-control min-h-11 max-w-full flex-1" value={projectId} onChange={(e) => { ++loadSequence.current; setItems(null); setProjectId(e.target.value); }}>
+        <select aria-label="Projeto" className="kb-control min-h-11 max-w-full flex-1" value={projectId} onChange={(e) => { ++loadSequence.current; setItems(null); setProjectId(e.target.value); setBrandFilter(null); }}>
           {projects.length === 0 && <option value="">Sem projetos</option>}
           {projects.map((p) => <option key={p.id} value={p.id}>{p.titulo}</option>)}
         </select>
@@ -215,8 +216,6 @@ export default function ContentBoard() {
             <button key={id} type="button" aria-pressed={view === id} onClick={() => setView(id)}>{label}</button>
           ))}
         </div>
-        <CalendarExport projectId={projectId} month={month} />
-        <button type="button" className="kb-btn-ghost min-h-11" disabled={!projectId} onClick={() => setImporting(true)}>Importar / colar status</button>
       </div>
 
       <div className="flex items-center justify-between gap-2">
@@ -239,19 +238,28 @@ export default function ContentBoard() {
 
       {nextEdit && <NextToEdit next={nextEdit} today={today} onOpen={setOpen} />}
 
-      {items && projectId && <ContentReview key={`${projectId}:${month}`} projectId={projectId} month={month} onChanged={() => void load()} onOpenPost={(id) => { const post = items.find(item => item.id === id); if (post) setOpen(post); }} />}
+      {items && (
+        <div className="flex flex-wrap items-center gap-2" aria-label="Empresas e ações do calendário">
+          <div className="flex flex-wrap gap-1" role="group" aria-label="Filtrar por empresa">
+            {BRAND_LIST.map((b) => (
+              <button key={b} type="button" className="kb-chip min-h-12" aria-pressed={brandFilter === b} onClick={() => setBrandFilter(current => current === b ? null : b)}>
+                <BrandLogo brand={b} size={24} />{b}
+                <span className="kb-faint tabular-nums">{items.filter(p => p.brand === b).length}</span>
+              </button>
+            ))}
+          </div>
+          <div className="ml-auto flex items-center gap-1">
+            <span className="kb-faint mr-2 text-[12px] tabular-nums">{(() => { const pr = projects.find((x) => x.id === projectId); const lim = pr ? effectivePostLimit(pr.categoria ?? "", pr.postLimit) : null; return lim === null ? `${items.length} no mês` : `${items.length} de ${lim} no mês`; })()}</span>
+            <button type="button" className="kb-btn-ghost inline-flex min-h-12 min-w-12 items-center justify-center" aria-label="Importar calendário ou colar status" title="Importar calendário ou colar status" disabled={!projectId} onClick={() => setImporting(true)}>
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5" /></svg>
+            </button>
+            <CalendarExport projectId={projectId} month={month} compact />
+          </div>
+        </div>
+      )}
 
       {items && view === "calendario" && (
         <>
-          <div className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Empresas">
-            {BRAND_LIST.map((b) => (
-              <span key={b} className="kb-muted inline-flex items-center gap-1.5 text-[12px]">
-                <BrandLogo brand={b} size={24} />{b}
-                <span className="kb-faint tabular-nums">{(items ?? []).filter((p) => p.brand === b).length}</span>
-              </span>
-            ))}
-            <span className="kb-faint ml-auto text-[12px] tabular-nums">{(() => { const pr = projects.find((x) => x.id === projectId); const lim = pr ? effectivePostLimit(pr.categoria ?? "", pr.postLimit) : null; return lim === null ? `${items.length} no mês` : `${items.length} de ${lim} no mês`; })()}</span>
-          </div>
           <div className="kb-glass overflow-hidden p-0!" role="grid" aria-label={`Calendário de ${monthName}`}>
             <div className="grid grid-cols-7 border-b border-white/10" role="row">
               {WEEK.map((w) => <div key={w} role="columnheader" className="kb-faint py-2 text-center text-[11px] uppercase tracking-wide">{w}</div>)}
