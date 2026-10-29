@@ -23,14 +23,14 @@ const go = (path: string, q: Record<string, string> = {}) => {
   return NextResponse.redirect(u);
 };
 
-/** Projetos em que o cliente decide sobre as redes: titular (direto ou por empresa, e as operações dele) ou quem faz a gestão. */
+/** Projetos em que o cliente decide sobre as redes: projetos ativos aos quais tem vínculo explícito, titular e operações. */
 export async function socialManageableProjectIds(userId: string) {
   const all = await clientProjectIds(userId);
   const byCompany = await ownedProjectIds(userId, all);
   const owned = await db().select({ id: projects.id }).from(projects).where(eq(projects.clienteId, userId));
   const ownedIds = [...new Set([...byCompany, ...owned.map((o) => o.id)])];
   const kids = ownedIds.length ? await db().select({ id: projects.id }).from(projects).where(inArray(projects.parentId, ownedIds)) : [];
-  return [...new Set([...ownedIds, ...kids.map((k) => k.id), ...(await managedProjectIds(userId))])];
+  return [...new Set([...all, ...ownedIds, ...kids.map((k) => k.id), ...(await managedProjectIds(userId))])];
 }
 
 async function targetFor(sp: URLSearchParams, user: SessionUser | null): Promise<FlowTarget | { redirect: string }> {

@@ -20,7 +20,10 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   try {
     const ids = await socialManageableProjectIds(user.id);
-    const mine = ids.length ? await db().select({ id: projects.id, titulo: projects.titulo, parentId: projects.parentId }).from(projects).where(inArray(projects.id, ids)) : [];
+    const mine = ids.length
+      ? (await db().select({ id: projects.id, titulo: projects.titulo, parentId: projects.parentId }).from(projects).where(inArray(projects.id, ids)))
+          .sort((a, b) => (a.parentId ? 1 : 0) - (b.parentId ? 1 : 0) || a.titulo.localeCompare(b.titulo))
+      : [];
     const items = (await accountsOverview(ids)).map((a) => ({
       id: a.id, projectId: a.projectId, project: a.project, network: a.network, provider: a.provider,
       name: a.name, username: a.username, pictureUrl: a.pictureUrl, status: a.status, via: a.via,

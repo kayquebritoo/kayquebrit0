@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BRAND_LIST, brandColor, brandLabel, brandsOf } from "@/lib/kbos/brand-colors";
+import { contentBrand, summarizeContent } from "@/lib/kbos/content-summary";
 import BrandPicker from "./BrandPicker";
 import { NETWORKS, NETWORK_LABEL } from "@/lib/kbos/content-model";
 import type { PubSummary } from "@/lib/kbos/content-cycle";
@@ -27,7 +28,7 @@ type Post = {
   brand: string | null;
   collabBrands?: string[];
   format: string;
-  networks: string[];
+  networks: string[] | number;
   scheduledAt: string | null;
   status: string;
   caption: string | null;
@@ -48,6 +49,13 @@ type Post = {
 /** "Postado" só quando saiu em todas as redes; se falta alguma, mostra como agendado (igual à conta do mês). */
 const shownStatus = (p: Pick<Post, "status" | "phase">) =>
   p.status === "postado" && p.phase && p.phase !== "publicado" ? "agendado" : p.status;
+
+const postNetworks = (p: Pick<Post, "networks" | "publications">): string[] =>
+  Array.isArray(p.networks) && p.networks.length > 0
+    ? p.networks
+    : p.publications?.length
+      ? p.publications.map((pub) => pub.network)
+      : [];
 
 type Proj = { id: string; titulo: string; manage?: boolean; parentId?: string | null };
 type Pool = {
@@ -171,33 +179,68 @@ export default function PortalPosts() {
     }
   }
 
+  const matchingProjectIds = useMemo(() => {
+    if (!projectId) return null;
+    const ids = new Set([projectId]);
+    for (const p of projects) {
+      if (p.parentId === projectId) ids.add(p.id);
+    }
+    return ids;
+  }, [projectId, projects]);
+
   const monthScoped = useMemo(
     () =>
       (items ?? []).filter(
         (p) =>
-          (!projectId || p.projectId === projectId) &&
-          (!p.scheduledAt || dayKey(p.scheduledAt).startsWith(month)),
+          (!matchingProjectIds || (p.projectId !== null && matchingProjectIds.has(p.projectId))) &&
+          Boolean(p.scheduledAt && dayKey(p.scheduledAt).startsWith(month)),
       ),
-    [items, projectId, month],
+    [items, matchingProjectIds, month],
   );
+  const brands = useMemo(() => brandsFor(projects, items ?? []), [projects, items]);
+  const monthSummary = useMemo(() => summarizeContent(monthScoped, brands), [monthScoped, brands]);
+  const activeMonthScoped = monthSummary.contents.filter((p) => p.status !== "cancelado");
   const brandItems = useMemo(
-    () => monthScoped.filter((p) => !brand || brandsOf(p).includes(brand)),
-    [monthScoped, brand],
+    () => monthSummary.contents.filter((p) => !brand || brandsOf(p).includes(brand)),
+    [monthSummary.contents, brand],
+  );
+  const activeBrandItems = useMemo(
+    () => brandItems.filter((p) => p.status !== "cancelado"),
+    [brandItems],
   );
   const shown = useMemo(
     () => brandItems.filter((p) => filter === "all" || shownStatus(p) === filter),
     [brandItems, filter],
   );
   const counts = useMemo(() => {
-    const c: Record<string, number> = { all: brandItems.length };
+    const c: Record<string, number> = { all: activeBrandItems.length };
     for (const s of STATUS) c[s.id] = brandItems.filter((p) => shownStatus(p) === s.id).length;
     return c;
-  }, [brandItems]);
-  const brands = useMemo(() => brandsFor(projects, items ?? []), [projects, items]);
+  }, [activeBrandItems, brandItems]);
   const brandCounts = useMemo(
-    () => Object.fromEntries(brands.map((b) => [b, monthScoped.filter((p) => brandsOf(p).includes(b)).length])),
-    [brands, monthScoped],
+    () => Object.fromEntries(brands.map((b) => [b, monthSummary.byBrand.get(b) ?? 0])),
+    [brands, monthSummary.byBrand],
   );
+  const manager = projects.some((p) => p.manage);
+  const scopedSummary = useMemo(() => {
+    if (brand) {
+      const primary = monthSummary.contents.filter((p) => contentBrand(p.brand) === brand);
+      const s = summarizeContent(primary);
+      return { total: s.total, published: s.published, late: s.late, internalHidden: 0 };
+    }
+    const hasProjectFilter = matchingProjectIds !== null && matchingProjectIds.size < projects.length;
+    if (hasProjectFilter || manager) {
+      return {
+        total: monthSummary.total,
+        published: monthSummary.published,
+        late: monthSummary.late,
+        internalHidden: 0,
+      };
+    }
+    if (!summary) return null;
+    const internalHidden = Math.max(0, summary.total - monthSummary.total);
+    return { ...summary, internalHidden };
+  }, [brand, matchingProjectIds, projects.length, manager, monthSummary, summary]);
   const byDay = useMemo(() => {
     const m = new Map<string, Post[]>();
     for (const p of shown) {
@@ -217,7 +260,6 @@ export default function PortalPosts() {
 
   if (!items) return null;
   if (items.length === 0 && projects.length === 0) return null;
-  const manager = projects.some((p) => p.manage);
   const waiting = brandItems.filter((p) => p.status === "aprovacao");
   const dayPosts = byDay.get(selected) ?? [];
   const planned = brandItems.filter(
@@ -252,7 +294,7 @@ export default function PortalPosts() {
             {[
               brandLabel(p),
               FORMAT[p.format] ?? "Post",
-              p.networks?.length ? p.networks.map((n) => NETWORK_LABEL[n] ?? n).join(", ") : null,
+              postNetworks(p).length ? postNetworks(p).map((n) => NETWORK_LABEL[n] ?? n).join(", ") : null,
               p.takes?.length ? `${p.takes.length} take${p.takes.length > 1 ? "s" : ""}` : null,
             ]
               .filter(Boolean)
@@ -436,12 +478,17 @@ export default function PortalPosts() {
         </button>
       </div>
 
-      {summary && (summary.total > 0 || summary.late > 0) && (
+      {scopedSummary && (scopedSummary.total > 0 || scopedSummary.late > 0) && (
         <p className="kb-muted text-sm tabular-nums" aria-label={`Resumo de ${monthName}`}>
-          {summary.total} no mês · {summary.published} publicado{summary.published === 1 ? "" : "s"} ·{" "}
-          <span className={summary.late ? "text-[var(--kb-late)]" : ""}>
-            {summary.late} atrasado{summary.late === 1 ? "" : "s"}
+          {scopedSummary.total} no mês · {scopedSummary.published} publicado{scopedSummary.published === 1 ? "" : "s"} ·{" "}
+          <span className={scopedSummary.late ? "text-[var(--kb-late)]" : ""}>
+            {scopedSummary.late} atrasado{scopedSummary.late === 1 ? "" : "s"}
           </span>
+          {scopedSummary.internalHidden > 0 && (
+            <span className="kb-faint ml-2 text-xs">
+              · {scopedSummary.internalHidden} em produção com a equipe
+            </span>
+          )}
           <span className="kb-faint ml-2 text-xs">· 1 conteúdo = 1 entrega (status independente por rede)</span>
         </p>
       )}
@@ -510,7 +557,7 @@ export default function PortalPosts() {
             aria-pressed={brand === ""}
             onClick={() => setBrand("")}
           >
-            Todas as empresas <span className="kb-faint tabular-nums">{monthScoped.length}</span>
+            Todas as empresas <span className="kb-faint tabular-nums">{activeMonthScoped.length}</span>
           </button>
           {brands.map((b) => (
             <button
@@ -619,7 +666,7 @@ function PortalPublications({ post }: { post: Post }) {
   const pubs: PubSummary[] =
     post.publications && post.publications.length > 0
       ? post.publications
-      : (post.networks ?? []).map((n) => ({
+      : postNetworks(post).map((n) => ({
           network: n,
           status: post.status === "postado" ? "publicado" : post.status === "agendado" ? "agendado" : "pendente",
           url: post.status === "postado" ? post.postedUrl : null,
@@ -692,7 +739,7 @@ function ContentEditor({
     title: post?.title ?? "",
     script: post?.script ?? "",
     caption: post?.caption ?? "",
-    networks: post?.networks?.length ? post.networks : ["instagram"],
+    networks: post && postNetworks(post).length ? postNetworks(post) : ["instagram"],
   }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");

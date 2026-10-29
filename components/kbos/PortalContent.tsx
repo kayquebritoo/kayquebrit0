@@ -10,7 +10,7 @@ import PortalPosts from "@/components/kbos/PortalPosts";
 import OverduePosts from "@/components/kbos/OverduePosts";
 import CycleCard from "@/components/kbos/CycleCard";
 
-type Project = { id: string; titulo: string; categoria: string; status: string; prazo?: string | null };
+type Project = { id: string; titulo: string; categoria: string; status: string; prazo?: string | null; parentId?: string | null };
 type TaskItem = { id: string; projectId: string | null; titulo: string; status: string; dueAt: string | null };
 type Invoice = { id: string; projectId: string | null; descricao: string; valor: string; status: string; vencimento: string | null };
 type FileItem = { id: string; projectId: string; nome: string; url: string; status: string };
@@ -40,7 +40,9 @@ export default function PortalContent({ firstName }: { firstName?: string }) {
           if (!r.ok) throw new Error("Não consegui carregar seus projetos agora.");
           return r.json();
         });
-        const items: Project[] = p.items || [];
+        const items: Project[] = ((p.items || []) as Project[]).sort(
+          (a, b) => (a.parentId ? 1 : 0) - (b.parentId ? 1 : 0) || a.titulo.localeCompare(b.titulo),
+        );
         const lists = await Promise.all(
           items.map((proj) => fetch(`/api/projects/${proj.id}/files`).then((r) => (r.ok ? r.json() : { items: [] })).then((f) => (f.items || []).map((x: FileItem) => ({ ...x, projectId: proj.id })))),
         );

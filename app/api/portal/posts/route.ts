@@ -20,17 +20,35 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   try {
     const managed = new Set(await managedProjectIds(user.id));
-    const mine = (await db().select({ id: projects.id, titulo: projects.titulo, parentId: projects.parentId }).from(projects).where(clientProjects(user.id))).map((p) => ({ ...p, manage: managed.has(p.id) }));
+    const mine = (await db().select({ id: projects.id, titulo: projects.titulo, parentId: projects.parentId }).from(projects).where(clientProjects(user.id)))
+      .map((p) => ({ ...p, manage: managed.has(p.id) }))
+      .sort((a, b) => (a.parentId ? 1 : 0) - (b.parentId ? 1 : 0) || a.titulo.localeCompare(b.titulo));
+    const mineIds = new Set(mine.map((p) => p.id));
     const month = new URL(req.url).searchParams.get("month") ?? "";
     const valid = /^\d{4}-\d{2}$/.test(month);
-    const roots = [...new Set(mine.map((p) => p.parentId ?? p.id))];
-    // cliente com operações: o plano é do principal, dividido entre as empresas
-    const pools = valid ? (await Promise.all(roots.map((r) => planPool(r, month)))).filter((p) => p && p.ops.length).map((p) => ({ ...p!, manage: managed.has(p!.rootId) })) : [];
+    // Só agrupa no projeto-mãe quando o cliente tem acesso ao principal ou a mais de uma operação dele
+    const poolRoots = [
+      ...new Set(
+        mine
+          .filter((p) => !p.parentId || mineIds.has(p.parentId) || mine.filter((x) => x.parentId === p.parentId).length > 1)
+          .map((p) => p.parentId ?? p.id),
+      ),
+    ];
+    const pools = valid
+      ? (await Promise.all(poolRoots.map((r) => planPool(r, month))))
+          .filter((p) => p && p.ops.length)
+          .map((p) => ({
+            ...p!,
+            ops: mineIds.has(p!.rootId) ? p!.ops : p!.ops.filter((o) => mineIds.has(o.id)),
+            manage: managed.has(p!.rootId),
+          }))
+      : [];
     const quota = valid && mine[0] && !pools.length ? await monthUsage(mine[0].id, month) : null;
-    // números do mês com a MESMA regra do relatório e do admin (o principal soma as operações)
+    // Números do mês estritamente sobre os projetos aos quais o cliente tem acesso (o principal soma as operações quando acessível)
+    const summaryIds = mine.filter((p) => !p.parentId || !mineIds.has(p.parentId)).map((p) => p.id);
     let summary: { total: number; published: number; late: number } | null = null;
-    if (valid && roots.length) {
-      const m = await monthMetricsByProject(roots, month);
+    if (valid && summaryIds.length) {
+      const m = await monthMetricsByProject(summaryIds, month);
       summary = [...m.values()].reduce((s, x) => ({ total: s.total + x.previstos, published: s.published + x.publicados, late: s.late + x.atrasados }), { total: 0, published: 0, late: 0 });
     }
     return NextResponse.json({ items: await contentFlags(await portalPosts(user.id)), projects: mine, quota, pools, summary });

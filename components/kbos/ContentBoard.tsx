@@ -27,7 +27,7 @@ export type CalendarPost = {
   clientNote: string | null;
   copies?: number;
   postedUrl: string | null;
-  networks?: string[];
+  networks?: string[] | number;
   scriptBy?: string | null;
   captureBy?: string | null;
   editor?: string | null;
@@ -562,11 +562,14 @@ function AdminContentBoard() {
             p.scheduledAt && hhmm(p.scheduledAt) !== "00:00" ? hhmm(p.scheduledAt) : null,
             brandLabel(p),
             FORMAT[p.format] ?? "Post",
-            p.networks?.length
-              ? `${p.networks.length} ${p.networks.length === 1 ? "rede" : "redes"}`
-              : p.copies > 1
-                ? `${p.copies} cópias na origem`
-                : null,
+            (() => {
+              const n = typeof p.networks === "number" ? p.networks : Array.isArray(p.networks) ? p.networks.length : 0;
+              return n > 0
+                ? `${n} ${n === 1 ? "rede" : "redes"}`
+                : p.copies > 1
+                  ? `${p.copies} cópias na origem`
+                  : null;
+            })(),
           ]
             .filter(Boolean)
             .join(" · ")}
