@@ -115,7 +115,7 @@ export default function PortalPreview() {
 
 function Section({ eyebrow, title, children, action }: { eyebrow?: string; title: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <section className="kb-glass p-5">
+    <section className="kb-glass-v2 p-5 sm:p-6">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
         <div className="min-w-0">{eyebrow && <p className="kb-faint text-[11px] uppercase tracking-[0.22em]">{eyebrow}</p>}<h2 className="font-display mt-1 text-xl">{title}</h2></div>
         {action}
@@ -127,10 +127,10 @@ function Section({ eyebrow, title, children, action }: { eyebrow?: string; title
 
 function Hero({ hello, line, children }: { hello: string; line: string; children?: React.ReactNode }) {
   return (
-    <header className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#11101E] p-5 sm:p-7">
-      <div aria-hidden className="absolute inset-0 opacity-90" style={{ background: "radial-gradient(80% 120% at 100% 0%, rgba(232,14,253,.22), transparent 55%), linear-gradient(120deg,#350C85,#4F12C7 60%,#11101E)" }} />
+    <header className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#11101E] p-6 sm:p-8 shadow-2xl">
+      <div aria-hidden className="absolute inset-0 opacity-90" style={{ background: "radial-gradient(80% 120% at 100% 0%, rgba(232,14,253,.26), transparent 55%), linear-gradient(120deg,#350C85,#4F12C7 60%,#11101E)" }} />
       <div className="relative">
-        <p className="font-display text-2xl sm:text-3xl">{hello}</p>
+        <p className="font-display text-2xl font-light sm:text-3xl">{hello}</p>
         <p className="mt-1 max-w-xl text-sm text-[#EDE6EC]/85">{line}</p>
         {children}
       </div>
@@ -165,8 +165,8 @@ function HomeBrand({ scenario, go, say }: { scenario: Scenario; go: (t: Tab) => 
             <LogoArt brand={scenario.companies[0].brand} bg={scenario.companies[0].brand.colors[1].hex} fg={scenario.companies[0].brand.colors[0].hex} big />
             <div className="flex flex-col gap-3">
               <p className="kb-muted text-sm">Ajustamos o peso das letras e simplificamos o símbolo, como você pediu na rodada 1.</p>
-              <button type="button" className="kb-btn" onClick={() => say("Aprovação registrada com seu nome e a data.")}>Aprovar esta versão</button>
-              <button type="button" className="kb-btn-ghost" onClick={() => go("aprovacoes")}>Pedir ajustes</button>
+              <button type="button" className="kb-btn min-h-11" onClick={() => say("Aprovação registrada com seu nome e a data.")}>Aprovar esta versão</button>
+              <button type="button" className="kb-btn-ghost min-h-11" onClick={() => go("aprovacoes")}>Pedir ajustes</button>
             </div>
           </div>
         </Section>
@@ -182,9 +182,18 @@ function HomeBrand({ scenario, go, say }: { scenario: Scenario; go: (t: Tab) => 
 
 function QuickCard({ title, text, onClick }: { title: string; text: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="kb-glass group flex min-h-[96px] flex-col items-start justify-between gap-2 p-4 text-left transition-transform active:scale-[.98]">
-      <span className="font-display text-lg">{title}</span>
-      <span className="kb-muted flex w-full items-center justify-between gap-2 text-sm">{text}<span aria-hidden className="transition-transform group-hover:translate-x-1">→</span></span>
+    <button
+      type="button"
+      onClick={onClick}
+      className="kb-glass-v2 kb-tactile group flex min-h-[104px] flex-col items-start justify-between gap-2 p-5 text-left transition-all hover:border-[var(--kb-accent-line)]"
+    >
+      <span className="font-display text-lg tracking-tight">{title}</span>
+      <span className="kb-muted flex w-full items-center justify-between gap-2 text-sm">
+        {text}
+        <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-1 font-semibold text-[var(--kb-accent)]">
+          →
+        </span>
+      </span>
     </button>
   );
 }
@@ -201,11 +210,18 @@ function HomeRecurring({ scenario, contents, company, go }: { scenario: Scenario
   return (
     <>
       <Hero hello={`Olá, ${scenario.person}.`} line={`Outubro de 2026 · ${company?.name ?? "todas as empresas do grupo"}. ${waiting.length ? `${waiting.length} conteúdo${waiting.length > 1 ? "s esperam" : " espera"} sua aprovação.` : "Nada esperando você agora."}`}>
-        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           {stats.map((s) => (
-            <div key={s.label} className={`rounded-2xl border px-3 py-3 ${s.hot && s.n ? "border-[#EDE6EC]/50 bg-white/10" : "border-white/15 bg-black/15"}`}>
-              <span className="font-display block text-2xl tabular-nums">{s.n}</span>
-              <span className="block text-xs text-[#EDE6EC]/80">{s.label}</span>
+            <div
+              key={s.label}
+              className={`rounded-2xl border px-3.5 py-3.5 transition-all ${
+                s.hot && s.n
+                  ? "border-[#EDE6EC]/40 bg-white/15 shadow-[0_0_20px_-6px_rgba(232,14,253,0.35)]"
+                  : "border-white/10 bg-black/25"
+              }`}
+            >
+              <span className="font-display block text-2xl font-medium tabular-nums sm:text-3xl">{s.n}</span>
+              <span className="block text-xs font-medium text-[#EDE6EC]/80">{s.label}</span>
             </div>
           ))}
         </div>
@@ -214,7 +230,7 @@ function HomeRecurring({ scenario, contents, company, go }: { scenario: Scenario
         {waiting.length === 0 ? <p className="kb-muted text-sm">Tudo aprovado por enquanto. Avisamos no WhatsApp quando chegar algo novo.</p> : (
           <div className="flex flex-col gap-2">
             {waiting.map((c) => (
-              <button key={c.id} type="button" className="kb-row w-full text-left" onClick={() => go("conteudo")}>
+              <button key={c.id} type="button" className="kb-row kb-tactile min-h-12 w-full text-left" onClick={() => go("conteudo")}>
                 <span className="min-w-0"><span className="block truncate text-sm">{c.title}</span><span className="kb-faint block text-xs">{day(c.date)} · {c.format} · {c.channels.length} rede{c.channels.length > 1 ? "s" : ""}</span></span>
                 <span className="kb-tag shrink-0">Revisar</span>
               </button>
@@ -242,7 +258,7 @@ function ContentList({ contents, companies, multi, decide }: { contents: Content
       {list.length === 0 && <p className="kb-muted py-6 text-center text-sm">Nenhum conteúdo neste filtro.</p>}
       <ul className="flex flex-col gap-3">
         {list.map((c) => (
-          <li key={c.id} className="kb-card flex flex-col gap-3 !p-4">
+          <li key={c.id} className="kb-card kb-tactile flex flex-col gap-3 !p-4 transition-all hover:border-white/20">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="kb-faint flex items-center gap-1.5 text-xs">{multi && <><i aria-hidden className="h-2 w-2 rounded-full" style={{ background: co(c.company)?.color }} />{co(c.company)?.name} ·</>} {day(c.date)} · {c.format}</p>
