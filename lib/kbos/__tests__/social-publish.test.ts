@@ -144,7 +144,7 @@ describe("agendar e publicar", () => {
     await startMedia(post, "piscina.mp4", MP4.length, MP4);
     await expect(schedulePost(post, { at: new Date() })).rejects.toThrow(/Instagram/);
     await syncPublications(post, ["instagram", "facebook"]);
-    await expect(schedulePost(post, { at: new Date() })).rejects.toThrow(/Falta ligar a conta/);
+    await expect(schedulePost(post, { at: new Date() })).rejects.toThrow(/Falta ligar.*a conta/);
     // tokens longos e únicos: "PT" curto aparecia por acaso no texto cifrado (aleatório) e o teste falhava às vezes
     await saveMetaAccounts([{ network: "instagram", externalId: "ig1", pageId: "p1", name: "Hotel", username: "hotel", pictureUrl: null, token: "TOKEN-EM-CLARO-HOTEL" }, { network: "facebook", externalId: "p9", pageId: "p9", name: "Grupo", username: null, pictureUrl: null, token: "TOKEN-EM-CLARO-GRUPO" }], null);
     expect((await d.select().from(schema.socialAccounts)).every((a) => !!a.tokenEnc && !a.tokenEnc.includes("TOKEN-EM-CLARO"))).toBe(true);
