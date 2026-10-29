@@ -1227,6 +1227,22 @@ html.light .hero-cta-m {
   --kb-soon-bg: rgba(245, 185, 74, 0.1);
   --kb-soon-line: rgba(245, 185, 74, 0.3);
   --kb-good: #7be0a8;
+  /* ── Design System v2: Tokens Aditivos (Motion, Radius, Touch, Elevation) ── */
+  --kb-dur-1: 120ms;
+  --kb-dur-2: 220ms;
+  --kb-dur-3: 360ms;
+  --kb-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --kb-ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  --kb-r-sm: 10px;
+  --kb-r-md: 14px;
+  --kb-r-lg: 20px;
+  --kb-r-xl: 28px;
+  --kb-r-pill: 999px;
+  --kb-elev-1: 0 1px 0 rgba(237, 230, 236, 0.07) inset, 0 8px 24px -16px rgba(0, 0, 0, 0.6);
+  --kb-elev-2: 0 1px 0 rgba(237, 230, 236, 0.09) inset, 0 30px 60px -40px rgba(53, 12, 133, 0.6);
+  --kb-press: inset 0 2px 6px rgba(0, 0, 0, 0.45);
+  --kb-glow-accent: 0 0 24px -6px rgba(79, 18, 199, 0.55);
+  --kb-touch: 44px;
   --kb-veil: radial-gradient(1100px 620px at 18% -12%, rgba(79, 18, 199, 0.26), transparent 62%),
     radial-gradient(760px 420px at 104% -4%, rgba(232, 14, 253, 0.07), transparent 60%);
   --kb-wave: rgba(237, 230, 236, 0.05);
@@ -1255,6 +1271,10 @@ html.light .kbos {
   --kb-soon-bg: rgba(214, 150, 30, 0.12);
   --kb-soon-line: rgba(214, 150, 30, 0.38);
   --kb-good: #1d8a52;
+  --kb-elev-1: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 6px 20px -12px rgba(23, 23, 46, 0.25);
+  --kb-elev-2: 0 1px 0 rgba(255, 255, 255, 0.95) inset, 0 24px 50px -30px rgba(23, 23, 46, 0.3);
+  --kb-press: inset 0 2px 5px rgba(23, 23, 46, 0.15);
+  --kb-glow-accent: 0 0 20px -4px rgba(79, 18, 199, 0.35);
   --kb-veil: radial-gradient(1100px 620px at 18% -12%, rgba(79, 18, 199, 0.1), transparent 62%),
     radial-gradient(760px 420px at 104% -4%, rgba(232, 14, 253, 0.04), transparent 60%);
   --kb-wave: rgba(23, 23, 46, 0.06);
@@ -1269,6 +1289,24 @@ html.light .kbos {
   box-shadow: var(--kb-shadow);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+}
+.kb-glass-v2 {
+  background: var(--kb-glass);
+  border: 1px solid var(--kb-line);
+  border-radius: var(--kb-r-lg, 20px);
+  box-shadow: var(--kb-elev-1);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  transition: border-color var(--kb-dur-2) var(--kb-ease-out), box-shadow var(--kb-dur-2) var(--kb-ease-out);
+}
+.kb-elev-1 { box-shadow: var(--kb-elev-1); }
+.kb-elev-2 { box-shadow: var(--kb-elev-2); }
+.kb-tactile {
+  transition: transform var(--kb-dur-1) var(--kb-ease-out), box-shadow var(--kb-dur-1) var(--kb-ease-out);
+}
+.kb-tactile:active {
+  transform: scale(0.975);
+  box-shadow: var(--kb-press);
 }
 .kb-chip {
   display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px;
