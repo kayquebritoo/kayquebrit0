@@ -61,7 +61,7 @@ describe("acesso compartilhado ao projeto", () => {
     expect((await addProjectMember(project, "equipe@example.com")).ok).toBe(false);
   });
   it("dá acesso pelo painel a quem está só no CRM, criando a conta na hora", async () => {
-    await pg.exec("TRUNCATE kbos_contacts CASCADE");
+    await pg.exec("DELETE FROM kbos_contacts");
     await d.insert(schema.contacts).values({ name: "Atalaia VIP", email: "AtalaiaVip2023@gmail.com", phone: "(91) 98888-1111", company: "Grupo Atalaia Vip", status: "client" });
     const found = await searchMemberCandidates("atalaia");
     expect(found).toEqual([{ email: "atalaiavip2023@gmail.com", name: "Atalaia VIP", company: "Grupo Atalaia Vip", hasAccount: false }]);
@@ -73,7 +73,7 @@ describe("acesso compartilhado ao projeto", () => {
     expect(await d.select().from(schema.contacts)).toHaveLength(1);
   });
   it("e-mail novo: pede o nome e cria contato + conta ali mesmo", async () => {
-    await pg.exec("TRUNCATE kbos_contacts CASCADE");
+    await pg.exec("DELETE FROM kbos_contacts");
     const miss = await addProjectMember(project, "nova@example.com");
     expect(!miss.ok && miss.needsName).toBe(true);
     const r = await addProjectMember(project, "nova@example.com", "gestao", { name: "Nova Pessoa", phone: "91 99999-0000" });
