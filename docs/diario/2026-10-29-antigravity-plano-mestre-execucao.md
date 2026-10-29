@@ -39,10 +39,17 @@
 
 ---
 
-## 2. O que falta
-1. Revisão e aprovação dos 3 PRs abertos no GitHub:
-   - [PR #25](https://github.com/kayquebritoo/kayquebrit0/pull/25) — Listas compactas
-   - [PR #26](https://github.com/kayquebritoo/kayquebrit0/pull/26) — Mobile-first portal
-   - [PR #27](https://github.com/kayquebritoo/kayquebrit0/pull/27) — Design System v2 e preview
-2. Decisão do Kayque sobre as lacunas da minuta contratual do Grupo VIP.
-3. Teste no navegador do protótipo `/portal/preview/` antes de estender o visual para as telas em produção.
+## 2. Status dos PRs e Deploy
+- **PR #25 (Listas Compactas):** CI aprovado e mesclado em `main` (commit `3e452fa`).
+- **PR #27 (Design System v2):** CI aprovado e mesclado em `main` (commit `193932d`).
+- **PR #26 (Mobile-First):** Rebase efetuado resolvendo conflitos com PR #25 e PR #27, CI aprovado e mesclado em `main` (commit `2ae20b3`).
+- **Deploy em Produção:** VPS (`179.236.67.19`) ativa, `/api/health` respondendo 200 OK com banco, redis e worker saudáveis.
+- **Limpeza de Worktrees:** Worktrees `APP-listas-compactas`, `APP-portal-mobile` e `APP-design-system-preview` removidos e branches remotas excluídas.
+
+---
+
+## 3. Próximos Passos (Decisão do Kayque)
+1. Decisão sobre as 9 lacunas jurídicas e operacionais mapeadas na minuta interna do Grupo VIP (`30-Clientes/Grupo VIP - Minuta contrato mensal (RASCUNHO).md`).
+2. Avaliação no navegador da experiência visual em `/portal/preview/` antes de estender os novos tokens para o restante das interfaces.
+3. Avançar na etapa L1 do roteiro KBOS + Lume (token HMAC de SSO e link no portal do cliente).
+
