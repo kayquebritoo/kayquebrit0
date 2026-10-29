@@ -335,7 +335,7 @@ export default function PortalPosts() {
   };
 
   return (
-    <section className="kb-glass flex flex-col gap-4 p-5" aria-label="Calendário de conteúdo">
+    <section id="calendario" className="kb-glass scroll-mt-20 flex flex-col gap-4 p-5" aria-label="Calendário de conteúdo">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">

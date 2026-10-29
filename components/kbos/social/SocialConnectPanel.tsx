@@ -227,8 +227,8 @@ export default function SocialConnectPanel({ token, linkToken, initialProject }:
                     href={href}
                     className={
                       connected.length > 0 && !hasExpired
-                        ? "kb-btn-ghost min-h-10 w-full text-center text-xs"
-                        : "kb-btn min-h-10 w-full text-center text-xs"
+                        ? "kb-btn-ghost min-h-11 w-full text-center text-xs"
+                        : "kb-btn min-h-11 w-full text-center text-xs"
                     }
                   >
                     {hasExpired
@@ -240,7 +240,7 @@ export default function SocialConnectPanel({ token, linkToken, initialProject }:
                 ) : (
                   <span
                     aria-disabled="true"
-                    className="kb-chip min-h-10 w-full justify-center text-xs opacity-70"
+                    className="kb-chip min-h-11 w-full justify-center text-xs opacity-70"
                   >
                     Pendente de ativação externa
                   </span>
