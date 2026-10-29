@@ -97,4 +97,39 @@ describe("contrato (página 2)", () => {
     expect(text).toMatch(/Valor mensal: R\$\s5\.000,00/);
     expect(text).not.toMatch(/Valor total contratado/);
   });
+
+  it("gera PDF do contrato mensal Grupo Atalaia VIP em exatamente 2 páginas", async () => {
+    const vipBudget: BudgetPdfData = {
+      code: "#VIP-2026",
+      title: "Gestão Mensal de Conteúdo e Audiovisual — Grupo Atalaia VIP",
+      status: "draft",
+      totalAmount: "5000",
+      validUntil: "2026-11-30",
+      terms: "1. Cotas mensais unificadas no Grupo: 50 conteúdos (30 vídeos, 20 carrosséis/artes), até 120 fotos tratadas e 2 visitas mensais.\n2. Hospedagem e alimentação no local fornecidas pelo CONTRATANTE durante as diárias de captação.\n3. Até 2 rodadas de revisão por material com prazo de aprovação pelo cliente de até 48 horas úteis.",
+      bankInfo: "Kayque Jonathan Brito\nChave Pix: contato@kayquebrito.com.br",
+      items: [
+        { service: "Hotel Atalaia VIP — Gestão Mensal", description: "18 conteúdos (10 vídeos, 8 carrosséis) + 40 fotos tratadas + 4h de captação/mês.", quantity: 1, unitPrice: 1666.67, total: 1666.67 },
+        { service: "Atalaia VIP Lounge — Gestão Mensal", description: "16 conteúdos (10 vídeos, 6 carrosséis) + 40 fotos tratadas + 4h de captação/mês.", quantity: 1, unitPrice: 1666.67, total: 1666.67 },
+        { service: "Praça de Alimentação — Gestão Mensal", description: "16 conteúdos (10 vídeos, 6 carrosséis) + 40 fotos tratadas + 4h de captação/mês.", quantity: 1, unitPrice: 1666.66, total: 1666.66 },
+      ],
+      createdAt: "2026-10-29",
+      clientName: "Dhony / Grupo Atalaia VIP",
+      clientCompany: "Grupo Atalaia VIP",
+      contactName: "Dhony",
+      contactPhone: null,
+      contactCompany: "Grupo Atalaia VIP",
+      contactEmail: "atalaiavip2023@gmail.com",
+      paymentCondition: "cash",
+      deliveryDeadline: "Fluxo contínuo mensal conforme calendário editorial",
+      revisionsCount: 2,
+    };
+
+    expect(isRecurringBudget(vipBudget)).toBe(true);
+
+    const buf = await renderBudgetPdf(vipBudget);
+    expect(Buffer.isBuffer(buf)).toBe(true);
+    expect(buf.length).toBeGreaterThan(5000);
+    expect(buf.subarray(0, 5).toString()).toBe("%PDF-");
+    expect(buf.toString("latin1").match(/\/Type \/Page(?!s)/g)?.length).toBe(2);
+  }, 30000);
 });
