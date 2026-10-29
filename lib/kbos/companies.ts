@@ -162,6 +162,7 @@ export async function clientLumeHub(userId: string): Promise<{ label: string; pa
   const res = await db().execute(sql`SELECT COALESCE(c.lume_pasta, g.lume_pasta) AS pasta, COALESCE(g.name, c.name) AS label
     FROM kbos_projects p JOIN kbos_companies c ON c.id = p.company_id LEFT JOIN kbos_companies g ON g.id = c.parent_id
     WHERE COALESCE(c.lume_pasta, g.lume_pasta) IS NOT NULL
+      AND (p.recurring OR p.status <> 'entregue')
       AND (p.cliente_id = ${userId}
         OR p.id IN (SELECT m.project_id FROM kbos_project_members m WHERE m.user_id = ${userId})
         OR c.id IN (SELECT a.company_id FROM kbos_company_access a WHERE a.user_id = ${userId} AND a.revoked_at IS NULL)
