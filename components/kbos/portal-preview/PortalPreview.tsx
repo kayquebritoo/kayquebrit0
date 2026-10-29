@@ -23,7 +23,7 @@ const STATUS_TONE: Record<ChannelStatus, string> = { publicado: "#2dd4bf", agend
 const day = (iso: string) => new Date(`${iso}T12:00:00-03:00`).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" });
 
 export default function PortalPreview() {
-  const [scenarioId, setScenarioId] = useState<Scenario["id"]>("marca");
+  const [scenarioId, setScenarioId] = useState<Scenario["id"]>("recorrente");
   const scenario = SCENARIOS.find((s) => s.id === scenarioId)!;
   const [companyId, setCompanyId] = useState("all");
   const [tab, setTab] = useState<Tab>("inicio");
@@ -238,7 +238,8 @@ function HomeRecurring({ scenario, contents, company, go }: { scenario: Scenario
           </div>
         )}
       </Section>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <QuickCard title="Calendário de conteúdo" text="Grid mensal de posts, aprovações e agendamentos." onClick={() => go("conteudo")} />
         <QuickCard title="Marca das empresas" text="Hotel, Lounge e Praça: logos, cores e fontes." onClick={() => go("marca")} />
         <QuickCard title="Relatório do mês" text="O que saiu, em quais redes e o que falhou." onClick={() => go("relatorio")} />
       </div>
@@ -246,45 +247,533 @@ function HomeRecurring({ scenario, contents, company, go }: { scenario: Scenario
   );
 }
 
+function getMonthCells(monthStr: string) {
+  const [y, m] = monthStr.split("-").map(Number);
+  const first = new Date(Date.UTC(y, m - 1, 1));
+  const start = new Date(Date.UTC(y, m - 1, 1 - first.getUTCDay()));
+  const days = Math.ceil((first.getUTCDay() + new Date(Date.UTC(y, m, 0)).getUTCDate()) / 7) * 7;
+  return Array.from({ length: days }, (_, i) => {
+    const d = new Date(start.getTime() + i * 86400000);
+    return {
+      key: d.toISOString().slice(0, 10),
+      n: d.getUTCDate(),
+      inMonth: d.getUTCMonth() === m - 1,
+    };
+  });
+}
+
+const MONTH_NAMES: Record<string, string> = {
+  "2026-09": "Setembro de 2026",
+  "2026-10": "Outubro de 2026",
+  "2026-11": "Novembro de 2026",
+  "2026-12": "Dezembro de 2026",
+};
+
+const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
 function ContentList({ contents, companies, multi, decide }: { contents: Content[]; companies: Company[]; multi: boolean; decide: (id: string, ok: boolean) => void }) {
+  const [view, setView] = useState<"calendario" | "lista">("calendario");
+  const [month, setMonth] = useState("2026-10");
   const [filter, setFilter] = useState<"todos" | "aprovacao" | "publicado">("todos");
-  const list = contents.filter((c) => filter === "todos" || (filter === "aprovacao" ? c.stage === "aprovacao" : c.stage === "publicado")).sort((a, b) => a.date.localeCompare(b.date));
+  const [selectedDay, setSelectedDay] = useState("2026-10-29");
+  const [activePost, setActivePost] = useState<Content | null>(null);
+
   const co = (id: string) => companies.find((c) => c.id === id);
+
+  const filteredContents = useMemo(() => {
+    return contents.filter((c) => {
+      if (filter === "aprovacao") return c.stage === "aprovacao";
+      if (filter === "publicado") return c.stage === "publicado";
+      return true;
+    });
+  }, [contents, filter]);
+
+  const cells = useMemo(() => getMonthCells(month), [month]);
+
+  const postsByDay = useMemo(() => {
+    const map = new Map<string, Content[]>();
+    for (const c of filteredContents) {
+      const arr = map.get(c.date) ?? [];
+      arr.push(c);
+      map.set(c.date, arr);
+    }
+    return map;
+  }, [filteredContents]);
+
+  const selectedPosts = useMemo(() => {
+    return postsByDay.get(selectedDay) ?? [];
+  }, [postsByDay, selectedDay]);
+
+  const prevMonth = () => {
+    const [y, m] = month.split("-").map(Number);
+    const prev = new Date(Date.UTC(y, m - 2, 1));
+    setMonth(prev.toISOString().slice(0, 7));
+  };
+
+  const nextMonth = () => {
+    const [y, m] = month.split("-").map(Number);
+    const next = new Date(Date.UTC(y, m, 1));
+    setMonth(next.toISOString().slice(0, 7));
+  };
+
   return (
-    <Section eyebrow="Outubro de 2026" title="Calendário de conteúdo">
-      <div className="kb-seg mb-4" role="group" aria-label="Filtrar">
-        {(["todos", "aprovacao", "publicado"] as const).map((f) => <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>{f === "todos" ? "Todos" : f === "aprovacao" ? "Para aprovar" : "Publicados"}</button>)}
-      </div>
-      {list.length === 0 && <p className="kb-muted py-6 text-center text-sm">Nenhum conteúdo neste filtro.</p>}
-      <ul className="flex flex-col gap-3">
-        {list.map((c) => (
-          <li key={c.id} className="kb-card kb-tactile flex flex-col gap-3 !p-4 transition-all hover:border-white/20">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="kb-faint flex items-center gap-1.5 text-xs">{multi && <><i aria-hidden className="h-2 w-2 rounded-full" style={{ background: co(c.company)?.color }} />{co(c.company)?.name} ·</>} {day(c.date)} · {c.format}</p>
-                <h3 className="mt-1 break-words text-base font-medium">{c.title}</h3>
-              </div>
-              <span className={`kb-tag ${c.stage === "aprovacao" ? "!border-[#f5c46e]/60 !text-[#f5c46e]" : ""}`}>{STAGE_LABEL[c.stage]}</span>
+    <>
+      <Section
+        eyebrow={MONTH_NAMES[month] ?? month}
+        title="Calendário de conteúdo"
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="kb-seg" role="group" aria-label="Visualização">
+              <button
+                type="button"
+                aria-pressed={view === "calendario"}
+                onClick={() => setView("calendario")}
+                className="px-3 min-h-10 text-xs sm:text-sm"
+              >
+                Calendário
+              </button>
+              <button
+                type="button"
+                aria-pressed={view === "lista"}
+                onClick={() => setView("lista")}
+                className="px-3 min-h-10 text-xs sm:text-sm"
+              >
+                Lista
+              </button>
             </div>
-            {c.caption && <p className="kb-muted text-sm">{c.caption}</p>}
-            <div className="flex flex-wrap gap-1.5" aria-label="Status por rede">
-              {c.channels.map((ch) => (
-                <span key={ch.network} className="kb-chip min-h-8 gap-1.5 !text-xs">
-                  <i aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: STATUS_TONE[ch.status] }} />{NETWORK_LABEL[ch.network]} · {CHANNEL_LABEL[ch.status]}
+          </div>
+        }
+      >
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="kb-seg" role="group" aria-label="Filtrar">
+            {(["todos", "aprovacao", "publicado"] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                aria-pressed={filter === f}
+                onClick={() => setFilter(f)}
+                className="px-3 min-h-10 text-xs"
+              >
+                {f === "todos" ? "Todos" : f === "aprovacao" ? "Para aprovar" : "Publicados"}
+              </button>
+            ))}
+          </div>
+          {view === "calendario" && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={prevMonth}
+                className="kb-btn-ghost min-h-10 px-3 text-xs"
+                aria-label="Mês anterior"
+              >
+                ← Anterior
+              </button>
+              <span className="text-xs font-medium text-[#EDE6EC]/90 min-w-[120px] text-center">
+                {MONTH_NAMES[month] ?? month}
+              </span>
+              <button
+                type="button"
+                onClick={nextMonth}
+                className="kb-btn-ghost min-h-10 px-3 text-xs"
+                aria-label="Próximo mês"
+              >
+                Próximo →
+              </button>
+            </div>
+          )}
+        </div>
+
+        {view === "calendario" ? (
+          <div className="flex flex-col gap-4">
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0B0B1E]">
+              <div className="grid grid-cols-7 border-b border-white/10 bg-white/5 text-center text-xs font-semibold text-[#EDE6EC]/70">
+                {WEEKDAYS.map((w) => (
+                  <div key={w} className="py-2.5">
+                    {w}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-[1px] bg-white/10">
+                {cells.map((cell) => {
+                  const dayPosts = postsByDay.get(cell.key) ?? [];
+                  const isSelected = selectedDay === cell.key;
+                  const isToday = cell.key === "2026-10-29";
+                  return (
+                    <button
+                      key={cell.key}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDay(cell.key);
+                        if (dayPosts.length === 1) setActivePost(dayPosts[0]);
+                      }}
+                      className={`relative flex min-h-[72px] sm:min-h-[96px] flex-col p-1.5 sm:p-2 text-left transition-all ${
+                        cell.inMonth ? "bg-[#11101E]" : "bg-[#0c0c16] opacity-40"
+                      } ${isSelected ? "ring-2 ring-inset ring-[var(--kb-accent)]" : "hover:bg-white/[0.04]"}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span
+                          className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                            isToday
+                              ? "bg-[var(--kb-accent)] font-bold text-white shadow-sm"
+                              : isSelected
+                              ? "bg-white/20 text-[#EDE6EC]"
+                              : "text-[#EDE6EC]/70"
+                          }`}
+                        >
+                          {cell.n}
+                        </span>
+                        {dayPosts.length > 0 && (
+                          <span className="hidden sm:inline-block rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-[#EDE6EC]/80 tabular-nums">
+                            {dayPosts.length}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mt-1 flex flex-wrap gap-1 sm:hidden">
+                        {dayPosts.slice(0, 3).map((p) => (
+                          <span
+                            key={p.id}
+                            className="h-2 w-2 rounded-full"
+                            style={{ background: co(p.company)?.color ?? "#8a6cf0" }}
+                            title={p.title}
+                          />
+                        ))}
+                        {dayPosts.length > 3 && (
+                          <span className="text-[9px] text-[#EDE6EC]/60">+{dayPosts.length - 3}</span>
+                        )}
+                      </div>
+
+                      <div className="mt-1 hidden flex-col gap-1 sm:flex">
+                        {dayPosts.slice(0, 2).map((p) => (
+                          <div
+                            key={p.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActivePost(p);
+                            }}
+                            className="kb-tactile group flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-1.5 py-1 text-[11px] leading-tight hover:border-white/25 hover:bg-white/10"
+                          >
+                            <span
+                              className="h-2 w-2 shrink-0 rounded-full"
+                              style={{ background: co(p.company)?.color ?? "#8a6cf0" }}
+                            />
+                            <span className="truncate text-[#EDE6EC]/90 font-medium group-hover:text-white">
+                              {p.title}
+                            </span>
+                          </div>
+                        ))}
+                        {dayPosts.length > 2 && (
+                          <span className="text-[10px] font-medium text-[var(--kb-accent)]">
+                            +{dayPosts.length - 2} mais
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-[#11101E] p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-3">
+                <h3 className="font-display text-base sm:text-lg">
+                  Entregas de {day(selectedDay)}
+                </h3>
+                <span className="kb-faint text-xs">
+                  {selectedPosts.length} conteúdo{selectedPosts.length !== 1 ? "s" : ""}
                 </span>
-              ))}
-            </div>
-            {c.stage === "aprovacao" && (
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" className="kb-btn min-h-11" onClick={() => decide(c.id, true)}>Aprovar</button>
-                <button type="button" className="kb-btn-ghost min-h-11" onClick={() => decide(c.id, false)}>Pedir ajustes</button>
               </div>
+              {selectedPosts.length === 0 ? (
+                <p className="kb-muted py-4 text-sm">Nenhum conteúdo agendado para esta data.</p>
+              ) : (
+                <div className="mt-3 flex flex-col gap-3">
+                  {selectedPosts.map((c) => (
+                    <article
+                      key={c.id}
+                      className="kb-card kb-tactile flex flex-col gap-3 !p-4 transition-all hover:border-white/20"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="kb-faint flex items-center gap-1.5 text-xs">
+                            {multi && (
+                              <>
+                                <i
+                                  aria-hidden
+                                  className="h-2 w-2 rounded-full"
+                                  style={{ background: co(c.company)?.color }}
+                                />
+                                {co(c.company)?.name} ·
+                              </>
+                            )}{" "}
+                            {c.format}
+                          </p>
+                          <h4 className="mt-1 break-words text-base font-medium">{c.title}</h4>
+                        </div>
+                        <span
+                          className={`kb-tag ${
+                            c.stage === "aprovacao" ? "!border-[#f5c46e]/60 !text-[#f5c46e]" : ""
+                          }`}
+                        >
+                          {STAGE_LABEL[c.stage]}
+                        </span>
+                      </div>
+                      {c.caption && <p className="kb-muted text-sm">{c.caption}</p>}
+                      <div className="flex flex-wrap gap-1.5" aria-label="Status por rede">
+                        {c.channels.map((ch) => (
+                          <span key={ch.network} className="kb-chip min-h-8 gap-1.5 !text-xs">
+                            <i
+                              aria-hidden
+                              className="h-1.5 w-1.5 rounded-full"
+                              style={{ background: STATUS_TONE[ch.status] }}
+                            />
+                            {NETWORK_LABEL[ch.network]} · {CHANNEL_LABEL[ch.status]}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <button
+                          type="button"
+                          className="kb-btn-ghost min-h-10 text-xs"
+                          onClick={() => setActivePost(c)}
+                        >
+                          Ver detalhes completos
+                        </button>
+                        {c.stage === "aprovacao" && (
+                          <>
+                            <button
+                              type="button"
+                              className="kb-btn min-h-10 text-xs"
+                              onClick={() => decide(c.id, true)}
+                            >
+                              Aprovar
+                            </button>
+                            <button
+                              type="button"
+                              className="kb-btn-ghost min-h-10 text-xs"
+                              onClick={() => decide(c.id, false)}
+                            >
+                              Pedir ajustes
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {filteredContents.length === 0 && (
+              <p className="kb-muted py-6 text-center text-sm">Nenhum conteúdo neste filtro.</p>
             )}
-          </li>
-        ))}
-      </ul>
-      <p className="kb-faint mt-4 text-xs">Um conteúdo é uma entrega só, mesmo saindo em várias redes. Cada rede mostra o próprio status.</p>
-    </Section>
+            <ul className="flex flex-col gap-3">
+              {filteredContents.map((c) => (
+                <li
+                  key={c.id}
+                  className="kb-card kb-tactile flex flex-col gap-3 !p-4 transition-all hover:border-white/20"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="kb-faint flex items-center gap-1.5 text-xs">
+                        {multi && (
+                          <>
+                            <i
+                              aria-hidden
+                              className="h-2 w-2 rounded-full"
+                              style={{ background: co(c.company)?.color }}
+                            />
+                            {co(c.company)?.name} ·
+                          </>
+                        )}{" "}
+                        {day(c.date)} · {c.format}
+                      </p>
+                      <h3 className="mt-1 break-words text-base font-medium">{c.title}</h3>
+                    </div>
+                    <span
+                      className={`kb-tag ${
+                        c.stage === "aprovacao" ? "!border-[#f5c46e]/60 !text-[#f5c46e]" : ""
+                      }`}
+                    >
+                      {STAGE_LABEL[c.stage]}
+                    </span>
+                  </div>
+                  {c.caption && <p className="kb-muted text-sm">{c.caption}</p>}
+                  <div className="flex flex-wrap gap-1.5" aria-label="Status por rede">
+                    {c.channels.map((ch) => (
+                      <span key={ch.network} className="kb-chip min-h-8 gap-1.5 !text-xs">
+                        <i
+                          aria-hidden
+                          className="h-1.5 w-1.5 rounded-full"
+                          style={{ background: STATUS_TONE[ch.status] }}
+                        />
+                        {NETWORK_LABEL[ch.network]} · {CHANNEL_LABEL[ch.status]}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <button
+                      type="button"
+                      className="kb-btn-ghost min-h-10 text-xs"
+                      onClick={() => setActivePost(c)}
+                    >
+                      Ver detalhes
+                    </button>
+                    {c.stage === "aprovacao" && (
+                      <>
+                        <button
+                          type="button"
+                          className="kb-btn min-h-10 text-xs"
+                          onClick={() => decide(c.id, true)}
+                        >
+                          Aprovar
+                        </button>
+                        <button
+                          type="button"
+                          className="kb-btn-ghost min-h-10 text-xs"
+                          onClick={() => decide(c.id, false)}
+                        >
+                          Pedir ajustes
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <p className="kb-faint mt-4 text-xs">
+          Um conteúdo é uma entrega só, mesmo saindo em várias redes. Cada rede mostra o próprio status.
+        </p>
+      </Section>
+
+      {activePost && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="preview-post-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+          onClick={() => setActivePost(null)}
+        >
+          <div
+            className="kb-arrive relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-white/15 bg-[#11101E] p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-4">
+              <div className="min-w-0">
+                <p className="kb-faint flex items-center gap-1.5 text-xs">
+                  <i
+                    aria-hidden
+                    className="h-2 w-2 rounded-full"
+                    style={{ background: co(activePost.company)?.color }}
+                  />
+                  {co(activePost.company)?.name} · {day(activePost.date)}
+                </p>
+                <h3 id="preview-post-title" className="font-display mt-1 text-xl">
+                  {activePost.title}
+                </h3>
+                <span className="kb-muted text-xs">{activePost.format}</span>
+              </div>
+              <button
+                type="button"
+                className="kb-btn-ghost min-h-9 px-2 text-sm"
+                onClick={() => setActivePost(null)}
+                aria-label="Fechar"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-4 text-sm">
+              <div>
+                <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">Status da Entrega</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <span
+                    className={`kb-tag ${
+                      activePost.stage === "aprovacao"
+                        ? "!border-[#f5c46e]/60 !text-[#f5c46e]"
+                        : ""
+                    }`}
+                  >
+                    {STAGE_LABEL[activePost.stage]}
+                  </span>
+                </div>
+              </div>
+
+              {activePost.caption && (
+                <div>
+                  <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">Legenda do Post</p>
+                  <p className="mt-1.5 rounded-xl border border-white/10 bg-black/25 p-3 text-sm leading-relaxed text-[#EDE6EC]/90">
+                    {activePost.caption}
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">
+                  Publicação por Rede Social
+                </p>
+                <div className="mt-2 flex flex-col gap-2">
+                  {activePost.channels.map((ch) => (
+                    <div
+                      key={ch.network}
+                      className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs"
+                    >
+                      <span className="font-medium">{NETWORK_LABEL[ch.network]}</span>
+                      <span className="flex items-center gap-1.5">
+                        <i
+                          aria-hidden
+                          className="h-1.5 w-1.5 rounded-full"
+                          style={{ background: STATUS_TONE[ch.status] }}
+                        />
+                        {CHANNEL_LABEL[ch.status]}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {activePost.stage === "aprovacao" ? (
+                <div className="mt-2 grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
+                  <button
+                    type="button"
+                    className="kb-btn min-h-11"
+                    onClick={() => {
+                      decide(activePost.id, true);
+                      setActivePost(null);
+                    }}
+                  >
+                    Aprovar Conteúdo
+                  </button>
+                  <button
+                    type="button"
+                    className="kb-btn-ghost min-h-11"
+                    onClick={() => {
+                      decide(activePost.id, false);
+                      setActivePost(null);
+                    }}
+                  >
+                    Pedir Ajustes
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-2 border-t border-white/10 pt-4">
+                  <button
+                    type="button"
+                    className="kb-btn-ghost min-h-11 w-full"
+                    onClick={() => setActivePost(null)}
+                  >
+                    Fechar
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
