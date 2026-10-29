@@ -42,9 +42,10 @@
 ## 2. Status dos PRs e Deploy
 - **PR #25 (Listas Compactas):** CI aprovado e mesclado em `main` (commit `3e452fa`).
 - **PR #27 (Design System v2):** CI aprovado e mesclado em `main` (commit `193932d`).
-- **PR #26 (Mobile-First):** Rebase efetuado resolvendo conflitos com PR #25 e PR #27, CI aprovado e mesclado em `main` (commit `2ae20b3`).
-- **Deploy em Produção:** VPS (`179.236.67.19`) ativa, `/api/health` respondendo 200 OK com banco, redis e worker saudáveis.
-- **Limpeza de Worktrees:** Worktrees `APP-listas-compactas`, `APP-portal-mobile` e `APP-design-system-preview` removidos e branches remotas excluídas.
+- **PR #28 (Calendário Navegável no Preview):** Implementado grid mensal (Outubro/Novembro 2026), seletor de empresa e modal de detalhes/aprovação de conteúdo com CI aprovado e mesclado em `main` (commit `d0c339e`).
+- **PR #29 (Contrato Mensal Grupo VIP em 2 Páginas):** Validação automatizada da compilação em PDF oficial de 2 páginas (Resumo Comercial + 7 cláusulas de salvaguarda com cotas de 50 conteúdos, 120 fotos e 2 visitas mensais) com CI aprovado e mesclado em `main` (commit `32285cd`).
+- **Deploy em Produção:** VPS (`179.236.67.19`) ativa, `/api/health` atualizado com o commit `d0c339e` colocando o novo calendário ativo em `/portal/preview/`.
+- **Limpeza de Worktrees:** Worktrees temporários removidos e branches remotas excluídas. Nenhuma reserva ativa.
 
 ---
 
