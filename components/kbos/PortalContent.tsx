@@ -96,79 +96,104 @@ export default function PortalContent({ firstName }: { firstName?: string }) {
           </div>
         </div>
       </header>
+      <nav aria-label="Navegação rápida do portal" className="kb-scroll-x -mx-4 scroll-px-4 px-4 sm:mx-0 sm:px-0 flex gap-2">
+        <a href="#calendario" className="kb-chip min-h-11 text-xs">
+          Calendário & Conteúdo
+        </a>
+        <a href="#projetos" className="kb-chip min-h-11 text-xs">
+          Projetos & Tarefas ({projects.length})
+        </a>
+        <a href="#lume" className="kb-chip min-h-11 text-xs">
+          Fotos · Lume
+        </a>
+        <a href="#redes" className="kb-chip min-h-11 text-xs">
+          Redes Sociais
+        </a>
+        {invoices.length > 0 && (
+          <a href="#pagamentos" className="kb-chip min-h-11 text-xs">
+            Pagamentos ({invoices.length})
+          </a>
+        )}
+      </nav>
       <OverduePosts audience="cliente" />
       <PortalPosts />
-      <div className="grid gap-4 md:grid-cols-2">
-        {projList.items.map((p) => {
-          const idx = Math.max(0, PIPELINE.findIndex((s) => s.id === p.status));
-          const mine = files.filter((f) => f.projectId === p.id);
-          const all = tasks.filter((t) => t.projectId === p.id);
-          const done = all.filter((t) => t.status === "done").length;
-          const todo = all.filter((t) => t.status !== "done").sort((a, b) => (a.status === b.status ? 0 : a.status === "doing" ? -1 : 1));
-          return (
-            <article key={p.id} className="kb-glass flex flex-col gap-4 p-5">
-              <div>
-                <p className="kb-faint text-[11px] uppercase tracking-[0.22em]">{p.categoria}</p>
-                <h2 className="font-display mt-1 break-words text-xl">{p.titulo}</h2>
-                {p.prazo && p.status !== "entregue" && <p className="kb-muted mt-1 text-sm">Previsão: {day(p.prazo)}</p>}
-              </div>
-              <button type="button" className="kb-btn-ghost min-h-11 self-start" onClick={() => setChat(p)}>
-                Conversar com a equipe{unread[p.id] ? <span className="kb-tag ml-2">{unread[p.id]} nova{unread[p.id] > 1 ? "s" : ""}</span> : null}
-              </button>
-              <ol className="flex gap-1" aria-label="Etapas do projeto">
-                {PIPELINE.map((s, i) => {
-                  const doneStep = i <= idx, curStep = i === idx;
-                  return (
-                    <li key={s.id} className="min-w-0 flex-1" aria-current={curStep ? "step" : undefined}>
+      <section id="projetos" className="scroll-mt-20 flex flex-col gap-3" aria-label="Projetos e entregas">
+        <div className="grid gap-4 md:grid-cols-2">
+          {projList.items.map((p) => {
+            const idx = Math.max(0, PIPELINE.findIndex((s) => s.id === p.status));
+            const mine = files.filter((f) => f.projectId === p.id);
+            const all = tasks.filter((t) => t.projectId === p.id);
+            const done = all.filter((t) => t.status === "done").length;
+            const todo = all.filter((t) => t.status !== "done").sort((a, b) => (a.status === b.status ? 0 : a.status === "doing" ? -1 : 1));
+            return (
+              <article key={p.id} className="kb-glass flex flex-col gap-4 p-5">
+                <div>
+                  <p className="kb-faint text-[11px] uppercase tracking-[0.22em]">{p.categoria}</p>
+                  <h2 className="font-display mt-1 break-words text-xl">{p.titulo}</h2>
+                  {p.prazo && p.status !== "entregue" && <p className="kb-muted mt-1 text-sm">Previsão: {day(p.prazo)}</p>}
+                </div>
+                <button type="button" className="kb-btn-ghost min-h-11 self-start" onClick={() => setChat(p)}>
+                  Conversar com a equipe{unread[p.id] ? <span className="kb-tag ml-2">{unread[p.id]} nova{unread[p.id] > 1 ? "s" : ""}</span> : null}
+                </button>
+                <ol className="flex gap-1" aria-label="Etapas do projeto">
+                  {PIPELINE.map((s, i) => {
+                    const doneStep = i <= idx, curStep = i === idx;
+                    return (
+                      <li key={s.id} className="min-w-0 flex-1" aria-current={curStep ? "step" : undefined}>
+                        <span
+                          className="block h-1.5 rounded-full"
+                          style={{
+                            background: doneStep ? s.color : "rgba(255,255,255,0.1)",
+                            opacity: curStep ? 1 : doneStep ? 0.5 : 1,
+                          }}
+                        />
+                        <span
+                          className={`mt-1.5 block truncate text-[10px] uppercase tracking-[0.08em] ${curStep ? "font-semibold" : "kb-faint"}`}
+                          style={curStep ? { color: s.color } : undefined}
+                        >
+                          {s.label}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+                {all.length > 0 && (
+                  <div className="border-t border-white/10 pt-4" aria-label="Tarefas do projeto">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">Tarefas</p>
+                      <span className="kb-faint text-xs tabular-nums">{done} de {all.length} concluídas</span>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-valuemin={0} aria-valuemax={all.length} aria-valuenow={done}>
                       <span
-                        className="block h-1.5 rounded-full"
+                        className="block h-full rounded-full"
                         style={{
-                          background: doneStep ? s.color : "rgba(255,255,255,0.1)",
-                          opacity: curStep ? 1 : doneStep ? 0.5 : 1,
+                          width: `${(done / all.length) * 100}%`,
+                          background: done === all.length ? "#22c55e" : (PIPELINE[idx]?.color ?? "#8a6cf0"),
                         }}
                       />
-                      <span
-                        className={`mt-1.5 block truncate text-[10px] uppercase tracking-[0.08em] ${curStep ? "font-semibold" : "kb-faint"}`}
-                        style={curStep ? { color: s.color } : undefined}
-                      >
-                        {s.label}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ol>
-              {all.length > 0 && (
-                <div className="border-t border-white/10 pt-4" aria-label="Tarefas do projeto">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">Tarefas</p>
-                    <span className="kb-faint text-xs tabular-nums">{done} de {all.length} concluídas</span>
+                    </div>
+                    <TaskList todo={todo} />
                   </div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-valuemin={0} aria-valuemax={all.length} aria-valuenow={done}>
-                    <span
-                      className="block h-full rounded-full"
-                      style={{
-                        width: `${(done / all.length) * 100}%`,
-                        background: done === all.length ? "#22c55e" : (PIPELINE[idx]?.color ?? "#8a6cf0"),
-                      }}
-                    />
-                  </div>
-                  <TaskList todo={todo} />
+                )}
+                <CycleCard projectId={p.id} mode="portal" />
+                <div className="border-t border-white/10 pt-4">
+                  <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">Arquivos para aprovação</p>
+                  <FileList projectId={p.id} files={mine} />
                 </div>
-              )}
-              <CycleCard projectId={p.id} mode="portal" />
-              <div className="border-t border-white/10 pt-4">
-                <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">Arquivos para aprovação</p>
-                <FileList projectId={p.id} files={mine} />
-              </div>
-            </article>
-          );
-        })}
+              </article>
+            );
+          })}
+        </div>
+        <CompactListControls {...projList} noun="projetos" className="-mt-1" />
+      </section>
+      <div id="lume" className="scroll-mt-20">
+        <PortalLumeCard />
       </div>
-      <CompactListControls {...projList} noun="projetos" className="-mt-2" />
-      <PortalLumeCard />
-      <SocialConnectPanel />
+      <div id="redes" className="scroll-mt-20">
+        <SocialConnectPanel />
+      </div>
       {invoices.length > 0 && (
-        <section className="kb-glass p-5" aria-label="Pagamentos">
+        <section id="pagamentos" className="kb-glass scroll-mt-20 p-5" aria-label="Pagamentos">
           <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">Pagamentos</p>
           <div className="mt-3 flex flex-col">
             {invList.items.map((i) => (

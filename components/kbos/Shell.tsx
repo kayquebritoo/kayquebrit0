@@ -197,7 +197,15 @@ export function KbosShell({
   const isAdmin = user.role === "admin";
   const isClient = user.role === "cliente";
   const allowed = (l: NavLink) => (!l.adminOnly || isAdmin) && (!l.staffOnly || !isClient) && (!l.clientOnly || !isAdmin);
-  const groups = GROUPS.map((g) => ({ ...g, links: g.links.filter(allowed) })).filter((g) => g.links.length);
+  const groups = GROUPS.map((g) => ({
+    ...g,
+    label: isClient && g.id === "producao" ? "Início" : g.label,
+    icon:
+      isClient && g.id === "producao"
+        ? ico("M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6")
+        : g.icon,
+    links: g.links.filter(allowed),
+  })).filter((g) => g.links.length);
   const isActive = (l: NavLink) =>
     l.exact ? pathname === l.href : pathname === l.href || pathname.startsWith(l.href + "/");
   const activeGroup = groups.find((g) => g.links.some(isActive))?.id ?? null;

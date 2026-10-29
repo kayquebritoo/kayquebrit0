@@ -25,22 +25,46 @@ export default function OverduePosts({ audience }: { audience: "admin" | "client
   const client = audience === "cliente";
   const shown = items.slice(0, 6);
   return (
-    <section aria-label="Posts atrasados" className="kb-glass flex flex-col gap-2 p-5 sm:p-6">
+    <section id="atrasados" aria-label="Posts atrasados" className="kb-glass scroll-mt-20 flex flex-col gap-2 p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-display kb-ink text-base">{total === 1 ? "1 post atrasado" : `${total} posts atrasados`} em {monthLabel(data.month)}</h2>
         {!client && <Link href="/admin/conteudo" className="kb-chip min-h-11">Abrir calendário</Link>}
       </div>
       <ul className="flex flex-col">
-        {shown.map((p) => (
-          <li key={p.id} className="kb-row">
-            <span className="min-w-0">
-              <span className="kb-ink block truncate text-[14px]">{p.title}</span>
-              <span className="kb-faint block truncate text-[12px]">{[p.brand, STATUS[p.status] ?? p.status, p.people].filter(Boolean).join(" · ")}</span>
-              {client && p.waitingClient && <span className="block text-[12px] text-[var(--kb-late)]">Falta a sua aprovação</span>}
-            </span>
-            <span className="kb-tag late shrink-0">{when(p.daysLate)}</span>
-          </li>
-        ))}
+        {shown.map((p) => {
+          const content = (
+            <>
+              <span className="min-w-0 flex-1">
+                <span className="kb-ink block truncate text-[14px]">{p.title}</span>
+                <span className="kb-faint block truncate text-[12px]">
+                  {[p.brand, STATUS[p.status] ?? p.status, p.people].filter(Boolean).join(" · ")}
+                </span>
+                {client && p.waitingClient && (
+                  <span className="block text-[12px] font-medium text-[var(--kb-late)]">
+                    Falta a sua aprovação · Toque para revisar ↗
+                  </span>
+                )}
+              </span>
+              <span className="kb-tag late shrink-0">{when(p.daysLate)}</span>
+            </>
+          );
+          return (
+            <li key={p.id}>
+              {client ? (
+                <a
+                  href="#calendario"
+                  className="kb-row min-h-12 w-full text-left transition-colors hover:bg-white/[0.03] focus-visible:outline-none"
+                >
+                  {content}
+                </a>
+              ) : (
+                <div className="kb-row">
+                  {content}
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
       {items.length > shown.length && <p className="kb-faint text-xs">+{items.length - shown.length} no calendário.</p>}
       {hidden > 0 && <p className="kb-faint text-xs">{hidden === 1 ? "1 ainda está" : `${hidden} ainda estão`} em produção com a equipe.</p>}
