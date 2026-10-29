@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Demand, DemandKind, MonthCash } from "@/lib/kbos/today";
 import { AnimatedLine, Bars, CountUp, Ring } from "./Charts";
+import { CompactListControls, useCompactList } from "./CompactList";
 
 type FeedItem = { id: string; at: string; kind: "mensagem" | "orcamento" | "financeiro" | "briefing"; text: string; href: string };
 type TodayData = {
@@ -63,6 +64,52 @@ function weekBars(demands: Demand[], todayKey: string) {
       hot: late > 0,
     };
   });
+}
+
+function DemandList({ items, todayKey }: { items: Demand[]; todayKey: string }) {
+  const list = useCompactList(items);
+  return (
+    <>
+      {list.items.map((d) => <DemandCard key={d.id} d={d} todayKey={todayKey} />)}
+      <CompactListControls {...list} noun="demandas" />
+    </>
+  );
+}
+
+function FeedList({ feed, fresh, clock }: { feed: FeedItem[]; fresh: Set<string>; clock: number }) {
+  const list = useCompactList(feed);
+  return (
+    <>
+    <ul className="flex flex-col">
+      {list.items.map((f, i) => (
+        <li key={f.id} className={fresh.has(f.id) ? "kb-arrive" : ""}>
+          <Link href={f.href} className={`flex gap-3 py-3 ${i ? "border-t border-[var(--kb-line)]" : ""}`}>
+            <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[var(--kb-chip)]">
+              <svg aria-hidden width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <path
+                  d={
+                    f.kind === "mensagem"
+                      ? "M4 5h16v11H8l-4 4z"
+                      : f.kind === "financeiro"
+                        ? "M12 3v18M17 7H9.5a3 3 0 0 0 0 6h5a3 3 0 0 1 0 6H6"
+                        : f.kind === "briefing"
+                          ? "M12 5v14M5 12h14"
+                          : "M6 3h9l3 3v15H6zM9 12h6M9 16h6"
+                  }
+                />
+              </svg>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm leading-snug">{f.text}</span>
+              <span className="kb-faint mt-0.5 block text-xs">{ago(f.at, clock)}</span>
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+      <CompactListControls {...list} noun="eventos" />
+    </>
+  );
 }
 
 function DemandCard({ d, todayKey }: { d: Demand; todayKey: string }) {
@@ -519,7 +566,7 @@ export default function Today() {
                   {items.length === 0 ? (
                     <p className="kb-faint rounded-[14px] border border-dashed border-[var(--kb-line-strong)] p-4 text-sm">{c.empty}</p>
                   ) : (
-                    items.map((d) => <DemandCard key={d.id} d={d} todayKey={data.todayKey} />)
+                    <DemandList items={items} todayKey={data.todayKey} />
                   )}
                 </div>
               );
@@ -591,33 +638,7 @@ export default function Today() {
             ) : data.feed.length === 0 ? (
               <p className="kb-muted text-sm">Quando chegar mensagem, pagamento ou briefing, aparece aqui na hora.</p>
             ) : (
-              <ul className="flex flex-col">
-                {data.feed.map((f, i) => (
-                  <li key={f.id} className={fresh.has(f.id) ? "kb-arrive" : ""}>
-                    <Link href={f.href} className={`flex gap-3 py-3 ${i ? "border-t border-[var(--kb-line)]" : ""}`}>
-                      <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[var(--kb-chip)]">
-                        <svg aria-hidden width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                          <path
-                            d={
-                              f.kind === "mensagem"
-                                ? "M4 5h16v11H8l-4 4z"
-                                : f.kind === "financeiro"
-                                  ? "M12 3v18M17 7H9.5a3 3 0 0 0 0 6h5a3 3 0 0 1 0 6H6"
-                                  : f.kind === "briefing"
-                                    ? "M12 5v14M5 12h14"
-                                    : "M6 3h9l3 3v15H6zM9 12h6M9 16h6"
-                            }
-                          />
-                        </svg>
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm leading-snug">{f.text}</span>
-                        <span className="kb-faint mt-0.5 block text-xs">{ago(f.at, clock)}</span>
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              <FeedList feed={data.feed} fresh={fresh} clock={clock} />
             )}
           </section>
 
