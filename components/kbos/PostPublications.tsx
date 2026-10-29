@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { NETWORKS, NETWORK_LABEL } from "@/lib/kbos/content-model";
+import { NetMark } from "@/components/kbos/social/networks";
 
 type Pub = { network: string; status: string; url: string | null; error: string | null; publishedAt: string | null; scheduledAt: string | null; accountId?: string | null };
 const PUB_LABEL: Record<string, string> = { pendente: "Pendente", agendado: "Agendado", publicado: "Publicado", erro: "Erro", cancelado: "Fora" };
@@ -37,12 +38,21 @@ export default function PostPublications({ postId, onPostStatus }: { postId: str
     <section className="space-y-2" aria-label="Redes">
       <p className="kb-faint text-[11px] uppercase tracking-[0.18em]">Redes · 1 conteúdo = 1 entrega</p>
       <div className="flex flex-wrap gap-1.5">
-        {NETWORKS.slice(0, 6).map((n) => <button key={n} type="button" className="kb-chip min-h-10" aria-pressed={active.includes(n)} disabled={busy} onClick={() => toggle(n)}>{NETWORK_LABEL[n]}</button>)}
+        {NETWORKS.map((n) => (
+          <button key={n} type="button" className="kb-chip min-h-10 gap-1.5" aria-pressed={active.includes(n)} disabled={busy} onClick={() => toggle(n)}>
+            <NetMark network={n} size={18} />
+            {NETWORK_LABEL[n]}
+          </button>
+        ))}
       </div>
       {items.filter((p) => p.status !== "cancelado").map((p) => (
         <div key={p.network} className="grid gap-1">
         <div className="kb-row gap-2">
-          <span className="flex min-w-0 items-center gap-2 text-sm"><i aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: PUB_COLOR[p.status] }} />{NETWORK_LABEL[p.network] ?? p.network}</span>
+          <span className="flex min-w-0 items-center gap-2 text-sm">
+            <NetMark network={p.network} size={20} />
+            <i aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: PUB_COLOR[p.status] }} />
+            {NETWORK_LABEL[p.network] ?? p.network}
+          </span>
           <span className="flex shrink-0 items-center gap-1.5">
             <input className="kb-control min-h-10 w-36 text-xs" inputMode="url" placeholder="link publicado" defaultValue={p.url ?? ""} aria-label={`Link no ${NETWORK_LABEL[p.network] ?? p.network}`}
               onBlur={(e) => { const v = e.target.value.trim(); if (v !== (p.url ?? "")) void call("PATCH", { network: p.network, url: v || null, ...(v && p.status !== "publicado" ? { status: "publicado" } : {}) }); }} />

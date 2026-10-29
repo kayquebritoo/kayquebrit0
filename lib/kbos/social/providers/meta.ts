@@ -11,7 +11,7 @@ export const metaProvider: SocialProvider = {
   pkce: false,
   canPublish: true,
   configured: metaConfigured,
-  authUrl: ({ redirectUri, state }) => metaLoginUrl(redirectUri, state),
+  authUrl: ({ redirectUri, state, network, prompt }) => metaLoginUrl(redirectUri, state, (network || prompt) ? { network, prompt } : undefined),
   async exchangeCode({ code, redirectUri }, f) {
     const t = await exchangeCode(code, redirectUri, f);
     return { accessToken: t.token, expiresAt: t.expiresAt, scopes: META_SCOPES };

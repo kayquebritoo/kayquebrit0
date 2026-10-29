@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ConnectLinkButton from "@/components/kbos/social/ConnectLinkButton";
-import { NETS, NetMark, connectHref, netInfo, returnMessage, type ProviderInfo, type SocialAccount } from "@/components/kbos/social/networks";
+import { CONNECTABLE_NETS, NETS, NetMark, connectHref, netInfo, returnMessage, type ProviderInfo, type SocialAccount } from "@/components/kbos/social/networks";
 
 type Project = { id: string; titulo: string; parentId?: string | null; categoria?: string };
 type Audit = { id: string; action: string; provider: string | null; project: string | null; actorKind: string; actor: string | null; ip: string | null; scopes: string | null; detail: Record<string, unknown> | null; createdAt: string };
@@ -78,13 +78,18 @@ export default function SocialAccounts() {
     setAudit(r?.ok ? (await r.json()).items : []);
   }
 
-  const providerList = providers.length ? providers : [];
+  const isConfigured = (providerId: string) => providers.find((p) => p.id === providerId)?.configured ?? false;
+  const countByNet = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const a of items ?? []) m[a.network] = (m[a.network] ?? 0) + 1;
+    return m;
+  }, [items]);
 
   return (
     <div className="kb-glass grid gap-4 p-4 sm:p-5">
       <div className="min-w-0">
         <p className="font-medium">Redes sociais (publicar pelo KBOS)</p>
-        <p className="kb-muted text-sm">Cada cliente conecta as próprias contas pelo login oficial da rede. O KBOS publica no horário do post, na conta do cliente do post.</p>
+        <p className="kb-muted text-sm">Cada cliente conecta as próprias contas pelo login oficial de cada rede. Instagram e Facebook são conectados separadamente para garantir a seleção exata de cada perfil.</p>
       </div>
       {msg && <p role="status" className="text-sm">{msg}</p>}
 
@@ -98,16 +103,30 @@ export default function SocialAccounts() {
         </label>
         {!personal && <button type="button" className="kb-chip min-h-11 justify-self-start px-3 text-sm" onClick={() => void createPersonal()}>+ Criar meu cliente “{PERSONAL}”</button>}
         <div className="grid gap-2 sm:grid-cols-2">
-          {providerList.map((p) => (
-            <a key={p.id} href={p.configured ? connectHref(p.id, { project: target || null, back: "/admin/ajustes/" }) : undefined} aria-disabled={!p.configured}
-              className={`flex min-h-14 items-center gap-3 rounded-2xl border p-2.5 ${p.configured ? "border-[var(--kb-line-strong)] bg-[var(--kb-chip)] hover:bg-[var(--kb-chip-hover)]" : "pointer-events-none border-[var(--kb-line)] opacity-55"}`}>
-              <span className="flex -space-x-2">{p.networks.map((n) => <NetMark key={n} network={n} size={34} />)}</span>
-              <span className="min-w-0">
-                <b className="block truncate text-sm">{p.label}</b>
-                <small className="kb-faint block text-xs">{p.configured ? "Conectar" : `Em breve · configure na VPS (opção ${OPTION[p.id] ?? "?"})`}</small>
-              </span>
-            </a>
-          ))}
+          {CONNECTABLE_NETS.map((net) => {
+            const on = isConfigured(net.provider);
+            const total = countByNet[net.network] ?? 0;
+            return (
+              <a
+                key={net.network}
+                href={on ? connectHref(net.network, { project: target || null, back: "/admin/ajustes/", prompt: true }) : undefined}
+                aria-disabled={!on}
+                className={`flex min-h-14 items-center gap-3 rounded-2xl border p-2.5 transition ${on ? "border-[var(--kb-line-strong)] bg-[var(--kb-chip)] hover:bg-[var(--kb-chip-hover)]" : "pointer-events-none border-[var(--kb-line)] opacity-55"}`}
+              >
+                <NetMark network={net.network} size={38} />
+                <span className="min-w-0 flex-1">
+                  <b className="block truncate text-sm">{net.label}</b>
+                  <small className="kb-faint block text-xs">
+                    {on
+                      ? total > 0
+                        ? `${total} conectada${total === 1 ? "" : "s"} · Conectar outra`
+                        : `Conectar ${net.label}`
+                      : `Pendente de ativação · VPS opção ${OPTION[net.provider] ?? "?"}`}
+                  </small>
+                </span>
+              </a>
+            );
+          })}
         </div>
         {target && <ConnectLinkButton key={target} projectId={target} projectName={targetName} />}
         {!target && <p className="kb-faint text-xs">Escolha um cliente para mandar a ele um link de conexão (vale 7 dias, sem senha do KBOS).</p>}
@@ -120,9 +139,20 @@ export default function SocialAccounts() {
           <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">{g.title}</p>
           {g.items.map((a) => (
             <div key={a.id} className="kb-row flex-wrap gap-2">
-              <span className="flex min-w-0 flex-1 items-center gap-2">
-                {/* eslint-disable-next-line @next/next/no-img-element -- foto de perfil vinda da rede */}
-                {a.pictureUrl ? <img src={a.pictureUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" /> : <NetMark network={a.network} size={32} />}
+              <span className="flex min-w-0 flex-1 items-center gap-2.5">
+                <span className="relative inline-flex shrink-0">
+                  {a.pictureUrl ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- foto de perfil vinda da rede */}
+                      <img src={a.pictureUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" />
+                      <span className=" -bottom-1 -right-1 absolute rounded-md ring-2 ring-[#11101E]">
+                        <NetMark network={a.network} size={18} />
+                      </span>
+                    </>
+                  ) : (
+                    <NetMark network={a.network} size={34} />
+                  )}
+                </span>
                 <span className="min-w-0">
                   <span className="block truncate text-sm">{a.name}{a.username ? ` · @${a.username}` : ""}</span>
                   <span className={`block text-xs ${a.status === "ativo" ? "kb-faint" : "text-[var(--kb-soon)]"}`}>

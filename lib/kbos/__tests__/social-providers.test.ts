@@ -272,10 +272,30 @@ describe("listAccounts", () => {
     const r = await linkedinProvider.listAccounts({ accessToken: "AT" }, f);
     expect(r).toEqual([{ network: "linkedin", externalId: "urn:li:person:abc123", name: "Kayque Brito", username: null, pictureUrl: "https://l/p.jpg" }]);
   });
-  it("Meta: Páginas e Instagram ligado", async () => {
-    const { f } = fakeNet({ "GET graph.facebook.com/me/accounts": () => ({ data: [{ id: "p1", name: "Hotel", access_token: "PT1", instagram_business_account: { id: "ig1", username: "hotel" } }] }) });
+  it("Meta: Páginas e Instagram ligado (instagram_business_account e connected_instagram_account)", async () => {
+    const { f } = fakeNet({
+      "GET graph.facebook.com/me/accounts": () => ({
+        data: [
+          { id: "p1", name: "Hotel", access_token: "PT1", instagram_business_account: { id: "ig1", username: "hotel" } },
+          { id: "p2", name: "Lounge", access_token: "PT2", connected_instagram_account: { id: "ig2", username: "lounge" } },
+        ],
+      }),
+    });
     const r = await metaProvider.listAccounts({ accessToken: "U" }, f);
-    expect(r.map((a) => [a.network, a.externalId, a.token])).toEqual([["facebook", "p1", "PT1"], ["instagram", "ig1", "PT1"]]);
+    expect(r.map((a) => [a.network, a.externalId, a.token])).toEqual([
+      ["facebook", "p1", "PT1"],
+      ["instagram", "ig1", "PT1"],
+      ["facebook", "p2", "PT2"],
+      ["instagram", "ig2", "PT2"],
+    ]);
+  });
+  it("Meta: authUrl separado para Instagram ativa IG_API_ONBOARDING e auth_type=rerequest", () => {
+    const uIg = new URL(metaProvider.authUrl({ redirectUri: REDIRECT, state: "ST", network: "instagram" }));
+    expect(uIg.searchParams.get("auth_type")).toBe("rerequest");
+    expect(uIg.searchParams.get("extras")).toBe(JSON.stringify({ setup: { channel: "IG_API_ONBOARDING" } }));
+    const uFb = new URL(metaProvider.authUrl({ redirectUri: REDIRECT, state: "ST", network: "facebook" }));
+    expect(uFb.searchParams.get("auth_type")).toBe("rerequest");
+    expect(uFb.searchParams.has("extras")).toBe(false);
   });
 });
 

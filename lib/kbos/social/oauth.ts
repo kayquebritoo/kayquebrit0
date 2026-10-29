@@ -9,7 +9,7 @@ export const FLOW_COOKIE = "kbos_social_flow";
 export const FLOW_TTL_S = 600;
 
 /** Para onde a conexão vai e quem está conectando. */
-export type FlowTarget = { projectId: string | null; linkId: string | null; userId: string | null; via: "admin" | "portal" | "link"; back: string };
+export type FlowTarget = { projectId: string | null; linkId: string | null; userId: string | null; via: "admin" | "portal" | "link"; back: string; network?: "instagram" | "facebook" | null };
 export type Flow = FlowTarget & { nonce: string; provider: ProviderId; verifier: string | null; redirectUri: string; exp: number };
 
 export const redirectUriFor = (provider: ProviderId) => `${appUrlEnv()}/api/social/${provider}/callback/`;

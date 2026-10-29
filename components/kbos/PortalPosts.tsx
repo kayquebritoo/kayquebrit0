@@ -923,7 +923,7 @@ function ContentEditor({
               <div className="kb-field">
                 <span>Redes</span>
                 <div className="flex flex-wrap gap-1.5">
-                  {NETWORKS.slice(0, 6).map((n) => (
+                  {NETWORKS.map((n) => (
                     <button
                       key={n}
                       type="button"

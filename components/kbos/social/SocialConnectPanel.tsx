@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { NETS, NetMark, connectHref, netInfo, returnMessage, type ProviderInfo, type SocialAccount } from "./networks";
+import { CONNECTABLE_NETS, NetMark, connectHref, netInfo, returnMessage, type ProviderInfo, type SocialAccount } from "./networks";
 
 type Project = { id: string; titulo: string; parentId: string | null };
 type Item = SocialAccount & {
@@ -178,13 +178,13 @@ export default function SocialConnectPanel({ token, linkToken, initialProject }:
       )}
 
       <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-        {NETS.map((n) => {
+        {CONNECTABLE_NETS.map((n) => {
           const on = isOn(n.provider);
           const connected = items.filter(
             (i) => i.network === n.network && (!projectId || !i.projectId || i.projectId === projectId),
           );
           const hasExpired = connected.some((c) => c.status !== "ativo");
-          const href = connectHref(n.provider, { link: tk, project: tk ? undefined : projectId });
+          const href = connectHref(n.network, { link: tk, project: tk ? undefined : projectId, prompt: true });
           return (
             <div
               key={n.network}
@@ -269,12 +269,19 @@ export default function SocialConnectPanel({ token, linkToken, initialProject }:
               <div key={a.id} className="kb-card flex flex-col gap-2.5 !p-3.5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2.5">
-                    {a.pictureUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={a.pictureUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
-                    ) : (
-                      <NetMark network={a.network} size={32} />
-                    )}
+                    <span className="relative inline-flex shrink-0">
+                      {a.pictureUrl ? (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={a.pictureUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" />
+                          <span className="-bottom-1 -right-1 absolute rounded-md ring-2 ring-[#11101E]">
+                            <NetMark network={a.network} size={18} />
+                          </span>
+                        </>
+                      ) : (
+                        <NetMark network={a.network} size={32} />
+                      )}
+                    </span>
                     <div className="min-w-0">
                       <p className="flex flex-wrap items-center gap-1.5 text-sm font-medium">
                         <span className="truncate">{a.name}</span>
@@ -322,7 +329,7 @@ export default function SocialConnectPanel({ token, linkToken, initialProject }:
                     )}
                     {provConfigured && (
                       <a
-                        href={connectHref(provId, { link: tk, project: tk ? undefined : (a.projectId ?? projectId) })}
+                        href={connectHref(a.network, { link: tk, project: tk ? undefined : (a.projectId ?? projectId), prompt: true })}
                         className={a.status === "ativo" ? "kb-chip min-h-9 text-xs" : "kb-btn min-h-9 !px-3 !text-xs"}
                       >
                         Reconectar

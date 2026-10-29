@@ -49,7 +49,7 @@ export interface SocialProvider {
   canPublish: boolean;
   /** Chaves do app configuradas no servidor. Sem elas a rede aparece como "Em breve". */
   configured(): boolean;
-  authUrl(p: { redirectUri: string; state: string; codeChallenge?: string }): string;
+  authUrl(p: { redirectUri: string; state: string; codeChallenge?: string; network?: string | null; prompt?: boolean }): string;
   exchangeCode(p: { code: string; redirectUri: string; codeVerifier?: string }, f?: Fetch): Promise<Tokens>;
   /** Renova o token de acesso. Ausente = a rede não renova (reconectar quando vencer). */
   refresh?(refreshToken: string, f?: Fetch): Promise<Tokens>;

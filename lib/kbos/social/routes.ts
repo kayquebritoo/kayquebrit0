@@ -52,25 +52,38 @@ async function targetFor(sp: URLSearchParams, user: SessionUser | null): Promise
 
 export async function socialConnect(req: Request, providerParam: string) {
   const sp = new URL(req.url).searchParams;
-  const provider = isProviderId(providerParam) ? providerById(providerParam)! : null;
+  const metaNet = providerParam === "instagram" || providerParam === "facebook"
+    ? providerParam
+    : (sp.get("network") === "instagram" || sp.get("network") === "facebook" ? (sp.get("network") as "instagram" | "facebook") : null);
+  const resolvedId = providerParam === "instagram" || providerParam === "facebook" ? "meta" : providerParam;
+  const provider = isProviderId(resolvedId) ? providerById(resolvedId)! : null;
   const user = await sessionUser();
   const target = await targetFor(sp, user);
   if ("redirect" in target) return go(target.redirect);
-  if (!provider || !provider.configured() || !socialCryptoReady()) return go(target.back, { redes: "embreve" });
+  if (metaNet) target.network = metaNet;
+  if (!provider || !provider.configured() || !socialCryptoReady()) return go(target.back, { redes: "embreve", ...(metaNet ? { rede: metaNet } : {}) });
   const flow = startFlow(provider.id, target, provider.pkce);
-  const res = NextResponse.redirect(provider.authUrl({ redirectUri: flow.redirectUri, state: flow.state, codeChallenge: flow.challenge }));
+  const res = NextResponse.redirect(provider.authUrl({
+    redirectUri: flow.redirectUri,
+    state: flow.state,
+    codeChallenge: flow.challenge,
+    network: target.network ?? null,
+    prompt: Boolean(target.network || sp.get("prompt")),
+  }));
   res.cookies.set(FLOW_COOKIE, flow.cookie, flowCookieOptions());
   return res;
 }
 
 export async function socialCallback(req: Request, providerParam: string) {
   const sp = new URL(req.url).searchParams;
-  if (!isProviderId(providerParam)) return go("/portal/", { redes: "estado" });
-  const provider = providerById(providerParam)!;
+  const resolvedId = providerParam === "instagram" || providerParam === "facebook" ? "meta" : providerParam;
+  if (!isProviderId(resolvedId)) return go("/portal/", { redes: "estado" });
+  const provider = providerById(resolvedId)!;
   const jar = await cookies();
   const flow = finishFlow(provider.id, sp.get("state"), jar.get(FLOW_COOKIE)?.value);
+  const rede = flow?.network ?? provider.id;
   const done = (q: Record<string, string>) => {
-    const res = go(flow?.back ?? "/portal/", { ...q, rede: provider.id });
+    const res = go(flow?.back ?? "/portal/", { ...q, rede });
     res.cookies.set(FLOW_COOKIE, "", { ...flowCookieOptions(), maxAge: 0 });
     return res;
   };
@@ -87,8 +100,11 @@ export async function socialCallback(req: Request, providerParam: string) {
   try {
     const tokens = await provider.exchangeCode({ code, redirectUri: flow.redirectUri, codeVerifier: flow.verifier ?? undefined });
     const accounts = await provider.listAccounts(tokens);
-    if (!accounts.length) return done({ redes: "vazio" });
-    const out = await saveConnection(provider.id, tokens, accounts, flow, actor);
+    const list = flow.network ? accounts.filter((a) => a.network === flow.network) : accounts;
+    if (!list.length) {
+      return done({ redes: flow.network === "instagram" && accounts.length > 0 ? "vazio_ig" : "vazio" });
+    }
+    const out = await saveConnection(provider.id, tokens, list, flow, actor);
     return done({ redes: "ok", contas: String(out.accounts.length) });
   } catch (e) {
     console.error(`[social] callback ${provider.id}`, e instanceof Error ? e.message : e);

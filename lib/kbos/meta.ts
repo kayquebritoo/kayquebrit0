@@ -40,8 +40,14 @@ async function graph<T>(f: Fetch, method: "GET" | "POST" | "DELETE", path: strin
 // ── login ──────────────────────────────────────────────────────────────────────
 export const metaRedirectUri = () => `${appUrlEnv()}/api/social/meta/callback/`;
 
-export function metaLoginUrl(redirectUri: string, state: string) {
+export function metaLoginUrl(redirectUri: string, state: string, opts?: { network?: string | null; prompt?: boolean }) {
   const qs = new URLSearchParams({ client_id: process.env.META_APP_ID || "", redirect_uri: redirectUri, state, response_type: "code", scope: META_SCOPES.join(",") });
+  if (opts?.network === "instagram") {
+    qs.set("auth_type", "rerequest");
+    qs.set("extras", JSON.stringify({ setup: { channel: "IG_API_ONBOARDING" } }));
+  } else if (opts?.network === "facebook" || opts?.prompt) {
+    qs.set("auth_type", "rerequest");
+  }
   return `https://www.facebook.com/${GRAPH_VERSION()}/dialog/oauth?${qs}`;
 }
 
@@ -55,22 +61,47 @@ export async function exchangeCode(code: string, redirectUri: string, f: Fetch =
 
 export type MetaAccount = { network: "facebook" | "instagram"; externalId: string; pageId: string; name: string; username: string | null; pictureUrl: string | null; token: string };
 
-/** Páginas que a pessoa administra e o Instagram profissional ligado a cada uma. */
+const PAGE_FIELDS = "id,name,access_token,picture{url},instagram_business_account{id,username,name,profile_picture_url},connected_instagram_account{id,username,name,profile_picture_url}";
+
+/** Páginas que a pessoa administra e o Instagram profissional ligado a cada uma (direto ou pelo Portfólio Empresarial). */
 export async function listMetaAccounts(userToken: string, f: Fetch = fetch): Promise<MetaAccount[]> {
-  type Page = { id: string; name: string; access_token: string; picture?: { data?: { url?: string } }; instagram_business_account?: { id: string; username?: string; name?: string; profile_picture_url?: string } };
+  type IgNode = { id: string; username?: string; name?: string; profile_picture_url?: string };
+  type Page = { id: string; name: string; access_token?: string; picture?: { data?: { url?: string } }; instagram_business_account?: IgNode; connected_instagram_account?: IgNode };
   const out: MetaAccount[] = [];
+  const seen = new Set<string>();
+  const addPage = (p: Page) => {
+    if (!p.id || !p.access_token) return;
+    const fbKey = `facebook:${p.id}`;
+    if (!seen.has(fbKey)) {
+      seen.add(fbKey);
+      out.push({ network: "facebook", externalId: p.id, pageId: p.id, name: p.name, username: null, pictureUrl: p.picture?.data?.url ?? null, token: p.access_token });
+    }
+    const ig = p.instagram_business_account ?? p.connected_instagram_account;
+    if (ig?.id) {
+      const igKey = `instagram:${ig.id}`;
+      if (!seen.has(igKey)) {
+        seen.add(igKey);
+        out.push({ network: "instagram", externalId: ig.id, pageId: p.id, name: ig.name || ig.username || p.name, username: ig.username ?? null, pictureUrl: ig.profile_picture_url ?? p.picture?.data?.url ?? null, token: p.access_token });
+      }
+    }
+  };
   let after: string | undefined;
   for (let i = 0; i < 10; i++) {
     const r = await graph<{ data: Page[]; paging?: { cursors?: { after?: string }; next?: string } }>(f, "GET", "/me/accounts", userToken, {
-      fields: "id,name,access_token,picture{url},instagram_business_account{id,username,name,profile_picture_url}", limit: 100, after,
+      fields: PAGE_FIELDS, limit: 100, after,
     });
-    for (const p of r.data ?? []) {
-      out.push({ network: "facebook", externalId: p.id, pageId: p.id, name: p.name, username: null, pictureUrl: p.picture?.data?.url ?? null, token: p.access_token });
-      const ig = p.instagram_business_account;
-      if (ig) out.push({ network: "instagram", externalId: ig.id, pageId: p.id, name: ig.name || ig.username || p.name, username: ig.username ?? null, pictureUrl: ig.profile_picture_url ?? null, token: p.access_token });
-    }
+    for (const p of r.data ?? []) addPage(p);
     after = r.paging?.next ? r.paging.cursors?.after : undefined;
     if (!after) break;
+  }
+  if (f === fetch) {
+    const biz = await graph<{ data?: { id: string }[] }>(f, "GET", "/me/businesses", userToken, { fields: "id", limit: 25 }).catch(() => ({ data: [] }));
+    for (const b of (biz.data ?? []).slice(0, 10)) {
+      for (const edge of ["owned_pages", "client_pages"] as const) {
+        const bp = await graph<{ data?: Page[] }>(f, "GET", `/${b.id}/${edge}`, userToken, { fields: PAGE_FIELDS, limit: 100 }).catch(() => ({ data: [] }));
+        for (const p of bp.data ?? []) addPage(p);
+      }
+    }
   }
   return out;
 }
