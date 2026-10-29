@@ -53,25 +53,33 @@ describe("acesso ao portal", () => {
     expect(again.ok && !again.created && again.linked).toBe(0);
     expect(await d.select().from(schema.users)).toHaveLength(1);
   });
-  it("liga como acesso compartilhado os projetos da mesma empresa, sem virar titular", async () => {
+  it("ser da mesma empresa não dá acesso: só projetos ativos ligados ao contato", async () => {
     const [dona] = await d.insert(schema.users).values({ email: "dona@example.com", name: "Dona", role: "cliente" }).returning();
     const [outro] = await d.insert(schema.contacts).values({ name: "Dona", email: "dona@example.com", company: " atalaia VIP " }).returning();
-    const [hotel] = await d.insert(schema.projects).values({ titulo: "Social", categoria: "social", contactId: outro.id, clienteId: dona.id }).returning();
-    const [porTitulo] = await d.insert(schema.projects).values({ titulo: "Atalaia Vip", categoria: "social" }).returning();
-    await d.insert(schema.projects).values({ titulo: "Alheio", categoria: "design" });
+    const [social] = await d.insert(schema.projects).values({ titulo: "Social", categoria: "social", contactId: outro.id, clienteId: dona.id }).returning();
+    await d.insert(schema.projects).values({ titulo: "Atalaia Vip", categoria: "social" });
+    const [velho] = await d.insert(schema.projects).values({ titulo: "Antigo", categoria: "video", contactId, status: "entregue" }).returning();
+    const [contrato] = await d.insert(schema.projects).values({ titulo: "Mensal", categoria: "social", contactId, status: "entregue", recurring: true }).returning();
     const r = await grantPortalAccess({ contactId });
-    expect(r.ok && r.linked).toBe(4);
-    expect(r.ok && [...r.projects].sort()).toEqual(["Atalaia Vip", "Hotel", "Lounge", "Social"]);
-    const members = await d.select().from(schema.projectMembers);
-    expect(members.map((m) => m.projectId).sort()).toEqual([hotel.id, porTitulo.id].sort());
-    expect((await d.select().from(schema.projects).where(eq(schema.projects.id, hotel.id)))[0].clienteId).toBe(dona.id);
-    const again = await grantPortalAccess({ contactId });
-    expect(again.ok && again.linked).toBe(0);
-    expect(await d.select().from(schema.projectMembers)).toHaveLength(2);
+    expect(r.ok && [...r.projects].sort()).toEqual(["Hotel", "Lounge", "Mensal"]);
+    expect(await d.select().from(schema.projectMembers)).toHaveLength(0);
+    expect((await d.select().from(schema.projects).where(eq(schema.projects.id, social.id)))[0].clienteId).toBe(dona.id);
+    expect((await d.select().from(schema.projects).where(eq(schema.projects.id, velho.id)))[0].clienteId).toBeNull();
+    expect((await d.select().from(schema.projects).where(eq(schema.projects.id, contrato.id)))[0].clienteId).not.toBeNull();
     const { suggestProjectMembers } = await import("../project-members");
-    expect(await suggestProjectMembers(hotel.id)).toEqual([]);
-    await d.delete(schema.projectMembers);
-    expect((await suggestProjectMembers(hotel.id)).map((u) => u.email)).toEqual(["thalita@example.com"]);
+    expect((await suggestProjectMembers(social.id)).map((u) => u.email)).toEqual(["thalita@example.com"]);
+  });
+  it("lead sem projeto ativo não vê nada; projeto entregue some do portal", async () => {
+    const { clientProjectIds } = await import("../project-members");
+    const [lead] = await d.insert(schema.contacts).values({ name: "Lead", email: "lead@example.com", company: "Atalaia Vip" }).returning();
+    const r = await grantPortalAccess({ contactId: lead.id });
+    expect(r.ok && r.projects).toEqual([]);
+    expect(await clientProjectIds(r.ok ? r.userId : "")).toEqual([]);
+    const t = await grantPortalAccess({ contactId });
+    const uid = t.ok ? t.userId : "";
+    expect(await clientProjectIds(uid)).toHaveLength(2);
+    await d.update(schema.projects).set({ status: "entregue" }).where(eq(schema.projects.titulo, "Hotel"));
+    expect(await clientProjectIds(uid)).toHaveLength(1);
   });
   it("recusa e-mail de administrador e e-mail inválido", async () => {
     await d.insert(schema.users).values({ email: "dono@example.com", name: "Dono", role: "admin" });

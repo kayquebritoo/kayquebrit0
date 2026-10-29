@@ -5,7 +5,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import * as schema from "../schema";
 const holder = vi.hoisted(() => ({ db: null as unknown }));
 vi.mock("../db", () => ({ db: () => holder.db }));
-import { addProjectMember, clientProjectIds, isClientOfProject, listProjectMembers, projectClientUsers, removeProjectMember } from "../project-members";
+import { addProjectMember, searchMemberCandidates, clientProjectIds, isClientOfProject, listProjectMembers, projectClientUsers, removeProjectMember } from "../project-members";
 import { portalPosts, decidePost, createClientRoteiro } from "../social-posts";
 import { canAccessProject } from "../project-chat";
 import { SCHEMA_STEPS } from "../migrations";
@@ -59,6 +59,30 @@ describe("acesso compartilhado ao projeto", () => {
     expect((await addProjectMember(project, "adelia@example.com")).ok).toBe(false);
     await d.insert(schema.users).values({ name: "Equipe", email: "equipe@example.com", role: "designer" });
     expect((await addProjectMember(project, "equipe@example.com")).ok).toBe(false);
+  });
+  it("dá acesso pelo painel a quem está só no CRM, criando a conta na hora", async () => {
+    await pg.exec("DELETE FROM kbos_contacts");
+    await d.insert(schema.contacts).values({ name: "Atalaia VIP", email: "AtalaiaVip2023@gmail.com", phone: "(91) 98888-1111", company: "Grupo Atalaia Vip", status: "client" });
+    const found = await searchMemberCandidates("atalaia");
+    expect(found).toEqual([{ email: "atalaiavip2023@gmail.com", name: "Atalaia VIP", company: "Grupo Atalaia Vip", hasAccount: false }]);
+    const r = await addProjectMember(project, "atalaiavip2023@gmail.com");
+    expect(r.ok && r.created && r.phone).toBe("5591988881111");
+    expect(await clientProjectIds(r.ok ? r.userId : "")).toEqual([project]);
+    expect((await searchMemberCandidates("atalaiavip"))[0].hasAccount).toBe(true);
+    expect((await addProjectMember(project, "atalaiavip2023@gmail.com")).ok && true).toBe(true);
+    expect(await d.select().from(schema.contacts)).toHaveLength(1);
+  });
+  it("e-mail novo: pede o nome e cria contato + conta ali mesmo", async () => {
+    await pg.exec("DELETE FROM kbos_contacts");
+    const miss = await addProjectMember(project, "nova@example.com");
+    expect(!miss.ok && miss.needsName).toBe(true);
+    const r = await addProjectMember(project, "nova@example.com", "gestao", { name: "Nova Pessoa", phone: "91 99999-0000" });
+    expect(r.ok && r.created).toBe(true);
+    const [c] = await d.select().from(schema.contacts);
+    expect([c.name, c.email, c.status]).toEqual(["Nova Pessoa", "nova@example.com", "client"]);
+    expect((await listProjectMembers(project)).map((m) => [m.email, m.access])).toEqual([["nova@example.com", "gestao"]]);
+    expect((await addProjectMember(project, "sem-arroba")).ok).toBe(false);
+    expect(await searchMemberCandidates("a")).toEqual([]);
   });
   it("passo de boot cria a mesma tabela que a migração SQL", async () => {
     const steps = SCHEMA_STEPS.filter((s) => s.id.startsWith("projects.members."));
