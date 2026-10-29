@@ -11,14 +11,36 @@ export const ROLE_LABELS: Record<Role, string> = {
   cliente: "Cliente",
 };
 
-export const PIPELINE: { id: string; label: string }[] = [
-  { id: "novo", label: "Novo" },
-  { id: "briefing", label: "Briefing" },
-  { id: "producao", label: "Em produção" },
-  { id: "revisao", label: "Revisão" },
-  { id: "aprovado", label: "Aprovado" },
-  { id: "entregue", label: "Entregue" },
+export const PIPELINE: { id: string; label: string; color: string }[] = [
+  { id: "novo", label: "Novo", color: "#9a93a8" },
+  { id: "briefing", label: "Briefing", color: "#4DA3FF" },
+  { id: "producao", label: "Em produção", color: "#8a6cf0" },
+  { id: "revisao", label: "Revisão", color: "#f5c46e" },
+  { id: "aprovado", label: "Aprovado", color: "#2dd4bf" },
+  { id: "entregue", label: "Entregue", color: "#22c55e" },
 ];
+
+export const PIPELINE_COLORS: Record<string, string> = Object.fromEntries(
+  PIPELINE.map((s) => [s.id, s.color]),
+);
+
+// Etapas de conteúdo do calendário editorial (cores sólidas, sem degradê).
+export const POST_STAGES = [
+  { id: "roteiro", label: "Roteiro", color: "#9a93a8" },
+  { id: "captacao", label: "Captação", color: "#4DA3FF" },
+  { id: "producao", label: "Produção", color: "#8a6cf0" },
+  { id: "aprovacao", label: "Aprovação", color: "#f5c46e" },
+  { id: "ajustes", label: "Ajustes", color: "#ff8a3d" },
+  { id: "aprovado", label: "Aprovado", color: "#2dd4bf" },
+  { id: "agendado", label: "Agendado", color: "#f472b6" },
+  { id: "postado", label: "Publicado", color: "#22c55e" },
+  { id: "erro", label: "Erro", color: "#ff5c5c" },
+  { id: "cancelado", label: "Cancelado", color: "#5a5566" },
+] as const;
+
+export const POST_STAGE_COLORS: Record<string, string> = Object.fromEntries(
+  POST_STAGES.map((s) => [s.id, s.color]),
+);
 
 // Fase 1 — CRM + Kanban de vendas (client-safe: sem imports server).
 export const CONTACT_STATUS = [

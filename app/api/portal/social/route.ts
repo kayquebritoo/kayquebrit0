@@ -7,7 +7,7 @@ import { serverError } from "@/lib/kbos/http";
 import { clientIp } from "@/lib/kbos/rate-limit";
 import { db } from "@/lib/kbos/db";
 import { projects } from "@/lib/kbos/schema";
-import { accountsOverview, assignAccountProject, disconnectAccount, publicProviderStatus } from "@/lib/kbos/social/connections";
+import { accountsOverview, assignAccountProject, disconnectAccount, providerStatus } from "@/lib/kbos/social/connections";
 import { socialManageableProjectIds } from "@/lib/kbos/social/routes";
 
 export const dynamic = "force-dynamic";
@@ -21,8 +21,13 @@ export async function GET() {
   try {
     const ids = await socialManageableProjectIds(user.id);
     const mine = ids.length ? await db().select({ id: projects.id, titulo: projects.titulo, parentId: projects.parentId }).from(projects).where(inArray(projects.id, ids)) : [];
-    const items = (await accountsOverview(ids)).map((a) => ({ id: a.id, projectId: a.projectId, project: a.project, network: a.network, provider: a.provider, name: a.name, username: a.username, pictureUrl: a.pictureUrl, status: a.status, via: a.via, connectedAt: a.connectedAt }));
-    return NextResponse.json({ providers: publicProviderStatus(), projects: mine, items });
+    const items = (await accountsOverview(ids)).map((a) => ({
+      id: a.id, projectId: a.projectId, project: a.project, network: a.network, provider: a.provider,
+      name: a.name, username: a.username, pictureUrl: a.pictureUrl, status: a.status, via: a.via,
+      connectedAt: a.connectedAt, scopes: a.scopes, expiresAt: a.expiresAt, refreshExpiresAt: a.refreshExpiresAt,
+      hasRefresh: a.hasRefresh, lastError: a.lastError,
+    }));
+    return NextResponse.json({ providers: providerStatus(), projects: mine, items });
   } catch (e) { return serverError(e); }
 }
 

@@ -7,7 +7,7 @@ import { seal } from "./social-crypto";
 import type { MetaAccount } from "./meta";
 import { SocialError, type PublishInput, type PublishResult } from "./social/types";
 import { providerForNetwork, PUBLISH_NETWORKS } from "./social/providers";
-import { disconnectAccount, publishTokenFor, refreshDueConnections } from "./social/connections";
+import { disconnectAccount, logAudit, publishTokenFor, refreshDueConnections } from "./social/connections";
 import { listMedia, publicMediaUrl } from "./social-media";
 import { updatePublication } from "./content-cycle";
 
@@ -39,20 +39,26 @@ export async function removeAccount(id: string, userId: string | null = null) {
   return disconnectAccount(id, { kind: "admin", userId });
 }
 
-/** Conta da rede para o projeto: a da operação; se ela não tiver, a do principal. */
+/** Conta da rede para o projeto: a da operação; se ela não tiver, a do principal (preferindo conta ativa). */
 export async function accountFor(projectId: string, network: string) {
   const [p] = await db().select({ parentId: projects.parentId }).from(projects).where(eq(projects.id, projectId)).limit(1);
   const ids = [projectId, ...(p?.parentId ? [p.parentId] : [])];
   const rows = await db().select().from(socialAccounts).where(and(inArray(socialAccounts.projectId, ids), eq(socialAccounts.network, network)));
-  return rows.find((r) => r.projectId === projectId) ?? rows[0] ?? null;
+  return (
+    rows.find((r) => r.projectId === projectId && r.status === "ativo") ??
+    rows.find((r) => r.status === "ativo") ??
+    rows.find((r) => r.projectId === projectId) ??
+    rows[0] ??
+    null
+  );
 }
 
 // ── agendar ────────────────────────────────────────────────────────────────────
 /**
  * Põe as redes do post na fila do KBOS: `at` = agora (publicar já) ou a data do post.
- * Confere antes o que faria a publicação falhar (arquivo, conta, data).
+ * Confere antes o que faria a publicação falhar (arquivo, conta ativa, data).
  */
-export async function schedulePost(postId: string, opts: { at: Date; networks?: string[] }) {
+export async function schedulePost(postId: string, opts: { at: Date; networks?: string[]; userId?: string | null }) {
   const [post] = await db().select().from(socialPosts).where(eq(socialPosts.id, postId)).limit(1);
   if (!post?.projectId) throw new PublishError("Esse post não está ligado a um projeto.");
   if (post.status === "cancelado") throw new PublishError("Esse post está cancelado.");
@@ -64,13 +70,17 @@ export async function schedulePost(postId: string, opts: { at: Date; networks?: 
   const missing: string[] = [];
   for (const p of targets) {
     const acc = await accountFor(post.projectId, p.network);
-    if (!acc) { missing.push(p.network); continue; }
+    if (!acc || acc.status !== "ativo") { missing.push(p.network); continue; }
     await db().update(postPublications).set({ status: "agendado", scheduledAt: opts.at, accountId: acc.id, error: null, attempts: 0, sendingAt: null, updatedAt: new Date() }).where(eq(postPublications.id, p.id));
   }
-  if (missing.length) throw new PublishError(`Falta ligar a conta de ${missing.join(" e ")} a este cliente (Ajustes → Redes sociais ou link de conexão).`);
+  if (missing.length) throw new PublishError(`Falta ligar ou reconectar a conta ativa de ${missing.join(" e ")} a este cliente (Ajustes → Redes sociais ou painel do cliente).`);
   if (["roteiro", "captacao", "producao", "aprovacao", "ajustes", "aprovado"].includes(post.status)) {
     await db().update(socialPosts).set({ status: "agendado", updatedAt: new Date() }).where(eq(socialPosts.id, postId));
   }
+  await logAudit("agendar", { kind: "admin", userId: opts.userId ?? null }, {
+    projectId: post.projectId,
+    detail: { postId: post.id, redes: targets.map((t) => t.network), para: opts.at.toISOString() },
+  });
   return targets.length;
 }
 
@@ -99,13 +109,22 @@ export async function sendPublication(pubId: string, now = new Date(), publish: 
     .where(and(eq(postPublications.id, pubId), eq(postPublications.status, "agendado"), or(isNull(postPublications.sendingAt), lt(postPublications.sendingAt, new Date(now.getTime() - LOCK_MS)))))
     .returning();
   if (!claimed) return { id: pubId, result: "ocupado" as const };
+  let postProjectId: string | null = null;
   const fail = async (message: string, final: boolean) => {
-    if (final) await updatePublication(claimed.postId, claimed.network, { status: "erro", error: message.slice(0, 500) });
+    if (final) {
+      await updatePublication(claimed.postId, claimed.network, { status: "erro", error: message.slice(0, 500) });
+      await logAudit("publicar-falhou", { kind: "sistema", userId: null }, {
+        provider: claimed.network,
+        projectId: postProjectId,
+        detail: { postId: claimed.postId, network: claimed.network, motivo: message.slice(0, 200) },
+      });
+    }
     await db().update(postPublications).set({ sendingAt: null, ...(final ? {} : { error: message.slice(0, 500) }), updatedAt: new Date() }).where(eq(postPublications.id, pubId));
     return { id: pubId, result: final ? ("erro" as const) : ("tentar-de-novo" as const), message };
   };
   try {
     const [post] = await db().select().from(socialPosts).where(eq(socialPosts.id, claimed.postId)).limit(1);
+    postProjectId = post?.projectId ?? null;
     if (!post || post.status === "cancelado") return await fail("Post cancelado ou apagado.", true);
     const [acc] = claimed.accountId ? await db().select().from(socialAccounts).where(eq(socialAccounts.id, claimed.accountId)).limit(1) : [];
     if (!acc) return await fail("Conta da rede não está mais ligada. Reconecte em Ajustes → Redes sociais.", true);
@@ -116,7 +135,13 @@ export async function sendPublication(pubId: string, now = new Date(), publish: 
     await updatePublication(post.id, claimed.network, { status: "publicado", url: out.url });
     await db().update(postPublications).set({ externalId: out.externalId, sendingAt: null, error: null }).where(eq(postPublications.id, pubId));
     if (out.url && !post.postedUrl) await db().update(socialPosts).set({ postedUrl: out.url }).where(eq(socialPosts.id, post.id));
-    return { id: pubId, result: "publicado" as const, url: out.url };
+    await logAudit("publicar", { kind: "sistema", userId: null }, {
+      provider: acc.provider ?? claimed.network,
+      projectId: post.projectId,
+      connectionId: acc.connectionId,
+      detail: { postId: post.id, conta: `${claimed.network}:${acc.name}`, externalId: out.externalId, url: out.url },
+    });
+    return { id: pubId, result: "publicado" as const, externalId: out.externalId, url: out.url };
   } catch (e) {
     if (e instanceof SocialError) {
       if (e.expired && claimed.accountId) {

@@ -7,7 +7,8 @@ import { eq } from "drizzle-orm";
 import * as schema from "../schema";
 const holder = vi.hoisted(() => ({ db: null as unknown }));
 vi.mock("../db", () => ({ db: () => holder.db }));
-import { closeCycle, contentState, cycleMetrics, cycleReport, isRecurring, listCycles, projectLate, reopenCycle, syncPublications, updatePublication } from "../content-cycle";
+import { closeCycle, contentFlags, contentState, cycleMetrics, cycleReport, isRecurring, listCycles, projectLate, reopenCycle, syncPublications, updatePublication } from "../content-cycle";
+import { PIPELINE, POST_STAGES } from "../constants";
 import { addProjectMember } from "../project-members";
 import { createClientRoteiro, portalPosts, setPostTakes, updateClientPost, isOverdue, monthUsage } from "../social-posts";
 import { SCHEMA_STEPS } from "../migrations";
@@ -58,6 +59,13 @@ describe("fase do conteúdo (pura)", () => {
     expect(projectLate({ categoria: "video", prazo: "2026-01-01", status: "producao" }, NOW)).toBe(true);
     expect(isOverdue({ status: "cancelado", scheduledAt: at("2026-01-01T00:00:00-03:00") }, NOW)).toBe(false);
   });
+  it("etapas do calendário e do projeto usam cores sólidas e distintas sem degradê", () => {
+    for (const s of [...POST_STAGES, ...PIPELINE]) {
+      expect(s.color).toMatch(/^#[0-9a-fA-F]{6}$/);
+    }
+    expect(new Set(POST_STAGES.map((s) => s.color)).size).toBe(POST_STAGES.length);
+    expect(new Set(PIPELINE.map((s) => s.color)).size).toBe(PIPELINE.length);
+  });
 });
 
 describe("Lume como cliente", () => {
@@ -104,6 +112,13 @@ describe("ciclo mensal e visão consolidada", () => {
     ]).returning();
     await syncPublications(p1.id, ["instagram", "facebook", "tiktok"]);
     await updatePublication(p1.id, "instagram", { status: "publicado", url: "https://instagram.com/p/x" });
+    const [flagged] = await contentFlags([p1], NOW);
+    expect(flagged).toMatchObject({ phase: "agendado", published: 1, networks: 3 });
+    expect(flagged.publications).toEqual([
+      { network: "facebook", status: "pendente", url: null },
+      { network: "instagram", status: "publicado", url: "https://instagram.com/p/x" },
+      { network: "tiktok", status: "pendente", url: null },
+    ]);
     let rep = (await cycleReport(grupo, "2026-11", NOW))!;
     expect(rep.recurring).toBe(true);
     expect(rep.operacoes.map((o) => [o.titulo, o.metrics.previstos, o.metrics.publicados, o.metrics.limite])).toEqual([["Hotel", 1, 0, 12], ["Lounge", 1, 1, 8]]);

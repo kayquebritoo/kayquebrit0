@@ -112,12 +112,26 @@ export default function PortalContent({ firstName }: { firstName?: string }) {
                 Conversar com a equipe{unread[p.id] ? <span className="kb-tag ml-2">{unread[p.id]} nova{unread[p.id] > 1 ? "s" : ""}</span> : null}
               </button>
               <ol className="flex gap-1" aria-label="Etapas do projeto">
-                {PIPELINE.map((s, i) => (
-                  <li key={s.id} className="min-w-0 flex-1" aria-current={i === idx ? "step" : undefined}>
-                    <span className={`block h-1.5 rounded-full ${i <= idx ? "bg-gradient-to-r from-[#4F12C7] to-[#E80EFD]" : "bg-white/10"}`} />
-                    <span className={`mt-1.5 block truncate text-[10px] uppercase tracking-[0.08em] ${i === idx ? "font-semibold" : "kb-faint"}`}>{s.label}</span>
-                  </li>
-                ))}
+                {PIPELINE.map((s, i) => {
+                  const doneStep = i <= idx, curStep = i === idx;
+                  return (
+                    <li key={s.id} className="min-w-0 flex-1" aria-current={curStep ? "step" : undefined}>
+                      <span
+                        className="block h-1.5 rounded-full"
+                        style={{
+                          background: doneStep ? s.color : "rgba(255,255,255,0.1)",
+                          opacity: curStep ? 1 : doneStep ? 0.5 : 1,
+                        }}
+                      />
+                      <span
+                        className={`mt-1.5 block truncate text-[10px] uppercase tracking-[0.08em] ${curStep ? "font-semibold" : "kb-faint"}`}
+                        style={curStep ? { color: s.color } : undefined}
+                      >
+                        {s.label}
+                      </span>
+                    </li>
+                  );
+                })}
               </ol>
               {all.length > 0 && (
                 <div className="border-t border-white/10 pt-4" aria-label="Tarefas do projeto">
@@ -126,7 +140,13 @@ export default function PortalContent({ firstName }: { firstName?: string }) {
                     <span className="kb-faint text-xs tabular-nums">{done} de {all.length} concluídas</span>
                   </div>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-valuemin={0} aria-valuemax={all.length} aria-valuenow={done}>
-                    <span className="block h-full rounded-full bg-gradient-to-r from-[#4F12C7] to-[#E80EFD]" style={{ width: `${(done / all.length) * 100}%` }} />
+                    <span
+                      className="block h-full rounded-full"
+                      style={{
+                        width: `${(done / all.length) * 100}%`,
+                        background: done === all.length ? "#22c55e" : (PIPELINE[idx]?.color ?? "#8a6cf0"),
+                      }}
+                    />
                   </div>
                   <div className="mt-2 flex flex-col">
                     {todo.slice(0, expanded[p.id] ? todo.length : 5).map((t) => (

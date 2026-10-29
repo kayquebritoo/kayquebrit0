@@ -152,7 +152,8 @@ export default function KanbanBoard() {
 
       <div className="kb-seg md:hidden" role="tablist" aria-label="Etapa do projeto" style={{ gridAutoColumns: "max-content", overflowX: "auto" }}>
         {PIPELINE.map((c) => (
-          <button key={c.id} role="tab" aria-selected={stage === c.id} onClick={() => setStage(c.id)} className="kb-chip min-h-11 whitespace-nowrap" aria-pressed={stage === c.id}>
+          <button key={c.id} role="tab" aria-selected={stage === c.id} onClick={() => setStage(c.id)} className="kb-chip min-h-11 gap-2 whitespace-nowrap" aria-pressed={stage === c.id}>
+            <span aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: c.color }} />
             {c.label} · {shown.filter((p) => p.status === c.id).length}
           </button>
         ))}
@@ -172,7 +173,10 @@ export default function KanbanBoard() {
                 onDrop={(e) => { const id = e.dataTransfer.getData("text/project-id"); if (id) move(id, col.id); }}
                 className={`${col.id === stage ? "block" : "hidden"} kb-glass min-w-0 p-3 md:block md:w-[272px] md:shrink-0`}
               >
-                <p className="kb-faint hidden px-1 text-[11px] uppercase tracking-[0.22em] md:block">{col.label} · {list.length}</p>
+                <p className="kb-faint hidden items-center gap-2 px-1 text-[11px] uppercase tracking-[0.22em] md:flex">
+                  <span aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: col.color }} />
+                  {col.label} · {list.length}
+                </p>
                 <div className="flex flex-col gap-2 md:mt-3">
                   {list.map((p) => {
                     const dd = due(p);

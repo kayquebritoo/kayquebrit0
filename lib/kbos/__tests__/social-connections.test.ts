@@ -410,12 +410,14 @@ describe("publicar com o token da conexão (YouTube)", () => {
       return { externalId: "VID1", url: "https://youtu.be/VID1" };
     };
     const out = await handleSocialTick(new Date("2026-11-02T18:00:30-03:00"), publisher);
-    expect(out).toMatchObject([{ result: "publicado" }]);
+    expect(out).toMatchObject([{ result: "publicado", externalId: "VID1", url: "https://youtu.be/VID1" }]);
     expect(seen).toEqual([{ network: "youtube", token: "AT-do-youtube", externalId: "UC1" }]);
     const [pub] = await d.select().from(schema.postPublications);
     expect(pub).toMatchObject({ status: "publicado", externalId: "VID1" });
+    expect((await audit("agendar"))[0]).toMatchObject({ projectId: projA, actorKind: "admin" });
+    expect((await audit("publicar"))[0]).toMatchObject({ provider: "youtube", projectId: projA, actorKind: "sistema", detail: expect.objectContaining({ externalId: "VID1", url: "https://youtu.be/VID1" }) });
   });
-  it("conexão vencida sem refresh: não publica, marca conta e conexão como expiradas", async () => {
+  it("conexão vencida sem refresh: não publica, marca conta e conexão como expiradas e audita falha", async () => {
     const { post, conn, acc } = await setup({ expiresAt: new Date("2026-11-02T00:00:00Z"), refreshEnc: null });
     await schedulePost(post.id, { at: new Date("2026-11-02T18:00:00-03:00") });
     const [pub] = await d.select().from(schema.postPublications);
@@ -425,5 +427,35 @@ describe("publicar com o token da conexão (YouTube)", () => {
     expect(r.result).toBe("erro");
     expect((await getAcc(acc.id)).status).toBe("expirado");
     expect((await getConn(conn.id)).status).toBe("expirado");
+    expect((await audit("publicar-falhou"))[0]).toMatchObject({ projectId: projA, actorKind: "sistema" });
+    // conta já expirada: não permite novo agendamento até reconectar
+    await d.update(schema.postPublications).set({ status: "pendente" }).where(eq(schema.postPublications.id, pub.id));
+    await expect(schedulePost(post.id, { at: new Date("2026-11-03T18:00:00-03:00") })).rejects.toThrow(/reconectar/);
+  });
+  it("isolamento e permissão no portal: titular por empresa gerencia redes da sua empresa e não acessa outra", async () => {
+    const { socialManageableProjectIds } = await import("../social/routes");
+    const { assignAccountProject } = await import("../social/connections");
+    const [cliA, cliB] = await d.insert(schema.users).values([
+      { email: "titular@empresa-a.com", name: "Titular A", role: "cliente" },
+      { email: "outro@empresa-b.com", name: "Outro B", role: "cliente" },
+    ]).returning();
+    const [compA] = await d.insert(schema.companies).values({ name: "Empresa A", slug: "empresa-a" }).returning();
+    await d.update(schema.projects).set({ companyId: compA.id, recurring: true }).where(eq(schema.projects.id, projA));
+    await d.update(schema.projects).set({ clienteId: cliB.id, recurring: true }).where(eq(schema.projects.id, projB));
+    await d.insert(schema.companyAccess).values({ companyId: compA.id, userId: cliA.id, role: "titular" });
+
+    const allowedA = await socialManageableProjectIds(cliA.id);
+    const allowedB = await socialManageableProjectIds(cliB.id);
+    expect(allowedA).toEqual([projA]);
+    expect(allowedB).toEqual([projB]);
+
+    const { accs } = await mkConn({ expiresAt: new Date(Date.now() + 3600_000) });
+    // cliB não vê nem move a conta de projA
+    expect(await accountsOverview(allowedB)).toHaveLength(0);
+    expect(await assignAccountProject(accs[0].id, projB, { kind: "cliente", userId: cliB.id }, allowedB)).toBe(false);
+    // cliA vê a conta de projA com escopos e status
+    const seenA = await accountsOverview(allowedA);
+    expect(seenA).toHaveLength(1);
+    expect(seenA[0]).toMatchObject({ id: accs[0].id, projectId: projA, status: "ativo", scopes: "s" });
   });
 });

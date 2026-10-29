@@ -6,7 +6,18 @@ import { NETS, NetMark, connectHref, netInfo, returnMessage, type ProviderInfo, 
 type Project = { id: string; titulo: string; parentId?: string | null; categoria?: string };
 type Audit = { id: string; action: string; provider: string | null; project: string | null; actorKind: string; actor: string | null; ip: string | null; scopes: string | null; detail: Record<string, unknown> | null; createdAt: string };
 const PERSONAL = "Kayque Brito (pessoal)";
-const ACTION: Record<string, string> = { conectar: "conectou", desconectar: "desconectou", "ligar-projeto": "mudou de cliente", "link-criado": "criou link", "link-cancelado": "cancelou link", "renovar-falhou": "renovação falhou", "cliente-pessoal": "criou cliente pessoal" };
+const ACTION: Record<string, string> = {
+  conectar: "conectou",
+  desconectar: "desconectou",
+  "ligar-projeto": "mudou de cliente",
+  "link-criado": "criou link",
+  "link-cancelado": "cancelou link",
+  "renovar-falhou": "renovação falhou",
+  "cliente-pessoal": "criou cliente pessoal",
+  agendar: "agendou publicação",
+  publicar: "publicou na rede",
+  "publicar-falhou": "publicação falhou",
+};
 const WHO: Record<string, string> = { admin: "Admin", cliente: "Cliente (portal)", link: "Cliente (link)", sistema: "KBOS" };
 const OPTION: Record<string, string> = { meta: "9", youtube: "10", google: "10", tiktok: "11", pinterest: "12", linkedin: "13" };
 

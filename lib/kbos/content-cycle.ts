@@ -44,15 +44,16 @@ export async function monthMetricsByProject(projectIds: string[], month: string,
   return out;
 }
 
-export type ContentFlags = { phase: Phase; late: boolean; published: number; networks: number };
+export type PubSummary = { network: string; status: string; url: string | null };
+export type ContentFlags = { phase: Phase; late: boolean; published: number; networks: number; publications: PubSummary[] };
 /** Fase e "atrasado" de cada post, olhando as redes (para as telas contarem igual ao relatório). */
 export async function contentFlags<T extends { id: string; status: string; scheduledAt: Date | null; networks?: string[] | null }>(posts: T[], now = new Date()): Promise<(T & ContentFlags)[]> {
   if (!posts.length) return [];
-  const pubs = await db().select({ postId: postPublications.postId, network: postPublications.network, status: postPublications.status }).from(postPublications).where(inArray(postPublications.postId, posts.map((p) => p.id)));
+  const pubs = await db().select({ postId: postPublications.postId, network: postPublications.network, status: postPublications.status, url: postPublications.url }).from(postPublications).where(inArray(postPublications.postId, posts.map((p) => p.id))).orderBy(asc(postPublications.network));
   return posts.map((p) => {
     const mine = pubs.filter((x) => x.postId === p.id);
     const st = contentState(p, mine);
-    return { ...p, phase: st.phase, late: isLate(p, mine, now), published: st.published, networks: st.networks };
+    return { ...p, phase: st.phase, late: isLate(p, mine, now), published: st.published, networks: st.networks, publications: mine.map((m) => ({ network: m.network, status: m.status, url: m.url })) };
   });
 }
 
