@@ -9,6 +9,7 @@ import ProjectChat from "@/components/kbos/ProjectChat";
 import PortalPosts from "@/components/kbos/PortalPosts";
 import OverduePosts from "@/components/kbos/OverduePosts";
 import CycleCard from "@/components/kbos/CycleCard";
+import { CompactListControls, useCompactList } from "@/components/kbos/CompactList";
 
 type Project = { id: string; titulo: string; categoria: string; status: string; prazo?: string | null; parentId?: string | null };
 type TaskItem = { id: string; projectId: string | null; titulo: string; status: string; dueAt: string | null };
@@ -28,7 +29,8 @@ export default function PortalContent({ firstName }: { firstName?: string }) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [unread, setUnread] = useState<Record<string, number>>({});
   const [chat, setChat] = useState<Project | null>(null);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const projList = useCompactList(projects ?? []);
+  const invList = useCompactList(invoices);
 
   useEffect(() => {
     let alive = true;
@@ -97,7 +99,7 @@ export default function PortalContent({ firstName }: { firstName?: string }) {
       <OverduePosts audience="cliente" />
       <PortalPosts />
       <div className="grid gap-4 md:grid-cols-2">
-        {projects.map((p) => {
+        {projList.items.map((p) => {
           const idx = Math.max(0, PIPELINE.findIndex((s) => s.id === p.status));
           const mine = files.filter((f) => f.projectId === p.id);
           const all = tasks.filter((t) => t.projectId === p.id);
@@ -150,42 +152,26 @@ export default function PortalContent({ firstName }: { firstName?: string }) {
                       }}
                     />
                   </div>
-                  <div className="mt-2 flex flex-col">
-                    {todo.slice(0, expanded[p.id] ? todo.length : 5).map((t) => (
-                      <div key={t.id} className="kb-row">
-                        <span className="min-w-0 truncate text-sm">{t.titulo}</span>
-                        <span className="kb-faint shrink-0 text-xs">{t.status === "doing" ? "Em produção" : "Na fila"}{t.dueAt ? ` · ${day(t.dueAt)}` : ""}</span>
-                      </div>
-                    ))}
-                    {todo.length === 0 && <p className="kb-faint py-2 text-sm">Tudo concluído por aqui.</p>}
-                  </div>
-                  {todo.length > 5 && <button type="button" className="kb-btn-ghost mt-2 min-h-11 w-full" onClick={() => setExpanded((x) => ({ ...x, [p.id]: !x[p.id] }))}>{expanded[p.id] ? "Mostrar menos" : `Ver todas (${todo.length})`}</button>}
+                  <TaskList todo={todo} />
                 </div>
               )}
               <CycleCard projectId={p.id} mode="portal" />
               <div className="border-t border-white/10 pt-4">
                 <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">Arquivos para aprovação</p>
-                <div className="mt-3 flex flex-col gap-3">
-                  {mine.map((f) => (
-                    <div key={f.id} className="kb-card gap-3 sm:!flex-row sm:items-center sm:justify-between">
-                      <a href={f.url} target="_blank" rel="noopener noreferrer" className="min-w-0 break-words text-sm underline-offset-2 hover:underline">{f.nome} ↗</a>
-                      <ApproveButtons projectId={p.id} fileId={f.id} status={f.status} />
-                    </div>
-                  ))}
-                  {mine.length === 0 && <p className="kb-faint text-sm">Nada para aprovar no momento.</p>}
-                </div>
+                <FileList projectId={p.id} files={mine} />
               </div>
             </article>
           );
         })}
       </div>
+      <CompactListControls {...projList} noun="projetos" className="-mt-2" />
       <PortalLumeCard />
       <SocialConnectPanel />
       {invoices.length > 0 && (
         <section className="kb-glass p-5" aria-label="Pagamentos">
           <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">Pagamentos</p>
           <div className="mt-3 flex flex-col">
-            {invoices.slice(0, 8).map((i) => (
+            {invList.items.map((i) => (
               <div key={i.id} className="kb-row">
                 <span className="min-w-0">
                   <span className="block truncate text-sm">{i.descricao}</span>
@@ -198,9 +184,48 @@ export default function PortalContent({ firstName }: { firstName?: string }) {
               </div>
             ))}
           </div>
+          <CompactListControls {...invList} noun="pagamentos" />
         </section>
       )}
       {chat && <ProjectChat projectId={chat.id} title={chat.titulo} onClose={() => { setUnread((u) => ({ ...u, [chat.id]: 0 })); setChat(null); }} />}
     </div>
+  );
+}
+
+function TaskList({ todo }: { todo: TaskItem[] }) {
+  const list = useCompactList(todo);
+  return (
+    <>
+      <div className="mt-2 flex flex-col">
+        {list.items.map((t) => (
+          <div key={t.id} className="kb-row">
+            <span className="min-w-0 truncate text-sm">{t.titulo}</span>
+            <span className="kb-faint shrink-0 text-xs">{t.status === "doing" ? "Em produção" : "Na fila"}{t.dueAt ? ` · ${day(t.dueAt)}` : ""}</span>
+          </div>
+        ))}
+        {todo.length === 0 && <p className="kb-faint py-2 text-sm">Tudo concluído por aqui.</p>}
+      </div>
+      <CompactListControls {...list} noun="tarefas" />
+    </>
+  );
+}
+
+function FileList({ projectId, files }: { projectId: string; files: FileItem[] }) {
+  // Pendentes de aprovação primeiro: é o que o cliente precisa resolver.
+  const sorted = [...files].sort((a, b) => (a.status === "enviado" ? 0 : 1) - (b.status === "enviado" ? 0 : 1));
+  const list = useCompactList(sorted);
+  return (
+    <>
+      <div className="mt-3 flex flex-col gap-3">
+        {list.items.map((f) => (
+          <div key={f.id} className="kb-card gap-3 sm:!flex-row sm:items-center sm:justify-between">
+            <a href={f.url} target="_blank" rel="noopener noreferrer" className="min-w-0 break-words text-sm underline-offset-2 hover:underline">{f.nome} ↗</a>
+            <ApproveButtons projectId={projectId} fileId={f.id} status={f.status} />
+          </div>
+        ))}
+        {files.length === 0 && <p className="kb-faint text-sm">Nada para aprovar no momento.</p>}
+      </div>
+      <CompactListControls {...list} noun="arquivos" />
+    </>
   );
 }
