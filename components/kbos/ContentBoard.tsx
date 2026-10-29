@@ -4,97 +4,406 @@ import CalendarExport from "./CalendarExport";
 import PostPublications from "./PostPublications";
 import PostPublishing from "./PostPublishing";
 import BrandPicker from "./BrandPicker";
+import PortalPosts from "./PortalPosts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CLIENT_HUBS, lumeHref } from "@/lib/kbos/client-hubs";
 import { BRAND_LIST, BRAND_LOGOS, brandColor, brandLabel, brandsOf } from "@/lib/kbos/brand-colors";
 import { contentBrand, summarizeContent } from "@/lib/kbos/content-summary";
 import { effectivePostLimit } from "@/lib/kbos/plan-limit";
+import type { PubSummary } from "@/lib/kbos/content-cycle";
 
-type Post = {
-  id: string; projectId: string | null; brand: string | null; collabBrands?: string[]; title: string; format: string; scheduledAt: string | null;
-  status: string; script: string | null; caption: string | null; mediaUrl: string | null; clientNote: string | null; copies: number; postedUrl: string | null;
-  networks?: string[]; scriptBy: string | null; captureBy: string | null; editor: string | null; errorMessage: string | null;
-  takes?: { id: number; nome: string; t: number | null; by: string | null }[];
+export type CalendarPost = {
+  id: string;
+  projectId: string | null;
+  brand: string | null;
+  collabBrands?: string[];
+  title: string;
+  format: string;
+  scheduledAt: string | null;
+  status: string;
+  script: string | null;
+  caption: string | null;
+  mediaUrl: string | null;
+  clientNote: string | null;
+  copies?: number;
+  postedUrl: string | null;
+  networks?: string[];
+  scriptBy?: string | null;
+  captureBy?: string | null;
+  editor?: string | null;
+  errorMessage?: string | null;
+  takes?: { id: number; nome: string; t: number | null; by: string | null; at?: string }[];
   /** Calculados no servidor pela regra única (olham cada rede): ver `contentFlags`. */
-  phase?: string; late?: boolean;
+  phase?: string;
+  late?: boolean;
+  publications?: PubSummary[];
+};
+
+type Post = CalendarPost & {
+  copies: number;
+  scriptBy: string | null;
+  captureBy: string | null;
+  editor: string | null;
+  errorMessage: string | null;
 };
 type Project = { id: string; titulo: string; categoria?: string; postLimit?: number | null; parentId?: string | null };
 
-// Etapas na ordem do fluxo (cor = o que a pessoa vê no calendário). Cores com matiz bem separado:
-// edição (roxo) × agendado (rosa) e aprovado (turquesa) × postado (verde) não se confundem.
-const STATUS: { id: string; label: string; color: string }[] = [
-  { id: "roteiro", label: "Roteiro", color: "#9a93a8" },
-  { id: "captacao", label: "Captação", color: "#4DA3FF" },
-  { id: "producao", label: "Em edição", color: "#8a6cf0" },
-  { id: "aprovacao", label: "Aguardando cliente", color: "#f5c46e" },
-  { id: "ajustes", label: "Ajustes", color: "#ff8a3d" },
-  { id: "aprovado", label: "Aprovado", color: "#2dd4bf" },
-  { id: "agendado", label: "Agendado", color: "#f472b6" },
-  { id: "postado", label: "Postado", color: "#22c55e" },
-  { id: "erro", label: "Erro ao postar", color: "#ff5c5c" },
-  { id: "cancelado", label: "Cancelado", color: "#5a5566" },
+// Etapas na ordem do fluxo (cor sólida = o que a pessoa vê no calendário, filtros, cards e modais).
+// Edição (roxo) × agendado (rosa) e aprovado (turquesa) × postado (verde) não se confundem. Sem degradê.
+export const STATUS: { id: string; label: string; clientLabel?: string; color: string }[] = [
+  { id: "roteiro", label: "Roteiro", clientLabel: "Planejado", color: "#9a93a8" },
+  { id: "captacao", label: "Captação", clientLabel: "Em captação", color: "#4DA3FF" },
+  { id: "producao", label: "Em edição", clientLabel: "Em edição", color: "#8a6cf0" },
+  { id: "aprovacao", label: "Aguardando cliente", clientLabel: "Aguardando você", color: "#f5c46e" },
+  { id: "ajustes", label: "Ajustes", clientLabel: "Ajustes pedidos", color: "#ff8a3d" },
+  { id: "aprovado", label: "Aprovado", clientLabel: "Aprovado", color: "#2dd4bf" },
+  { id: "agendado", label: "Agendado", clientLabel: "Agendado", color: "#f472b6" },
+  { id: "postado", label: "Postado", clientLabel: "Publicado", color: "#22c55e" },
+  { id: "erro", label: "Erro ao postar", clientLabel: "Erro ao postar", color: "#ff5c5c" },
+  { id: "cancelado", label: "Cancelado", clientLabel: "Cancelado", color: "#5a5566" },
 ];
-const STEPS = ["roteiro", "captacao", "producao", "aprovacao", "aprovado", "postado"];
-const STEP_LABEL: Record<string, string> = { roteiro: "Roteiro", captacao: "Captação", producao: "Edição", aprovacao: "Aprovação", aprovado: "Aprovado", postado: "Postado" };
-const stepIndex = (s: string) => (s === "ajustes" ? 3 : s === "agendado" ? 4 : s === "erro" ? 5 : Math.max(0, STEPS.indexOf(s)));
-const FORMAT: Record<string, string> = { reels: "Reels", carrossel: "Carrossel", estatico: "Flyer", story: "Story", outro: "Post" };
-const FORMAT_SHORT: Record<string, string> = { reels: "R", carrossel: "C", estatico: "F", story: "S", outro: "P" };
-const meta = (s: string) => STATUS.find((x) => x.id === s) ?? STATUS[0];
-const BELEM = "America/Belem";
-const dayKey = (iso: string) => new Date(iso).toLocaleDateString("sv-SE", { timeZone: BELEM });
-const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-const dayLabel = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", timeZone: BELEM });
-const hhmm = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: BELEM });
-const toLocalInput = (iso: string | null) => (iso ? new Date(iso).toLocaleString("sv-SE", { timeZone: BELEM }).replace(" ", "T").slice(0, 16) : "");
-const WEEK = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+export const STEPS = ["roteiro", "captacao", "producao", "aprovacao", "aprovado", "postado"];
+export const STEP_LABEL: Record<string, string> = {
+  roteiro: "Roteiro",
+  captacao: "Captação",
+  producao: "Edição",
+  aprovacao: "Aprovação",
+  aprovado: "Aprovado",
+  postado: "Postado",
+};
+export const stepIndex = (s: string) =>
+  s === "ajustes" ? 3 : s === "agendado" ? 4 : s === "erro" ? 5 : Math.max(0, STEPS.indexOf(s));
+export const FORMAT: Record<string, string> = {
+  reels: "Reels",
+  carrossel: "Carrossel",
+  estatico: "Flyer",
+  story: "Story",
+  outro: "Post",
+};
+export const FORMAT_SHORT: Record<string, string> = {
+  reels: "R",
+  carrossel: "C",
+  estatico: "F",
+  story: "S",
+  outro: "P",
+};
+export const meta = (s: string) => STATUS.find((x) => x.id === s) ?? STATUS[0];
+export const BELEM = "America/Belem";
+export const dayKey = (iso: string) => new Date(iso).toLocaleDateString("sv-SE", { timeZone: BELEM });
+export const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+export const dayLabel = (iso: string) =>
+  new Date(iso).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", timeZone: BELEM });
+export const hhmm = (iso: string) =>
+  new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: BELEM });
+const toLocalInput = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleString("sv-SE", { timeZone: BELEM }).replace(" ", "T").slice(0, 16) : "";
+export const WEEK = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-function BrandLogo({ brand, size = 20 }: { brand: string | null; size?: number }) {
+export function BrandLogo({ brand, size = 20 }: { brand: string | null; size?: number }) {
   const src = brand ? BRAND_LOGOS[brand] : undefined;
   if (!src) return null;
-  return <Image src={src} alt="" title={brand ?? undefined} width={size} height={size} sizes={`${size}px`} className="shrink-0 rounded-sm bg-white object-contain p-px" style={{ width: size, height: size }} />;
+  return (
+    <Image
+      src={src}
+      alt=""
+      title={brand ?? undefined}
+      width={size}
+      height={size}
+      sizes={`${size}px`}
+      className="shrink-0 rounded-sm bg-white object-contain p-px"
+      style={{ width: size, height: size }}
+    />
+  );
 }
 
-function safeUrl(u: string | null | undefined) {
+export function safeUrl(u: string | null | undefined) {
   if (!u) return null;
-  try { const x = new URL(u.trim()); return x.protocol === "http:" || x.protocol === "https:" ? x.href : null; } catch { return null; }
+  try {
+    const x = new URL(u.trim());
+    return x.protocol === "http:" || x.protocol === "https:" ? x.href : null;
+  } catch {
+    return null;
+  }
 }
 
-function OpenPost({ url, className = "" }: { url: string | null | undefined; className?: string }) {
+export function OpenPost({ url, className = "" }: { url: string | null | undefined; className?: string }) {
   const href = safeUrl(url);
   if (!href) return null;
-  return <a href={href} target="_blank" rel="noopener noreferrer" aria-label="Abrir post publicado" title="Abrir post publicado" onClick={(e) => e.stopPropagation()} className={`kb-faint inline-flex shrink-0 items-center justify-center rounded-md px-1 text-[13px] hover:text-[var(--kb-ink,inherit)] hover:bg-white/10 ${className}`}>↗</a>;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Abrir post publicado"
+      title="Abrir post publicado"
+      onClick={(e) => e.stopPropagation()}
+      className={`kb-faint inline-flex shrink-0 items-center justify-center rounded-md px-1 text-[13px] hover:bg-white/10 hover:text-[var(--kb-ink,inherit)] ${className}`}
+    >
+      ↗
+    </a>
+  );
 }
 
-/** Ícone de situação ao lado da logo: postado (✓), agendado (relógio), erro (!), cancelado (×); o resto é um anel na cor da etapa = ainda não foi ao ar. */
-function StateIcon({ status, size = 14 }: { status: string; size?: number }) {
+/** Ícone de situação ao lado da logo: postado (✓), agendado (relógio), erro (!), cancelado (×); o resto é um anel sólido na cor da etapa = ainda não foi ao ar. */
+export function StateIcon({ status, size = 14 }: { status: string; size?: number }) {
   const { color, label } = meta(status);
-  const common = { width: size, height: size, viewBox: "0 0 16 16", className: "shrink-0", role: "img" as const, "aria-label": label };
-  if (status === "postado") return <svg {...common}><title>{label}</title><circle cx="8" cy="8" r="7.5" fill={color} /><path d="M4.6 8.3l2.2 2.2 4.6-4.8" fill="none" stroke="#0B0B1E" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-  if (status === "agendado") return <svg {...common}><title>{label}</title><circle cx="8" cy="8" r="6.6" fill="none" stroke={color} strokeWidth="1.8" /><path d="M8 4.6V8l2.3 1.5" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" /></svg>;
-  if (status === "erro") return <svg {...common}><title>{label}</title><circle cx="8" cy="8" r="7.5" fill={color} /><path d="M8 4.2v4.6M8 11.4v.2" stroke="#0B0B1E" strokeWidth="2" strokeLinecap="round" /></svg>;
-  if (status === "cancelado") return <svg {...common}><title>{label}</title><circle cx="8" cy="8" r="6.6" fill="none" stroke={color} strokeWidth="1.6" /><path d="M5.6 5.6l4.8 4.8M10.4 5.6l-4.8 4.8" stroke={color} strokeWidth="1.6" strokeLinecap="round" /></svg>;
-  return <svg {...common}><title>{label} · ainda não postado</title><circle cx="8" cy="8" r="5.6" fill="none" stroke={color} strokeWidth="2.2" /></svg>;
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 16 16",
+    className: "shrink-0",
+    role: "img" as const,
+    "aria-label": label,
+  };
+  if (status === "postado")
+    return (
+      <svg {...common}>
+        <title>{label}</title>
+        <circle cx="8" cy="8" r="7.5" fill={color} />
+        <path
+          d="M4.6 8.3l2.2 2.2 4.6-4.8"
+          fill="none"
+          stroke="#0B0B1E"
+          strokeWidth="1.9"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  if (status === "agendado")
+    return (
+      <svg {...common}>
+        <title>{label}</title>
+        <circle cx="8" cy="8" r="6.6" fill="none" stroke={color} strokeWidth="1.8" />
+        <path d="M8 4.6V8l2.3 1.5" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  if (status === "erro")
+    return (
+      <svg {...common}>
+        <title>{label}</title>
+        <circle cx="8" cy="8" r="7.5" fill={color} />
+        <path d="M8 4.2v4.6M8 11.4v.2" stroke="#0B0B1E" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    );
+  if (status === "cancelado")
+    return (
+      <svg {...common}>
+        <title>{label}</title>
+        <circle cx="8" cy="8" r="6.6" fill="none" stroke={color} strokeWidth="1.6" />
+        <path d="M5.6 5.6l4.8 4.8M10.4 5.6l-4.8 4.8" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    );
+  return (
+    <svg {...common}>
+      <title>{label} · ainda não postado</title>
+      <circle cx="8" cy="8" r="5.6" fill="none" stroke={color} strokeWidth="2.2" />
+    </svg>
+  );
+}
+
+export function StatusTag({ status, client, late }: { status: string; client?: boolean; late?: boolean }) {
+  const m = meta(status);
+  return (
+    <span className={`kb-tag shrink-0 gap-1.5 ${status === "ajustes" || late ? "late" : ""}`}>
+      <span aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: m.color }} />
+      {client ? (m.clientLabel ?? m.label) : m.label}
+      {late ? " · atrasado" : ""}
+    </span>
+  );
+}
+
+export function Stepper({ status }: { status: string }) {
+  const at = stepIndex(status);
+  const bad = status === "erro";
+  const color = meta(status).color; // cor sólida da etapa atual (sem degradê)
+  return (
+    <ol className="flex gap-1" aria-label="Andamento do post">
+      {STEPS.map((s, i) => (
+        <li key={s} className="min-w-0 flex-1" aria-current={i === at ? "step" : undefined}>
+          <span
+            className={`block h-1.5 rounded-full transition-[background-color,opacity] duration-300 ${i <= at ? "" : "bg-white/10"}`}
+            style={
+              i <= at
+                ? { background: bad && i === at ? "var(--kb-late-dot)" : color, opacity: i === at ? 1 : 0.5 }
+                : undefined
+            }
+          />
+          <span
+            className={`mt-1 block truncate text-[10px] uppercase tracking-[0.06em] ${i === at ? "font-semibold" : "kb-faint"}`}
+            style={i === at ? { color } : undefined}
+          >
+            {STEP_LABEL[s]}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+export type CalendarCell = { key: string; n: number; inMonth: boolean };
+export function buildMonthCells(month: string): CalendarCell[] {
+  const [y, m] = month.split("-").map(Number);
+  const first = new Date(Date.UTC(y, m - 1, 1));
+  const start = new Date(Date.UTC(y, m - 1, 1 - first.getUTCDay()));
+  const days = Math.ceil((first.getUTCDay() + new Date(Date.UTC(y, m, 0)).getUTCDate()) / 7) * 7;
+  return Array.from({ length: days }, (_, i) => {
+    const d = new Date(start.getTime() + i * 86400000);
+    return { key: d.toISOString().slice(0, 10), n: d.getUTCDate(), inMonth: d.getUTCMonth() === m - 1 };
+  });
+}
+
+/** Grid único do calendário editorial compartilhado entre Admin e Portal do Cliente. */
+export function SharedCalendarGrid<T extends CalendarPost>({
+  monthName,
+  cells,
+  byDay,
+  selected,
+  today,
+  expandedDay,
+  setSelected,
+  setExpandedDay,
+  onPickDay,
+  onOpenPost,
+  statusOf,
+}: {
+  monthName: string;
+  cells: CalendarCell[];
+  byDay: Map<string, T[]>;
+  selected: string;
+  today: string;
+  expandedDay: string | null;
+  setSelected: (k: string) => void;
+  setExpandedDay: (k: string | null) => void;
+  onPickDay: (key: string, hasPosts: boolean) => void;
+  onOpenPost: (p: T) => void;
+  statusOf?: (p: T) => string;
+}) {
+  const resolveStatus = statusOf ?? ((p: T) => p.status);
+  return (
+    <div className="kb-glass overflow-hidden p-0!" role="grid" aria-label={`Calendário de ${monthName}`}>
+      <div className="grid grid-cols-7 border-b border-white/10" role="row">
+        {WEEK.map((w) => (
+          <div key={w} role="columnheader" className="kb-faint py-2 text-center text-[11px] uppercase tracking-wide">
+            {w}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7">
+        {cells.map((c) => {
+          const list = byDay.get(c.key) ?? [];
+          const sel = c.key === selected;
+          return (
+            <div
+              key={c.key}
+              role="gridcell"
+              tabIndex={0}
+              aria-label={`${c.n}, ${list.length} post${list.length === 1 ? "" : "s"}`}
+              aria-selected={sel}
+              onClick={() => onPickDay(c.key, list.length > 0)}
+              onKeyDown={(e) => {
+                if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                  e.preventDefault();
+                  onPickDay(c.key, list.length > 0);
+                }
+              }}
+              className={`min-h-[58px] cursor-pointer border-b border-r border-white/5 p-1 text-left transition-colors sm:min-h-[118px] sm:p-1.5 ${c.inMonth ? "" : "opacity-40"} ${sel ? "bg-[var(--kb-chip-hover)]" : "hover:bg-[var(--kb-chip)]"}`}
+            >
+              <span
+                className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[12px] tabular-nums ${c.key === today ? "bg-[#4F12C7] font-semibold text-white" : "kb-muted"}`}
+              >
+                {c.n}
+              </span>
+              {/* celular: logos compactos identificam cada empresa e etapa */}
+              <div className="mt-1 flex flex-wrap gap-0.5 sm:hidden">
+                {list.slice(0, 6).map((p) => {
+                  const st = resolveStatus(p);
+                  return (
+                    <span key={p.id} aria-label={p.brand ?? meta(st).label}>
+                      {p.brand && BRAND_LOGOS[p.brand] ? (
+                        <BrandLogo brand={p.brand} size={12} />
+                      ) : (
+                        <StateIcon status={st} size={10} />
+                      )}
+                    </span>
+                  );
+                })}
+                {list.length > 6 && (
+                  <span className="kb-faint text-[10px] leading-3 tabular-nums">+{list.length - 6}</span>
+                )}
+              </div>
+              {/* tela grande: etiquetas com título, logo, ícone de etapa em cor sólida e link */}
+              <div className="mt-1 hidden flex-col gap-0.5 sm:flex">
+                {list.slice(0, expandedDay === c.key ? list.length : 3).map((p) => {
+                  const st = resolveStatus(p);
+                  return (
+                    <div
+                      key={p.id}
+                      className="flex min-w-0 items-center rounded-md hover:bg-white/10"
+                      style={{
+                        borderLeft: `3px solid ${brandColor(p.brand) ?? meta(st).color}`,
+                        background: brandColor(p.brand) ? `${brandColor(p.brand)}14` : undefined,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenPost(p);
+                        }}
+                        title={`${p.title} — ${meta(st).label}`}
+                        className="flex min-w-0 flex-1 items-center gap-1 px-1 py-0.5 text-left text-[11px]"
+                      >
+                        {brandsOf(p).map((b) => (
+                          <BrandLogo key={b} brand={b} size={18} />
+                        ))}
+                        <StateIcon status={st} size={13} />
+                        <b className="kb-faint shrink-0">{FORMAT_SHORT[p.format] ?? "P"}</b>
+                        <span className="kb-ink truncate">{p.title}</span>
+                      </button>
+                      <OpenPost url={p.postedUrl} />
+                    </div>
+                  );
+                })}
+                {list.length > 3 && (
+                  <button
+                    type="button"
+                    className="kb-faint rounded-md px-1 py-0.5 text-left text-[11px] hover:bg-white/10 hover:text-[var(--kb-ink)]"
+                    aria-expanded={expandedDay === c.key}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelected(c.key);
+                      setExpandedDay(expandedDay === c.key ? null : c.key);
+                    }}
+                  >
+                    {expandedDay === c.key ? "mostrar menos" : `+${list.length - 3} mais`}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 // "Próximo para editar": vídeos e carrosséis que ainda não passaram pela aprovação.
 const EDIT_FORMATS = new Set(["reels", "carrossel"]);
 const EDIT_STATUS = new Set(["roteiro", "captacao", "producao", "ajustes"]);
 
-function people(p: Post) {
-  return [p.scriptBy && `Roteiro: ${p.scriptBy}`, p.captureBy && `Capta: ${p.captureBy}`, p.editor && `Edita: ${p.editor}`].filter(Boolean).join(" · ");
+function people(p: CalendarPost) {
+  return [p.scriptBy && `Roteiro: ${p.scriptBy}`, p.captureBy && `Capta: ${p.captureBy}`, p.editor && `Edita: ${p.editor}`]
+    .filter(Boolean)
+    .join(" · ");
 }
 
-function StatusTag({ status }: { status: string }) {
-  const m = meta(status);
-  return (
-    <span className="kb-tag shrink-0 gap-1.5">
-      <span aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: m.color }} />
-      {m.label}
-    </span>
-  );
+export default function ContentBoard({ mode = "admin" }: { mode?: "admin" | "portal" } = {}) {
+  if (mode === "portal") return <PortalPosts />;
+  return <AdminContentBoard />;
 }
 
-export default function ContentBoard() {
+function AdminContentBoard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectId, setProjectId] = useState("");
   const [month, setMonth] = useState(() => monthKey(new Date()));
@@ -108,15 +417,15 @@ export default function ContentBoard() {
   const [selected, setSelected] = useState<string>(() => new Date().toLocaleDateString("sv-SE", { timeZone: BELEM }));
 
   const loadSequence = useRef(0);
-  // dia aberto por inteiro no calendário (o "+N mais" mostra o resto ali mesmo)
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const dayListRef = useRef<HTMLElement>(null);
-  /** Escolhe o dia; no celular, leva até a lista do dia (o calendário ocupa a tela toda). */
   const pickDay = (key: string, hasPosts: boolean) => {
     setSelected(key);
     if (hasPosts && typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches) {
       const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      requestAnimationFrame(() => dayListRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }));
+      requestAnimationFrame(() =>
+        dayListRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }),
+      );
     }
   };
 
@@ -125,12 +434,25 @@ export default function ContentBoard() {
       try {
         const r = await fetch("/api/projects", { cache: "no-store" });
         const d = await r.json();
-        const all: Project[] = (d.items || []).map((p: Project) => ({ id: p.id, titulo: p.titulo, categoria: p.categoria, postLimit: p.postLimit ?? null, parentId: p.parentId ?? null }));
-        // só clientes recorrentes de redes sociais (categoria "social"); projetos pontuais (marca, site…) nunca entram
+        const all: Project[] = (d.items || []).map((p: Project) => ({
+          id: p.id,
+          titulo: p.titulo,
+          categoria: p.categoria,
+          postLimit: p.postLimit ?? null,
+          parentId: p.parentId ?? null,
+        }));
         const list = all.filter((p) => p.categoria === "social");
         setProjects(list);
-        setProjectId((cur) => cur || list.find(p => !p.parentId && list.some(child => child.parentId === p.id))?.id || list[0]?.id || "");
-      } catch { setError("Não consegui carregar os projetos."); }
+        setProjectId(
+          (cur) =>
+            cur ||
+            list.find((p) => !p.parentId && list.some((child) => child.parentId === p.id))?.id ||
+            list[0]?.id ||
+            "",
+        );
+      } catch {
+        setError("Não consegui carregar os projetos.");
+      }
     })();
   }, []);
 
@@ -146,7 +468,9 @@ export default function ContentBoard() {
       if (!r.ok) throw new Error(d.error || "Não consegui carregar o calendário.");
       setItems(summarizeContent<Post>(d.items).contents);
       setError("");
-    } catch (e) { if (sequence === loadSequence.current) setError(e instanceof Error ? e.message : "Erro."); }
+    } catch (e) {
+      if (sequence === loadSequence.current) setError(e instanceof Error ? e.message : "Erro.");
+    }
   }, [month, projectId]);
 
   useEffect(() => {
@@ -155,10 +479,24 @@ export default function ContentBoard() {
   }, [load]);
 
   const summary = useMemo(() => summarizeContent(items ?? [], BRAND_LIST), [items]);
-  const selectedProject = projects.find(project => project.id === projectId);
-  const planLimit = selectedProject ? effectivePostLimit(selectedProject.categoria ?? "", selectedProject.postLimit) : null;
-  const brandItems = useMemo(() => (items ?? []).filter(p => brandFilter === null || contentBrand(p.brand) === brandFilter || (!!brandFilter && (p.collabBrands ?? []).includes(brandFilter))), [items, brandFilter]);
-  const shown = useMemo(() => brandItems.filter((p) => filter === "all" || p.status === filter), [brandItems, filter]);
+  const selectedProject = projects.find((project) => project.id === projectId);
+  const planLimit = selectedProject
+    ? effectivePostLimit(selectedProject.categoria ?? "", selectedProject.postLimit)
+    : null;
+  const brandItems = useMemo(
+    () =>
+      (items ?? []).filter(
+        (p) =>
+          brandFilter === null ||
+          contentBrand(p.brand) === brandFilter ||
+          (!!brandFilter && (p.collabBrands ?? []).includes(brandFilter)),
+      ),
+    [items, brandFilter],
+  );
+  const shown = useMemo(
+    () => brandItems.filter((p) => filter === "all" || p.status === filter),
+    [brandItems, filter],
+  );
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: brandItems.length };
     for (const s of STATUS) c[s.id] = brandItems.filter((p) => p.status === s.id).length;
@@ -172,22 +510,17 @@ export default function ContentBoard() {
     }
     return m;
   }, [shown]);
-  const names = useMemo(() => [...new Set((items ?? []).flatMap((p) => [p.scriptBy, p.captureBy, p.editor]).filter(Boolean) as string[])], [items]);
+  const names = useMemo(
+    () => [...new Set((items ?? []).flatMap((p) => [p.scriptBy, p.captureBy, p.editor]).filter(Boolean) as string[])],
+    [items],
+  );
 
-  const cells = useMemo(() => {
-    const [y, m] = month.split("-").map(Number);
-    const first = new Date(Date.UTC(y, m - 1, 1));
-    const start = new Date(Date.UTC(y, m - 1, 1 - first.getUTCDay()));
-    const days = Math.ceil((first.getUTCDay() + new Date(Date.UTC(y, m, 0)).getUTCDate()) / 7) * 7;
-    return Array.from({ length: days }, (_, i) => {
-      const d = new Date(start.getTime() + i * 86400000);
-      return { key: d.toISOString().slice(0, 10), n: d.getUTCDate(), inMonth: d.getUTCMonth() === m - 1 };
-    });
-  }, [month]);
+  const cells = useMemo(() => buildMonthCells(month), [month]);
 
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: BELEM });
   function shift(delta: number) {
-    ++loadSequence.current; setItems(null);
+    ++loadSequence.current;
+    setItems(null);
     const [y, m] = month.split("-").map(Number);
     setMonth(monthKey(new Date(y, m - 1 + delta, 1)));
   }
@@ -195,9 +528,9 @@ export default function ContentBoard() {
   const dayPosts = byDay.get(selected) ?? [];
   const nextEdit = useMemo(() => {
     if (!items || month !== today.slice(0, 7)) return null;
-    const fila = brandItems.filter((p) => EDIT_FORMATS.has(p.format) && EDIT_STATUS.has(p.status) && p.scheduledAt)
+    const fila = brandItems
+      .filter((p) => EDIT_FORMATS.has(p.format) && EDIT_STATUS.has(p.status) && p.scheduledAt)
       .sort((a, b) => a.scheduledAt!.localeCompare(b.scheduledAt!));
-    // atrasado pela regra única (prazo do post e redes), calculada no servidor
     const atrasados = fila.filter((p) => p.late);
     const proximos = fila.filter((p) => !p.late);
     const post = proximos[0] ?? atrasados[0];
@@ -206,42 +539,107 @@ export default function ContentBoard() {
   const undated = byDay.get("sem-data") ?? [];
 
   const row = (p: Post) => (
-    <div key={p.id} role="button" tabIndex={0} className="kb-row w-full cursor-pointer text-left" onClick={() => setOpen(p)} onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); setOpen(p); } }}>
+    <div
+      key={p.id}
+      role="button"
+      tabIndex={0}
+      className="kb-row w-full cursor-pointer text-left"
+      onClick={() => setOpen(p)}
+      onKeyDown={(e) => {
+        if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          setOpen(p);
+        }
+      }}
+    >
       <span className="min-w-0">
         <span className="kb-ink block truncate text-[14px]">{p.title}</span>
-        <span className="kb-faint flex items-center gap-1.5 truncate text-[12px]">{brandsOf(p).map(b => <BrandLogo key={b} brand={b} />)}{[p.scheduledAt && hhmm(p.scheduledAt) !== "00:00" ? hhmm(p.scheduledAt) : null, brandLabel(p), FORMAT[p.format] ?? "Post", p.networks?.length ? `${p.networks.length} ${p.networks.length === 1 ? "rede" : "redes"}` : p.copies > 1 ? `${p.copies} cópias na origem` : null].filter(Boolean).join(" · ")}</span>
+        <span className="kb-faint flex items-center gap-1.5 truncate text-[12px]">
+          {brandsOf(p).map((b) => (
+            <BrandLogo key={b} brand={b} />
+          ))}
+          {[
+            p.scheduledAt && hhmm(p.scheduledAt) !== "00:00" ? hhmm(p.scheduledAt) : null,
+            brandLabel(p),
+            FORMAT[p.format] ?? "Post",
+            p.networks?.length
+              ? `${p.networks.length} ${p.networks.length === 1 ? "rede" : "redes"}`
+              : p.copies > 1
+                ? `${p.copies} cópias na origem`
+                : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </span>
         {people(p) && <span className="kb-muted block truncate text-[12px]">{people(p)}</span>}
-        {p.status === "erro" && p.errorMessage && <span className="block truncate text-[12px] text-[var(--kb-late)]">{p.errorMessage}</span>}
+        {p.status === "erro" && p.errorMessage && (
+          <span className="block truncate text-[12px] text-[var(--kb-late)]">{p.errorMessage}</span>
+        )}
       </span>
-      <span className="flex shrink-0 items-center gap-1.5"><OpenPost url={p.postedUrl} className="min-h-8 min-w-8" /><StatusTag status={p.status} /></span>
+      <span className="flex shrink-0 items-center gap-1.5">
+        <OpenPost url={p.postedUrl} className="min-h-8 min-w-8" />
+        <StatusTag status={p.status} />
+      </span>
     </div>
   );
 
   return (
     <div className="kb-page mx-auto w-full max-w-6xl space-y-4 pb-10">
       <div className="flex flex-wrap items-center gap-2">
-        <select aria-label="Projeto" className="kb-control min-h-11 max-w-full flex-1" value={projectId} onChange={(e) => { ++loadSequence.current; setItems(null); setProjectId(e.target.value); setBrandFilter(null); }}>
+        <select
+          aria-label="Projeto"
+          className="kb-control min-h-11 max-w-full flex-1"
+          value={projectId}
+          onChange={(e) => {
+            ++loadSequence.current;
+            setItems(null);
+            setProjectId(e.target.value);
+            setBrandFilter(null);
+          }}
+        >
           {projects.length === 0 && <option value="">Sem projetos</option>}
-          {projects.map((p) => <option key={p.id} value={p.id}>{p.titulo}</option>)}
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.titulo}
+            </option>
+          ))}
         </select>
         <div className="kb-seg" role="group" aria-label="Visualização">
-          {([["calendario", "Calendário"], ["lista", "Lista"]] as const).map(([id, label]) => (
-            <button key={id} type="button" aria-pressed={view === id} onClick={() => setView(id)}>{label}</button>
+          {(
+            [
+              ["calendario", "Calendário"],
+              ["lista", "Lista"],
+            ] as const
+          ).map(([id, label]) => (
+            <button key={id} type="button" aria-pressed={view === id} onClick={() => setView(id)}>
+              {label}
+            </button>
           ))}
         </div>
       </div>
 
       <div className="flex items-center justify-between gap-2">
-        <button type="button" aria-label="Mês anterior" className="kb-chip min-h-11 min-w-11" onClick={() => shift(-1)}>‹</button>
+        <button type="button" aria-label="Mês anterior" className="kb-chip min-h-11 min-w-11" onClick={() => shift(-1)}>
+          ‹
+        </button>
         <p className="font-display kb-ink text-lg capitalize">{monthName}</p>
-        <button type="button" aria-label="Próximo mês" className="kb-chip min-h-11 min-w-11" onClick={() => shift(1)}>›</button>
+        <button type="button" aria-label="Próximo mês" className="kb-chip min-h-11 min-w-11" onClick={() => shift(1)}>
+          ›
+        </button>
       </div>
 
       <div className="kb-scroll-x -mx-4 scroll-px-4 px-4 sm:mx-0 sm:px-0">
         {[{ id: "all", label: "Todos", color: "" }, ...STATUS].map((s) => (
-          <button key={s.id} type="button" className="kb-chip" aria-pressed={filter === s.id} onClick={() => setFilter(s.id)}>
+          <button
+            key={s.id}
+            type="button"
+            className="kb-chip"
+            aria-pressed={filter === s.id}
+            onClick={() => setFilter(s.id)}
+          >
             {s.color && <span aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: s.color }} />}
-            {s.label}<span className="kb-faint tabular-nums">{counts[s.id] ?? 0}</span>
+            {s.label}
+            <span className="kb-faint tabular-nums">{counts[s.id] ?? 0}</span>
           </button>
         ))}
       </div>
@@ -254,20 +652,55 @@ export default function ContentBoard() {
       {items && (
         <div className="flex flex-wrap items-center gap-2" aria-label="Empresas e ações do calendário">
           <div className="flex flex-wrap gap-1" role="group" aria-label="Filtrar por empresa">
-            <button type="button" className="kb-chip min-h-12" aria-pressed={brandFilter === null} onClick={() => setBrandFilter(null)}>
+            <button
+              type="button"
+              className="kb-chip min-h-12"
+              aria-pressed={brandFilter === null}
+              onClick={() => setBrandFilter(null)}
+            >
               Todas as empresas <span className="kb-faint tabular-nums">{summary.total}</span>
             </button>
             {[...summary.byBrand].map(([brand, count]) => (
-              <button key={brand} type="button" className="kb-chip min-h-12" aria-pressed={brandFilter === brand} onClick={() => setBrandFilter(current => current === brand ? null : brand)}>
-                <BrandLogo brand={brand} size={24} />{brand || "Sem empresa"}
+              <button
+                key={brand}
+                type="button"
+                className="kb-chip min-h-12"
+                aria-pressed={brandFilter === brand}
+                onClick={() => setBrandFilter((current) => (current === brand ? null : brand))}
+              >
+                <BrandLogo brand={brand} size={24} />
+                {brand || "Sem empresa"}
                 <span className="kb-faint tabular-nums">{count}</span>
               </button>
             ))}
           </div>
           <div className="ml-auto flex items-center gap-1">
-            <span className="kb-faint mr-2 text-[12px] tabular-nums" aria-live="polite">{summary.total} no mês · {summary.published} publicados · <span className={summary.late ? "text-[var(--kb-late)]" : ""}>{summary.late} atrasados</span>{shown.length !== summary.total ? ` · ${shown.length} exibidos` : ""}</span>
-            <button type="button" className="kb-btn-ghost inline-flex min-h-12 min-w-12 items-center justify-center" aria-label="Importar calendário ou colar status" title="Importar calendário ou colar status" disabled={!projectId} onClick={() => setImporting(true)}>
-              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5" /></svg>
+            <span className="kb-faint mr-2 text-[12px] tabular-nums" aria-live="polite">
+              {summary.total} no mês · {summary.published} publicados ·{" "}
+              <span className={summary.late ? "text-[var(--kb-late)]" : ""}>{summary.late} atrasados</span>
+              {shown.length !== summary.total ? ` · ${shown.length} exibidos` : ""}
+            </span>
+            <button
+              type="button"
+              className="kb-btn-ghost inline-flex min-h-12 min-w-12 items-center justify-center"
+              aria-label="Importar calendário ou colar status"
+              title="Importar calendário ou colar status"
+              disabled={!projectId}
+              onClick={() => setImporting(true)}
+            >
+              <svg
+                aria-hidden="true"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5" />
+              </svg>
             </button>
             <CalendarExport projectId={projectId} month={month} compact />
           </div>
@@ -275,67 +708,36 @@ export default function ContentBoard() {
       )}
       {items && planLimit !== null && (
         <p className="kb-faint text-xs">
-          Plano mensal: {planLimit} conteúdos · {summary.total} no mês{summary.cancelled > 0 ? ` · ${summary.cancelled} cancelados (fora da conta)` : ""}.
+          Plano mensal: {planLimit} conteúdos · {summary.total} no mês
+          {summary.cancelled > 0 ? ` · ${summary.cancelled} cancelados (fora da conta)` : ""}.
           {summary.total > planLimit ? ` ${summary.total - planLimit} acima do plano.` : ""}
         </p>
       )}
 
       {items && view === "calendario" && (
         <>
-          <div className="kb-glass overflow-hidden p-0!" role="grid" aria-label={`Calendário de ${monthName}`}>
-            <div className="grid grid-cols-7 border-b border-white/10" role="row">
-              {WEEK.map((w) => <div key={w} role="columnheader" className="kb-faint py-2 text-center text-[11px] uppercase tracking-wide">{w}</div>)}
-            </div>
-            <div className="grid grid-cols-7">
-              {cells.map((c) => {
-                const list = byDay.get(c.key) ?? [];
-                const sel = c.key === selected;
-                return (
-                  <div
-                    key={c.key}
-                    role="gridcell"
-                    tabIndex={0}
-                    aria-label={`${c.n}, ${list.length} post${list.length === 1 ? "" : "s"}`}
-                    aria-selected={sel}
-                    onClick={() => pickDay(c.key, list.length > 0)}
-                    onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); pickDay(c.key, list.length > 0); } }}
-                    className={`min-h-[58px] cursor-pointer border-b border-r border-white/5 p-1 text-left transition-colors sm:min-h-[118px] sm:p-1.5 ${c.inMonth ? "" : "opacity-40"} ${sel ? "bg-[var(--kb-chip-hover)]" : "hover:bg-[var(--kb-chip)]"}`}
-                  >
-                    <span className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[12px] tabular-nums ${c.key === today ? "bg-gradient-to-br from-[#4F12C7] to-[#E80EFD] font-semibold text-white" : "kb-muted"}`}>{c.n}</span>
-                    {/* celular: logos compactos identificam cada empresa */}
-                    <div className="mt-1 flex flex-wrap gap-0.5 sm:hidden">
-                      {list.slice(0, 6).map((p) => <span key={p.id} aria-label={p.brand ?? meta(p.status).label}>{p.brand && BRAND_LOGOS[p.brand] ? <BrandLogo brand={p.brand} size={12} /> : <StateIcon status={p.status} size={10} />}</span>)}
-                      {list.length > 6 && <span className="kb-faint text-[10px] leading-3 tabular-nums">+{list.length - 6}</span>}
-                    </div>
-                    {/* tela grande: etiquetas com título */}
-                    <div className="mt-1 hidden flex-col gap-0.5 sm:flex">
-                      {list.slice(0, expandedDay === c.key ? list.length : 3).map((p) => (
-                        <div key={p.id} className="flex min-w-0 items-center rounded-md hover:bg-white/10" style={{ borderLeft: `3px solid ${brandColor(p.brand) ?? meta(p.status).color}`, background: brandColor(p.brand) ? `${brandColor(p.brand)}14` : undefined }}>
-                          <button type="button" onClick={(e) => { e.stopPropagation(); setOpen(p); }} title={`${p.title} — ${meta(p.status).label}`} className="flex min-w-0 flex-1 items-center gap-1 px-1 py-0.5 text-left text-[11px]">
-                            {brandsOf(p).map(b => <BrandLogo key={b} brand={b} size={18} />)}
-                            <StateIcon status={p.status} size={13} />
-                            <b className="kb-faint shrink-0">{FORMAT_SHORT[p.format] ?? "P"}</b>
-                            <span className="kb-ink truncate">{p.title}</span>
-                          </button>
-                          <OpenPost url={p.postedUrl} />
-                        </div>
-                      ))}
-                      {list.length > 3 && (
-                        <button type="button" className="kb-faint rounded-md px-1 py-0.5 text-left text-[11px] hover:bg-white/10 hover:text-[var(--kb-ink)]" aria-expanded={expandedDay === c.key}
-                          onClick={(e) => { e.stopPropagation(); setSelected(c.key); setExpandedDay(expandedDay === c.key ? null : c.key); }}>
-                          {expandedDay === c.key ? "mostrar menos" : `+${list.length - 3} mais`}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <SharedCalendarGrid
+            monthName={monthName}
+            cells={cells}
+            byDay={byDay}
+            selected={selected}
+            today={today}
+            expandedDay={expandedDay}
+            setSelected={setSelected}
+            setExpandedDay={setExpandedDay}
+            onPickDay={pickDay}
+            onOpenPost={setOpen}
+          />
 
           <section ref={dayListRef} aria-label="Posts do dia" className="scroll-mt-24">
-            <h2 className="kb-faint mb-1 text-[12px] uppercase tracking-wide">{dayLabel(`${selected}T12:00:00-03:00`)}</h2>
-            {dayPosts.length === 0 ? <p className="kb-muted py-6 text-center text-sm">Nada marcado para esse dia.</p> : dayPosts.map(row)}
+            <h2 className="kb-faint mb-1 text-[12px] uppercase tracking-wide">
+              {dayLabel(`${selected}T12:00:00-03:00`)}
+            </h2>
+            {dayPosts.length === 0 ? (
+              <p className="kb-muted py-6 text-center text-sm">Nada marcado para esse dia.</p>
+            ) : (
+              dayPosts.map(row)
+            )}
           </section>
           {undated.length > 0 && (
             <section aria-label="Sem data">
@@ -348,70 +750,144 @@ export default function ContentBoard() {
 
       {items && view === "lista" && (
         <>
-          {shown.length === 0 && <p className="kb-muted py-10 text-center text-sm">Nenhum post por aqui. Importe um calendário ou troque o mês/projeto.</p>}
+          {shown.length === 0 && (
+            <p className="kb-muted py-10 text-center text-sm">
+              Nenhum post por aqui. Importe um calendário ou troque o mês/projeto.
+            </p>
+          )}
           {[...byDay.entries()].map(([k, list]) => (
             <section key={k} aria-label={k}>
-              <h2 className="kb-faint mb-1 text-[12px] uppercase tracking-wide">{k === "sem-data" ? "Sem data" : dayLabel(`${k}T12:00:00-03:00`)}</h2>
+              <h2 className="kb-faint mb-1 text-[12px] uppercase tracking-wide">
+                {k === "sem-data" ? "Sem data" : dayLabel(`${k}T12:00:00-03:00`)}
+              </h2>
               {list.map(row)}
             </section>
           ))}
         </>
       )}
 
-      {open && <PostEditor post={open} names={names} onClose={() => setOpen(null)} onSaved={(p) => { setItems((cur) => (cur ?? []).filter((x) => !(x.id === p.id && (p as Post & { __gone?: boolean }).__gone)).map((x) => (x.id === p.id ? p : x))); setOpen(null); void load(); }} />}
-      {importing && <ImportIcs projectId={projectId} month={month} onClose={() => setImporting(false)} onDone={() => { setImporting(false); void load(); }} />}
+      {open && (
+        <PostEditor
+          post={open}
+          names={names}
+          onClose={() => setOpen(null)}
+          onSaved={(p) => {
+            setItems((cur) =>
+              (cur ?? [])
+                .filter((x) => !(x.id === p.id && (p as Post & { __gone?: boolean }).__gone))
+                .map((x) => (x.id === p.id ? p : x)),
+            );
+            setOpen(null);
+            void load();
+          }}
+        />
+      )}
+      {importing && (
+        <ImportIcs
+          projectId={projectId}
+          month={month}
+          onClose={() => setImporting(false)}
+          onDone={() => {
+            setImporting(false);
+            void load();
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function NextToEdit({ next, today, onOpen }: { next: { post: Post | null; fila: number; atrasados: number }; today: string; onOpen: (p: Post) => void }) {
+function NextToEdit({
+  next,
+  today,
+  onOpen,
+}: {
+  next: { post: Post | null; fila: number; atrasados: number };
+  today: string;
+  onOpen: (p: Post) => void;
+}) {
   const p = next.post;
-  if (!p) return <div className="kb-glass flex items-center gap-3 px-4! py-3!"><span className="kb-faint text-[11px] uppercase tracking-[0.08em]">Próximo para editar</span><span className="kb-muted text-[13px]">Nenhum vídeo ou carrossel na fila deste mês.</span></div>;
+  if (!p)
+    return (
+      <div className="kb-glass flex items-center gap-3 px-4! py-3!">
+        <span className="kb-faint text-[11px] uppercase tracking-[0.08em]">Próximo para editar</span>
+        <span className="kb-muted text-[13px]">Nenhum vídeo ou carrossel na fila deste mês.</span>
+      </div>
+    );
   const dia = dayKey(p.scheduledAt!);
   const diff = Math.round((Date.parse(`${dia}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) / 86400000);
-  const quando = diff === 0 ? "hoje" : diff === 1 ? "amanhã" : diff > 1 ? `em ${diff} dias` : `${-diff} ${diff === -1 ? "dia" : "dias"} atrasado`;
+  const quando =
+    diff === 0 ? "hoje" : diff === 1 ? "amanhã" : diff > 1 ? `em ${diff} dias` : `${-diff} ${diff === -1 ? "dia" : "dias"} atrasado`;
   const st = meta(p.status);
   return (
-    <button type="button" onClick={() => onOpen(p)} className="kb-glass group flex w-full min-w-0 items-center gap-3 px-4! py-3! text-left transition-transform duration-300 active:scale-[0.98]" style={{ borderLeft: `3px solid ${st.color}` }}>
+    <button
+      type="button"
+      onClick={() => onOpen(p)}
+      className="kb-glass group flex w-full min-w-0 items-center gap-3 px-4! py-3! text-left transition-transform duration-300 active:scale-[0.98]"
+      style={{ borderLeft: `3px solid ${st.color}` }}
+    >
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="kb-faint text-[11px] uppercase tracking-[0.08em]">Próximo para editar</span>
-        <span className="kb-ink flex min-w-0 items-center gap-2 text-[15px]"><BrandLogo brand={p.brand} size={22} /><span className="truncate">{p.title}</span></span>
+        <span className="kb-ink flex min-w-0 items-center gap-2 text-[15px]">
+          <BrandLogo brand={p.brand} size={22} />
+          <span className="truncate">{p.title}</span>
+        </span>
         <span className="kb-muted flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px]">
-          <span>{FORMAT[p.format] ?? "Post"} · {brandLabel(p) ?? "Sem casa"} · {new Date(p.scheduledAt!).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: BELEM })}</span>
+          <span>
+            {FORMAT[p.format] ?? "Post"} · {brandLabel(p) ?? "Sem casa"} ·{" "}
+            {new Date(p.scheduledAt!).toLocaleDateString("pt-BR", {
+              weekday: "short",
+              day: "2-digit",
+              month: "2-digit",
+              timeZone: BELEM,
+            })}
+          </span>
           <span className={diff < 0 ? "text-[var(--kb-late)]" : "kb-ink"}>{quando}</span>
-          <span className="inline-flex items-center gap-1"><StateIcon status={p.status} size={12} />{st.label}</span>
+          <span className="inline-flex items-center gap-1">
+            <StateIcon status={p.status} size={12} />
+            {st.label}
+          </span>
         </span>
       </span>
       <span className="flex shrink-0 flex-col items-end gap-1 text-[12px]">
         <span className="kb-faint tabular-nums">{next.fila} na fila</span>
-        {next.atrasados > 0 && <span className="tabular-nums text-[var(--kb-late)]">{next.atrasados} atrasado{next.atrasados === 1 ? "" : "s"}</span>}
-        <span className="kb-ink transition-transform duration-300 group-hover:translate-x-0.5" aria-hidden>→</span>
+        {next.atrasados > 0 && (
+          <span className="tabular-nums text-[var(--kb-late)]">
+            {next.atrasados} atrasado{next.atrasados === 1 ? "" : "s"}
+          </span>
+        )}
+        <span className="kb-ink transition-transform duration-300 group-hover:translate-x-0.5" aria-hidden>
+          →
+        </span>
       </span>
     </button>
   );
 }
 
-function Stepper({ status }: { status: string }) {
-  const at = stepIndex(status);
-  const bad = status === "erro";
-  const color = meta(status).color; // a linha usa a cor da etiqueta da etapa atual
-  return (
-    <ol className="flex gap-1" aria-label="Andamento do post">
-      {STEPS.map((s, i) => (
-        <li key={s} className="min-w-0 flex-1" aria-current={i === at ? "step" : undefined}>
-          <span className={`block h-1.5 rounded-full transition-[background-color,opacity] duration-300 ${i <= at ? "" : "bg-white/10"}`} style={i <= at ? { background: bad && i === at ? "var(--kb-late-dot)" : color, opacity: i === at ? 1 : 0.5 } : undefined} />
-          <span className={`mt-1 block truncate text-[10px] uppercase tracking-[0.06em] ${i === at ? "font-semibold" : "kb-faint"}`}>{STEP_LABEL[s]}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: string[]; onClose: () => void; onSaved: (p: Post) => void }) {
+function PostEditor({
+  post,
+  names,
+  onClose,
+  onSaved,
+}: {
+  post: Post;
+  names: string[];
+  onClose: () => void;
+  onSaved: (p: Post) => void;
+}) {
   const [f, setF] = useState({
-    brands: brandsOf(post), title: post.title, status: post.status, caption: post.caption ?? "", mediaUrl: post.mediaUrl ?? "", script: post.script ?? "",
-    scriptBy: post.scriptBy ?? "", captureBy: post.captureBy ?? "", editor: post.editor ?? "", when: toLocalInput(post.scheduledAt),
-    postedUrl: post.postedUrl ?? "", errorMessage: post.errorMessage ?? "",
+    brands: brandsOf(post),
+    title: post.title,
+    status: post.status,
+    caption: post.caption ?? "",
+    mediaUrl: post.mediaUrl ?? "",
+    script: post.script ?? "",
+    scriptBy: post.scriptBy ?? "",
+    captureBy: post.captureBy ?? "",
+    editor: post.editor ?? "",
+    when: toLocalInput(post.scheduledAt),
+    postedUrl: post.postedUrl ?? "",
+    errorMessage: post.errorMessage ?? "",
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -420,52 +896,102 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
   const pasta = hub.empresas.find((e) => e.label === post.brand)?.pasta;
   const listId = `names-${post.id}`;
   const text = (v: string) => v.trim() || null;
-  const [sugg, setSugg] = useState<{ id: string; title: string; brand: string | null; format: string; status: string; scheduledAt: string | null; hasScript: boolean; scriptBy: string | null }[]>([]);
+  const [sugg, setSugg] = useState<
+    {
+      id: string;
+      title: string;
+      brand: string | null;
+      format: string;
+      status: string;
+      scheduledAt: string | null;
+      hasScript: boolean;
+      scriptBy: string | null;
+    }[]
+  >([]);
   useEffect(() => {
     if (post.status === "roteiro") return;
     let alive = true;
-    fetch(`/api/admin/social/${post.id}/link`, { cache: "no-store" }).then((r) => r.json()).then((d) => { if (alive) setSugg(d.items || []); }).catch(() => undefined);
-    return () => { alive = false; };
+    fetch(`/api/admin/social/${post.id}/link`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (alive) setSugg(d.items || []);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
   }, [post.id, post.status]);
 
   async function link(scriptId: string) {
-    setBusy(true); setError("");
+    setBusy(true);
+    setError("");
     try {
-      const r = await fetch(`/api/admin/social/${post.id}/link`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ scriptId }) });
+      const r = await fetch(`/api/admin/social/${post.id}/link`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scriptId }),
+      });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Não consegui vincular.");
       onSaved(d.item);
-    } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setBusy(false); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro.");
+    } finally {
+      setBusy(false);
+    }
   }
   async function dismiss() {
-    setBusy(true); setError("");
+    setBusy(true);
+    setError("");
     try {
-      const r = await fetch(`/api/admin/social/${post.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ dismissed: true }) });
+      const r = await fetch(`/api/admin/social/${post.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ dismissed: true }),
+      });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Não consegui dispensar.");
       onSaved({ ...d.item, dismissedAt: d.item.dismissedAt, __gone: true } as Post);
-    } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setBusy(false); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   const brand = f.brands[0] ?? "";
   const collab = f.brands.slice(1);
   async function save() {
-    setBusy(true); setError("");
+    setBusy(true);
+    setError("");
     try {
       const r = await fetch(`/api/admin/social/${post.id}`, {
-        method: "PATCH", headers: { "content-type": "application/json" },
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({
           ...(brand !== (post.brand ?? "") ? { brand: brand || null } : {}),
           ...(collab.join("|") !== (post.collabBrands ?? []).join("|") ? { collabBrands: collab } : {}),
-          title: f.title.trim() || post.title, status: f.status, caption: text(f.caption), mediaUrl: text(f.mediaUrl), script: text(f.script),
-          scriptBy: text(f.scriptBy), captureBy: text(f.captureBy), editor: text(f.editor), postedUrl: text(f.postedUrl), errorMessage: f.status === "erro" ? text(f.errorMessage) : null,
+          title: f.title.trim() || post.title,
+          status: f.status,
+          caption: text(f.caption),
+          mediaUrl: text(f.mediaUrl),
+          script: text(f.script),
+          scriptBy: text(f.scriptBy),
+          captureBy: text(f.captureBy),
+          editor: text(f.editor),
+          postedUrl: text(f.postedUrl),
+          errorMessage: f.status === "erro" ? text(f.errorMessage) : null,
           ...(f.when ? { scheduledAt: `${f.when}:00-03:00` } : {}),
         }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Não consegui salvar.");
       onSaved(d.item);
-    } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setBusy(false); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   const h = "kb-faint text-[11px] uppercase tracking-[0.18em]";
@@ -474,42 +1000,149 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
       <div onClick={(e) => e.stopPropagation()} className="kb-modal space-y-4" role="dialog" aria-label="Editar post">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">{[brandLabel(post), FORMAT[post.format] ?? "Post", post.scheduledAt ? dayLabel(post.scheduledAt) : null].filter(Boolean).join(" · ")}</p>
+            <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">
+              {[brandLabel(post), FORMAT[post.format] ?? "Post", post.scheduledAt ? dayLabel(post.scheduledAt) : null]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
             <h2 className="font-display kb-ink break-words text-lg">{post.title}</h2>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar" className="h-11 w-11 shrink-0 rounded-full text-2xl">×</button>
+          <button type="button" onClick={onClose} aria-label="Fechar" className="h-11 w-11 shrink-0 rounded-full text-2xl">
+            ×
+          </button>
         </div>
         <BrandPicker brands={BRAND_LIST} value={f.brands} onChange={(brands) => setF({ ...f, brands })} />
         <Stepper status={f.status} />
-        {post.clientNote && <p className="kb-tag late w-full justify-start rounded-xl! px-3! py-2! text-sm">Pedido do cliente: {post.clientNote}</p>}
+        {post.clientNote && (
+          <p className="kb-tag late w-full justify-start rounded-xl! px-3! py-2! text-sm">
+            Pedido do cliente: {post.clientNote}
+          </p>
+        )}
 
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="Etapa">
           {STATUS.map((s) => (
-            <button key={s.id} type="button" className="kb-chip min-h-11" aria-pressed={f.status === s.id} onClick={() => setF({ ...f, status: s.id })}>
-              <span aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: s.color }} />{s.label}
+            <button
+              key={s.id}
+              type="button"
+              className="kb-chip min-h-11"
+              aria-pressed={f.status === s.id}
+              onClick={() => setF({ ...f, status: s.id })}
+            >
+              <span aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: s.color }} />
+              {s.label}
             </button>
           ))}
         </div>
-        {f.status === "aprovacao" && post.status !== "aprovacao" && <p className="kb-faint text-xs">Ao salvar, o cliente recebe um aviso no WhatsApp com o link do portal.</p>}
-        {f.status === "erro" && <label className="kb-field"><span>O que deu errado?</span><input className="kb-control" value={f.errorMessage} onChange={(e) => setF({ ...f, errorMessage: e.target.value })} placeholder="Ex.: Instagram recusou o vídeo" /></label>}
+        {f.status === "aprovacao" && post.status !== "aprovacao" && (
+          <p className="kb-faint text-xs">Ao salvar, o cliente recebe um aviso no WhatsApp com o link do portal.</p>
+        )}
+        {f.status === "erro" && (
+          <label className="kb-field">
+            <span>O que deu errado?</span>
+            <input
+              className="kb-control"
+              value={f.errorMessage}
+              onChange={(e) => setF({ ...f, errorMessage: e.target.value })}
+              placeholder="Ex.: Instagram recusou o vídeo"
+            />
+          </label>
+        )}
 
         <section className="space-y-2" aria-label="Equipe">
           <p className={h}>Quem faz o quê</p>
-          <datalist id={listId}>{names.map((n) => <option key={n} value={n} />)}</datalist>
+          <datalist id={listId}>
+            {names.map((n) => (
+              <option key={n} value={n} />
+            ))}
+          </datalist>
           <div className="grid gap-2 sm:grid-cols-3">
-            <label className="kb-field"><span>Roteiro por</span><input className="kb-control" list={listId} value={f.scriptBy} onChange={(e) => setF({ ...f, scriptBy: e.target.value })} /></label>
-            <label className="kb-field"><span>Captação</span><input className="kb-control" list={listId} value={f.captureBy} onChange={(e) => setF({ ...f, captureBy: e.target.value })} /></label>
-            <label className="kb-field"><span>Edição</span><input className="kb-control" list={listId} value={f.editor} onChange={(e) => setF({ ...f, editor: e.target.value })} /></label>
+            <label className="kb-field">
+              <span>Roteiro por</span>
+              <input
+                className="kb-control"
+                list={listId}
+                value={f.scriptBy}
+                onChange={(e) => setF({ ...f, scriptBy: e.target.value })}
+              />
+            </label>
+            <label className="kb-field">
+              <span>Captação</span>
+              <input
+                className="kb-control"
+                list={listId}
+                value={f.captureBy}
+                onChange={(e) => setF({ ...f, captureBy: e.target.value })}
+              />
+            </label>
+            <label className="kb-field">
+              <span>Edição</span>
+              <input
+                className="kb-control"
+                list={listId}
+                value={f.editor}
+                onChange={(e) => setF({ ...f, editor: e.target.value })}
+              />
+            </label>
           </div>
         </section>
 
         <section className="space-y-2" aria-label="Publicação">
           <p className={h}>Publicação</p>
-          <label className="kb-field"><span>Título</span><input className="kb-control" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></label>
-          <label className="kb-field"><span>Data e hora</span><input className="kb-control" type="datetime-local" value={f.when} onChange={(e) => setF({ ...f, when: e.target.value })} /></label>
-          <label className="kb-field"><span>Link do arquivo para o cliente ver (Drive, Lume…)</span><input className="kb-control" inputMode="url" placeholder="https://…" value={f.mediaUrl} onChange={(e) => setF({ ...f, mediaUrl: e.target.value })} /></label>
-          <label className="kb-field"><span>Legenda</span><textarea className="kb-control" style={{ padding: "10px 14px" }} rows={4} value={f.caption} onChange={(e) => setF({ ...f, caption: e.target.value })} /></label>
-          {(f.status === "postado" || f.status === "erro" || post.postedUrl) && <label className="kb-field"><span>Link do post publicado</span><input className="kb-control" inputMode="url" placeholder="https://…" value={f.postedUrl} onChange={(e) => setF({ ...f, postedUrl: e.target.value })} />{safeUrl(f.postedUrl) && <a href={safeUrl(f.postedUrl)!} target="_blank" rel="noopener noreferrer" className="kb-chip mt-1 min-h-10 self-start">Abrir post ↗</a>}</label>}
+          <label className="kb-field">
+            <span>Título</span>
+            <input className="kb-control" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
+          </label>
+          <label className="kb-field">
+            <span>Data e hora</span>
+            <input
+              className="kb-control"
+              type="datetime-local"
+              value={f.when}
+              onChange={(e) => setF({ ...f, when: e.target.value })}
+            />
+          </label>
+          <label className="kb-field">
+            <span>Link do arquivo para o cliente ver (Drive, Lume…)</span>
+            <input
+              className="kb-control"
+              inputMode="url"
+              placeholder="https://…"
+              value={f.mediaUrl}
+              onChange={(e) => setF({ ...f, mediaUrl: e.target.value })}
+            />
+          </label>
+          <label className="kb-field">
+            <span>Legenda</span>
+            <textarea
+              className="kb-control"
+              style={{ padding: "10px 14px" }}
+              rows={4}
+              value={f.caption}
+              onChange={(e) => setF({ ...f, caption: e.target.value })}
+            />
+          </label>
+          {(f.status === "postado" || f.status === "erro" || post.postedUrl) && (
+            <label className="kb-field">
+              <span>Link do post publicado</span>
+              <input
+                className="kb-control"
+                inputMode="url"
+                placeholder="https://…"
+                value={f.postedUrl}
+                onChange={(e) => setF({ ...f, postedUrl: e.target.value })}
+              />
+              {safeUrl(f.postedUrl) && (
+                <a
+                  href={safeUrl(f.postedUrl)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="kb-chip mt-1 min-h-10 self-start"
+                >
+                  Abrir post ↗
+                </a>
+              )}
+            </label>
+          )}
         </section>
 
         <PostPublications key={pubKey} postId={post.id} onPostStatus={(status) => setF((x) => ({ ...x, status }))} />
@@ -520,8 +1153,16 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
             <p className={h}>Takes escolhidos pelo cliente</p>
             <div className="flex flex-wrap gap-1.5">
               {post.takes!.map((t) => (
-                <a key={t.id} className="kb-chip min-h-10" target="_blank" rel="noopener noreferrer" href={`/api/admin/lume/entrar?ir=${encodeURIComponent(`/midia/${t.id}`)}`}>
-                  {t.nome}{t.t !== null ? ` · ${Math.floor(t.t / 60)}:${String(Math.floor(t.t % 60)).padStart(2, "0")}` : ""}{t.by ? ` · ${t.by}` : ""} ↗
+                <a
+                  key={t.id}
+                  className="kb-chip min-h-10"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  href={`/api/admin/lume/entrar?ir=${encodeURIComponent(`/midia/${t.id}`)}`}
+                >
+                  {t.nome}
+                  {t.t !== null ? ` · ${Math.floor(t.t / 60)}:${String(Math.floor(t.t % 60)).padStart(2, "0")}` : ""}
+                  {t.by ? ` · ${t.by}` : ""} ↗
                 </a>
               ))}
             </div>
@@ -535,9 +1176,31 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
               <div key={x.id} className="kb-row">
                 <span className="min-w-0">
                   <span className="kb-ink block truncate text-[14px]">{x.title}</span>
-                  <span className="kb-faint block truncate text-[12px]">{[x.scheduledAt ? new Date(x.scheduledAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: BELEM }) : null, x.brand, FORMAT[x.format] ?? "Post", x.scriptBy ? `por ${x.scriptBy}` : null].filter(Boolean).join(" · ")}</span>
+                  <span className="kb-faint block truncate text-[12px]">
+                    {[
+                      x.scheduledAt
+                        ? new Date(x.scheduledAt).toLocaleDateString("pt-BR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            timeZone: BELEM,
+                          })
+                        : null,
+                      x.brand,
+                      FORMAT[x.format] ?? "Post",
+                      x.scriptBy ? `por ${x.scriptBy}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
                 </span>
-                <button type="button" className="kb-chip min-h-11 shrink-0" disabled={busy} onClick={() => void link(x.id)}>Vincular</button>
+                <button
+                  type="button"
+                  className="kb-chip min-h-11 shrink-0"
+                  disabled={busy}
+                  onClick={() => void link(x.id)}
+                >
+                  Vincular
+                </button>
               </div>
             ))}
           </section>
@@ -545,24 +1208,58 @@ function PostEditor({ post, names, onClose, onSaved }: { post: Post; names: stri
 
         <section className="space-y-2" aria-label="Roteiro">
           <p className={h}>Roteiro</p>
-          <textarea className="kb-control" style={{ padding: "10px 14px" }} rows={8} aria-label="Roteiro" value={f.script} onChange={(e) => setF({ ...f, script: e.target.value })} />
+          <textarea
+            className="kb-control"
+            style={{ padding: "10px 14px" }}
+            rows={8}
+            aria-label="Roteiro"
+            value={f.script}
+            onChange={(e) => setF({ ...f, script: e.target.value })}
+          />
         </section>
 
         {error && <p className="kb-tag late w-full justify-start rounded-xl! px-3! py-2! text-sm">{error}</p>}
         <div className="flex flex-wrap gap-2">
-          <button type="button" className="kb-btn min-h-12 flex-1" disabled={busy} onClick={() => void save()}>{busy ? "Salvando…" : "Salvar"}</button>
-          <button type="button" className="kb-btn-ghost min-h-12" disabled={busy} title="Tira da lista de atrasados sem apagar" onClick={() => void dismiss()}>Dispensar</button>
-          <a className="kb-btn-ghost min-h-12 inline-flex items-center" href={lumeHref(pasta ?? hub.pasta)}>Achar takes no Lume</a>
+          <button type="button" className="kb-btn min-h-12 flex-1" disabled={busy} onClick={() => void save()}>
+            {busy ? "Salvando…" : "Salvar"}
+          </button>
+          <button
+            type="button"
+            className="kb-btn-ghost min-h-12"
+            disabled={busy}
+            title="Tira da lista de atrasados sem apagar"
+            onClick={() => void dismiss()}
+          >
+            Dispensar
+          </button>
+          <a className="kb-btn-ghost inline-flex min-h-12 items-center" href={lumeHref(pasta ?? hub.pasta)}>
+            Achar takes no Lume
+          </a>
         </div>
       </div>
     </div>
   );
 }
 
-function ImportIcs({ projectId, month, onClose, onDone }: { projectId: string; month: string; onClose: () => void; onDone: () => void }) {
+function ImportIcs({
+  projectId,
+  month,
+  onClose,
+  onDone,
+}: {
+  projectId: string;
+  month: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
   const [tab, setTab] = useState<"ics" | "status">("ics");
   const [list, setList] = useState("");
-  const [res, setRes] = useState<{ matched: number; postedBefore: number; restored: number; unmatched: string[] } | null>(null);
+  const [res, setRes] = useState<{
+    matched: number;
+    postedBefore: number;
+    restored: number;
+    unmatched: string[];
+  } | null>(null);
   const [text, setText] = useState("");
   const [info, setInfo] = useState<{ total: number; fresh: number; existing: number } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -570,14 +1267,23 @@ function ImportIcs({ projectId, month, onClose, onDone }: { projectId: string; m
   const input = useRef<HTMLInputElement>(null);
 
   async function statusRun(dryRun: boolean) {
-    setBusy(true); setError("");
+    setBusy(true);
+    setError("");
     try {
-      const r = await fetch("/api/admin/social/production", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ projectId, month, text: list, dryRun }) });
+      const r = await fetch("/api/admin/social/production", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ projectId, month, text: list, dryRun }),
+      });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Não consegui ler a lista.");
       setRes(d);
       if (!dryRun) onDone();
-    } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setBusy(false); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function pick(file: File | undefined) {
@@ -585,69 +1291,185 @@ function ImportIcs({ projectId, month, onClose, onDone }: { projectId: string; m
     await previewText(await file.text());
   }
   async function previewText(t: string) {
-    setBusy(true); setError("");
+    setBusy(true);
+    setError("");
     try {
-      const r = await fetch("/api/admin/social/import", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ projectId, text: t, dryRun: true }) });
+      const r = await fetch("/api/admin/social/import", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ projectId, text: t, dryRun: true }),
+      });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Não consegui ler o arquivo.");
-      setText(t); setInfo(d);
-    } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setBusy(false); }
+      setText(t);
+      setInfo(d);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro.");
+    } finally {
+      setBusy(false);
+    }
   }
   async function commit() {
-    setBusy(true); setError("");
+    setBusy(true);
+    setError("");
     try {
-      const r = await fetch("/api/admin/social/import", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ projectId, text }) });
+      const r = await fetch("/api/admin/social/import", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ projectId, text }),
+      });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Não consegui importar.");
       onDone();
-    } catch (e) { setError(e instanceof Error ? e.message : "Erro."); } finally { setBusy(false); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <div className="kb-modal-back" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="kb-modal space-y-3" role="dialog" aria-label="Importar calendário">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="kb-modal space-y-3"
+        role="dialog"
+        aria-label="Importar calendário"
+      >
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="font-display kb-ink text-lg">Importar e atualizar</h2>
             <div className="kb-seg mt-2" role="group" aria-label="Tipo de importação">
-              <button type="button" aria-pressed={tab === "ics"} onClick={() => setTab("ics")}>Calendário .ics</button>
-              <button type="button" aria-pressed={tab === "status"} onClick={() => setTab("status")}>Colar status</button>
+              <button type="button" aria-pressed={tab === "ics"} onClick={() => setTab("ics")}>
+                Calendário .ics
+              </button>
+              <button type="button" aria-pressed={tab === "status"} onClick={() => setTab("status")}>
+                Colar status
+              </button>
             </div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar" className="h-11 w-11 shrink-0 rounded-full text-2xl">×</button>
+          <button type="button" onClick={onClose} aria-label="Fechar" className="h-11 w-11 shrink-0 rounded-full text-2xl">
+            ×
+          </button>
         </div>
         {error && <p className="kb-tag late w-full justify-start rounded-xl! px-3! py-2! text-sm">{error}</p>}
         {tab === "status" && (
           <div className="space-y-2">
-            <p className="kb-muted text-sm">Cole a lista da produção (dia, marca, formato e situação, como no seu bloco de notas). O KBOS acha cada post do mês e ajusta a etapa. Se escrever &quot;os demais pra trás foram postados&quot;, tudo antes da primeira linha vira Postado.</p>
-            <textarea className="kb-control text-base" style={{ padding: "10px 14px" }} rows={10} aria-label="Lista da produção" value={list} onChange={(e) => { setList(e.target.value); setRes(null); }} placeholder={"* 14 - LOUNGE - Reels Chapa Mista ✅🟡 Editado / em aprovação\n* 16 - PRAÇA - Carrossel ❌ Fila de espera"} />
+            <p className="kb-muted text-sm">
+              Cole a lista da produção (dia, marca, formato e situação, como no seu bloco de notas). O KBOS acha cada
+              post do mês e ajusta a etapa. Se escrever &quot;os demais pra trás foram postados&quot;, tudo antes da
+              primeira linha vira Postado.
+            </p>
+            <textarea
+              className="kb-control text-base"
+              style={{ padding: "10px 14px" }}
+              rows={10}
+              aria-label="Lista da produção"
+              value={list}
+              onChange={(e) => {
+                setList(e.target.value);
+                setRes(null);
+              }}
+              placeholder={
+                "* 14 - LOUNGE - Reels Chapa Mista ✅🟡 Editado / em aprovação\n* 16 - PRAÇA - Carrossel ❌ Fila de espera"
+              }
+            />
             {res && (
               <div className="kb-card space-y-1 p-3 text-sm">
-                <p><b className="kb-ink">{res.matched}</b> posts encontrados{res.postedBefore ? ` · ${res.postedBefore} anteriores viram Postado` : ""}{res.restored ? ` · ${res.restored} restaurados da limpeza` : ""}.</p>
-                {res.unmatched.length > 0 && <p className="text-[var(--kb-late)]">Não achei: {res.unmatched.join(" · ")}</p>}
+                <p>
+                  <b className="kb-ink">{res.matched}</b> posts encontrados
+                  {res.postedBefore ? ` · ${res.postedBefore} anteriores viram Postado` : ""}
+                  {res.restored ? ` · ${res.restored} restaurados da limpeza` : ""}.
+                </p>
+                {res.unmatched.length > 0 && (
+                  <p className="text-[var(--kb-late)]">Não achei: {res.unmatched.join(" · ")}</p>
+                )}
               </div>
             )}
             <div className="flex gap-2">
-              <button type="button" className="kb-btn-ghost min-h-12 flex-1" disabled={busy || list.trim().length < 5} onClick={() => void statusRun(true)}>Conferir</button>
-              <button type="button" className="kb-btn min-h-12 flex-1" disabled={busy || !res || res.matched === 0} onClick={() => void statusRun(false)}>{busy ? "Aplicando…" : "Aplicar"}</button>
+              <button
+                type="button"
+                className="kb-btn-ghost min-h-12 flex-1"
+                disabled={busy || list.trim().length < 5}
+                onClick={() => void statusRun(true)}
+              >
+                Conferir
+              </button>
+              <button
+                type="button"
+                className="kb-btn min-h-12 flex-1"
+                disabled={busy || !res || res.matched === 0}
+                onClick={() => void statusRun(false)}
+              >
+                {busy ? "Aplicando…" : "Aplicar"}
+              </button>
             </div>
           </div>
         )}
-        <input ref={input} type="file" accept=".ics,text/calendar" className="hidden" onChange={(e) => void pick(e.target.files?.[0])} />
-        {tab === "ics" && (!info ? (
-          <div className="space-y-3">
-            <button type="button" className="kb-btn min-h-12 w-full" disabled={busy} onClick={() => input.current?.click()}>{busy ? "Lendo…" : "Escolher arquivo .ics"}</button>
-            <details><summary className="kb-muted min-h-11 cursor-pointer py-3 text-sm">Colar arquivo ICS</summary><textarea className="kb-control text-base" rows={5} aria-label="Conteúdo do arquivo ICS" value={text} onChange={e => setText(e.target.value)} /><button type="button" className="kb-btn-ghost min-h-11 mt-2" disabled={busy || !text.trim()} onClick={() => void previewText(text)}>Conferir arquivo colado</button></details>
-          </div>
-        ) : (
-          <>
-            <p className="kb-muted text-sm"><b className="kb-ink">{info.fresh}</b> posts novos · {info.existing} já existiam (de {info.total}).</p>
-            <div className="flex gap-2">
-              <button type="button" className="kb-btn min-h-12 flex-1" disabled={busy || info.fresh === 0} onClick={() => void commit()}>{busy ? "Importando…" : `Importar ${info.fresh}`}</button>
-              <button type="button" className="kb-btn-ghost min-h-12" onClick={() => { setInfo(null); setText(""); }}>Trocar arquivo</button>
+        <input
+          ref={input}
+          type="file"
+          accept=".ics,text/calendar"
+          className="hidden"
+          onChange={(e) => void pick(e.target.files?.[0])}
+        />
+        {tab === "ics" &&
+          (!info ? (
+            <div className="space-y-3">
+              <button
+                type="button"
+                className="kb-btn min-h-12 w-full"
+                disabled={busy}
+                onClick={() => input.current?.click()}
+              >
+                {busy ? "Lendo…" : "Escolher arquivo .ics"}
+              </button>
+              <details>
+                <summary className="kb-muted min-h-11 cursor-pointer py-3 text-sm">Colar arquivo ICS</summary>
+                <textarea
+                  className="kb-control text-base"
+                  rows={5}
+                  aria-label="Conteúdo do arquivo ICS"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="kb-btn-ghost mt-2 min-h-11"
+                  disabled={busy || !text.trim()}
+                  onClick={() => void previewText(text)}
+                >
+                  Conferir arquivo colado
+                </button>
+              </details>
             </div>
-          </>
-        ))}
+          ) : (
+            <>
+              <p className="kb-muted text-sm">
+                <b className="kb-ink">{info.fresh}</b> posts novos · {info.existing} já existiam (de {info.total}).
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="kb-btn min-h-12 flex-1"
+                  disabled={busy || info.fresh === 0}
+                  onClick={() => void commit()}
+                >
+                  {busy ? "Importando…" : `Importar ${info.fresh}`}
+                </button>
+                <button
+                  type="button"
+                  className="kb-btn-ghost min-h-12"
+                  onClick={() => {
+                    setInfo(null);
+                    setText("");
+                  }}
+                >
+                  Trocar arquivo
+                </button>
+              </div>
+            </>
+          ))}
       </div>
     </div>
   );
