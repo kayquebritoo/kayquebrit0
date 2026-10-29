@@ -7,7 +7,7 @@ import { db } from "../db";
 import { appUrlEnv } from "../email";
 import { clientIp } from "../rate-limit";
 import { sessionUser, type SessionUser } from "../rbac";
-import { managedProjectIds } from "../project-members";
+import { clientProjectIds, managedProjectIds, ownedProjectIds } from "../project-members";
 import { projects } from "../schema";
 import { socialCryptoReady } from "../social-crypto";
 import { FLOW_COOKIE, finishFlow, flowCookieOptions, safeBack, startFlow, type FlowTarget } from "./oauth";
@@ -23,10 +23,12 @@ const go = (path: string, q: Record<string, string> = {}) => {
   return NextResponse.redirect(u);
 };
 
-/** Projetos em que o cliente decide sobre as redes: titular (e as operações dele) ou quem faz a gestão. */
+/** Projetos em que o cliente decide sobre as redes: titular (direto ou por empresa, e as operações dele) ou quem faz a gestão. */
 export async function socialManageableProjectIds(userId: string) {
+  const all = await clientProjectIds(userId);
+  const byCompany = await ownedProjectIds(userId, all);
   const owned = await db().select({ id: projects.id }).from(projects).where(eq(projects.clienteId, userId));
-  const ownedIds = owned.map((o) => o.id);
+  const ownedIds = [...new Set([...byCompany, ...owned.map((o) => o.id)])];
   const kids = ownedIds.length ? await db().select({ id: projects.id }).from(projects).where(inArray(projects.parentId, ownedIds)) : [];
   return [...new Set([...ownedIds, ...kids.map((k) => k.id), ...(await managedProjectIds(userId))])];
 }

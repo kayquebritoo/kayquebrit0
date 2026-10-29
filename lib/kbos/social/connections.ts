@@ -223,8 +223,21 @@ export async function revokeConnectLink(id: string, actor: Actor) {
 export async function linkAccounts(linkId: string) {
   const conns = await db().select({ id: socialConnections.id }).from(socialConnections).where(eq(socialConnections.linkId, linkId));
   if (!conns.length) return [];
-  return db().select({ id: socialAccounts.id, network: socialAccounts.network, name: socialAccounts.name, username: socialAccounts.username, pictureUrl: socialAccounts.pictureUrl, status: socialAccounts.status })
-    .from(socialAccounts).where(inArray(socialAccounts.connectionId, conns.map((c) => c.id))).orderBy(socialAccounts.network, socialAccounts.name);
+  const rows = await db().select({
+    id: socialAccounts.id, projectId: socialAccounts.projectId, project: projects.titulo,
+    network: socialAccounts.network, provider: socialAccounts.provider,
+    name: socialAccounts.name, username: socialAccounts.username, pictureUrl: socialAccounts.pictureUrl,
+    status: socialAccounts.status, lastError: socialAccounts.lastError,
+    scopes: socialConnections.scopes, expiresAt: socialConnections.expiresAt, refreshExpiresAt: socialConnections.refreshExpiresAt,
+    hasRefresh: sql<boolean>`${socialConnections.refreshEnc} IS NOT NULL`,
+  })
+    .from(socialAccounts)
+    .leftJoin(socialConnections, eq(socialConnections.id, socialAccounts.connectionId))
+    .leftJoin(projects, eq(projects.id, socialAccounts.projectId))
+    .where(inArray(socialAccounts.connectionId, conns.map((c) => c.id)))
+    .orderBy(socialAccounts.network, socialAccounts.name);
+  const now = Date.now();
+  return rows.map((r) => ({ ...r, status: accountState(r, now) }));
 }
 
 // ── cliente pessoal do Kayque ──────────────────────────────────────────────────

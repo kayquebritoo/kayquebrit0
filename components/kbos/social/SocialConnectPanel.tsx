@@ -1,154 +1,349 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { useCallback, useEffect, useState } from "react";
 import { NETS, NetMark, connectHref, netInfo, returnMessage, type ProviderInfo, type SocialAccount } from "./networks";
 
-type Project = { id: string; titulo: string };
-type Data = { providers: ProviderInfo[]; items: SocialAccount[]; projects?: Project[]; project?: string; expiresAt?: string };
+type Project = { id: string; titulo: string; parentId: string | null };
+type Item = SocialAccount & {
+  expiresAt?: string | null;
+  refreshExpiresAt?: string | null;
+  hasRefresh?: boolean | null;
+};
 
-/**
- * "Suas redes sociais": um botão grande por rede, o status de cada uma e as contas escolhidas.
- * Mesmo painel no portal (cliente logado) e no link de conexão (sem login, `token`).
- */
-export default function SocialConnectPanel({ token }: { token?: string }) {
-  const api = token ? `/api/public/social-connect/${token}/` : "/api/portal/social/";
-  const [data, setData] = useState<Data | null>(null);
-  const [error, setError] = useState("");
-  const [msg, setMsg] = useState("");
-  const [project, setProject] = useState("");
-  const [busy, setBusy] = useState("");
+const SCOPE_LABELS: Record<string, string> = {
+  instagram_basic: "Perfil do Instagram",
+  instagram_content_publish: "Publicar no Instagram",
+  pages_show_list: "Listar Páginas",
+  pages_read_engagement: "Engajamento da Página",
+  pages_manage_posts: "Publicar no Facebook",
+  business_management: "Portfólio Empresarial",
+  "https://www.googleapis.com/auth/youtube.upload": "Enviar vídeos no YouTube",
+  "https://www.googleapis.com/auth/youtube.readonly": "Ler canal do YouTube",
+  "https://www.googleapis.com/auth/business.manage": "Gerenciar Perfil da Empresa no Google",
+  "user.info.basic": "Perfil básico do TikTok",
+  "video.publish": "Publicar vídeos no TikTok",
+  "video.upload": "Enviar vídeos no TikTok",
+  "user_accounts:read": "Ler conta do Pinterest",
+  "boards:read": "Ler pastas do Pinterest",
+  "pins:read": "Ler Pins",
+  "pins:write": "Criar e publicar Pins",
+  openid: "Identificação OpenID",
+  profile: "Perfil do LinkedIn",
+  w_member_social: "Publicar no LinkedIn",
+};
+
+function summarizeScopes(scopes: string | null | undefined, provider?: string | null): string {
+  if (!scopes?.trim()) {
+    if (provider === "meta") return "Perfil do Instagram · Publicar no Instagram · Publicar no Facebook";
+    return "Publicação e leitura básica do perfil autorizado";
+  }
+  const parts = scopes
+    .split(/[\s,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const translated = parts.map((s) => SCOPE_LABELS[s] ?? s);
+  return [...new Set(translated)].join(" · ");
+}
+
+function fmtDate(iso: string | null | undefined) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function expirationSummary(a: Item): { text: string; warn: boolean } {
+  if (a.status !== "ativo") {
+    return {
+      text: a.lastError
+        ? `Autorização expirada/revogada (${a.lastError}) — reconecte para voltar a publicar`
+        : "Autorização expirada — reconecte para voltar a publicar",
+      warn: true,
+    };
+  }
+  if (a.provider === "meta") {
+    return { text: "Token de Página de longa duração · renovação gerenciada", warn: false };
+  }
+  if (a.hasRefresh) {
+    const until = fmtDate(a.refreshExpiresAt) ?? fmtDate(a.expiresAt);
+    return {
+      text: until ? `Renovação automática ativa · ciclo até ${until}` : "Renovação automática ativa",
+      warn: false,
+    };
+  }
+  const exp = fmtDate(a.expiresAt);
+  return {
+    text: exp ? `Válido até ${exp}` : "Autorização ativa",
+    warn: false,
+  };
+}
+
+export default function SocialConnectPanel({ token, linkToken, initialProject }: { token?: string; linkToken?: string; initialProject?: string }) {
+  const tk = token ?? linkToken;
+  const [providers, setProviders] = useState<ProviderInfo[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectId, setProjectId] = useState(initialProject ?? "");
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expiredLink, setExpiredLink] = useState(false);
+  const [msg, setMsg] = useState<string>(() =>
+    typeof window !== "undefined" ? returnMessage(new URLSearchParams(window.location.search)) : "",
+  );
+
+  const endpoint = tk ? `/api/public/social-connect/${encodeURIComponent(tk)}/` : "/api/portal/social";
 
   const load = useCallback(async () => {
-    const r = await fetch(api, { cache: "no-store" }).catch(() => null);
-    const j = r ? await r.json().catch(() => null) : null;
-    if (!r?.ok || !j) { setError(j?.error || "Não consegui carregar suas redes agora."); return; }
-    setError(""); setData(j);
-    setProject((p) => p || j.projects?.[0]?.id || "");
-  }, [api]);
+    const r = await fetch(endpoint, { cache: "no-store" });
+    if (r.status === 404 && tk) {
+      setExpiredLink(true);
+      setLoading(false);
+      return;
+    }
+    if (r.ok) {
+      const j = await r.json();
+      setProviders(j.providers ?? []);
+      setProjects(j.projects ?? []);
+      setItems(j.items ?? []);
+      setProjectId((prev) => prev || j.projects?.[0]?.id || "");
+    }
+    setLoading(false);
+  }, [endpoint, tk]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- mensagem da volta do login da rede
-    setMsg(returnMessage(new URLSearchParams(window.location.search)));
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 
-  const projects = data?.projects ?? [];
-  const byNet = useMemo(() => {
-    const m = new Map<string, SocialAccount[]>();
-    for (const a of data?.items ?? []) {
-      if (!token && projects.length > 1 && project && a.projectId !== project) continue;
-      m.set(a.network, [...(m.get(a.network) ?? []), a]);
-    }
-    return m;
-  }, [data, project, projects.length, token]);
-
-  async function disconnect(a: SocialAccount) {
-    if (!confirm(`Desconectar ${a.name} (${netInfo(a.network).label})? O KBOS para de publicar nessa conta e o acesso é revogado na rede.`)) return;
-    setBusy(a.id);
-    const r = await fetch(`${api}?id=${a.id}`, { method: "DELETE" }).catch(() => null);
-    const j = r ? await r.json().catch(() => ({})) : {};
-    setBusy("");
-    setMsg(r?.ok ? (j.revoked === "manual" ? "Desconectado. No Pinterest, remova também o app KBOS em Configurações → Apps." : "Desconectado e acesso revogado na rede.") : j.error || "Não consegui desconectar.");
-    await load();
-  }
-
-  async function move(a: SocialAccount, projectId: string) {
-    const r = await fetch(api, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: a.id, projectId }) }).catch(() => null);
-    setMsg(r?.ok ? "Salvo." : "Não consegui mudar a empresa.");
-    await load();
-  }
-
-  if (error && !data) {
+  if (expiredLink) {
     return (
-      <section className="kb-glass p-5" aria-label="Suas redes sociais" role="alert">
-        <p className="font-display text-xl">Suas redes sociais</p>
-        <p className="kb-muted mt-1 text-sm">{error}</p>
+      <section className="kb-glass p-5">
+        <p className="font-display text-lg">Este link venceu ou foi cancelado.</p>
+        <p className="kb-muted mt-1 text-sm">Peça um link novo ao Kayque no WhatsApp ou entre no seu portal.</p>
       </section>
     );
   }
-  if (!data) return <div className="kb-skel h-72" aria-label="Carregando suas redes" />;
-  if (!token && !projects.length) return null; // sem empresa para administrar, o card não aparece
+  if (!loading && !tk && projects.length === 0) return null;
 
-  const providers = new Map(data.providers.map((p) => [p.id, p]));
+  const isOn = (provider: string) => providers.find((p) => p.id === provider)?.configured ?? false;
+
+  async function disconnect(a: Item) {
+    if (!confirm(`Desconectar ${a.name}? O KBOS para de publicar nesta conta e apaga a autorização.`)) return;
+    const r = await fetch(`${endpoint}?id=${encodeURIComponent(a.id)}`, { method: "DELETE" });
+    const j = await r.json().catch(() => ({}));
+    setMsg(
+      j.revoked === "manual"
+        ? "Conta desconectada do KBOS. No Pinterest, se quiser remover do painel deles também, acesse pinterest.com → Configurações → Segurança e logins."
+        : "Conta desconectada e autorização revogada.",
+    );
+    await load();
+  }
+
+  async function moveProject(id: string, nextProjectId: string) {
+    await fetch("/api/portal/social", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id, projectId: nextProjectId }),
+    });
+    await load();
+  }
 
   return (
-    <section className="kb-glass relative overflow-hidden p-5 sm:p-6" aria-labelledby="redes-titulo">
-      <div aria-hidden className="kb-wave pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(79,18,199,.35),transparent_65%)]" />
-      <div className="relative flex flex-col gap-4">
-        <header className="flex flex-col gap-1">
-          <h2 id="redes-titulo" className="font-display text-2xl leading-tight">Suas redes sociais</h2>
-          <p className="kb-muted text-sm leading-relaxed">
-            Conecte para o KBOS publicar seus posts no horário combinado. O login é feito no site oficial de cada rede: o KBOS nunca vê sua senha, e você pode desconectar quando quiser.
+    <section className="kb-glass flex flex-col gap-4 p-5" aria-label="Suas redes sociais">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="kb-faint text-[11px] uppercase tracking-[0.22em]">Suas redes · Conexão oficial OAuth</p>
+          <h2 className="font-display mt-1 text-xl">Redes sociais conectadas</h2>
+          <p className="kb-muted mt-1 text-sm">
+            Conecte suas contas no login oficial de cada plataforma para que a equipe agende e publique os conteúdos aprovados. O KBOS nunca vê nem armazena sua senha.
           </p>
-        </header>
-
-        {!token && projects.length > 1 && (
-          <label className="kb-field">
-            <span className="kb-faint text-xs">Empresa</span>
-            <select className="kb-control" value={project} onChange={(e) => setProject(e.target.value)}>
-              {projects.map((p) => <option key={p.id} value={p.id}>{p.titulo}</option>)}
+        </div>
+        {!tk && projects.length > 1 && (
+          <label className="kb-field text-xs">
+            Conectar na empresa
+            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="kb-control min-h-11 sm:w-56">
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.titulo}
+                </option>
+              ))}
             </select>
           </label>
         )}
+      </div>
 
-        {msg && <p role="status" className="rounded-xl border border-[var(--kb-accent-line)] bg-[var(--kb-accent-soft)] px-3 py-2 text-sm">{msg}</p>}
+      {msg && (
+        <p role="status" className="kb-tag self-start">
+          {msg}
+        </p>
+      )}
 
-        <ul className="grid gap-2.5 sm:grid-cols-2">
-          {NETS.map((n) => {
-            const p = providers.get(n.provider);
-            const accounts = byNet.get(n.network) ?? [];
-            const expired = accounts.some((a) => a.status !== "ativo");
-            const on = p?.configured;
-            const state = !on ? "Em breve" : expired ? "Reconectar" : accounts.length ? `Conectado${accounts.length > 1 ? ` · ${accounts.length}` : ""}` : "Não conectado";
-            const href = on ? connectHref(n.provider, token ? { link: token } : { project }) : undefined;
-            return (
-              <li key={n.network}>
-                <a
-                  href={href}
-                  aria-disabled={!on}
-                  className={`group flex min-h-16 items-center gap-3 rounded-2xl border p-3 transition ${on ? "border-[var(--kb-line-strong)] bg-[var(--kb-chip)] hover:bg-[var(--kb-chip-hover)] active:scale-[.98]" : "pointer-events-none border-[var(--kb-line)] opacity-55"}`}
-                >
-                  <NetMark network={n.network} size={44} />
-                  <span className="min-w-0 flex-1">
-                    <b className="block truncate text-[15px]">{accounts.length && !expired ? n.label : `Conectar ${n.label}`}</b>
-                    <small className={`block text-xs ${expired ? "text-[var(--kb-soon)]" : accounts.length ? "text-[var(--kb-good)]" : "kb-faint"}`}>{state}</small>
+      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+        {NETS.map((n) => {
+          const on = isOn(n.provider);
+          const connected = items.filter(
+            (i) => i.network === n.network && (!projectId || !i.projectId || i.projectId === projectId),
+          );
+          const hasExpired = connected.some((c) => c.status !== "ativo");
+          const href = connectHref(n.provider, { link: tk, project: tk ? undefined : projectId });
+          return (
+            <div
+              key={n.network}
+              className={`kb-card flex flex-col justify-between gap-3 !p-4 ${on ? "" : "opacity-75"}`}
+            >
+              <div className="flex items-start gap-3">
+                <NetMark network={n.network} size={38} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-1.5">
+                    <span className="truncate font-medium">{n.label}</span>
+                    {!on ? (
+                      <span
+                        className="kb-chip min-h-6 !px-2 !py-0.5 text-[10px]"
+                        style={{ color: "#f5c46e", borderColor: "rgba(245,196,110,0.35)" }}
+                      >
+                        Pendente de ativação
+                      </span>
+                    ) : hasExpired ? (
+                      <span className="kb-chip min-h-6 !px-2 !py-0.5 text-[10px] text-[#f5c46e]">
+                        Reconexão necessária
+                      </span>
+                    ) : connected.length > 0 ? (
+                      <span className="kb-chip min-h-6 !px-2 !py-0.5 text-[10px] text-[#22c55e]">
+                        {connected.length} conectada{connected.length > 1 ? "s" : ""}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="kb-muted mt-0.5 text-xs">
+                    {!on
+                      ? "Aguardando ativação de credenciais/revisão OAuth da plataforma."
+                      : connected.length > 0
+                        ? connected.map((c) => (c.username ? `@${c.username}` : c.name)).join(", ")
+                        : "Login oficial da plataforma (OAuth 2.0)"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2 pt-1">
+                {on ? (
+                  <a
+                    href={href}
+                    className={
+                      connected.length > 0 && !hasExpired
+                        ? "kb-btn-ghost min-h-10 w-full text-center text-xs"
+                        : "kb-btn min-h-10 w-full text-center text-xs"
+                    }
+                  >
+                    {hasExpired
+                      ? "Reconectar conta →"
+                      : connected.length > 0
+                        ? "Conectar outra / Atualizar →"
+                        : "Conectar →"}
+                  </a>
+                ) : (
+                  <span
+                    aria-disabled="true"
+                    className="kb-chip min-h-10 w-full justify-center text-xs opacity-70"
+                  >
+                    Pendente de ativação externa
                   </span>
-                  {on && <span aria-hidden className="kb-faint text-lg transition-transform group-hover:translate-x-0.5">→</span>}
-                </a>
-              </li>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {items.length > 0 && (
+        <div className="flex flex-col gap-2 border-t border-white/10 pt-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">Contas vinculadas e permissões</p>
+            <span className="kb-faint text-xs">
+              {items.filter((i) => i.status === "ativo").length} ativa(s) de {items.length}
+            </span>
+          </div>
+          {items.map((a) => {
+            const info = netInfo(a.network);
+            const exp = expirationSummary(a);
+            const scopeText = summarizeScopes(a.scopes, a.provider);
+            const provId = a.provider || info.provider;
+            const provConfigured = isOn(provId);
+            return (
+              <div key={a.id} className="kb-card flex flex-col gap-2.5 !p-3.5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    {a.pictureUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={a.pictureUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+                    ) : (
+                      <NetMark network={a.network} size={32} />
+                    )}
+                    <div className="min-w-0">
+                      <p className="flex flex-wrap items-center gap-1.5 text-sm font-medium">
+                        <span className="truncate">{a.name}</span>
+                        {a.username && <span className="kb-muted font-normal">@{a.username}</span>}
+                      </p>
+                      <p className="kb-faint flex flex-wrap items-center gap-1.5 text-xs">
+                        <span>{info.label}</span>
+                        {a.project && (
+                          <>
+                            <span>·</span>
+                            <span>
+                              Empresa: <strong className="text-[var(--kb-ink)] font-normal">{a.project}</strong>
+                            </span>
+                          </>
+                        )}
+                        <span>·</span>
+                        <span
+                          className="inline-flex items-center gap-1 font-medium"
+                          style={{ color: a.status === "ativo" ? "#22c55e" : "#f5c46e" }}
+                        >
+                          <span
+                            aria-hidden
+                            className="inline-block h-1.5 w-1.5 rounded-full"
+                            style={{ background: a.status === "ativo" ? "#22c55e" : "#f5c46e" }}
+                          />
+                          {a.status === "ativo" ? "Autorizado" : "Requer reconexão"}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {!tk && projects.length > 1 && (
+                      <select
+                        aria-label={`Empresa de ${a.name}`}
+                        value={a.projectId ?? ""}
+                        onChange={(e) => e.target.value && moveProject(a.id, e.target.value)}
+                        className="kb-control min-h-9 text-xs"
+                      >
+                        {projects.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.titulo}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {provConfigured && (
+                      <a
+                        href={connectHref(provId, { link: tk, project: tk ? undefined : (a.projectId ?? projectId) })}
+                        className={a.status === "ativo" ? "kb-chip min-h-9 text-xs" : "kb-btn min-h-9 !px-3 !text-xs"}
+                      >
+                        Reconectar
+                      </a>
+                    )}
+                    <button type="button" onClick={() => disconnect(a)} className="kb-btn-ghost min-h-9 text-xs">
+                      Desconectar
+                    </button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/5 pt-2 text-[11px]">
+                  <span className="kb-muted">
+                    <strong className="kb-faint font-normal uppercase tracking-[0.12em]">Permissões:</strong> {scopeText}
+                  </span>
+                  <span className={exp.warn ? "text-[#f5c46e]" : "kb-faint"}>{exp.text}</span>
+                </div>
+              </div>
             );
           })}
-        </ul>
-
-        {[...byNet.values()].flat().length > 0 && (
-          <div className="flex flex-col">
-            <p className="kb-faint text-[11px] uppercase tracking-[0.2em]">Contas conectadas</p>
-            {[...byNet.values()].flat().map((a) => (
-              <div key={a.id} className="kb-row flex-wrap gap-2">
-                <span className="flex min-w-0 flex-1 items-center gap-2.5">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- foto de perfil vinda da rede */}
-                  {a.pictureUrl ? <img src={a.pictureUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" /> : <NetMark network={a.network} size={36} />}
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm">{a.name}{a.username ? ` · @${a.username}` : ""}</span>
-                    <span className={`block text-xs ${a.status === "ativo" ? "kb-faint" : "text-[var(--kb-soon)]"}`}>{netInfo(a.network).label}{a.status !== "ativo" ? " · acesso venceu, toque na rede acima para reconectar" : ""}</span>
-                  </span>
-                </span>
-                <span className="flex shrink-0 items-center gap-2">
-                  {!token && projects.length > 1 && (
-                    <select className="kb-control min-h-11 max-w-44" aria-label={`Empresa de ${a.name}`} value={a.projectId ?? ""} onChange={(e) => void move(a, e.target.value)}>
-                      {projects.map((p) => <option key={p.id} value={p.id}>{p.titulo}</option>)}
-                    </select>
-                  )}
-                  <button type="button" className="kb-btn-ghost min-h-11" disabled={busy === a.id} onClick={() => void disconnect(a)}>{busy === a.id ? "…" : "Desconectar"}</button>
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <p className="kb-faint text-xs leading-relaxed">
-          Você também pode tirar o acesso pelo app de cada rede (Configurações → Apps e sites conectados). Pedimos só a permissão de publicar e ler o resultado dos posts.
-        </p>
-      </div>
+        </div>
+      )}
     </section>
   );
 }
