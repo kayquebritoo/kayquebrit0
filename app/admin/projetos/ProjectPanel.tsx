@@ -142,7 +142,10 @@ export default function ProjectPanel({ project, contacts, projects = [], onClose
 
         <div className="mt-4 flex flex-wrap gap-1.5" role="group" aria-label="Etapa">
           {PIPELINE.map((s) => (
-            <button key={s.id} className="kb-chip min-h-11" aria-pressed={project.status === s.id} onClick={() => onMoved(project.id, s.id)}>{s.label}</button>
+            <button key={s.id} className="kb-chip min-h-11 gap-2" aria-pressed={project.status === s.id} onClick={() => onMoved(project.id, s.id)}>
+              <span aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: s.color }} />
+              {s.label}
+            </button>
           ))}
         </div>
         {project.clienteId && <p className="kb-faint mt-2 text-xs">Mudar a etapa avisa o cliente no WhatsApp.</p>}

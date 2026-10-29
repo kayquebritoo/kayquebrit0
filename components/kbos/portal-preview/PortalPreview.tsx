@@ -146,13 +146,17 @@ function HomeBrand({ scenario, go, say }: { scenario: Scenario; go: (t: Tab) => 
     <>
       <Hero hello={`Olá, ${scenario.person}.`} line="Sua identidade está na etapa de criação. Falta uma aprovação sua para seguirmos.">
         <ol className="mt-5 grid grid-cols-5 gap-1.5" aria-label="Etapas do projeto">
-          {steps.map((s, i) => (
-            <li key={s.label} className="min-w-0" aria-current={s.current ? "step" : undefined}>
-              <span className={`block h-1.5 rounded-full ${s.done ? "bg-[#EDE6EC]" : s.current ? "bg-gradient-to-r from-[#EDE6EC] to-[#E80EFD]" : "bg-white/20"}`} />
-              <span className={`mt-2 block truncate text-[10px] uppercase sm:tracking-[0.08em] ${i === current ? "font-semibold" : "text-[#EDE6EC]/70"}`}>{s.label}</span>
-              <span className="block text-[10px] text-[#EDE6EC]/60">{s.date}</span>
-            </li>
-          ))}
+          {steps.map((s, i) => {
+            const colors = ["#9a93a8", "#4DA3FF", "#8a6cf0", "#f5c46e", "#22c55e"];
+            const color = colors[i] ?? "#8a6cf0";
+            return (
+              <li key={s.label} className="min-w-0" aria-current={s.current ? "step" : undefined}>
+                <span className="block h-1.5 rounded-full" style={{ background: s.done || s.current ? color : "rgba(255,255,255,0.2)", opacity: s.current ? 1 : s.done ? 0.5 : 1 }} />
+                <span className={`mt-2 block truncate text-[10px] uppercase sm:tracking-[0.08em] ${i === current ? "font-semibold" : "text-[#EDE6EC]/70"}`} style={i === current ? { color } : undefined}>{s.label}</span>
+                <span className="block text-[10px] text-[#EDE6EC]/60">{s.date}</span>
+              </li>
+            );
+          })}
         </ol>
       </Hero>
       {waiting && (
