@@ -2,6 +2,7 @@
 // Protótipo navegável do portal por empresa e módulos (Fase 3). Dados fictícios de `data.ts`: nada é lido do banco nem gravado.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CHANNEL_LABEL, NETWORK_LABEL, SCENARIOS, STAGE_LABEL, type Brand, type ChannelStatus, type Company, type Content, type Scenario } from "./data";
+import OctoberGallery from "./OctoberGallery";
 
 type Tab = "inicio" | "conteudo" | "marca" | "aprovacoes" | "arquivos" | "relatorio";
 const ico = (d: string) => (
@@ -877,7 +878,12 @@ function Files({ scenario, say }: { scenario: Scenario; say: (m: string) => void
   return (
     <>
       {scenario.id === "recorrente" && (
-        <Section eyebrow="Lume" title="Acervo de fotos e vídeos">
+        <Section eyebrow="Acervo de Outubro" title="Fotos Tratadas — Outubro 2026" action={<span className="kb-faint text-xs">455 fotos editadas</span>}>
+          <OctoberGallery say={say} />
+        </Section>
+      )}
+      {scenario.id === "recorrente" && (
+        <Section eyebrow="Lume" title="Acervo geral de fotos e vídeos">
           <label className="kb-field"><span className="sr-only">Buscar no acervo</span><input className="kb-control min-h-12 text-base" placeholder="Busque como fala: “camarão na chapa”, “piscina de dia”…" onKeyDown={(e) => { if (e.key === "Enter") say("No portal real, a busca abre o Lume só na pasta da sua empresa."); }} /></label>
           <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
             {["#1C5D99", "#FF6A2B", "#E8B93A", "#3BA6FF", "#8C2F0E", "#3A2A0E"].map((c, i) => <div key={i} className="aspect-square rounded-xl" style={{ background: `linear-gradient(135deg, ${c}, #11101E)` }} />)}
