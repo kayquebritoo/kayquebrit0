@@ -45,6 +45,7 @@
 - **PR #28 (Calendário Navegável no Preview):** Implementado grid mensal (Outubro/Novembro 2026), seletor de empresa e modal de detalhes/aprovação de conteúdo com CI aprovado e mesclado em `main` (commit `d0c339e`).
 - **PR #29 (Contrato Mensal Grupo VIP em 2 Páginas):** Validação automatizada da compilação em PDF oficial de 2 páginas (Resumo Comercial + 7 cláusulas de salvaguarda com cotas de 50 conteúdos, 120 fotos e 2 visitas mensais) com CI aprovado e mesclado em `main` (commit `32285cd`).
 - **Deploy em Produção:** VPS (`179.236.67.19`) ativa, `/api/health` atualizado com o commit `d0c339e` colocando o novo calendário ativo em `/portal/preview/`.
+- **Credenciais Meta OAuth:** Recebidas credenciais oficiais de aplicativo (`META_APP_ID=1156339827067314` e `META_APP_SECRET=dccc4188fb718a85887e8ce6ccaf6a81`) e gerada a `SOCIAL_TOKEN_KEY` criptográfica de 32 bytes para blindagem de tokens no banco.
 - **Limpeza de Worktrees:** Worktrees temporários removidos e branches remotas excluídas. Nenhuma reserva ativa.
 
 ---
