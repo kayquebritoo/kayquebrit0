@@ -1,43 +1,36 @@
-# LLM Gateway — config LiteLLM (allowlist apenas modelos gratuitos confirmados).
-# NUNCA commitar com valores reais de chave. As chaves vêm do .env da VPS.
+# LLM Gateway - LiteLLM. Somente modelos :free confirmados (OpenRouter).
+# O proxy so aceita model_name listados aqui; qualquer outro modelo e
+# rejeitado com 400 antes de qualquer chamada de rede (allowlist efetiva).
+# NUNCA commitar chaves: os valores vem do .env da VPS via os.environ/.
 model_list:
-  # Default e único modelo ativo por padrão (gratuito confirmado, OpenRouter).
   - model_name: openrouter/cohere/north-mini-code:free
     litellm_params:
       model: openrouter/cohere/north-mini-code:free
-      api_base: https://openrouter.ai/api/v1
-      api_key: ${OPENROUTER_API_KEY}
-
-  # Fallback 1 (gratuito, distinto).
-  - model_name: openrouter/nemotron-3.5-super-vl-free
+      api_key: os.environ/OPENROUTER_API_KEY
+      rpm: 20
+  - model_name: openrouter/nvidia/nemotron-3.5-super-vl:free
     litellm_params:
-      model: openrouter/nemotron-3.5-super-vl-free
-      api_base: https://openrouter.ai/api/v1
-      api_key: ${OPENROUTER_API_KEY}
-
-  # Fallback 2 (gratuito, distinto).
-  - model_name: openrouter/nemotron-3.5-lightning-free
+      model: openrouter/nvidia/nemotron-3.5-super-vl:free
+      api_key: os.environ/OPENROUTER_API_KEY
+      rpm: 20
+  - model_name: openrouter/nvidia/nemotron-3.5-lightning:free
     litellm_params:
-      model: openrouter/nemotron-3.5-lightning-free
-      api_base: https://openrouter.ai/api/v1
-      api_key: ${OPENROUTER_API_KEY}
+      model: openrouter/nvidia/nemotron-3.5-lightning:free
+      api_key: os.environ/OPENROUTER_API_KEY
+      rpm: 20
 
-# Bloqueio efetivo: qualquer modelo fora desta lista é rejeitado antes da rede.
-allowed_model_ids:
-  - openrouter/cohere/north-mini-code:free
-  - openrouter/nemotron-3.5-super-vl-free
-  - openrouter/nemotron-3.5-lightning-free
+router_settings:
+  num_retries: 2
+  timeout: 60
+  fallbacks:
+    - openrouter/cohere/north-mini-code:free:
+        - openrouter/nvidia/nemotron-3.5-super-vl:free
+        - openrouter/nvidia/nemotron-3.5-lightning:free
 
-# Orçamento nominal zero: qualquer rota que gere custo é bloqueada.
-max_budget: 0.0
+litellm_settings:
+  drop_params: true
+  # Teto nominal zero (LITELLM_BUDGET_MAX=0). Protecao real = allowlist acima.
+  max_budget: 0
 
-# Rate limit por requisição (a ser complementado por rate limit por app no nível da aplicação).
-rpm: 20
-tpm: 120000
-
-# Resiliência.
-retries: 2
-timeout: 60
-
-# Observabilidade sem conteúdo sensível (apenas metadados).
-verbose: false
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
