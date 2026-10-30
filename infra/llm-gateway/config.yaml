@@ -1,0 +1,43 @@
+# LLM Gateway — config LiteLLM (allowlist apenas modelos gratuitos confirmados).
+# NUNCA commitar com valores reais de chave. As chaves vêm do .env da VPS.
+model_list:
+  # Default e único modelo ativo por padrão (gratuito confirmado, OpenRouter).
+  - model_name: openrouter/cohere/north-mini-code:free
+    litellm_params:
+      model: openrouter/cohere/north-mini-code:free
+      api_base: https://openrouter.ai/api/v1
+      api_key: ${OPENROUTER_API_KEY}
+
+  # Fallback 1 (gratuito, distinto).
+  - model_name: openrouter/nemotron-3.5-super-vl-free
+    litellm_params:
+      model: openrouter/nemotron-3.5-super-vl-free
+      api_base: https://openrouter.ai/api/v1
+      api_key: ${OPENROUTER_API_KEY}
+
+  # Fallback 2 (gratuito, distinto).
+  - model_name: openrouter/nemotron-3.5-lightning-free
+    litellm_params:
+      model: openrouter/nemotron-3.5-lightning-free
+      api_base: https://openrouter.ai/api/v1
+      api_key: ${OPENROUTER_API_KEY}
+
+# Bloqueio efetivo: qualquer modelo fora desta lista é rejeitado antes da rede.
+allowed_model_ids:
+  - openrouter/cohere/north-mini-code:free
+  - openrouter/nemotron-3.5-super-vl-free
+  - openrouter/nemotron-3.5-lightning-free
+
+# Orçamento nominal zero: qualquer rota que gere custo é bloqueada.
+max_budget: 0.0
+
+# Rate limit por requisição (a ser complementado por rate limit por app no nível da aplicação).
+rpm: 20
+tpm: 120000
+
+# Resiliência.
+retries: 2
+timeout: 60
+
+# Observabilidade sem conteúdo sensível (apenas metadados).
+verbose: false

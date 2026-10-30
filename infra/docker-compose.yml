@@ -281,6 +281,27 @@ services:
       - evo-db
     restart: unless-stopped
 
+  # --- LLM Gateway (Multi-LLM, somente modelos gratuitos confirmados) ---
+  # Porta 4000 exposta apenas em 127.0.0.1 (não à internet). Acesso interno
+  # por KBOS/Lume/Jarvis via API compatível OpenAI. Allowlist rígida :free.
+  llm-gateway:
+    build:
+      context: ./llm-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:4000:4000"
+    environment:
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-}
+      LITELLM_BUDGET_MAX: "0"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--timeout=3", "--spider", "http://127.0.0.1:4000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
   # Ouvido do assistente (opcional): Whisper local, padrão OpenAI, só CPU.
   # Liga uma vez com `--profile voz`; no .env: STT_BASE_URL=http://whisper:8000/v1
   # e STT_MODEL=Systran/faster-whisper-small. Limitado a 1,5 núcleo para não
