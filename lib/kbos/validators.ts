@@ -421,6 +421,13 @@ export const campaignDispatchSchema = z.object({
   scheduledAt: dateField.optional(),
 });
 
+// Assistente de escrita (Fase 1 do llm-gateway): só o briefing, sem dados do banco.
+export const writerDraftSchema = z.object({
+  kind: z.enum(["legenda", "roteiro", "texto", "ideias"]),
+  brief: z.string().trim().min(3, { error: "Briefing muito curto." }).max(4000),
+  tone: z.string().trim().max(200).optional(),
+});
+
 export const assistantTurnSchema = z
   .object({
     conversationId: uuidField.optional(),

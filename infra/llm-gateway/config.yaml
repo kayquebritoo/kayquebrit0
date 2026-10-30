@@ -1,0 +1,36 @@
+# LLM Gateway - LiteLLM. Somente modelos :free confirmados (OpenRouter).
+# O proxy so aceita model_name listados aqui; qualquer outro modelo e
+# rejeitado com 400 antes de qualquer chamada de rede (allowlist efetiva).
+# NUNCA commitar chaves: os valores vem do .env da VPS via os.environ/.
+model_list:
+  - model_name: openrouter/cohere/north-mini-code:free
+    litellm_params:
+      model: openrouter/cohere/north-mini-code:free
+      api_key: os.environ/OPENROUTER_API_KEY
+      rpm: 20
+  - model_name: openrouter/nvidia/nemotron-3.5-super-vl:free
+    litellm_params:
+      model: openrouter/nvidia/nemotron-3.5-super-vl:free
+      api_key: os.environ/OPENROUTER_API_KEY
+      rpm: 20
+  - model_name: openrouter/nvidia/nemotron-3.5-lightning:free
+    litellm_params:
+      model: openrouter/nvidia/nemotron-3.5-lightning:free
+      api_key: os.environ/OPENROUTER_API_KEY
+      rpm: 20
+
+router_settings:
+  num_retries: 2
+  timeout: 60
+  fallbacks:
+    - openrouter/cohere/north-mini-code:free:
+        - openrouter/nvidia/nemotron-3.5-super-vl:free
+        - openrouter/nvidia/nemotron-3.5-lightning:free
+
+litellm_settings:
+  drop_params: true
+  # Teto nominal zero (LITELLM_BUDGET_MAX=0). Protecao real = allowlist acima.
+  max_budget: 0
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

@@ -130,6 +130,12 @@ services:
       ASSISTANT_TRIGGER: ${ASSISTANT_TRIGGER:-}
       ASSISTANT_OWNER_PHONE: ${ASSISTANT_OWNER_PHONE:-}
       RATE_AI_MIN: ${RATE_AI_MIN:-20}
+      # Assistente de escrita (Fase 1 do gateway): SO modelos :free via llm-gateway.
+      # Vazio = desligado. Nao afeta AI_*/STT_*/TTS_* (cerebro, ouvido e voz).
+      WRITER_BASE_URL: ${WRITER_BASE_URL:-}
+      WRITER_API_KEY: ${WRITER_API_KEY:-}
+      WRITER_MODEL: ${WRITER_MODEL:-}
+      RATE_WRITER_MIN: ${RATE_WRITER_MIN:-20}
       MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
       MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET:-}
     depends_on:
@@ -279,6 +285,27 @@ services:
     depends_on:
       - redis
       - evo-db
+    restart: unless-stopped
+
+  # --- LLM Gateway (Multi-LLM, somente modelos gratuitos confirmados) ---
+  # Porta 4000 exposta apenas em 127.0.0.1 (não à internet). Acesso interno
+  # por KBOS/Lume/Jarvis via API compatível OpenAI. Allowlist rígida :free.
+  llm-gateway:
+    build:
+      context: ./llm-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:4000:4000"
+    environment:
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-}
+      LITELLM_BUDGET_MAX: "0"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
 
   # Ouvido do assistente (opcional): Whisper local, padrão OpenAI, só CPU.
