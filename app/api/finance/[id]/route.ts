@@ -6,6 +6,7 @@ import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { checkId, financePatchSchema, readBody } from "@/lib/kbos/validators";
 import { nextDueDate, toDbPatch, toFinanceEntry } from "@/lib/kbos/finance";
 import { serverError } from "@/lib/kbos/http";
+import { syncLeadConversionForTransaction } from "@/lib/kbos/sales";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await sessionUser();
@@ -32,6 +33,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const before = (await db().select().from(transactions).where(eq(transactions.id, id)).limit(1))[0];
     if (!before) return NextResponse.json({ error: "Não encontrado." }, { status: 404 });
     await db().update(transactions).set(toDbPatch(parsed.data)).where(eq(transactions.id, id));
+    if (parsed.data.status === "paid") {
+      await syncLeadConversionForTransaction(id);
+    }
     // Recorrente pago agora: já deixa a próxima parcela pendente na fila.
     let next: string | null = null;
     const recurrence = parsed.data.recurrence !== undefined ? parsed.data.recurrence : before.recurrence;

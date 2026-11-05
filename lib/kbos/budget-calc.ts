@@ -68,7 +68,7 @@ export function calcBudgetWithDiscount(
 export type PaymentCondition = "cash" | "installments" | "card";
 
 export const PAYMENT_CONDITIONS: { id: PaymentCondition; label: string; hint: string }[] = [
-  { id: "cash", label: "À vista", hint: "10% de desconto" },
+  { id: "cash", label: "À vista", hint: "Pix ou transferência" },
   { id: "installments", label: "Parcelado", hint: "50% entrada + 50% entrega" },
   { id: "card", label: "Cartão", hint: "Crédito ou débito" },
 ];

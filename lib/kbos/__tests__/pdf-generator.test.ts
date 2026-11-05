@@ -76,13 +76,46 @@ describe("contrato (página 2)", () => {
     expect(isRecurringBudget({ ...base, items: months })).toBe(true);
   });
 
-  it("gera as 7 cláusulas; pontual não fala em mensalidade", () => {
+  it("gera as 7 cláusulas; pontual não fala em mensalidade e preserva valor integral sem desconto automático", () => {
     const clauses = buildContractClauses(base, 5000);
     expect(clauses).toHaveLength(7);
     const text = clauses.map((c) => c.body).join(" ");
     expect(text).not.toMatch(/mensalidade|dia 10/i);
-    expect(text).toMatch(/R\$\s4\.500,00/); // à vista com 10%
+    expect(text).toMatch(/R\$\s5\.000,00/);
+
+    const withCashDiscount = buildContractClauses({ ...base, applyCashDiscount: true }, 5000)
+      .map((c) => c.body)
+      .join(" ");
+    expect(withCashDiscount).toMatch(/R\$\s4\.500,00/);
   });
+
+  it("renderiza PDF com carimbo de aceite eletrônico e tabela de descontos progressivos mantendo exatamente 2 páginas", async () => {
+    const buf = await renderBudgetPdf({
+      ...base,
+      subtype: "Landing Page",
+      totalAmount: "2250",
+      baseTotal: 2500,
+      discountType: "percent",
+      discountValue: 10,
+      progressiveDiscounts: true,
+      progressiveOptions: [
+        { count: 1, label: "À vista (1x) · 10% OFF", total: 2250, baseTotal: 2500, discountPercent: 10, discountAmount: 250, installments: [{ label: "Parcela única", amount: 2250, dueDate: "2026-11-05", onAcceptance: true }] },
+        { count: 2, label: "2x sem juros · 6% OFF", total: 2350, baseTotal: 2500, discountPercent: 6, discountAmount: 150, installments: [{ label: "Parcela 1/2", amount: 1175, dueDate: "2026-11-05", onAcceptance: true }, { label: "Parcela 2/2", amount: 1175, dueDate: "2026-11-20" }] },
+        { count: 3, label: "3x sem juros · 3% OFF", total: 2425, baseTotal: 2500, discountPercent: 3, discountAmount: 75, installments: [{ label: "Parcela 1/3", amount: 808.34, dueDate: "2026-11-05", onAcceptance: true }, { label: "Parcela 2/3", amount: 808.33, dueDate: "2026-11-12" }, { label: "Parcela 3/3", amount: 808.33, dueDate: "2026-11-20" }] },
+        { count: 4, label: "4x sem juros · 0%", total: 2500, baseTotal: 2500, discountPercent: 0, discountAmount: 0, installments: [{ label: "Parcela 1/4", amount: 625, dueDate: "2026-11-05", onAcceptance: true }, { label: "Parcela 2/4", amount: 625, dueDate: "2026-11-10" }, { label: "Parcela 3/4", amount: 625, dueDate: "2026-11-15" }, { label: "Parcela 4/4", amount: 625, dueDate: "2026-11-20" }] },
+      ],
+      installmentsCount: 1,
+      acceptance: {
+        signerName: "Luana Nakata",
+        acceptedAt: "2026-11-05T18:00:00.000Z",
+        verificationCode: "KBOS-14002-A1B2C3D4E5",
+        budgetVersion: "2026-11-05T18:00:00.000Z",
+      },
+    });
+    expect(Buffer.isBuffer(buf)).toBe(true);
+    expect(buf.subarray(0, 5).toString()).toBe("%PDF-");
+    expect(buf.toString("latin1").match(/\/Type \/Page(?!s)/g)?.length).toBe(2);
+  }, 30000);
 
   it("recorrente: pré-pago até o dia 5, sem 50/50 e sem multa rescisória", () => {
     const text = buildContractClauses({ ...base, title: "Acompanhamento recorrente" }, 5000)

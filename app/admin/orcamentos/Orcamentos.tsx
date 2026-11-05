@@ -252,7 +252,7 @@ export default function Orcamentos() {
           company: qa.company.trim() || undefined,
           phone: qa.phone.trim() || undefined,
           email: qa.email.trim() || undefined,
-          status: "client",
+          status: "lead",
         }),
       });
       const j = await res.json();
@@ -486,7 +486,7 @@ export default function Orcamentos() {
         </table>
       </div>
 
-      {saleBudget && <SaleLink budgetId={saleBudget.id} contactId={saleBudget.contactId} amount={Number(saleBudget.totalAmount)} monthly={/recorrente|mensalidade|\bmensal\b|por m[eê]s/i.test(`${saleBudget.title} ${saleBudget.terms || ""}`)} initialStart={[...(saleBudget.eventDates || []), ...saleBudget.items.map((i) => i.date || "")].filter((d) => d >= new Date().toLocaleDateString("en-CA", { timeZone: "America/Belem" })).sort()[0]} onClose={() => setSaleBudget(null)} onCreated={() => void load()} />}
+      {saleBudget && <SaleLink budgetId={saleBudget.id} contactId={saleBudget.contactId} amount={Number(saleBudget.totalAmount)} monthly={/recorrente|mensalidade|\bmensal\b|por m[eê]s/i.test(`${saleBudget.title} ${saleBudget.terms || ""}`)} initialStart={[...(saleBudget.eventDates || []), ...saleBudget.items.map((i) => i.date || "")].filter((d) => d >= new Date().toLocaleDateString("en-CA", { timeZone: "America/Belem" })).sort()[0]} budget={saleBudget} onClose={() => setSaleBudget(null)} onCreated={() => void load()} />}
       {modal ? (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-3 sm:p-4">
           <div className="my-4 w-full max-w-3xl space-y-4 rounded-2xl border border-white/10 bg-[#14141c] p-4 sm:p-6">
@@ -510,6 +510,35 @@ export default function Orcamentos() {
                     value={form.title}
                     onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                   />
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] text-white/40">Subtipos rápidos:</span>
+                    {[
+                      "Landing Page",
+                      "E-commerce e Gestão",
+                      "Site Institucional",
+                      "Identidade Visual",
+                      "Cobertura Audiovisual",
+                      "Plano Mensal",
+                    ].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() =>
+                          setForm((f) => ({
+                            ...f,
+                            title: f.company.trim() ? `${preset} — ${f.company.trim()}` : preset,
+                            items:
+                              f.items.length === 1 && !f.items[0].service.trim()
+                                ? [{ ...f.items[0], service: preset }]
+                                : f.items,
+                          }))
+                        }
+                        className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-[11px] text-white/65 transition hover:border-brand-mag/40 hover:text-white"
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
@@ -773,11 +802,29 @@ export default function Orcamentos() {
                   />
                 </div>
               </div>
-              <div className="mt-3 flex items-center justify-between rounded-xl border border-brand-mag/30 bg-brand-mag/[0.06] px-4 py-3">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-brand-mag">
-                  Total{discountAmount > 0 ? ` (−${brl(discountAmount)})` : ""}
-                </span>
-                <strong className="font-display text-2xl font-light text-white">{brl(formTotal)}</strong>
+              <div className="mt-3 grid gap-2 rounded-xl border border-brand-mag/30 bg-brand-mag/[0.06] px-4 py-3 sm:grid-cols-4">
+                <div>
+                  <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">Valor original</span>
+                  <strong className="text-sm text-white">{brl(subtotal)}</strong>
+                </div>
+                <div>
+                  <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">Descontos</span>
+                  <strong className="text-sm text-white">{discountAmount > 0 ? `−${brl(discountAmount)}` : brl(0)}</strong>
+                </div>
+                <div>
+                  <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-mag">Valor final</span>
+                  <strong className="font-display text-xl font-light text-white">{brl(formTotal)}</strong>
+                </div>
+                <div>
+                  <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">Parcelas</span>
+                  <strong className="text-sm text-white">
+                    {recurringForm
+                      ? `${brl(formTotal)} /mês`
+                      : form.paymentCondition === "installments"
+                      ? `2× de ${brl(calcPaymentOptions(formTotal).entry)}`
+                      : `1× de ${brl(formTotal)}`}
+                  </strong>
+                </div>
               </div>
 
               {recurringForm ? (
@@ -800,7 +847,7 @@ export default function Orcamentos() {
                     const active = form.paymentCondition === p.id;
                     const v = calcPaymentOptions(formTotal);
                     const value =
-                      p.id === "cash" ? brl(v.cash) : p.id === "installments" ? `2× ${brl(v.entry)}` : brl(formTotal);
+                      p.id === "cash" ? brl(formTotal) : p.id === "installments" ? `2× ${brl(v.entry)}` : brl(formTotal);
                     return (
                       <button
                         key={p.id}

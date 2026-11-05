@@ -47,6 +47,29 @@ export type BudgetPdfData = {
   paymentCondition?: string | null;
   deliveryDeadline?: string | null;
   revisionsCount?: number | null;
+  subtype?: string | null;
+  applyCashDiscount?: boolean | null;
+  progressiveDiscounts?: boolean | null;
+  baseTotal?: number | null;
+  progressiveOptions?: {
+    count: number;
+    label: string;
+    total: number;
+    baseTotal: number;
+    discountPercent: number;
+    discountAmount: number;
+    installments: { label: string; amount: number; dueDate: string; onAcceptance?: boolean }[];
+  }[] | null;
+  installmentsCount?: number | null;
+  maxInstallments?: number | null;
+  customClauses?: Clause[] | null;
+  customInstallments?: { label: string; amount: number; dueDate: string; onAcceptance?: boolean }[] | null;
+  acceptance?: {
+    signerName: string;
+    acceptedAt: Date | string;
+    verificationCode: string;
+    budgetVersion?: Date | string | null;
+  } | null;
 };
 
 // Tipografia display do site (Cottorway Pro .woff — mesma família do
@@ -231,6 +254,20 @@ const fmtDate = (v: Date | string | null | undefined): string => {
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("pt-BR");
 };
 
+const fmtDateTime = (v: Date | string | null | undefined): string => {
+  if (!v) return "—";
+  const d = v instanceof Date ? v : new Date(v);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("pt-BR", {
+    timeZone: "America/Belem",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 const MONTH_PT = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
 function monthYearLabel(ym: string): string | null {
@@ -303,15 +340,24 @@ export function buildContractClauses(data: BudgetPdfData, total: number): Clause
       ? "material bruto em até 5 dias úteis após cada captação e material editado em até 10 dias úteis"
       : "conforme o cronograma da página 1");
 
+  const useCashDiscount = data.applyCashDiscount === true;
+  const useProgressiveDiscounts = data.progressiveDiscounts === true;
+  const customSchedule = data.customInstallments && data.customInstallments.length > 0 ? data.customInstallments : null;
   const payment = recurring
     ? `Plano pré-pago: cada mensalidade é paga antecipadamente via Pix (${pix}) até o dia 5 do mês de referência, e a primeira na assinatura deste instrumento. Planos mensais não admitem parcelamento, entrada + saldo nem desconto à vista.`
-    : data.paymentCondition === "cash"
-      ? `Pagamento à vista via Pix (${pix}) na assinatura deste instrumento, com 10% de desconto: ${formatBRL(pay.cash)}.`
-      : data.paymentCondition === "installments"
-        ? `Pagamento em duas parcelas, via Pix (${pix}) ou cartão: ${formatBRL(pay.entry)} na assinatura e ${formatBRL(pay.balance)} na entrega final.`
-        : data.paymentCondition === "card"
-          ? "Pagamento por cartão de crédito ou débito, pelo valor integral, na assinatura deste instrumento."
-          : `Pagamento conforme a condição escolhida na página 1, via Pix (${pix}) ou cartão.`;
+    : useProgressiveDiscounts && customSchedule
+      ? `Pagamento via Pix (${pix}) em ${customSchedule.length}x sem juros (${customSchedule.map((i) => `${i.label}: ${formatBRL(i.amount)}`).join("; ")}), conforme tabela de descontos progressivos (à vista 1x com 10% OFF, 2x com 6% OFF, 3x com 3% OFF ou 4x sem desconto sobre ${formatBRL(data.baseTotal ?? total)}).`
+      : customSchedule
+        ? `Pagamento em ${customSchedule.length}x sem juros (${customSchedule.map((i) => `${i.label}: ${formatBRL(i.amount)}`).join("; ")}), via Pix (${pix}) ou cartão, mantendo a opção em até ${data.maxInstallments ?? 4}x sem juros.`
+        : data.paymentCondition === "cash"
+          ? useCashDiscount
+            ? `Pagamento à vista via Pix (${pix}) na assinatura deste instrumento, com 10% de desconto: ${formatBRL(pay.cash)}.`
+            : `Pagamento à vista (1x sem juros) via Pix (${pix}) ou em até ${data.maxInstallments ?? 4}x sem juros pelo valor integral de ${formatBRL(total)}.`
+          : data.paymentCondition === "installments"
+            ? `Pagamento parcelado sem juros via Pix (${pix}) ou cartão (em 2x de ${formatBRL(pay.entry)} e ${formatBRL(pay.balance)}, ou em até ${data.maxInstallments ?? 4}x sem juros totalizando ${formatBRL(total)}).`
+            : data.paymentCondition === "card"
+              ? `Pagamento por cartão de crédito em até ${data.maxInstallments ?? 4}x sem juros, pelo valor integral de ${formatBRL(total)}.`
+              : `Pagamento em 1x, 2x, 3x ou 4x sem juros conforme a condição escolhida na página 1, via Pix (${pix}) ou cartão.`;
 
   return [
     {
@@ -464,16 +510,22 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
   const clientDocLabel = clientDoc && clientDoc.replace(/[^0-9A-Z]/gi, "").length === 11 ? "CPF" : "CNPJ";
   const recurring = isRecurringBudget(data);
   const period = executionPeriodLabel(data, recurring);
+  const baseClauses = data.customClauses?.length ? data.customClauses : buildContractClauses(data, total);
+  const acc = data.acceptance;
   const clauses = [
-    ...buildContractClauses(data, total),
+    ...baseClauses,
     ...(data.terms ? [{ title: "8 · CONDIÇÕES ESPECÍFICAS DESTE PROJETO", body: data.terms }] : []),
     {
       title: `${data.terms ? 9 : 8} · ACEITE E ASSINATURA ELETRÔNICA`,
-      body: `As partes declaram ter lido e aceito o resumo comercial (página 1) e as cláusulas deste instrumento. O aceite por assinatura eletrônica simples (Lei nº 14.063/2020) — rubrica eletrônica ou confirmação por e-mail/WhatsApp que identifique o documento ${data.code} — é admitido pelas partes como válido, nos termos do art. 10, § 2º, da MP nº 2.200-2/2001.`,
+      body: acc
+        ? `As partes declaram ter lido e aceito o resumo comercial (página 1) e as cláusulas deste instrumento. Aceite eletrônico simples (Lei nº 14.063/2020 e art. 10, § 2º, da MP nº 2.200-2/2001) registrado por ${acc.signerName} em ${fmtDateTime(acc.acceptedAt)} (horário de Belém/PA), referente ao documento ${data.code}, sob o registro verificável ${acc.verificationCode}.`
+        : `As partes declaram ter lido e aceito o resumo comercial (página 1) e as cláusulas deste instrumento. O aceite por assinatura eletrônica simples (Lei nº 14.063/2020) — rubrica eletrônica ou confirmação por e-mail/WhatsApp que identifique o documento ${data.code} — é admitido pelas partes como válido, nos termos do art. 10, § 2º, da MP nº 2.200-2/2001.`,
     },
   ];
   const [colA, colB] = splitBalanced(clauses);
   const docDate = fmtDate(data.createdAt);
+  const useCashDiscount = data.applyCashDiscount === true;
+  const headerStatus = acc ? "ACEITO E FORMALIZADO" : (STATUS_LABEL[data.status] ?? data.status).toUpperCase();
   return (
     <Document title={`Orçamento ${data.code} — Kayque Brito`}>
       <Page size="A4" style={s.page}>
@@ -484,7 +536,7 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
           label="ORÇAMENTO"
           code={data.code}
           date={docDate}
-          status={(STATUS_LABEL[data.status] ?? data.status).toUpperCase()}
+          status={headerStatus}
         />
 
         {/* ── Cliente & Projeto ────────────────────────── */}
@@ -500,6 +552,7 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
             <Text style={s.cardLabel}>PROJETO</Text>
             <Text style={s.cardText}>{data.title}</Text>
             <Text style={s.cardLine}>
+              {data.subtype ? `${data.subtype} · ` : ""}
               {plural(items.length, "item", "itens")}
               {recurring
                 ? " · Plano mensal pré-pago"
@@ -604,22 +657,65 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
               <Text style={s.payHint}>Aviso de 30 dias · o mês pago é entregue integralmente</Text>
             </View>
           </View>
+          ) : data.progressiveOptions && data.progressiveOptions.length > 0 ? (
+          <View style={s.payRow}>
+            {data.progressiveOptions.map((opt) => {
+              const selectedCount = data.installmentsCount ?? data.customInstallments?.length ?? 1;
+              const isSelected = opt.count === selectedCount;
+              const firstAmt = opt.installments[0]?.amount ?? opt.total;
+              const lastAmt = opt.installments[opt.installments.length - 1]?.amount ?? opt.total;
+              const sameAmounts = Math.abs(firstAmt - lastAmt) < 0.005;
+              const scheduleSummary =
+                opt.count === 1
+                  ? `Economia de ${formatBRL(opt.discountAmount)} no PIX`
+                  : sameAmounts
+                    ? `${opt.count}x de ${formatBRL(firstAmt)}${opt.discountAmount > 0 ? ` (−${formatBRL(opt.discountAmount)})` : " · valor base"}`
+                    : `1ª ${formatBRL(firstAmt)} + ${opt.count - 1}x ${formatBRL(lastAmt)}${opt.discountAmount > 0 ? ` (−${formatBRL(opt.discountAmount)})` : ""}`;
+              return (
+                <View key={opt.count} style={isSelected ? s.payCardHot : s.payCard}>
+                  <Text style={isSelected ? s.payTitleHot : s.payTitle}>
+                    {opt.count === 1
+                      ? `À VISTA · ${opt.discountPercent}% OFF`
+                      : opt.discountPercent > 0
+                        ? `${opt.count}X PIX · ${opt.discountPercent}% OFF`
+                        : `${opt.count}X PIX · 0%`}
+                  </Text>
+                  <Text style={s.payValue}>{formatBRL(opt.total)}</Text>
+                  <Text style={s.payHint}>{scheduleSummary}</Text>
+                </View>
+              );
+            })}
+          </View>
           ) : (
           <View style={s.payRow}>
             <View style={isPay("cash") ? s.payCardHot : s.payCard}>
-              <Text style={isPay("cash") ? s.payTitleHot : s.payTitle}>À VISTA · 10% OFF</Text>
-              <Text style={s.payValue}>{formatBRL(pay.cash)}</Text>
-              <Text style={s.payHint}>Dinheiro ou Pix · economiza {formatBRL(pay.cashSavings)}</Text>
+              <Text style={isPay("cash") ? s.payTitleHot : s.payTitle}>
+                {useCashDiscount ? "À VISTA · 10% OFF" : "1X SEM JUROS · PIX"}
+              </Text>
+              <Text style={s.payValue}>{formatBRL(useCashDiscount ? pay.cash : total)}</Text>
+              <Text style={s.payHint}>
+                {useCashDiscount
+                  ? `Dinheiro ou Pix · economiza ${formatBRL(pay.cashSavings)}`
+                  : "Pix ou transferência · valor integral"}
+              </Text>
             </View>
             <View style={isPay("installments") ? s.payCardHot : s.payCard}>
-              <Text style={isPay("installments") ? s.payTitleHot : s.payTitle}>PARCELADO 50/50</Text>
+              <Text style={isPay("installments") ? s.payTitleHot : s.payTitle}>
+                {data.customInstallments && data.customInstallments.length >= 2
+                  ? `PARCELADO · ${data.customInstallments.length}X SEM JUROS`
+                  : "PARCELADO · ATÉ 4X SEM JUROS"}
+              </Text>
               <Text style={s.payValue}>{formatBRL(total)}</Text>
-              <Text style={s.payHint}>{formatBRL(pay.entry)} entrada + {formatBRL(pay.balance)} na entrega</Text>
+              <Text style={s.payHint}>
+                {data.customInstallments && data.customInstallments.length >= 2
+                  ? data.customInstallments.map((c) => formatBRL(c.amount)).join(" + ")
+                  : `2x de ${formatBRL(pay.entry)} · 3x ou 4x de ${formatBRL(Math.floor(Math.round(total * 100) / 4) / 100)}`}
+              </Text>
             </View>
             <View style={isPay("card") ? s.payCardHot : s.payCard}>
-              <Text style={isPay("card") ? s.payTitleHot : s.payTitle}>CARTÃO</Text>
+              <Text style={isPay("card") ? s.payTitleHot : s.payTitle}>CARTÃO · ATÉ 4X SEM JUROS</Text>
               <Text style={s.payValue}>{formatBRL(pay.card)}</Text>
-              <Text style={s.payHint}>Crédito ou débito · valor integral</Text>
+              <Text style={s.payHint}>1x, 2x, 3x ou 4x sem juros · valor integral</Text>
             </View>
           </View>
           )}
@@ -693,7 +789,7 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
           ))}
         </View>
 
-        {/* ── Assinaturas: rubrica do Contratado; espaço livre p/ o Contratante ── */}
+        {/* ── Assinaturas: rubrica do Contratado; espaço livre ou aceite do Contratante ── */}
         <View style={s.sign} wrap={false}>
           <View style={s.signCol}>
             <Text style={s.signScript}>{contractorName}</Text>
@@ -701,9 +797,17 @@ export function BudgetPdf({ data }: { data: BudgetPdfData }) {
             <Text style={s.signSub}>Assinatura eletrônica / rubrica</Text>
           </View>
           <View style={s.signCol}>
-            <View style={s.signBlank} />
+            {acc ? (
+              <Text style={s.signScript}>{acc.signerName}</Text>
+            ) : (
+              <View style={s.signBlank} />
+            )}
             <Text style={s.signBox}>{contractingName} — Contratante</Text>
-            <Text style={s.signSub}>Assinatura eletrônica / rubrica</Text>
+            <Text style={s.signSub}>
+              {acc
+                ? `Aceito em ${fmtDateTime(acc.acceptedAt)} · ${acc.verificationCode}`
+                : "Assinatura eletrônica / rubrica"}
+            </Text>
           </View>
         </View>
 

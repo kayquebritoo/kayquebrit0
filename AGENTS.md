@@ -30,7 +30,10 @@ Vários agentes trabalham neste repo ao mesmo tempo, na mesma máquina. Quem faz
 - **Fluxo de Deploy**: branch → CI verde → merge em `main` → o cron da VPS (`deploy.sh --auto`) publica sozinho. Forçar na VPS: `./deploy.sh` (não `git pull`).
 - **Se precisar comandar a VPS à mão** (a partir da RAIZ do repo, nunca de `infra/`):
   `docker compose --env-file /opt/kbos/.env -f infra/docker-compose.yml --profile evolution up -d --build`
-- **Regras Técnicas**: NUNCA commitar segredos (`.env*` está no `.gitignore`); schema via `npx drizzle-kit push` contra o Neon; migrações SQL vivem em `drizzle/000N_*.sql` + entrada em `drizzle/meta/_journal.json`.
+- **Regras Técnicas**: NUNCA commitar segredos (`.env*` está no `.gitignore`); migrações SQL vivem em `drizzle/000N_*.sql` + entrada em `drizzle/meta/_journal.json`.
+- **Preflight Obrigatório e Proteção Anti-Neon**:
+  - Antes de iniciar qualquer sessão de desenvolvimento ou operação de dados, execute `npm run preflight` (`node scripts/kbos-preflight.mjs`) para verificar repositório/worktree, `HEAD` vs `origin/main` vs produção (`/api/health/`), host do `DATABASE_URL` e alterações locais pendentes.
+  - O banco de produção é o **PostgreSQL 18 na VPS (`kbos-pg18`)**. O cluster Neon antigo (`ep-dawn-wildflower-b5k6i390`) foi descontinuado em out/2026 e está bloqueado por padrão em `lib/kbos/db.ts`. Operações de cadastro em produção devem usar exclusivamente a API autenticada (`https://kbos.kayquebrito.com.br/api/...`).
 
 ## DNA da Marca e Diretrizes de Design (LDP Design)
 - **Arquétipos**: O Criador (*"Se pode ser imaginado, poderá ser criado"*) e O Explorador (*"Não levante cercas à minha volta"*)[cite: 20].

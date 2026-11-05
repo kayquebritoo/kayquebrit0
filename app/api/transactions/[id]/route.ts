@@ -5,6 +5,7 @@ import { transactions } from "@/lib/kbos/schema";
 import { deny, sessionUser } from "@/lib/kbos/rbac";
 import { checkId, readBody, transactionPatchSchema } from "@/lib/kbos/validators";
 import { serverError } from "@/lib/kbos/http";
+import { syncLeadConversionForTransaction } from "@/lib/kbos/sales";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await sessionUser();
@@ -21,6 +22,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (b.status !== undefined) patch.status = b.status;
     if (b.gatewayRef !== undefined) patch.gatewayRef = b.gatewayRef;
     await db().update(transactions).set(patch).where(eq(transactions.id, id));
+    if (b.status === "pago") {
+      await syncLeadConversionForTransaction(id);
+    }
     return NextResponse.json({ ok: true });
   } catch (e) {
     return serverError(e);

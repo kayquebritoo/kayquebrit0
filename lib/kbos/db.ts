@@ -15,6 +15,43 @@ type NeonDb = ReturnType<typeof drizzleNeon<typeof schema>>;
 
 let _db: NeonDb | null = null;
 
+/** Clusters Neon descontinuados após a migração para PostgreSQL 18 na VPS (out/2026). */
+export const DEPRECATED_NEON_CLUSTERS = ["ep-dawn-wildflower-b5k6i390"] as const;
+
+/**
+ * Extrai apenas o hostname de uma connection string Postgres sem jamais expor
+ * usuário, senha, query params ou caminho nos logs/erros.
+ */
+export function extractDbHost(rawUrl: string): string {
+  const cleaned = rawUrl.trim().replace(/^['"]|['"]$/g, "");
+  try {
+    return new URL(cleaned).hostname.toLowerCase();
+  } catch {
+    const match = cleaned.match(/@([^:/?#\s]+)/);
+    return match ? match[1].toLowerCase() : "<host-invalido>";
+  }
+}
+
+export function isDeprecatedNeonHost(host: string): boolean {
+  const h = host.toLowerCase();
+  return DEPRECATED_NEON_CLUSTERS.some((cluster) => h.includes(cluster));
+}
+
+export function assertAllowedDatabaseUrl(rawUrl: string): void {
+  const host = extractDbHost(rawUrl);
+  if (isDeprecatedNeonHost(host) && process.env.KBOS_ALLOW_DEPRECATED_NEON !== "1") {
+    throw new Error(
+      `[kbos/db] Conexão bloqueada: DATABASE_URL aponta para o cluster Neon descontinuado (${host}). ` +
+        `O KBOS em produção utiliza PostgreSQL 18 na VPS (kbos-pg18). ` +
+        `Para leitura/auditoria excepcional no banco antigo, defina explicitamente KBOS_ALLOW_DEPRECATED_NEON=1.`
+    );
+  }
+}
+
+export function _resetDbForTests(): void {
+  _db = null;
+}
+
 export function dbDriver(): "neon" | "pg" {
   return process.env.DATABASE_DRIVER === "pg" ? "pg" : "neon";
 }
@@ -76,13 +113,15 @@ function makePgDb(url: string): NeonDb {
 
 export function db() {
   if (!_db) {
-    const url = process.env.DATABASE_URL;
-    if (!url) {
+    const rawUrl = process.env.DATABASE_URL;
+    if (!rawUrl) {
       throw new Error(
         "DATABASE_URL não configurada. Crie um Postgres (Neon/Supabase), " +
           "rode `npx drizzle-kit push` e defina a variável de ambiente."
       );
     }
+    const url = rawUrl.trim().replace(/^['"]|['"]$/g, "");
+    assertAllowedDatabaseUrl(url);
     _db = dbDriver() === "pg" ? makePgDb(url) : drizzleNeon(neon(url), { schema });
   }
   return _db;
