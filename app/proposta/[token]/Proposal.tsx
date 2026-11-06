@@ -52,11 +52,12 @@ const fmtDateTime = (s: string | null | undefined) => {
       });
 };
 
-const PAY_CONDITION_LABEL: Record<string, string> = {
-  cash: "À vista (Pix ou transferência)",
-  installments: "Parcelado conforme cronograma",
-  card: "Cartão de crédito ou débito",
-};
+// Superfície de vidro incolor translúcido com leve desfoque e borda especular sutil.
+const GLASS_PANEL =
+  "relative overflow-hidden rounded-3xl border border-white/[0.09] bg-white/[0.03] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_24px_64px_rgba(0,0,0,0.45),inset_0_1px_0_0_rgba(255,255,255,0.12)]";
+
+const GLASS_SUBCARD =
+  "rounded-2xl border border-white/[0.08] bg-white/[0.025] backdrop-blur-xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.07)]";
 
 export default function Proposal({ token }: { token: string }) {
   const [data, setData] = useState<ProposalData | null>(null);
@@ -69,6 +70,8 @@ export default function Proposal({ token }: { token: string }) {
   const [uploading, setUploading] = useState(false);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [pdfDocKind, setPdfDocKind] = useState<"proposta" | "contrato">("proposta");
+  const [showClauses, setShowClauses] = useState(false);
+  const [showBrandFields, setShowBrandFields] = useState(false);
   const [pixCopied, setPixCopied] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [selectedInstallments, setSelectedInstallments] = useState<number>(1);
@@ -173,11 +176,6 @@ export default function Proposal({ token }: { token: string }) {
     return s.interestFreeOptions?.find((o) => o.count === targetCount) ?? null;
   }, [s, plan?.service, data?.acceptedAt, selectedInstallments]);
 
-  const cashOption = useMemo(() => {
-    if (!s || plan?.service === "mensal") return null;
-    return s.interestFreeOptions?.find((o) => o.count === 1) ?? null;
-  }, [s, plan?.service]);
-
   const activeInstallments = useMemo(() => {
     if (!s) return [];
     if (data?.acceptedAt || plan?.service === "mensal") return s.installments || [];
@@ -230,14 +228,7 @@ export default function Proposal({ token }: { token: string }) {
   const serviceCategoryLabel = plan ? SERVICE_LABELS[plan.service] || "Projeto" : "Projeto";
   const subtypeLabel = s?.subtype || plan?.subtype || null;
   const stages = plan ? SERVICE_TEMPLATES[plan.service] || SERVICE_TEMPLATES.site : [];
-  const deadlineLabel =
-    s?.deliveryDeadline ||
-    plan?.deliveryDeadline ||
-    (plan
-      ? plan.service === "mensal"
-        ? `Vigência de ${plan.months} mês(es) (${fmtDate(plan.startDate)} a ${fmtDate(plan.deliveryDate)})`
-        : `${fmtDate(plan.startDate)} a ${fmtDate(plan.deliveryDate)}`
-      : "Conforme cronograma");
+  const deadlineLabel = s?.deliveryDeadline || plan?.deliveryDeadline || "30 dias";
   const revisionsCount = s?.revisionsCount ?? 2;
 
   const installmentsQuery =
@@ -272,9 +263,50 @@ export default function Proposal({ token }: { token: string }) {
   };
 
   return (
-    <div className="kbos min-h-screen bg-[#11101E] text-[#EDE6EC] selection:bg-[#4F12C7]/40 selection:text-white">
-      {/* Barra superior translúcida com acesso rápido ao PDF */}
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#11101E]/80 backdrop-blur-xl">
+    <div className="kbos relative min-h-screen overflow-x-hidden bg-[#0D0C16] text-[#EDE6EC] selection:bg-[#4F12C7]/40 selection:text-white">
+      {/* Animacoes fluidas de fundo roxo + ruido sutil de vidro */}
+      <style>{`
+        @keyframes kbOrbFloatA {
+          0% { transform: translate3d(-4%, -3%, 0) scale(1); }
+          50% { transform: translate3d(8%, 6%, 0) scale(1.12); }
+          100% { transform: translate3d(-2%, 10%, 0) scale(0.96); }
+        }
+        @keyframes kbOrbFloatB {
+          0% { transform: translate3d(6%, 4%, 0) scale(1.04); }
+          50% { transform: translate3d(-9%, -6%, 0) scale(0.92); }
+          100% { transform: translate3d(4%, -8%, 0) scale(1.1); }
+        }
+        @keyframes kbOrbFloatC {
+          0% { transform: translate3d(0%, 6%, 0) scale(0.95); }
+          50% { transform: translate3d(7%, -5%, 0) scale(1.08); }
+          100% { transform: translate3d(-6%, 2%, 0) scale(1); }
+        }
+        .kb-orb-a { animation: kbOrbFloatA 22s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate; will-change: transform; }
+        .kb-orb-b { animation: kbOrbFloatB 28s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate; will-change: transform; }
+        .kb-orb-c { animation: kbOrbFloatC 25s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate; will-change: transform; }
+        @media (prefers-reduced-motion: reduce) {
+          .kb-orb-a, .kb-orb-b, .kb-orb-c { animation: none !important; }
+        }
+      `}</style>
+
+      {/* CAMADA DE FUNDO: Degrade roxo em movimento continuo + textura de ruido optico */}
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div className="kb-orb-a absolute -top-32 -left-24 h-[34rem] w-[34rem] rounded-full bg-[#4F12C7]/35 blur-[130px]" />
+        <div className="kb-orb-b absolute top-[28%] -right-28 h-[38rem] w-[38rem] rounded-full bg-[#350C85]/45 blur-[140px]" />
+        <div className="kb-orb-c absolute -bottom-36 left-[18%] h-[32rem] w-[32rem] rounded-full bg-[#4F12C7]/28 blur-[135px]" />
+        {/* Ponto focal de 5% em magenta apenas na atmosfera profunda */}
+        <div className="kb-orb-a absolute top-[62%] right-[22%] h-64 w-64 rounded-full bg-[#E80EFD]/[0.07] blur-[110px]" />
+        {/* Ruido granulado sutil para efeito de vidro fosco real */}
+        <div
+          className="absolute inset-0 opacity-[0.04] mix-blend-overlay"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          }}
+        />
+      </div>
+
+      {/* BARRA SUPERIOR EM VIDRO INCOLOR */}
+      <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-white/[0.02] backdrop-blur-2xl backdrop-saturate-150">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-6">
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -304,27 +336,27 @@ export default function Proposal({ token }: { token: string }) {
                   setPdfDocKind("proposta");
                   setShowPdfViewer((v) => !v);
                 }}
-                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3.5 py-2 text-xs font-medium text-[#EDE6EC] transition hover:border-white/35 hover:bg-white/[0.08] active:scale-[0.98]"
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-xs font-medium text-[#EDE6EC] transition duration-200 hover:border-white/25 hover:bg-white/[0.08] active:scale-[0.97]"
               >
-                {showPdfViewer ? "Ocultar visualização PDF" : "Visualizar proposta em PDF"}
+                {showPdfViewer ? "Ocultar PDF" : "Visualizar PDF"}
               </button>
               <a
                 href={pdfDownloadUrl}
                 download
-                className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-[#4F12C7] to-[#E80EFD] px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-[#4F12C7]/25 transition hover:opacity-95 active:scale-[0.98]"
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/15 bg-[#4F12C7]/85 px-4 py-2 text-xs font-semibold text-white shadow-[0_8px_24px_rgba(79,18,199,0.35),inset_0_1px_0_0_rgba(255,255,255,0.2)] transition duration-200 hover:bg-[#5B18DE] active:scale-[0.97]"
               >
-                {data?.acceptedAt ? "Baixar Proposta Aceita (PDF)" : "Baixar PDF"}
+                {data?.acceptedAt ? "Baixar Proposta Aceita (PDF)" : "Baixar PDF (2 páginas)"}
               </a>
             </div>
           )}
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6 sm:py-12">
+      <main className="relative z-10 mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
         {error && (
           <div
             role="alert"
-            className="rounded-2xl border border-red-400/30 bg-red-500/10 p-5 text-sm text-red-200"
+            className="rounded-2xl border border-red-400/30 bg-red-500/10 p-5 text-sm text-red-200 backdrop-blur-xl"
           >
             <p className="font-semibold">Atenção</p>
             <p className="mt-1">{error}</p>
@@ -332,26 +364,23 @@ export default function Proposal({ token }: { token: string }) {
         )}
 
         {loading && !s && !error && (
-          <div className="space-y-4 rounded-3xl border border-white/10 bg-white/[0.02] p-8">
+          <div className={`${GLASS_PANEL} space-y-4 p-8`}>
             <div className="h-4 w-48 animate-pulse rounded bg-white/10" />
             <div className="h-10 w-3/4 animate-pulse rounded bg-white/10" />
             <div className="h-24 w-full animate-pulse rounded-2xl bg-white/5" />
-            <p className="text-sm text-[#BDB7BC]">Carregando proposta comercial e termos…</p>
+            <p className="text-sm text-[#BDB7BC]">Carregando proposta comercial…</p>
           </div>
         )}
 
         {s && data && plan && (
           <>
-            {/* Visualizador integrado de PDF (sob demanda) */}
+            {/* VISUALIZADOR DE PDF SOB DEMANDA */}
             {showPdfViewer && (
-              <section
-                aria-label="Visualizador de PDF integrado"
-                className="overflow-hidden rounded-3xl border border-white/15 bg-[#161527] shadow-2xl"
-              >
+              <section aria-label="Visualizador de PDF integrado" className={GLASS_PANEL}>
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-3.5">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#BDB7BC]">
-                      Documento Oficial Integrado · 2 Páginas (A4)
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#BDB7BC]">
+                      Documento Oficial · 2 Páginas (A4)
                     </p>
                     <p className="text-sm font-medium text-[#EDE6EC]">
                       {pdfDocKind === "contrato"
@@ -397,7 +426,7 @@ export default function Proposal({ token }: { token: string }) {
                     <a
                       href={pdfDocKind === "contrato" ? contractDownloadUrl : pdfDownloadUrl}
                       download
-                      className="rounded-xl border border-[#E80EFD]/40 bg-[#E80EFD]/10 px-3 py-1.5 text-xs font-medium text-[#EDE6EC] hover:bg-[#E80EFD]/20"
+                      className="rounded-xl border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-[#EDE6EC] hover:bg-white/[0.12]"
                     >
                       Baixar arquivo
                     </a>
@@ -410,7 +439,7 @@ export default function Proposal({ token }: { token: string }) {
                     </button>
                   </div>
                 </div>
-                <div className="bg-black/40">
+                <div className="bg-black/30">
                   <object
                     data={pdfInlineUrl}
                     type="application/pdf"
@@ -418,7 +447,7 @@ export default function Proposal({ token }: { token: string }) {
                   >
                     <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
                       <p className="max-w-md text-sm text-[#BDB7BC]">
-                        Seu navegador móvel prefere abrir documentos PDF em tela cheia ou fazer o download direto.
+                        Seu navegador prefere abrir documentos PDF em tela cheia ou fazer o download direto.
                       </p>
                       <div className="flex flex-wrap justify-center gap-3">
                         <a
@@ -443,465 +472,239 @@ export default function Proposal({ token }: { token: string }) {
               </section>
             )}
 
-            {/* ── 1. CAPA COMERCIAL (HERO) ─────────────────────────────── */}
-            <section className="relative overflow-hidden rounded-3xl border border-white/12 bg-gradient-to-br from-[#1A182E] via-[#131222] to-[#11101E] p-6 shadow-2xl sm:p-10">
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-[#4F12C7]/25 blur-3xl"
-              />
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-[#E80EFD]/10 blur-3xl"
-              />
-
-              <div className="relative flex flex-wrap items-center justify-between gap-3">
+            {/* ── 1. CAPA COMERCIAL (VIDRO INCOLOR + HIERARQUIA LIMPA) ───── */}
+            <section className={`${GLASS_PANEL} p-6 sm:p-9`}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-white/15 bg-white/[0.05] px-3 py-1 font-mono text-xs font-medium text-[#EDE6EC]">
+                  <span className="rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 font-mono text-xs font-medium text-[#EDE6EC]">
                     {s.code}
                   </span>
-                  <span className="rounded-full border border-[#4F12C7]/50 bg-[#4F12C7]/20 px-3 py-1 text-xs font-medium text-[#EDE6EC]">
+                  <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs font-medium text-[#BDB7BC]">
                     {serviceCategoryLabel}
                     {subtypeLabel ? ` · ${subtypeLabel}` : ""}
                   </span>
                 </div>
-                <span
-                  className={`rounded-full border px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${
-                    data.acceptedAt
-                      ? "border-emerald-400/40 bg-emerald-400/15 text-emerald-200"
-                      : "border-[#E80EFD]/40 bg-[#E80EFD]/12 text-[#EDE6EC]"
-                  }`}
-                >
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1 text-xs font-medium text-[#EDE6EC]">
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      data.acceptedAt ? "bg-emerald-400" : "bg-[#E80EFD]"
+                    }`}
+                  />
                   {data.acceptedAt ? "Proposta Aceita e Formalizada" : "Aguardando Aceite"}
                 </span>
               </div>
 
-              <div className="relative mt-6">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#BDB7BC]">
-                  Proposta Comercial & Instrumento de Prestação de Serviços
+              <div className="mt-6">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BDB7BC]">
+                  Proposta Comercial · Studio Kayque Brito
                 </p>
-                <h1 className="font-display mt-2 text-3xl font-light tracking-[-0.02em] text-[#EDE6EC] sm:text-5xl sm:leading-[1.08]">
+                <h1 className="font-display mt-1.5 text-3xl font-light tracking-[-0.02em] text-[#EDE6EC] sm:text-5xl sm:leading-[1.08]">
                   {s.title}
                 </h1>
+                {s.terms && (
+                  <p className="mt-3 max-w-3xl text-sm leading-relaxed text-[#BDB7BC]">
+                    {s.terms}
+                  </p>
+                )}
               </div>
 
-              {/* Linha em gradiente da identidade LDP */}
-              <div className="my-6 h-[2px] w-full bg-gradient-to-r from-[#4F12C7] via-[#E80EFD]/60 to-transparent" />
-
-              <div className="relative grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#BDB7BC]">
-                    Cliente / Empresa
+              {/* 4 Indicadores Essenciais (sem repetição ao longo da página) */}
+              <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className={`${GLASS_SUBCARD} p-4`}>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BDB7BC]">
+                    Cliente
                   </p>
-                  <p className="mt-1.5 text-base font-semibold text-[#EDE6EC]">{s.clientName}</p>
-                  {(s.clientCompany || data.companyProfile.companyName) && (
-                    <p className="mt-0.5 text-xs text-[#BDB7BC]">
-                      {s.clientCompany || data.companyProfile.companyName}
-                    </p>
-                  )}
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#BDB7BC]">
-                    Prazo Estimado
-                  </p>
-                  <p className="mt-1.5 text-base font-semibold text-[#EDE6EC]">{deadlineLabel}</p>
+                  <p className="mt-1 text-sm font-semibold text-[#EDE6EC]">{s.clientName}</p>
                   <p className="mt-0.5 text-xs text-[#BDB7BC]">
-                    Início previsto: {fmtDate(plan.startDate)}
+                    {s.clientCompany || data.companyProfile.companyName || "Contratante"}
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#BDB7BC]">
-                    Investimento Total
+                <div className={`${GLASS_SUBCARD} p-4`}>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BDB7BC]">
+                    Prazo de Entrega
                   </p>
-                  <p className="font-display mt-1.5 text-2xl font-light text-[#EDE6EC]">
+                  <p className="mt-1 text-sm font-semibold text-[#EDE6EC]">{deadlineLabel}</p>
+                  <p className="mt-0.5 text-xs text-[#BDB7BC]">
+                    Previsão: {fmtDate(plan.startDate)} a {fmtDate(plan.deliveryDate)}
+                  </p>
+                </div>
+
+                <div className={`${GLASS_SUBCARD} p-4`}>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BDB7BC]">
+                    Validade do Orçamento
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-[#EDE6EC]">
+                    10 dias ({s.validUntil ? `até ${fmtDate(s.validUntil)}` : `até ${fmtDate(data.expiresAt)}`})
+                  </p>
+                  <p className="mt-0.5 text-xs text-[#BDB7BC]">
+                    Expira em {fmtDateTime(data.expiresAt)}
+                  </p>
+                </div>
+
+                <div className={`${GLASS_SUBCARD} p-4`}>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BDB7BC]">
+                    Investimento Selecionado
+                  </p>
+                  <p className="font-display mt-1 text-2xl font-light text-[#EDE6EC]">
                     {formatBRL(financialSummary.finalTotal)}
                   </p>
                   <p className="mt-0.5 text-xs text-[#BDB7BC]">
-                    {plan.service === "mensal"
-                      ? `${plan.months} mensalidade(s) de ${formatBRL(s.total)}`
-                      : activeInstallments.length > 1
-                        ? `${activeInstallments.length}x no PIX${financialSummary.discountPercent > 0 ? ` (${financialSummary.discountPercent}% OFF · −${formatBRL(financialSummary.discountAmount)})` : " sem juros"}`
-                        : `À vista no PIX${financialSummary.discountPercent > 0 ? ` (${financialSummary.discountPercent}% OFF · −${formatBRL(financialSummary.discountAmount)})` : ""}`}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#BDB7BC]">
-                    Validade da Proposta
-                  </p>
-                  <p className="mt-1.5 text-base font-semibold text-[#EDE6EC]">
-                    {s.validUntil ? fmtDate(s.validUntil) : fmtDate(data.expiresAt)}
-                  </p>
-                  <p className="mt-0.5 text-xs text-[#BDB7BC]">
-                    Link ativo até {fmtDateTime(data.expiresAt)}
+                    {activeInstallments.length === 1
+                      ? `À vista no PIX${financialSummary.discountPercent > 0 ? ` (${financialSummary.discountPercent}% OFF)` : ""}`
+                      : `${activeInstallments.length}x no PIX${financialSummary.discountPercent > 0 ? ` (${financialSummary.discountPercent}% OFF)` : " sem juros"}`}
                   </p>
                 </div>
               </div>
             </section>
 
-            {/* ── FLUXO CONECTADO (ETAPAS DE FORMALIZAÇÃO E CONVERSÃO) ── */}
-            <section
-              aria-label="Etapas de contratação"
-              className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5"
-            >
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BDB7BC]">
-                  Jornada de Contratação e Ativação
-                </p>
-                <span className="text-xs text-[#BDB7BC]">
-                  Aceite explícito + pagamento confirmado = ativação automática como cliente
-                </span>
-              </div>
-              <div className="grid gap-2.5 sm:grid-cols-5">
-                {[
-                  {
-                    step: "01",
-                    title: "Proposta apresentada",
-                    desc: `Documento ${s.code}`,
-                    done: true,
-                    active: !data.acceptedAt,
-                  },
-                  {
-                    step: "02",
-                    title: "Aceite da proposta",
-                    desc: data.acceptedAt ? `Em ${fmtDate(data.acceptedAt)}` : "Assinatura eletrônica",
-                    done: Boolean(data.acceptedAt),
-                    active: !data.acceptedAt,
-                  },
-                  {
-                    step: "03",
-                    title: "Contrato formalizado",
-                    desc: data.acceptedAt ? "PDF disponível" : "Instrumento particular",
-                    done: Boolean(data.acceptedAt),
-                    active: false,
-                  },
-                  {
-                    step: "04",
-                    title: "Pagamento e confirmação",
-                    desc: data.lifecycle?.paymentConfirmed
-                      ? "Pagamento confirmado"
-                      : "Entrada / parcela inicial",
-                    done: Boolean(data.lifecycle?.paymentConfirmed),
-                    active: Boolean(data.acceptedAt && !data.lifecycle?.paymentConfirmed),
-                  },
-                  {
-                    step: "05",
-                    title: "Cliente ativo",
-                    desc: data.lifecycle?.clientConverted
-                      ? "Convertido e ativo"
-                      : "Após confirmação do pagamento",
-                    done: Boolean(data.lifecycle?.clientConverted),
-                    active: false,
-                  },
-                ].map((st) => (
-                  <div
-                    key={st.step}
-                    className={`rounded-xl border p-3 transition ${
-                      st.done
-                        ? "border-emerald-400/35 bg-emerald-400/[0.07]"
-                        : st.active
-                          ? "border-[#E80EFD]/40 bg-[#4F12C7]/15"
-                          : "border-white/10 bg-black/20 opacity-75"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-widest">
-                      <span className={st.done ? "text-emerald-300" : "text-[#BDB7BC]"}>
-                        Etapa {st.step}
-                      </span>
-                      <span className={st.done ? "text-emerald-300" : "text-white/40"}>
-                        {st.done ? "Concluída" : st.active ? "Atual" : "Pendente"}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs font-semibold text-[#EDE6EC]">{st.title}</p>
-                    <p className="mt-0.5 text-[11px] text-[#BDB7BC]">{st.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            {/* ── COMPROVANTE DE PROPOSTA ACEITA (QUANDO JÁ ACEITA) ───── */}
+            {/* ── COMPROVANTE DE ACEITE (EXIBIDO APENAS QUANDO JÁ ACEITA) ── */}
             {data.acceptedAt && (
               <section
                 role="status"
                 aria-label="Registro verificável do aceite"
-                className="rounded-3xl border border-emerald-400/35 bg-gradient-to-br from-emerald-500/[0.09] via-[#151A24] to-[#11101E] p-6 sm:p-8"
+                className={`${GLASS_PANEL} border-emerald-400/30 p-6 sm:p-8`}
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300">
-                      Cópia da Proposta Aceita · Registro Verificável
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
+                      Proposta Aceita · Registro Verificável
                     </p>
                     <h2 className="font-display mt-1 text-2xl font-light text-[#EDE6EC]">
                       Aceite registrado e contrato formalizado
                     </h2>
                     <p className="mt-1 text-sm text-[#BDB7BC]">
-                      O projeto foi aberto em preparação. A conversão definitiva e o início da execução
-                      ocorrem mediante a confirmação do pagamento previsto no cronograma.
+                      Data do aceite: {fmtDateTime(data.acceptedAt)} · Responsável:{" "}
+                      <strong className="text-[#EDE6EC]">
+                        {data.acceptance?.signerName || data.signerName || s.clientName}
+                      </strong>
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPdfDocKind("proposta");
-                        setShowPdfViewer(true);
-                      }}
-                      className="rounded-xl border border-white/20 bg-white/[0.06] px-4 py-2.5 text-xs font-semibold text-[#EDE6EC] hover:bg-white/[0.12]"
-                    >
-                      Visualizar PDF Aceito
-                    </button>
                     <a
                       href={pdfDownloadUrl}
                       download
-                      className="rounded-xl bg-emerald-500/20 border border-emerald-400/40 px-4 py-2.5 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/30"
+                      className="rounded-xl border border-emerald-400/35 bg-emerald-500/15 px-4 py-2.5 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/25"
                     >
-                      Baixar Cópia da Proposta Aceita (PDF)
+                      Baixar Proposta Aceita (PDF)
                     </a>
                     <a
                       href={contractDownloadUrl}
                       download
-                      className="rounded-xl border border-white/20 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-[#EDE6EC] hover:border-white/40"
+                      className="rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-[#EDE6EC] hover:border-white/30"
                     >
-                      Baixar Contrato Formalizado (PDF)
+                      Baixar Contrato (PDF)
                     </a>
                   </div>
                 </div>
 
-                <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#BDB7BC]">
-                      1. Identificação da Proposta
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-[#EDE6EC]">
-                      {s.code} — {s.title}
-                    </p>
-                    {subtypeLabel && (
-                      <p className="mt-0.5 text-xs text-[#BDB7BC]">
-                        Categoria: {serviceCategoryLabel} ({subtypeLabel})
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#BDB7BC]">
-                      2. Data e Horário do Aceite
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-[#EDE6EC]">
-                      {fmtDateTime(data.acceptedAt)}
-                    </p>
-                    <p className="mt-0.5 text-xs text-[#BDB7BC]">Fuso oficial: America/Belem (BRT)</p>
-                  </div>
-
-                  <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#BDB7BC]">
-                      3. Responsável pelo Aceite
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-[#EDE6EC]">
-                      {data.acceptance?.signerName || data.signerName || data.companyProfile.contactName || s.clientName}
-                    </p>
-                    <p className="mt-0.5 text-xs text-[#BDB7BC]">
-                      {data.companyProfile.legalName || data.companyProfile.companyName || s.clientCompany || s.clientName}
-                      {data.companyProfile.document ? ` · ${data.companyProfile.document}` : ""}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#BDB7BC]">
-                      4. Versão e Condições Aceitas
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-[#EDE6EC]">
-                      {formatBRL(financialSummary.finalTotal)} ({s.installments.length} parcela{s.installments.length > 1 ? "s" : ""})
-                    </p>
-                    <p className="mt-0.5 text-xs text-[#BDB7BC]">
-                      Versão congelada em {fmtDateTime(data.acceptance?.budgetVersion || s.createdAt)}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-white/10 bg-black/25 p-4 sm:col-span-2">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#BDB7BC]">
-                        5. Registro Verificável do Aceite (Assinatura Eletrônica Simples — Lei nº 14.063/2020)
-                      </p>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className={`${GLASS_SUBCARD} p-4`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BDB7BC]">
+                        Código de Verificação (Lei nº 14.063/2020)
+                      </span>
                       {data.acceptance?.code && (
                         <button
                           type="button"
                           onClick={() => void copyVerificationCode()}
-                          className="rounded-lg border border-white/15 px-2.5 py-1 text-[11px] text-[#EDE6EC] hover:border-white/35"
+                          className="rounded-lg border border-white/15 px-2 py-0.5 text-[11px] text-[#EDE6EC] hover:border-white/35"
                         >
-                          {codeCopied ? "Código copiado" : "Copiar código"}
+                          {codeCopied ? "Copiado" : "Copiar"}
                         </button>
                       )}
                     </div>
-                    <p className="mt-1 font-mono text-sm font-semibold text-emerald-300">
+                    <p className="mt-1 font-mono text-xs font-semibold text-emerald-300">
                       {data.acceptance?.code || `KBOS-${s.code.replace("#", "")}-ACEITO`}
                     </p>
                     {data.acceptance?.sha256 && (
-                      <p className="mt-1 break-all font-mono text-[11px] text-[#BDB7BC]">
+                      <p className="mt-1 truncate font-mono text-[10px] text-[#BDB7BC]">
                         SHA-256: {data.acceptance.sha256}
                       </p>
                     )}
                   </div>
-                </div>
 
-                {/* Instruções diretas de pagamento por PIX após o aceite */}
-                <div className="mt-5 rounded-2xl border border-[#4F12C7]/45 bg-[#4F12C7]/15 p-4 sm:p-5">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#E80EFD]">
-                        Próximo Passo · Pagamento Direto via PIX
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-[#EDE6EC]">
-                        {activeInstallments.length > 1
-                          ? `1ª parcela no aceite: ${formatBRL(activeInstallments[0]?.amount ?? financialSummary.finalTotal)} (total contratado: ${formatBRL(financialSummary.finalTotal)} em ${activeInstallments.length}x)`
-                          : `Pagamento à vista no aceite: ${formatBRL(financialSummary.finalTotal)}`}
-                      </p>
-                      <p className="mt-1 text-xs text-[#BDB7BC]">
-                        Realize o pagamento diretamente pela chave PIX abaixo. Após a conferência bancária e baixa manual pelo estúdio no KBOS, seu cadastro é ativado automaticamente como Cliente.
-                      </p>
+                  <div className={`${GLASS_SUBCARD} p-4`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BDB7BC]">
+                        Pagamento via PIX Direto
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => void copyPix()}
+                        className="rounded-lg border border-white/15 px-2 py-0.5 text-[11px] text-[#EDE6EC] hover:border-white/35"
+                      >
+                        {pixCopied ? "Chave copiada" : "Copiar PIX"}
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => void copyPix()}
-                      className="shrink-0 rounded-xl bg-gradient-to-r from-[#4F12C7] to-[#E80EFD] px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-[#4F12C7]/25 transition hover:opacity-95"
-                    >
-                      {pixCopied ? "Chave PIX copiada" : "Copiar Chave PIX"}
-                    </button>
-                  </div>
-                  <div className="mt-3 rounded-xl border border-white/10 bg-black/35 p-3 font-mono text-xs text-[#EDE6EC] whitespace-pre-line">
-                    {pixInfo}
+                    <p className="mt-1 font-mono text-xs text-[#EDE6EC]">{pixInfo}</p>
+                    <p className="mt-1 text-[11px] text-[#BDB7BC]">
+                      1ª parcela no aceite: {formatBRL(activeInstallments[0]?.amount ?? financialSummary.finalTotal)}. Ativação como cliente após confirmação bancária.
+                    </p>
                   </div>
                 </div>
 
                 {data.planningUrl && (
-                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                     <div>
                       <p className="text-sm font-semibold text-[#EDE6EC]">
-                        Diretrizes da Marca e Planejamento Estratégico
+                        Diretrizes da Marca e Planejamento
                       </p>
                       <p className="text-xs text-[#BDB7BC]">
-                        Acesse a página dedicada para acompanhar o planejamento e os ativos enviados.
+                        Acompanhe o planejamento estratégico e os ativos enviados.
                       </p>
                     </div>
                     <a
                       href={data.planningUrl}
-                      className="rounded-xl bg-gradient-to-r from-[#4F12C7] to-[#E80EFD] px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-[#4F12C7]/25"
+                      className="rounded-xl border border-white/15 bg-[#4F12C7]/85 px-4 py-2 text-xs font-semibold text-white hover:bg-[#5B18DE]"
                     >
-                      Abrir minha marca e planejamento →
+                      Abrir planejamento →
                     </a>
                   </div>
                 )}
               </section>
             )}
 
-            {/* ── 2 & 3. APRESENTAÇÃO PROFISSIONAL E OBJETIVO DO PROJETO ── */}
-            <div className="grid gap-6 md:grid-cols-2">
-              <section className="rounded-3xl border border-white/10 bg-white/[0.025] p-6 sm:p-7">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#BDB7BC]">
-                  01 · Apresentação Profissional
-                </p>
-                <h2 className="font-display mt-2 text-2xl font-light text-[#EDE6EC]">
-                  Kayque Brito — Studio Criativo & Engenharia Digital
-                </h2>
-                <p className="mt-3 text-sm leading-relaxed text-[#BDB7BC]">
-                  Atuação integrada em desenvolvimento de software sob medida, design de identidade
-                  e direção audiovisual em Belém/PA. Cada projeto é construído sobre três pilares
-                  inegociáveis: <strong className="text-[#EDE6EC]">Agilidade, Inovação e Inteligência</strong>,
-                  unindo estética refinada, performance técnica e foco em resultado comercial.
-                </p>
-                <div className="mt-4 flex flex-wrap gap-2 text-xs text-[#BDB7BC]">
-                  <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1">
-                    Arquitetura Web & E-commerce
-                  </span>
-                  <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1">
-                    UI/UX & Direção de Arte
-                  </span>
-                  <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1">
-                    Produção Audiovisual & Conteúdo
-                  </span>
-                </div>
-              </section>
-
-              <section className="rounded-3xl border border-white/10 bg-white/[0.025] p-6 sm:p-7">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#BDB7BC]">
-                  02 · Objetivo do Projeto
-                </p>
-                <h2 className="font-display mt-2 text-2xl font-light text-[#EDE6EC]">
-                  {subtypeLabel ? `${subtypeLabel} para ${s.clientCompany || s.clientName}` : s.title}
-                </h2>
-                <p className="mt-3 text-sm leading-relaxed text-[#BDB7BC]">
-                  Esta proposta estrutura a entrega de{" "}
-                  <strong className="text-[#EDE6EC]">{s.title}</strong> para{" "}
-                  <strong className="text-[#EDE6EC]">
-                    {s.clientCompany ? `${s.clientName} (${s.clientCompany})` : s.clientName}
-                  </strong>
-                  , com escopo, prazos e responsabilidades claramente delimitados para assegurar
-                  previsibilidade de execução, padrão visual superior e retorno comercial.
-                </p>
-                {s.terms && (
-                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-3.5 text-xs leading-relaxed text-[#EDE6EC]">
-                    <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BDB7BC]">
-                      Diretrizes Específicas da Proposta
-                    </span>
-                    <p className="mt-1 whitespace-pre-line">{s.terms}</p>
-                  </div>
-                )}
-              </section>
-            </div>
-
-            {/* ── 4. ESCOPO E ENTREGÁVEIS ──────────────────────────────── */}
-            <section className="rounded-3xl border border-white/10 bg-white/[0.025] p-6 sm:p-8">
+            {/* ── 2. ESCOPO, ENTREGÁVEIS E CRONOGRAMA DE 30 DIAS ───────── */}
+            <section className={`${GLASS_PANEL} p-6 sm:p-8`}>
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#BDB7BC]">
-                    03 · Escopo e Entregáveis
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BDB7BC]">
+                    01 · Escopo e Execução
                   </p>
                   <h2 className="font-display mt-1 text-2xl font-light text-[#EDE6EC] sm:text-3xl">
-                    Detalhamento dos serviços inclusos
+                    Entregáveis e fases do projeto
                   </h2>
                 </div>
-                <span className="rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1 text-xs text-[#BDB7BC]">
-                  {s.items.length} {s.items.length === 1 ? "item detalhado" : "itens detalhados"}
+                <span className="rounded-full border border-white/10 bg-white/[0.03] px-3.5 py-1 text-xs text-[#BDB7BC]">
+                  Prazo total de entrega: <strong className="text-[#EDE6EC]">{deadlineLabel}</strong>
                 </span>
               </div>
 
-              <div className="mt-6 space-y-3">
+              {/* Lista enxuta de entregáveis */}
+              <div className="mt-5 space-y-3">
                 {s.items.map((item, idx) => (
                   <div
                     key={idx}
-                    className="flex flex-col justify-between gap-4 rounded-2xl border border-white/10 bg-black/25 p-4 transition hover:border-white/20 sm:flex-row sm:items-center sm:p-5"
+                    className={`${GLASS_SUBCARD} flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center`}
                   >
                     <div className="flex items-start gap-3.5">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-[#4F12C7]/40 bg-[#4F12C7]/15 font-mono text-xs font-semibold text-[#EDE6EC]">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/12 bg-white/[0.04] font-mono text-xs font-semibold text-[#EDE6EC]">
                         {String(idx + 1).padStart(2, "0")}
                       </span>
                       <div>
                         <h3 className="text-base font-semibold text-[#EDE6EC]">{item.service}</h3>
                         {item.description && (
-                          <p className="mt-1 text-sm leading-relaxed text-[#BDB7BC]">
+                          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[#BDB7BC]">
                             {item.description}
                           </p>
                         )}
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[#BDB7BC]">
-                          <span className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-0.5">
-                            Quantidade: {item.quantity} un.
-                          </span>
-                          <span className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-0.5">
-                            Valor unitário: {formatBRL(item.unitPrice)}
-                          </span>
-                          {item.date && (
-                            <span className="rounded-lg border border-[#E80EFD]/30 bg-[#E80EFD]/10 px-2.5 py-0.5 text-[#EDE6EC]">
-                              Execução prevista: {fmtDate(item.date)}
-                            </span>
-                          )}
-                        </div>
                       </div>
                     </div>
-
                     <div className="shrink-0 text-right sm:pl-4">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#BDB7BC]">
-                        Subtotal
-                      </p>
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BDB7BC]">
+                        Valor Base
+                      </span>
                       <p className="font-display text-xl font-light text-[#EDE6EC]">
                         {formatBRL(item.total)}
                       </p>
@@ -909,454 +712,306 @@ export default function Proposal({ token }: { token: string }) {
                   </div>
                 ))}
               </div>
-            </section>
 
-            {/* ── 5. CRONOGRAMA E PRAZO ESTIMADO ───────────────────────── */}
-            <section className="rounded-3xl border border-white/10 bg-white/[0.025] p-6 sm:p-8">
-              <div className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#BDB7BC]">
-                    04 · Cronograma e Prazo Estimado
-                  </p>
-                  <h2 className="font-display mt-1 text-2xl font-light text-[#EDE6EC] sm:text-3xl">
-                    Etapas de execução e entrega
-                  </h2>
-                </div>
-                <div className="rounded-2xl border border-[#4F12C7]/40 bg-[#4F12C7]/15 px-4 py-2 text-right">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BDB7BC]">
-                    Prazo Estimado
-                  </p>
-                  <p className="text-sm font-semibold text-[#EDE6EC]">{deadlineLabel}</p>
-                </div>
-              </div>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {/* Linha do tempo das 4 etapas */}
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {stages.map((stageTitle, index) => (
-                  <div
-                    key={stageTitle}
-                    className="rounded-2xl border border-white/10 bg-black/25 p-4"
-                  >
-                    <div className="flex items-center justify-between text-xs text-[#BDB7BC]">
-                      <span className="font-mono font-semibold text-[#E80EFD]">
-                        FASE 0{index + 1}
+                  <div key={stageTitle} className={`${GLASS_SUBCARD} p-4`}>
+                    <div className="flex items-center justify-between text-[11px] text-[#BDB7BC]">
+                      <span className="font-mono font-semibold text-[#EDE6EC]">
+                        ETAPA 0{index + 1}
                       </span>
                       <span>
                         {index === 0
-                          ? `Início: ${fmtDate(plan.startDate)}`
+                          ? fmtDate(plan.startDate)
                           : index === stages.length - 1
-                            ? `Entrega: ${fmtDate(plan.deliveryDate)}`
+                            ? fmtDate(plan.deliveryDate)
                             : "Execução"}
                       </span>
                     </div>
-                    <p className="mt-2 text-sm font-semibold text-[#EDE6EC]">{stageTitle}</p>
+                    <p className="mt-1.5 text-sm font-medium text-[#EDE6EC]">{stageTitle}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3 text-xs text-[#BDB7BC]">
+              {/* Garantias operacionais integradas (sem criar seções repetidas) */}
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-4 py-3 text-xs text-[#BDB7BC]">
                 <span>
-                  Início programado: <strong className="text-[#EDE6EC]">{fmtDate(plan.startDate)}</strong>
+                  Revisões inclusas: <strong className="text-[#EDE6EC]">até {revisionsCount} rodadas</strong> dentro do escopo
                 </span>
                 <span>
-                  {plan.service === "mensal"
-                    ? `Término da vigência (${plan.months} meses): `
-                    : "Previsão de conclusão: "}
-                  <strong className="text-[#EDE6EC]">{fmtDate(plan.deliveryDate)}</strong>
+                  Titularidade: <strong className="text-[#EDE6EC]">cessão integral de uso</strong> após quitação
                 </span>
                 <span>
-                  Os prazos contam a partir do envio dos materiais iniciais e confirmação das condições comerciais.
+                  Suporte direto: <strong className="text-[#EDE6EC]">Studio Kayque Brito (Belém/PA)</strong>
                 </span>
               </div>
             </section>
 
-            {/* ── 6. INVESTIMENTO E CONDIÇÕES DE PAGAMENTO ─────────────── */}
-            <section className="rounded-3xl border border-white/10 bg-white/[0.025] p-6 sm:p-8">
-              <div className="flex flex-wrap items-end justify-between gap-4">
+            {/* ── 3. FORMAS DE PAGAMENTO E DESCONTOS PROGRESSIVOS PIX ──── */}
+            <section className={`${GLASS_PANEL} p-6 sm:p-8`}>
+              <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#BDB7BC]">
-                    05 · Investimento e Condições de Pagamento
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BDB7BC]">
+                    02 · Investimento e Formas de Pagamento
                   </p>
                   <h2 className="font-display mt-1 text-2xl font-light text-[#EDE6EC] sm:text-3xl">
-                    Demonstrativo transparente de valores e parcelas
+                    { data.acceptedAt
+                      ? "Condição de pagamento formalizada"
+                      : "Selecione a forma de pagamento via PIX" }
                   </h2>
                 </div>
-                {s.progressiveDiscounts && (
-                  <span className="rounded-full border border-[#E80EFD]/40 bg-[#E80EFD]/12 px-3.5 py-1 text-xs font-semibold text-[#EDE6EC]">
-                    Descontos progressivos via PIX direto · Até 10% OFF
-                  </span>
-                )}
+                <span className="text-xs text-[#BDB7BC]">
+                  Valor base: <strong className="text-[#EDE6EC]">{formatBRL(financialSummary.subtotal)}</strong> · Sem juros em até 4x
+                </span>
               </div>
 
-              {/* Destaque visual da economia da opção à vista (1x com 10% OFF) */}
-              {s.progressiveDiscounts && cashOption && cashOption.discountAmount > 0 && (
-                <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#E80EFD]/45 bg-gradient-to-r from-[#4F12C7]/25 via-[#E80EFD]/15 to-transparent p-4 sm:px-5">
+              {/* SELETOR ESTRUTURADO DAS 4 OPÇÕES (1x, 2x, 3x, 4x) */}
+              {plan.service !== "mensal" &&
+                s.interestFreeOptions &&
+                s.interestFreeOptions.length > 1 && (
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    {s.interestFreeOptions.map((opt) => {
+                      const active =
+                        (data.acceptedAt ? activeInstallments.length : selectedInstallments) ===
+                        opt.count;
+                      const isCash = opt.count === 1;
+                      return (
+                        <button
+                          key={opt.count}
+                          type="button"
+                          disabled={Boolean(data.acceptedAt)}
+                          onClick={() => setSelectedInstallments(opt.count)}
+                          aria-pressed={active}
+                          className={`group relative flex flex-col justify-between rounded-2xl border p-4 text-left transition duration-200 active:scale-[0.98] ${
+                            active
+                              ? "border-white/30 bg-white/[0.08] shadow-[0_12px_32px_rgba(0,0,0,0.35),inset_0_1px_0_0_rgba(255,255,255,0.22)]"
+                              : "border-white/[0.08] bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]"
+                          } ${data.acceptedAt ? "cursor-default" : ""}`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="inline-flex items-center gap-2 text-xs font-semibold text-[#EDE6EC]">
+                                <span
+                                  className={`h-2 w-2 rounded-full transition ${
+                                    active
+                                      ? "bg-[#E80EFD] shadow-[0_0_8px_#E80EFD]"
+                                      : "border border-white/30 bg-transparent"
+                                  }`}
+                                />
+                                {isCash ? "À vista (1x)" : `${opt.count}x sem juros`}
+                              </span>
+                              {s.progressiveDiscounts && (
+                                <span
+                                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide ${
+                                    isCash
+                                      ? "border border-[#E80EFD]/40 bg-[#E80EFD]/12 text-[#EDE6EC]"
+                                      : opt.discountPercent > 0
+                                        ? "border border-white/15 bg-white/[0.06] text-[#EDE6EC]"
+                                        : "border border-white/10 bg-white/[0.02] text-[#BDB7BC]"
+                                  }`}
+                                >
+                                  {opt.discountPercent > 0 ? `−${opt.discountPercent}%` : "Base"}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="mt-4">
+                              <p className="font-display text-2xl font-light text-[#EDE6EC]">
+                                {isCash
+                                  ? formatBRL(opt.total)
+                                  : `${opt.count}x de ${formatBRL(opt.regularAmount)}`}
+                              </p>
+                              <p className="mt-0.5 text-xs text-[#BDB7BC]">
+                                {isCash
+                                  ? "Parcela única no aceite"
+                                  : `Total: ${formatBRL(opt.total)}${
+                                      opt.firstAmount !== opt.regularAmount
+                                        ? ` (1ª de ${formatBRL(opt.firstAmount)})`
+                                        : ""
+                                    }`}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 border-t border-white/[0.08] pt-2.5 text-[11px]">
+                            {opt.discountAmount > 0 ? (
+                              <span className="font-medium text-emerald-300">
+                                Economia de {formatBRL(opt.discountAmount)}
+                              </span>
+                            ) : (
+                              <span className="text-[#BDB7BC]">Valor base sem desconto</span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+              {/* DETALHAMENTO DE VENCIMENTOS + CHAVE PIX (LADO A LADO, SEM REPETIÇÃO) */}
+              <div className="mt-6 grid gap-4 lg:grid-cols-12">
+                {/* Coluna Esquerda: Vencimentos da opção selecionada */}
+                <div className={`${GLASS_SUBCARD} flex flex-col justify-between p-5 lg:col-span-7`}>
                   <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-[#E80EFD] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-white">
-                        Maior Economia · 10% OFF à Vista
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.08] pb-3">
+                      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#BDB7BC]">
+                        Cronograma da Opção Selecionada ({activeInstallments.length}x)
                       </span>
-                      <span className="text-xs font-medium text-[#EDE6EC]">
-                        Pagamento via PIX direto com confirmação manual no KBOS
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-sm text-[#EDE6EC]">
-                      Na opção <strong>À vista (1x)</strong>, você economiza{" "}
-                      <strong className="text-[#E80EFD]">{formatBRL(cashOption.discountAmount)}</strong>{" "}
-                      sobre o valor base de {formatBRL(cashOption.baseTotal)}, investindo{" "}
-                      <strong>{formatBRL(cashOption.total)}</strong>.
-                    </p>
-                  </div>
-                  {!data.acceptedAt && selectedInstallments !== 1 && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedInstallments(1)}
-                      className="shrink-0 rounded-xl border border-[#E80EFD]/50 bg-[#E80EFD]/20 px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#E80EFD]/30"
-                    >
-                      Selecionar À vista (−{formatBRL(cashOption.discountAmount)})
-                    </button>
-                  )}
-                </div>
-              )}
-
-              <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-                {/* Quadro resumo de valores: Valor Original, Descontos, Valor Final */}
-                <div className="flex flex-col justify-between rounded-2xl border border-white/12 bg-black/30 p-5">
-                  <div className="space-y-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#BDB7BC]">
-                      Resumo Financeiro da Proposta
-                    </p>
-                    <div className="flex items-center justify-between border-b border-white/10 pb-2.5 text-sm">
-                      <span className="text-[#BDB7BC]">Valor base dos serviços</span>
-                      <span className="font-medium text-[#EDE6EC]">
-                        {formatBRL(financialSummary.subtotal)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between border-b border-white/10 pb-2.5 text-sm">
-                      <span className="text-[#BDB7BC]">
-                        {financialSummary.discountPercent > 0
-                          ? `Desconto progressivo (${financialSummary.discountPercent}% OFF)`
-                          : "Descontos concedidos"}
-                      </span>
-                      <span
-                        className={`font-medium ${
-                          financialSummary.discountAmount > 0 ? "text-emerald-300" : "text-[#EDE6EC]"
-                        }`}
-                      >
+                      <span className="text-xs text-[#BDB7BC]">
                         {financialSummary.discountAmount > 0
-                          ? `− ${formatBRL(financialSummary.discountAmount)}`
-                          : "R$ 0,00 (0% · valor base)"}
+                          ? `Desconto de ${financialSummary.discountPercent}% (−${formatBRL(financialSummary.discountAmount)})`
+                          : "Sem desconto (0%)"}
                       </span>
                     </div>
-                    <div className="flex items-baseline justify-between pt-2">
-                      <div>
-                        <span className="block text-xs font-semibold uppercase tracking-[0.2em] text-[#E80EFD]">
-                          {plan.service === "mensal" ? "Total do Plano" : "Valor Final Selecionado"}
-                        </span>
-                        <span className="text-xs text-[#BDB7BC]">
-                          {plan.service === "mensal"
-                            ? PAY_CONDITION_LABEL[s.paymentCondition || plan.paymentCondition || "cash"]
-                            : activeInstallments.length === 1
-                              ? `À vista (1x no PIX)${financialSummary.discountPercent > 0 ? ` · ${financialSummary.discountPercent}% de desconto` : ""}`
-                              : `Parcelado em ${activeInstallments.length}x no PIX${financialSummary.discountPercent > 0 ? ` · ${financialSummary.discountPercent}% de desconto` : " sem desconto"}`}
-                        </span>
-                      </div>
-                      <span className="font-display text-3xl font-light text-[#EDE6EC]">
-                        {formatBRL(financialSummary.finalTotal)}
-                      </span>
+
+                    <div className="mt-3 divide-y divide-white/[0.06]">
+                      {activeInstallments.map((inst, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between gap-3 py-2.5 text-sm"
+                        >
+                          <div>
+                            <p className="font-medium text-[#EDE6EC]">{inst.label}</p>
+                            <p className="text-xs text-[#BDB7BC]">
+                              {inst.onAcceptance
+                                ? `No aceite da proposta (${fmtDate(inst.dueDate)})`
+                                : `Vencimento em ${fmtDate(inst.dueDate)}`}
+                            </p>
+                          </div>
+                          <span className="font-mono text-sm font-semibold text-[#EDE6EC]">
+                            {formatBRL(inst.amount)}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
-                  <div className="mt-6 rounded-xl border border-[#4F12C7]/40 bg-[#4F12C7]/10 p-4">
+                  <div className="mt-4 flex items-baseline justify-between border-t border-white/10 pt-3">
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#BDB7BC]">
+                      Total Final ({activeInstallments.length}x no PIX)
+                    </span>
+                    <span className="font-display text-2xl font-light text-[#EDE6EC]">
+                      {formatBRL(financialSummary.finalTotal)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Coluna Direita: Chave PIX e fluxo de confirmação */}
+                <div className={`${GLASS_SUBCARD} flex flex-col justify-between p-5 lg:col-span-5`}>
+                  <div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#BDB7BC]">
-                        Pagamento via PIX Direto (Confirmação Manual)
+                      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#BDB7BC]">
+                        Chave PIX Oficial
                       </span>
                       <button
                         type="button"
                         onClick={() => void copyPix()}
-                        className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-xs font-medium text-[#EDE6EC] transition hover:border-white/35"
+                        className="rounded-xl border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-[#EDE6EC] transition hover:border-white/30 hover:bg-white/[0.12] active:scale-[0.97]"
                       >
-                        {pixCopied ? "Copiado" : "Copiar Pix"}
+                        {pixCopied ? "Chave copiada" : "Copiar Chave PIX"}
                       </button>
                     </div>
-                    <p className="mt-1.5 whitespace-pre-line font-mono text-xs text-[#EDE6EC]">
+
+                    <div className="mt-3 rounded-xl border border-white/[0.08] bg-black/25 p-3.5 font-mono text-xs text-[#EDE6EC] whitespace-pre-line">
                       {pixInfo}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Cronograma de parcelas e seletor das 4 opções */}
-                <div className="rounded-2xl border border-white/12 bg-black/30 p-5">
-                  {plan.service !== "mensal" &&
-                    s.interestFreeOptions &&
-                    s.interestFreeOptions.length > 1 && (
-                      <div className="mb-4">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#BDB7BC]">
-                            {data.acceptedAt
-                              ? "Modalidade escolhida no aceite"
-                              : s.progressiveDiscounts
-                                ? "Escolha a opção de pagamento via PIX (1x a 4x)"
-                                : "Opções de pagamento (1x a 4x sem juros)"}
-                          </span>
-                          <span className="text-[11px] text-[#BDB7BC]">
-                            {s.progressiveDiscounts
-                              ? "Desconto único sobre o valor base (sem acúmulo)"
-                              : "Sem juros e sem desconto automático"}
-                          </span>
-                        </div>
-                        <div className="mt-2.5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-                          {s.interestFreeOptions.map((opt) => {
-                            const active =
-                              (data.acceptedAt ? activeInstallments.length : selectedInstallments) ===
-                              opt.count;
-                            const isCashBest = Boolean(s.progressiveDiscounts && opt.count === 1 && opt.discountPercent > 0);
-                            return (
-                              <button
-                                key={opt.count}
-                                type="button"
-                                disabled={Boolean(data.acceptedAt)}
-                                onClick={() => setSelectedInstallments(opt.count)}
-                                aria-pressed={active}
-                                className={`relative flex flex-col justify-between rounded-xl border p-3 text-left transition ${
-                                  active
-                                    ? "border-[#E80EFD] bg-[#E80EFD]/15 text-[#EDE6EC] shadow-lg shadow-[#E80EFD]/10"
-                                    : isCashBest
-                                      ? "border-[#E80EFD]/40 bg-[#4F12C7]/15 text-[#EDE6EC] hover:border-[#E80EFD]/70"
-                                      : "border-white/10 bg-white/[0.02] text-[#BDB7BC] hover:border-white/25"
-                                } ${data.acceptedAt ? "cursor-default" : ""}`}
-                              >
-                                <div>
-                                  <div className="flex items-center justify-between gap-1">
-                                    <span className="text-xs font-bold text-[#EDE6EC]">
-                                      {opt.count === 1 ? "À vista (1x)" : `${opt.count}x sem juros`}
-                                    </span>
-                                    {s.progressiveDiscounts && (
-                                      <span
-                                        className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
-                                          opt.discountPercent > 0
-                                            ? "bg-[#E80EFD]/25 text-[#EDE6EC]"
-                                            : "bg-white/10 text-[#BDB7BC]"
-                                        }`}
-                                      >
-                                        {opt.discountPercent > 0 ? `−${opt.discountPercent}%` : "0%"}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <span className="mt-1.5 block text-sm font-semibold text-[#EDE6EC]">
-                                    {formatBRL(opt.total)}
-                                  </span>
-                                  <span className="mt-0.5 block text-[11px] text-[#BDB7BC]">
-                                    {opt.count === 1
-                                      ? "Parcela única no PIX"
-                                      : `${opt.count}x de ${formatBRL(opt.regularAmount)}${opt.firstAmount !== opt.regularAmount ? "*" : ""}`}
-                                  </span>
-                                </div>
-                                {s.progressiveDiscounts && (
-                                  <span
-                                    className={`mt-2 block border-t border-white/10 pt-1.5 text-[10px] font-semibold ${
-                                      opt.discountAmount > 0 ? "text-emerald-300" : "text-[#BDB7BC]"
-                                    }`}
-                                  >
-                                    {opt.discountAmount > 0
-                                      ? `Economia de ${formatBRL(opt.discountAmount)}`
-                                      : "Valor base integral"}
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#BDB7BC]">
-                      Cronograma de Pagamento ({activeInstallments.length}{" "}
-                      {activeInstallments.length === 1 ? "parcela" : "parcelas"} sem juros)
-                    </p>
-                    <span className="text-xs text-[#BDB7BC]">
-                      Soma exata: <strong className="text-[#EDE6EC]">{formatBRL(financialSummary.scheduleTotal)}</strong>
-                    </span>
+                    </div>
                   </div>
 
-                  <div className="mt-3 space-y-2.5">
-                    {activeInstallments.map((inst, index) => (
-                      <div
-                        key={index}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
-                      >
-                        <div>
-                          <p className="text-sm font-semibold text-[#EDE6EC]">{inst.label}</p>
-                          <p className="text-xs text-[#BDB7BC]">
-                            {inst.onAcceptance
-                              ? `Vencimento no aceite da proposta (${fmtDate(inst.dueDate)})`
-                              : `Vencimento programado: ${fmtDate(inst.dueDate)}`}
-                          </p>
-                        </div>
-                        <span className="font-display text-xl font-light text-[#EDE6EC]">
-                          {formatBRL(inst.amount)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  <p className="mt-4 text-xs leading-relaxed text-[#BDB7BC]">
+                    Pagamento direto via PIX após o aceite eletrônico. A ativação automática como{" "}
+                    <strong className="text-[#EDE6EC]">Cliente</strong> e o início do cronograma ocorrem
+                    assim que o recebimento da 1ª parcela é confirmado pelo estúdio.
+                  </p>
                 </div>
               </div>
             </section>
 
-            {/* ── 7 & 8. REVISÕES, CONDIÇÕES COMERCIAIS E VALIDADE ─────── */}
-            <section className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-3xl border border-white/10 bg-white/[0.025] p-6">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#BDB7BC]">
-                  06 · Revisões Inclusas
-                </p>
-                <p className="font-display mt-2 text-2xl font-light text-[#EDE6EC]">
-                  {revisionsCount} {revisionsCount === 1 ? "rodada inclusa" : "rodadas inclusas"}
-                </p>
-                <p className="mt-2 text-xs leading-relaxed text-[#BDB7BC]">
-                  Contempla até {revisionsCount} rodada(s) de ajustes dentro do escopo aprovado.
-                  Alterações estruturais ou demandas fora do escopo inicial são orçadas à parte.
-                </p>
-              </div>
-
-              <div className="rounded-3xl border border-white/10 bg-white/[0.025] p-6">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#BDB7BC]">
-                  07 · Direitos e Propriedade
-                </p>
-                <p className="font-display mt-2 text-2xl font-light text-[#EDE6EC]">
-                  Cessão de Uso
-                </p>
-                <p className="mt-2 text-xs leading-relaxed text-[#BDB7BC]">
-                  Após a quitação integral dos valores contratados, o CONTRATANTE recebe a titularidade
-                  e cessão de uso dos entregáveis finais para as finalidades do projeto.
-                </p>
-              </div>
-
-              <div className="rounded-3xl border border-white/10 bg-white/[0.025] p-6">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#BDB7BC]">
-                  08 · Validade da Proposta
-                </p>
-                <p className="font-display mt-2 text-2xl font-light text-[#EDE6EC]">
-                  Até {s.validUntil ? fmtDate(s.validUntil) : fmtDate(data.expiresAt)}
-                </p>
-                <p className="mt-2 text-xs leading-relaxed text-[#BDB7BC]">
-                  Condições comerciais, valores e disponibilidade de agenda garantidos até{" "}
-                  {fmtDateTime(data.expiresAt)} (horário de Belém/PA).
-                </p>
-              </div>
-            </section>
-
-            {/* ── 9. INSTRUMENTO PARTICULAR DE PRESTAÇÃO DE SERVIÇOS E PDF ── */}
-            <section className="rounded-3xl border border-white/10 bg-white/[0.025] p-6 sm:p-8">
-              <div className="flex flex-wrap items-start justify-between gap-4">
+            {/* ── 4. TERMOS CONTRATUAIS E PDF (COLAPSÁVEL PARA LEITURA LIMPA) ── */}
+            <section className={`${GLASS_PANEL} p-6 sm:p-8`}>
+              <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#BDB7BC]">
-                    09 · Instrumento Particular de Prestação de Serviços & PDF
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BDB7BC]">
+                    03 · Instrumento Particular de Prestação de Serviços
                   </p>
-                  <h2 className="font-display mt-1 text-2xl font-light text-[#EDE6EC] sm:text-3xl">
-                    Cláusulas contratuais e versão em PDF
+                  <h2 className="font-display mt-1 text-xl font-light text-[#EDE6EC] sm:text-2xl">
+                    Cláusulas de salvaguarda e versão em PDF (2 páginas)
                   </h2>
-                  <p className="mt-2 text-sm text-[#BDB7BC]">
-                    Contratado: <strong className="text-[#EDE6EC]">Kayque Jonathan Brito</strong> (Belém/PA) ·
-                    Contratante:{" "}
-                    <strong className="text-[#EDE6EC]">
-                      {data.companyProfile.legalName ||
-                        data.companyProfile.companyName ||
-                        s.clientCompany ||
-                        s.clientName}
-                    </strong>
-                    {data.companyProfile.document ? ` (${data.companyProfile.document})` : ""}.
-                  </p>
                 </div>
-
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      setPdfDocKind("proposta");
-                      setShowPdfViewer((v) => !v);
-                    }}
-                    className="rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-[#EDE6EC] transition hover:border-white/35"
+                    onClick={() => setShowClauses((v) => !v)}
+                    className="rounded-xl border border-white/12 bg-white/[0.04] px-4 py-2 text-xs font-medium text-[#EDE6EC] transition hover:border-white/25 hover:bg-white/[0.08] active:scale-[0.97]"
                   >
-                    {showPdfViewer ? "Fechar visualização PDF" : "Visualizar proposta em PDF"}
+                    {showClauses ? "Ocultar cláusulas" : `Ler as ${s.clauses.length} cláusulas`}
                   </button>
                   <a
                     href={pdfDownloadUrl}
                     download
-                    className="rounded-xl bg-gradient-to-r from-[#4F12C7] to-[#E80EFD] px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-[#4F12C7]/20"
+                    className="rounded-xl border border-white/15 bg-white/[0.06] px-4 py-2 text-xs font-semibold text-[#EDE6EC] transition hover:bg-white/[0.12] active:scale-[0.97]"
                   >
-                    {data.acceptedAt ? "Baixar Proposta Aceita (PDF)" : "Baixar PDF (2 páginas)"}
+                    Baixar PDF Completo
                   </a>
-                  {data.acceptedAt && (
-                    <a
-                      href={contractDownloadUrl}
-                      download
-                      className="rounded-xl border border-emerald-400/35 bg-emerald-400/10 px-4 py-2.5 text-xs font-semibold text-emerald-100 hover:bg-emerald-400/20"
-                    >
-                      Baixar Contrato Formalizado (PDF)
-                    </a>
-                  )}
                 </div>
               </div>
 
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                {s.clauses.map((c, idx) => {
-                  const isPaymentClause = idx === 4 || c.title.includes("VALOR E PAGAMENTO");
-                  const dynamicPaymentBody =
-                    isPaymentClause && s.progressiveDiscounts && activeInstallments.length > 0
-                      ? `Pagamento via PIX direto (${activeInstallments.length}x sem juros · ${
-                          financialSummary.discountPercent > 0
-                            ? `${financialSummary.discountPercent}% de desconto progressivo sobre ${formatBRL(financialSummary.subtotal)}, economia de ${formatBRL(financialSummary.discountAmount)}, valor final de ${formatBRL(financialSummary.finalTotal)}`
-                            : `valor base de ${formatBRL(financialSummary.subtotal)}, sem desconto`
-                        }): ${activeInstallments
-                          .map(
-                            (i) =>
-                              `${i.label}: ${formatBRL(i.amount)}, ${
-                                i.onAcceptance ? "na assinatura" : `em ${fmtDate(i.dueDate)}`
-                              }`,
-                          )
-                          .join("; ")}. Tabela de descontos progressivos via PIX: à vista (1x) com 10% de desconto, 2x com 6% de desconto, 3x com 3% de desconto ou 4x sem desconto. Confirmação manual pelo estúdio; atraso superior a 7 dias suspende execução e entregas até a regularização.`
-                      : c.body;
-                  return (
-                    <div
-                      key={c.title}
-                      className="rounded-2xl border border-white/10 bg-black/25 p-4"
-                    >
-                      <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#EDE6EC]">
-                        {c.title}
-                      </h3>
-                      <p className="mt-2 text-xs leading-relaxed text-[#BDB7BC]">{dynamicPaymentBody}</p>
-                    </div>
-                  );
-                })}
-              </div>
+              {showClauses && (
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  {s.clauses.map((c, idx) => {
+                    const isPaymentClause = idx === 4 || c.title.includes("VALOR E PAGAMENTO");
+                    const dynamicPaymentBody =
+                      isPaymentClause && s.progressiveDiscounts && activeInstallments.length > 0
+                        ? `Pagamento via PIX direto (${activeInstallments.length}x sem juros · ${
+                            financialSummary.discountPercent > 0
+                              ? `${financialSummary.discountPercent}% de desconto progressivo sobre ${formatBRL(financialSummary.subtotal)}, economia de ${formatBRL(financialSummary.discountAmount)}, valor final de ${formatBRL(financialSummary.finalTotal)}`
+                              : `valor base de ${formatBRL(financialSummary.subtotal)}, sem desconto`
+                          }): ${activeInstallments
+                            .map(
+                              (i) =>
+                                `${i.label}: ${formatBRL(i.amount)}, ${
+                                  i.onAcceptance ? "na assinatura" : `em ${fmtDate(i.dueDate)}`
+                                }`,
+                            )
+                            .join("; ")}. Confirmação manual pelo estúdio; atraso superior a 7 dias suspende execução e entregas até a regularização.`
+                        : c.body;
+                    return (
+                      <div key={c.title} className={`${GLASS_SUBCARD} p-4`}>
+                        <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#EDE6EC]">
+                          {c.title}
+                        </h3>
+                        <p className="mt-1.5 text-xs leading-relaxed text-[#BDB7BC]">
+                          {dynamicPaymentBody}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
 
-            {/* ── MATERIAIS DE REFERÊNCIA E MANUAL (SE HOUVER) ─────────── */}
+            {/* ── MATERIAIS ANEXADOS (SE HOUVER) ───────────────────────── */}
             {(plan.manualUrl || plan.attachments?.length) ? (
-              <section className="rounded-3xl border border-white/10 bg-white/[0.025] p-6 sm:p-8">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#BDB7BC]">
-                  Materiais e Referências Anexados
+              <section className={`${GLASS_PANEL} p-6 sm:p-8`}>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BDB7BC]">
+                  Materiais e Referências
                 </p>
-                <h2 className="font-display mt-1 text-2xl font-light text-[#EDE6EC]">
-                  Manual de Identidade e arquivos da proposta
-                </h2>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   {plan.manualUrl && (
                     <a
-                      className="flex items-center justify-between rounded-2xl border border-white/15 bg-black/25 p-4 text-sm font-medium text-[#EDE6EC] hover:border-white/35"
+                      className={`${GLASS_SUBCARD} flex items-center justify-between p-4 text-sm font-medium text-[#EDE6EC] hover:border-white/25`}
                       href={plan.manualUrl}
                       target="_blank"
                       rel="noreferrer"
                     >
                       <span>Abrir Manual de Identidade</span>
-                      <span className="text-xs text-[#BDB7BC]">Link externo →</span>
+                      <span className="text-xs text-[#BDB7BC]">Abrir →</span>
                     </a>
                   )}
                   {plan.attachments?.map((a, i) => (
                     <a
                       key={i}
-                      className="flex items-center justify-between rounded-2xl border border-white/15 bg-black/25 p-4 text-sm font-medium text-[#EDE6EC] hover:border-white/35"
+                      className={`${GLASS_SUBCARD} flex items-center justify-between p-4 text-sm font-medium text-[#EDE6EC] hover:border-white/25`}
                       href={a.kind === "file" ? `/api/proposals/${token}/files/${a.fileId}/` : a.url}
                       target="_blank"
                       rel="noreferrer"
@@ -1367,7 +1022,7 @@ export default function Proposal({ token }: { token: string }) {
                           {a.role === "manual" ? "Manual de Identidade" : "Referência do Projeto"}
                         </p>
                       </div>
-                      <span className="shrink-0 text-xs text-[#E80EFD]">
+                      <span className="shrink-0 text-xs text-[#EDE6EC]">
                         {a.kind === "file" ? "Baixar" : "Abrir"} →
                       </span>
                     </a>
@@ -1376,132 +1031,124 @@ export default function Proposal({ token }: { token: string }) {
               </section>
             ) : null}
 
-            {/* ── 10. ÁREA DE QUALIFICAÇÃO E ACEITE ELETRÔNICO ─────────── */}
+            {/* ── 5. FORMALIZAÇÃO E ACEITE ELETRÔNICO ──────────────────── */}
             {!data.acceptedAt && (
-              <>
-                <section className="rounded-3xl border border-white/10 bg-white/[0.025] p-6 sm:p-8">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#BDB7BC]">
-                    10 · Qualificação e Diretrizes da Marca (Opcional / Recomendado)
-                  </p>
-                  <h2 className="font-display mt-1 text-2xl font-light text-[#EDE6EC]">
-                    Dados da empresa e ativos de identidade
-                  </h2>
-                  <p className="mt-2 mb-6 text-sm text-[#BDB7BC]">
-                    Confira os dados cadastrais para o contrato e, se desejar, anexe o logotipo ou
-                    manual da sua marca para agilizar o início do planejamento.
-                  </p>
-                  <CompanyProfileFields
-                    value={data.companyProfile}
-                    onChange={(companyProfile) =>
-                      setData((v) => (v ? { ...v, companyProfile } : v))
-                    }
-                    uploadUrl={`/api/proposals/${token}/brand-files/`}
-                    assetUrl={(id, preview) =>
-                      `/api/proposals/${token}/brand-files/${id}/${preview ? "?preview=1" : ""}`
-                    }
-                    onBusy={setUploading}
-                  />
-                </section>
-
-                <form
-                  onSubmit={accept}
-                  className="rounded-3xl border border-[#4F12C7]/45 bg-gradient-to-br from-[#1C1738] via-[#141326] to-[#11101E] p-6 shadow-2xl sm:p-8"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#E80EFD]">
-                      Formalização e Aceite Comercial
+              <form onSubmit={accept} className={`${GLASS_PANEL} p-6 sm:p-8`}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BDB7BC]">
+                      04 · Formalização e Aceite Eletrônico
                     </p>
-                    <span className="text-xs text-[#BDB7BC]">
-                      Assinatura eletrônica simples (Lei nº 14.063/2020)
+                    <h2 className="font-display mt-1 text-2xl font-light text-[#EDE6EC] sm:text-3xl">
+                      Confirmar aceite da proposta {s.code}
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowBrandFields((v) => !v)}
+                    className="rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-xs font-medium text-[#EDE6EC] transition hover:border-white/25 hover:bg-white/[0.08]"
+                  >
+                    {showBrandFields
+                      ? "Ocultar dados da marca"
+                      : "Editar dados da empresa / anexar marca (opcional)"}
+                  </button>
+                </div>
+
+                {showBrandFields && (
+                  <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-5">
+                    <CompanyProfileFields
+                      value={data.companyProfile}
+                      onChange={(companyProfile) =>
+                        setData((v) => (v ? { ...v, companyProfile } : v))
+                      }
+                      uploadUrl={`/api/proposals/${token}/brand-files/`}
+                      assetUrl={(id, preview) =>
+                        `/api/proposals/${token}/brand-files/${id}/${preview ? "?preview=1" : ""}`
+                      }
+                      onBusy={setUploading}
+                    />
+                  </div>
+                )}
+
+                <div className="mt-6 space-y-4">
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-[#BDB7BC]">
+                      Nome completo do responsável pelo aceite *
+                    </span>
+                    <input
+                      className="kb-control min-h-12 w-full rounded-xl border border-white/15 bg-white/[0.03] px-4 text-base text-[#EDE6EC] outline-none transition focus:border-white/40"
+                      autoComplete="name"
+                      placeholder="Ex.: Luana Nakata"
+                      required
+                      minLength={3}
+                      maxLength={160}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                    />
+                  </label>
+
+                  <label className={`${GLASS_SUBCARD} flex cursor-pointer items-start gap-3 p-4 text-sm text-[#EDE6EC] transition hover:border-white/20`}>
+                    <input
+                      type="checkbox"
+                      required
+                      checked={contract}
+                      onChange={(e) => setContract(e.target.checked)}
+                      className="mt-1 h-4 w-4 shrink-0 accent-[#4F12C7]"
+                    />
+                    <span>
+                      Li e aceito o escopo ({s.code}), o prazo de entrega de{" "}
+                      <strong>{deadlineLabel}</strong>, a condição de pagamento selecionada (
+                      <strong>
+                        {activeInstallments.length}x no PIX · Total {formatBRL(financialSummary.finalTotal)}
+                      </strong>
+                      ) e as cláusulas do Instrumento Particular de Prestação de Serviços.
+                    </span>
+                  </label>
+
+                  <label className={`${GLASS_SUBCARD} flex cursor-pointer items-start gap-3 p-4 text-sm text-[#EDE6EC] transition hover:border-white/20`}>
+                    <input
+                      type="checkbox"
+                      required
+                      checked={manual}
+                      onChange={(e) => setManual(e.target.checked)}
+                      className="mt-1 h-4 w-4 shrink-0 accent-[#4F12C7]"
+                    />
+                    <span>
+                      {plan.manualUrl || plan.attachments?.length
+                        ? "Confirmo os dados da empresa e aprovo os materiais de referência vinculados a esta proposta."
+                        : "Confirmo os dados da empresa e comprometo-me a fornecer os materiais e aprovações necessários para a execução."}
+                    </span>
+                  </label>
+
+                  <button
+                    type="submit"
+                    className="min-h-13 w-full rounded-2xl border border-white/15 bg-[#4F12C7] px-6 py-3.5 text-base font-semibold text-white shadow-[0_12px_36px_rgba(79,18,199,0.4),inset_0_1px_0_0_rgba(255,255,255,0.22)] transition duration-200 hover:bg-[#5B18DE] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
+                    disabled={
+                      busy ||
+                      uploading ||
+                      !contract ||
+                      !manual ||
+                      name.trim().length < 3 ||
+                      !data.companyProfile.companyName.trim()
+                    }
+                  >
+                    {uploading
+                      ? "Enviando arquivos da marca…"
+                      : busy
+                        ? "Registrando aceite e gerando comprovante…"
+                        : `Aceitar proposta (${activeInstallments.length}x no PIX · ${formatBRL(financialSummary.finalTotal)})`}
+                  </button>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-[#BDB7BC]">
+                    <span>
+                      Assinatura eletrônica simples (Lei nº 14.063/2020) · Validade de 10 dias (até {fmtDate(data.expiresAt)}).
+                    </span>
+                    <span>
+                      Cópia formalizada em PDF liberada imediatamente após o aceite.
                     </span>
                   </div>
-                  <h2 className="font-display mt-1 text-2xl font-light text-[#EDE6EC] sm:text-3xl">
-                    Confirmar aceite da proposta {s.code}
-                  </h2>
-                  <p className="mt-2 text-sm text-[#BDB7BC]">
-                    Ao confirmar o aceite abaixo, você aprova o escopo, o cronograma e as cláusulas
-                    do Instrumento Particular de Prestação de Serviços no valor total de{" "}
-                    <strong className="text-[#EDE6EC]">{formatBRL(financialSummary.finalTotal)}</strong>.
-                  </p>
-
-                  <div className="mt-6 space-y-4">
-                    <label className="block">
-                      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-[#BDB7BC]">
-                        Nome completo do responsável pelo aceite *
-                      </span>
-                      <input
-                        className="kb-control min-h-12 w-full rounded-xl border border-white/15 bg-black/40 px-4 text-base text-[#EDE6EC] outline-none focus:border-[#E80EFD]"
-                        autoComplete="name"
-                        placeholder="Ex.: Luana Nakata"
-                        required
-                        minLength={3}
-                        maxLength={160}
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                      />
-                    </label>
-
-                    <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-black/25 p-4 text-sm text-[#EDE6EC] transition hover:border-white/25">
-                      <input
-                        type="checkbox"
-                        required
-                        checked={contract}
-                        onChange={(e) => setContract(e.target.checked)}
-                        className="mt-1 h-4 w-4 shrink-0 accent-[#E80EFD]"
-                      />
-                      <span>
-                        Li e aceito integralmente o resumo comercial ({s.code}), o cronograma de
-                        pagamento ({formatBRL(financialSummary.finalTotal)}) e todas as cláusulas do
-                        Instrumento Particular de Prestação de Serviços.
-                      </span>
-                    </label>
-
-                    <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-black/25 p-4 text-sm text-[#EDE6EC] transition hover:border-white/25">
-                      <input
-                        type="checkbox"
-                        required
-                        checked={manual}
-                        onChange={(e) => setManual(e.target.checked)}
-                        className="mt-1 h-4 w-4 shrink-0 accent-[#E80EFD]"
-                      />
-                      <span>
-                        {plan.manualUrl || plan.attachments?.length
-                          ? "Revisei os dados da minha empresa e aprovo o Manual de Identidade e os materiais de referência vinculados a esta proposta."
-                          : "Revisei os dados da minha empresa e comprometo-me a fornecer os materiais e aprovações necessários conforme previsto no contrato."}
-                      </span>
-                    </label>
-
-                    <button
-                      type="submit"
-                      className="min-h-13 w-full rounded-2xl bg-gradient-to-r from-[#4F12C7] to-[#E80EFD] px-6 py-3.5 text-base font-semibold text-white shadow-xl shadow-[#4F12C7]/30 transition hover:opacity-95 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={
-                        busy ||
-                        uploading ||
-                        !contract ||
-                        !manual ||
-                        name.trim().length < 3 ||
-                        !data.companyProfile.companyName.trim()
-                      }
-                    >
-                      {uploading
-                        ? "Enviando arquivos da marca…"
-                        : busy
-                          ? "Registrando aceite e gerando comprovante…"
-                          : `Aceitar e formalizar proposta (${formatBRL(financialSummary.finalTotal)})`}
-                    </button>
-
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 text-xs text-[#BDB7BC]">
-                      <span>
-                        Link válido até {fmtDateTime(data.expiresAt)} (America/Belem).
-                      </span>
-                      <span>
-                        Após o aceite, uma cópia formalizada em PDF com código verificável ficará
-                        disponível imediatamente nesta página.
-                      </span>
-                    </div>
-                  </div>
-                </form>
-              </>
+                </div>
+              </form>
             )}
           </>
         )}

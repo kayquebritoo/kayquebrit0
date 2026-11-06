@@ -27,8 +27,14 @@ export function buildContactPayload() {
     kind: "pj",
     source: "Proposta Comercial",
     notes:
-      "Cliente com duas alternativas comerciais (nao cumulativas) via PIX direto com descontos progressivos: Proposta 1 (Landing Page — base R$ 2.500,00: 1x R$ 2.250,00 [-10%], 2x R$ 2.350,00 [-6%], 3x R$ 2.425,00 [-3%], 4x R$ 2.500,00 [0%], prazo 7 a 12 dias uteis) e Proposta 2 (E-commerce e Gestao — base R$ 9.800,00: 1x R$ 8.820,00 [-10%], 2x R$ 9.212,00 [-6%], 3x R$ 9.506,00 [-3%], 4x R$ 9.800,00 [0%], prazo 45 a 60 dias).",
+      "Cliente com duas alternativas comerciais (nao cumulativas) via PIX direto com descontos progressivos (prazo de entrega: 30 dias; validade: 10 dias): Proposta 1 (Landing Page — base R$ 2.500,00: 1x R$ 2.250,00 [-10%], 2x R$ 2.350,00 [-6%], 3x R$ 2.425,00 [-3%], 4x R$ 2.500,00 [0%]) e Proposta 2 (E-commerce e Gestao — base R$ 9.800,00: 1x R$ 8.820,00 [-10%], 2x R$ 9.212,00 [-6%], 3x R$ 9.506,00 [-3%], 4x R$ 9.800,00 [0%]).",
   };
+}
+
+function validityDateInDays(days = 10) {
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Belem" });
+  const [y, m, d] = today.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
 export function buildBudget1Payload(contactId) {
@@ -39,15 +45,15 @@ export function buildBudget1Payload(contactId) {
     clientCompany: "Sorella Import",
     status: "draft",
     paymentCondition: "cash",
-    validUntil: "2026-11-20",
-    deliveryDeadline: "7 a 12 dias úteis",
+    validUntil: validityDateInDays(10),
+    deliveryDeadline: "30 dias",
     terms:
-      "Alternativa Comercial 1 — Desenvolvimento de Landing Page. Prazo estimado de entrega: 7 a 12 dias úteis. Condições de pagamento via PIX direto com descontos progressivos (sem acúmulo): À vista (1x) com 10% OFF por R$ 2.250,00 (economia de R$ 250,00); 2x com 6% OFF por R$ 2.350,00 (2x de R$ 1.175,00); 3x com 3% OFF por R$ 2.425,00 (1ª de R$ 808,34 + 2x de R$ 808,33); ou 4x sem desconto por R$ 2.500,00 (4x de R$ 625,00).",
+      "Desenvolvimento de Landing Page de alta conversão para Sorella Import, com direção de arte autoral, arquitetura responsiva mobile-first, otimização de carregamento e integração direta com os canais de atendimento.",
     items: [
       {
         service: "Landing Page",
         description:
-          "Desenvolvimento de Landing Page (Prazo estimado: 7 a 12 dias úteis · PIX com descontos progressivos: 1x R$ 2.250,00 [-10%] · 2x R$ 2.350,00 [-6%] · 3x R$ 2.425,00 [-3%] · 4x R$ 2.500,00 [0%])",
+          "Design de interface (UI/UX) sob medida, implementação front-end responsiva, otimização de performance e configuração de pontos de captação e contato.",
         quantity: 1,
         unitPrice: 2500,
       },
@@ -63,15 +69,15 @@ export function buildBudget2Payload(contactId) {
     clientCompany: "Sorella Import",
     status: "draft",
     paymentCondition: "cash",
-    validUntil: "2026-11-20",
-    deliveryDeadline: "45 a 60 dias",
+    validUntil: validityDateInDays(10),
+    deliveryDeadline: "30 dias",
     terms:
-      "Alternativa Comercial 2 — Desenvolvimento de E-commerce e Gestão. Prazo estimado de entrega: 45 a 60 dias. Condições de pagamento via PIX direto com descontos progressivos (sem acúmulo): À vista (1x) com 10% OFF por R$ 8.820,00 (economia de R$ 980,00); 2x com 6% OFF por R$ 9.212,00 (2x de R$ 4.606,00); 3x com 3% OFF por R$ 9.506,00 (1ª de R$ 3.168,68 + 2x de R$ 3.168,66); ou 4x sem desconto por R$ 9.800,00 (4x de R$ 2.450,00).",
+      "Desenvolvimento e estruturação completa de plataforma de E-commerce e Gestão para Sorella Import, projetada para operação de vendas online, organização de catálogo e acompanhamento operacional.",
     items: [
       {
         service: "E-commerce e Gestão",
         description:
-          "Desenvolvimento de E-commerce e Gestão (Prazo estimado: 45 a 60 dias · PIX com descontos progressivos: 1x R$ 8.820,00 [-10%] · 2x R$ 9.212,00 [-6%] · 3x R$ 9.506,00 [-3%] · 4x R$ 9.800,00 [0%])",
+          "Implantação da loja virtual responsiva, estruturação de catálogo e categorias, fluxo de carrinho e checkout, integração logística/pagamentos e painel administrativo de gestão.",
         quantity: 1,
         unitPrice: 9800,
       },
@@ -94,7 +100,7 @@ export function buildSaleLinkPlan(kind) {
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Belem" });
   const isLanding = kind === "landing";
   const [y, m, d] = today.split("-").map(Number);
-  const deliveryDate = new Date(Date.UTC(y, m - 1, d + (isLanding ? 15 : 60)))
+  const deliveryDate = new Date(Date.UTC(y, m - 1, d + 30))
     .toISOString()
     .slice(0, 10);
   return {
@@ -108,7 +114,7 @@ export function buildSaleLinkPlan(kind) {
     maxInstallments: 4,
     progressiveDiscounts: true,
     applyCashDiscount: false,
-    deliveryDeadline: isLanding ? "7 a 12 dias úteis" : "45 a 60 dias",
+    deliveryDeadline: "30 dias",
     replaceExisting: true,
   };
 }
@@ -290,6 +296,7 @@ async function main() {
       cookie,
       body: {
         paymentCondition: p1.paymentCondition,
+        validUntil: p1.validUntil,
         deliveryDeadline: p1.deliveryDeadline,
         terms: p1.terms,
         items: p1.items,
@@ -322,6 +329,7 @@ async function main() {
       cookie,
       body: {
         paymentCondition: p2.paymentCondition,
+        validUntil: p2.validUntil,
         deliveryDeadline: p2.deliveryDeadline,
         terms: p2.terms,
         items: p2.items,

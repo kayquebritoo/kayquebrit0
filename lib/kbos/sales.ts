@@ -89,7 +89,55 @@ export type AcceptanceVerification = {
 };
 
 export const tokenHash = (token: string) => createHash("sha256").update(token).digest("hex");
-export const validSaleToken = (token: string) => /^[a-f0-9]{64}$/.test(token);
+export const validSaleToken = (token: string) =>
+  /^[a-f0-9]{64}$/.test(token) || /^[a-z0-9]+(?:-[a-z0-9]+)*-[a-f0-9]{6,16}$/.test(token);
+
+const STOP_SLUG_WORDS = new Set([
+  "de",
+  "da",
+  "do",
+  "das",
+  "dos",
+  "e",
+  "em",
+  "para",
+  "com",
+  "por",
+  "proposta",
+  "orcamento",
+  "alternativa",
+  "comercial",
+  "ltda",
+  "me",
+  "sa",
+  "import",
+]);
+
+function slugSegment(input: string | null | undefined, maxWords = 2): string {
+  if (!input) return "";
+  const words = input
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/e-commerce/g, "ecommerce")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w.length > 1 && !/^\d+$/.test(w) && !STOP_SLUG_WORDS.has(w));
+  return words.slice(0, maxWords).join("-");
+}
+
+export function buildFriendlySaleToken(opts: {
+  clientCompany?: string | null;
+  clientName?: string | null;
+  subtype?: string | null;
+  title?: string | null;
+}): string {
+  const clientSlug = slugSegment(opts.clientCompany, 1) || slugSegment(opts.clientName, 1) || "cliente";
+  const projectSlug = slugSegment(opts.subtype || opts.title, 2) || "projeto";
+  const shortHex = randomBytes(3).toString("hex");
+  return `${clientSlug}-${projectSlug}-${shortHex}`;
+}
 
 export function buildAcceptanceVerification(sale: {
   id: string;
@@ -354,17 +402,24 @@ export async function issueSaleLink(
     applyCashDiscount: planWithMeta.applyCashDiscount,
     deliveryDeadline: effectiveDeliveryDeadline,
     revisionsCount: b.revisionsCount ?? 2,
-    validUntil: b.validUntil ? b.validUntil.toISOString().slice(0, 10) : null,
+    validUntil: b.validUntil
+      ? b.validUntil.toISOString().slice(0, 10)
+      : new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10),
     createdAt: b.createdAt ? b.createdAt.toISOString() : new Date().toISOString(),
     subtype: effectiveSubtype,
     bankInfo: b.bankInfo?.trim() || DEFAULT_PIX_INFO,
     eventDates,
   };
-  const token = randomBytes(32).toString("hex");
-  // Expira no início da execução (fim do dia local), nunca depois da validade.
-  const expiresAt = new Date(Math.min(Date.now() + 7 * 86_400_000,
-    new Date(`${plan.startDate}T23:59:59-03:00`).getTime(),
-    b.validUntil ? new Date(`${b.validUntil.toISOString().slice(0, 10)}T23:59:59-03:00`).getTime() : Infinity));
+  const token = buildFriendlySaleToken({
+    clientCompany: snapshot.clientCompany,
+    clientName: snapshot.clientName,
+    subtype: effectiveSubtype,
+    title: b.title,
+  });
+  // Validade comercial padrão de 10 dias (ou até a data validUntil do orçamento, se definida).
+  const expiresAt = b.validUntil
+    ? new Date(`${b.validUntil.toISOString().slice(0, 10)}T23:59:59-03:00`)
+    : new Date(Date.now() + 10 * 86_400_000);
   if (expiresAt.getTime() <= Date.now()) throw new PublicError("A validade do orçamento expirou.", 410);
   // Um único comando: persiste ajustes comerciais no orçamento, bloqueia a versão, avança o funil e publica.
   const result = await d.execute(sql`
